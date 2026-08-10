@@ -2,10 +2,9 @@
   "name": "swiftserve",
   "private": true,
   "scripts": {
-    "dev": "turbo dev --filter=!@swiftserve/rider",
-    "dev:all": "turbo dev",
-    "dev:local": "turbo dev --filter=api --filter=dashboard --filter=pos",
-    "build": "turbo build",
+    "dev": "turbo run dev --parallel --filter=!@swiftserve/rider",
+    "build": "turbo run build",
+    "test": "turbo run test",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack --port 3005",
+    "dev": "next dev --turbopack --port 3003",
     "build": "next build",
-    "start": "next start --port 3005",
+    "start": "next start --port 3003",
     "lint": "eslint \"**/*.ts*\""
   },
   "dependencies": {
@@ -17,7 +17,7 @@
     "date-fns": "^4.1.0",
     "jose": "^5.9.6",
     "lucide-react": "^0.378.0",
-    "next": "15.0.3",
+    "next": "15.5.23",
     "react": "19.0.0-rc-69d4b800-20241021",
     "react-dom": "19.0.0-rc-69d4b800-20241021",
     "recharts": "^2.15.4",
