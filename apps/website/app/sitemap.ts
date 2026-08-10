@@ -1,57 +1,25 @@
-import { MetadataRoute } from 'next';
-import { getAllBlogPosts, getAllCaseStudies } from '@/lib/mdx';
+import { MetadataRoute } from 'next'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://dineiz.com';
+  const BASE = 'https://dineiz.com'
+  const now = new Date()
 
-  // Static routes
-  const staticRoutes = [
-    '',
-    '/pricing',
-    '/features',
-    '/product/pos',
-    '/product/console',
-    '/product/go',
-    '/product/whatsapp',
-    '/industries/dhaba',
-    '/industries/restaurant',
-    '/industries/cafe',
-    '/industries/food-cart',
-    '/about',
-    '/contact',
-    '/blog',
-    '/case-studies',
-    '/changelog',
-    '/careers',
-    '/partners',
-    '/privacy-policy',
-    '/terms-of-service',
-    '/refund-policy',
-    '/cookie-policy',
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date().toISOString().split('T')[0],
-    changeFrequency: 'weekly' as const,
-    priority: route === '' ? 1.0 : 0.8,
-  }));
+  const staticPages = [
+    { url: BASE, priority: 1.0, changeFrequency: 'weekly' },
+    { url: `${BASE}/pricing`, priority: 0.9, changeFrequency: 'weekly' },
+    { url: `${BASE}/features`, priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/product/pos`, priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/product/go`, priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/product/console`, priority: 0.7, changeFrequency: 'monthly' },
+    { url: `${BASE}/product/whatsapp`, priority: 0.7, changeFrequency: 'monthly' },
+    { url: `${BASE}/industries/dhaba`, priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/industries/restaurant`, priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/industries/cafe`, priority: 0.7, changeFrequency: 'monthly' },
+    { url: `${BASE}/industries/food-cart`, priority: 0.7, changeFrequency: 'monthly' },
+    { url: `${BASE}/about`, priority: 0.6, changeFrequency: 'monthly' },
+    { url: `${BASE}/contact`, priority: 0.6, changeFrequency: 'monthly' },
+    { url: `${BASE}/blog`, priority: 0.7, changeFrequency: 'daily' },
+  ].map(page => ({ ...page, lastModified: now, changeFrequency: page.changeFrequency as "weekly" | "monthly" | "daily" }))
 
-  // Dynamic Blog Posts
-  const posts = await getAllBlogPosts();
-  const blogRoutes = posts.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: post.date || new Date().toISOString().split('T')[0],
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }));
-
-  // Dynamic Case Studies
-  const caseStudies = await getAllCaseStudies();
-  const caseStudyRoutes = caseStudies.map((cs) => ({
-    url: `${baseUrl}/case-studies/${cs.slug}`,
-    lastModified: new Date().toISOString().split('T')[0],
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }));
-
-  return [...staticRoutes, ...blogRoutes, ...caseStudyRoutes];
+  return staticPages
 }

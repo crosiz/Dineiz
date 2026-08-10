@@ -1,37 +1,25 @@
 import React from "react";
-import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter } from 'next/font/google'
 import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
 import "./globals.css";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import {
-  generateSEOMetadata,
-  generateOrganizationSchema,
-  generateWebSiteSchema,
-} from "@/lib/seo";
+import { generateSEO } from "@/lib/seo";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
-  display: "swap",
-});
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+  preload: true,
+})
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
-});
-
-export const metadata: Metadata = generateSEOMetadata({
-  title: "Dineiz — Restaurant POS System Pakistan & WhatsApp Ordering",
+export const metadata = generateSEO({
+  title: "Restaurant POS System Pakistan & WhatsApp Ordering",
   description:
     "The #1 restaurant POS, billing software, and WhatsApp AI ordering system in Pakistan. Billing for cafes, food carts, and multi-branch restaurant groups. FBR compliant.",
-  path: "/",
+  canonical: "https://dineiz.com",
 });
 
 export default function RootLayout({
@@ -39,29 +27,43 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const orgSchema = generateOrganizationSchema();
-  const siteSchema = generateWebSiteSchema();
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'Dineiz',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, Android, iOS',
+    description: 'Restaurant POS and management software for Pakistan',
+    url: 'https://dineiz.com',
+    creator: {
+      '@type': 'Organization',
+      name: 'Crosiz Technologies',
+      url: 'https://crosiz.com',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'PKR',
+      description: 'Free plan available',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.9',
+      reviewCount: '200',
+    },
+  }
 
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable}`}
     >
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* Google Search Console verification meta */}
-        <meta name="google-site-verification" content="DINEIZ_GSC_VERIFICATION_TOKEN" />
-
         {/* JSON-LD Schemas */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
 
         {/* GTM Head Script */}
@@ -79,15 +81,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-white text-gray-900 font-sans antialiased">
-        {/* Skip to Content link for accessibility */}
+      <body className="min-h-screen flex flex-col font-sans antialiased">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-brand-500 focus:text-white focus:rounded-lg"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-4 focus:py-2 focus:bg-orange-500 focus:text-white focus:rounded-lg"
         >
           Skip to main content
         </a>
-
 
         <Navbar />
 
