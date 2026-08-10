@@ -9,6 +9,9 @@ import { smsQueue } from "../../jobs/sms.worker";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
 
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+redis.on('error', (err) => {
+  console.error('Redis connection error in mobile.ts:', err.message || err);
+});
 
 const OTP_MAX_ATTEMPTS = parseInt(process.env.OTP_MAX_ATTEMPTS || '5', 10);
 const OTP_RATE_LIMIT_PHONE = parseInt(process.env.OTP_RATE_LIMIT_PER_PHONE_PER_HOUR || '3', 10);

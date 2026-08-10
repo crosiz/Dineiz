@@ -14,6 +14,9 @@ import { runCustomersSegmentsJob } from '../jobs/customersWorker';
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
 });
+connection.on('error', (err) => {
+  console.error('Redis connection error in queue.ts:', err.message || err);
+});
 
 // Define queues here
 export const defaultQueue = new Queue('default', { connection });

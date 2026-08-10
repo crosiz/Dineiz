@@ -4,6 +4,9 @@ import { handleWebhookPayload } from '../routes/aggregators/aggregators.service'
 import IORedis from 'ioredis';
 
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
+connection.on('error', (err) => {
+  console.error('Redis connection error in aggregatorsWorker.ts:', err.message || err);
+});
 
 export const aggregatorsWorker = new Worker('aggregators-webhook-queue', async (job) => {
   const { eventId } = job.data;
