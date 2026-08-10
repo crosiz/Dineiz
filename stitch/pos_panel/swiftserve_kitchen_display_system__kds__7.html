@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | KITCHEN COMMAND</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#41382e",
+                        "on-secondary-fixed-variant": "#474646",
+                        "surface-container-lowest": "#140d06",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "surface-container": "#261e15",
+                        "on-primary-container": "#613b00",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#3c3329",
+                        "secondary": "#c9c6c5",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-secondary": "#313030",
+                        "error": "#ffb4ab",
+                        "surface-container-high": "#31281f",
+                        "on-surface-variant": "#d8c3ad",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "surface": "#19120a",
+                        "surface-container-low": "#221a12",
+                        "on-tertiary": "#2f312f",
+                        "on-secondary-container": "#bab8b7",
+                        "on-background": "#f0e0d1",
+                        "primary-fixed-dim": "#ffb95f",
+                        "secondary-container": "#4a4949",
+                        "error-container": "#93000a",
+                        "outline": "#a08e7a",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-highest": "#3c3329",
+                        "on-primary": "#472a00",
+                        "on-surface": "#f0e0d1",
+                        "on-primary-fixed-variant": "#653e00",
+                        "tertiary-fixed": "#e3e2e0",
+                        "primary": "#ffc174",
+                        "background": "#19120a",
+                        "on-error": "#690005",
+                        "tertiary": "#cdccca",
+                        "inverse-primary": "#855300",
+                        "surface-dim": "#19120a",
+                        "primary-container": "#f59e0b",
+                        "on-primary-fixed": "#2a1700",
+                        "surface-tint": "#ffb95f",
+                        "on-tertiary-container": "#434442",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "tertiary-container": "#b1b1ae",
+                        "outline-variant": "#534434",
+                        "primary-fixed": "#ffddb8",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "inverse-surface": "#f0e0d1",
+                        "status-new": "#3B82F6",
+                        "status-progress": "#F59E0B",
+                        "status-ready": "#10B981",
+                        "urgency-red": "#EF4444"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "32px",
+                        "base": "8px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "currency-display": ["Clash Display"],
+                        "label-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "display-lg": ["Clash Display"],
+                        "body-md": ["Inter"],
+                        "mono": ["Inter Tight", "monospace"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        @keyframes pulse-red {
+            0%, 100% { border-color: #EF4444; opacity: 1; }
+            50% { border-color: #7F1D1D; opacity: 0.8; }
+        }
+        .animate-pulse-red {
+            animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #19120a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #534434;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-[#0A0A0A] text-on-surface font-body-md selection:bg-primary selection:text-on-primary overflow-hidden h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full h-16 bg-[#1A1A1A] flex justify-between items-center px-lg z-50 border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<span class="font-headline-lg text-headline-lg font-bold text-primary tracking-tight">SWIFTSERVE</span>
+<div class="h-6 w-[2px] bg-outline-variant mx-sm"></div>
+<span class="font-headline-sm text-headline-sm text-on-surface-variant tracking-widest">KITCHEN</span>
+</div>
+<div class="flex items-center gap-xl">
+<div class="font-mono text-headline-md text-white font-bold tracking-tighter" id="live-clock">14:28:45</div>
+<div class="flex items-center gap-sm bg-surface-container-highest px-md py-xs rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-primary">receipt_long</span>
+<span class="font-headline-sm text-headline-sm text-primary">05</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-sm rounded-lg hover:bg-surface-variant transition-colors active:scale-95 duration-100 text-on-surface-variant">
+<span class="material-symbols-outlined">sync</span>
+</button>
+<button class="p-sm rounded-lg hover:bg-surface-variant transition-colors active:scale-95 duration-100 text-on-surface-variant">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="p-sm rounded-lg hover:bg-surface-variant transition-colors active:scale-95 duration-100 text-on-surface-variant">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+</div>
+</header>
+<!-- SideNavBar (Minimal Icons Only for High Density) -->
+<aside class="fixed left-0 top-16 h-[calc(100vh-64px-44px)] w-20 flex flex-col py-md bg-surface-container border-r border-outline-variant z-40">
+<div class="flex flex-col gap-base items-center">
+<div class="w-14 h-14 bg-primary-container text-on-primary-container rounded-xl flex items-center justify-center border-l-4 border-primary transition-all duration-150">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+</div>
+<div class="w-14 h-14 text-on-surface-variant hover:bg-surface-bright rounded-xl flex items-center justify-center transition-all duration-150">
+<span class="material-symbols-outlined">history</span>
+</div>
+<div class="w-14 h-14 text-on-surface-variant hover:bg-surface-bright rounded-xl flex items-center justify-center transition-all duration-150">
+<span class="material-symbols-outlined">inventory_2</span>
+</div>
+<div class="w-14 h-14 text-on-surface-variant hover:bg-surface-bright rounded-xl flex items-center justify-center transition-all duration-150">
+<span class="material-symbols-outlined">groups</span>
+</div>
+</div>
+<div class="mt-auto flex flex-col gap-base items-center">
+<div class="w-14 h-14 text-on-surface-variant hover:bg-surface-bright rounded-xl flex items-center justify-center transition-all duration-150">
+<span class="material-symbols-outlined">help</span>
+</div>
+<div class="w-14 h-14 text-on-surface-variant hover:bg-surface-bright rounded-xl flex items-center justify-center transition-all duration-150">
+<span class="material-symbols-outlined">lock</span>
+</div>
+</div>
+</aside>
+<!-- Main Board Area -->
+<main class="ml-20 mt-16 flex-1 grid grid-cols-3 gap-0 h-[calc(100vh-64px-44px)]">
+<!-- Column 1: NEW ORDERS -->
+<section class="border-r border-outline-variant flex flex-col bg-surface">
+<header class="h-14 bg-status-new/20 border-b-2 border-status-new px-md flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-status-new flex items-center gap-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">fiber_new</span> NEW ORDERS
+                </h2>
+<span class="bg-status-new text-white px-md py-xs rounded font-bold text-label-lg">02</span>
+</header>
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Ticket ORD-2847 -->
+<article class="w-full bg-[#1C1C1C] border-l-[6px] border-status-ready rounded-lg shadow-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-white/5 bg-[#252525]">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-headline-sm text-headline-sm text-white">ORD-2847</span>
+<span class="bg-blue-600 text-white text-[10px] px-sm py-[2px] rounded font-bold tracking-tighter uppercase">Dine-in</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-lg uppercase">Table 07</span>
+<span class="text-xs text-on-surface-variant/70 italic">Server: Marco</span>
+</div>
+<div class="text-right">
+<span class="font-mono text-status-ready font-bold">2m ago</span>
+</div>
+</div>
+</div>
+<div class="flex-1">
+<!-- Item Row -->
+<div class="p-md flex items-center gap-md border-b border-white/5 bg-surface-variant/10 active:bg-surface-variant/30 transition-colors">
+<div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center font-headline-sm text-primary">1</div>
+<div class="flex-1">
+<span class="block text-[17px] font-medium text-white">Swift Burger Special</span>
+<span class="text-sm text-on-surface-variant/80">+ Add Extra Cheese, No Onions</span>
+</div>
+<button class="w-10 h-10 rounded border border-outline-variant flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">check_circle</span>
+</button>
+</div>
+<!-- Item Row with Allergy -->
+<div class="p-md flex items-center gap-md border-b border-white/5 bg-surface-variant/10">
+<div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center font-headline-sm text-primary">1</div>
+<div class="flex-1">
+<span class="block text-[17px] font-medium text-white">Garlic Fries</span>
+<div class="bg-red-900/40 border border-red-500/50 px-sm py-[2px] rounded inline-flex items-center gap-xs mt-xs">
+<span class="material-symbols-outlined text-[14px] text-error">warning</span>
+<span class="text-[10px] font-bold text-error uppercase tracking-tighter">⚠ ALLERGY: Nut allergy</span>
+</div>
+</div>
+<button class="w-10 h-10 rounded border border-outline-variant flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">check_circle</span>
+</button>
+</div>
+</div>
+<div class="p-sm bg-[#1C1C1C]">
+<button class="w-full h-12 bg-primary text-on-primary font-headline-sm rounded-lg active:scale-95 transition-transform uppercase">MARK ALL READY</button>
+</div>
+</article>
+<!-- Ticket ORD-2848 -->
+<article class="w-full bg-[#1C1C1C] border-l-[6px] border-status-ready rounded-lg shadow-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-white/5 bg-[#252525]">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-headline-sm text-headline-sm text-white">ORD-2848</span>
+<span class="bg-orange-600 text-white text-[10px] px-sm py-[2px] rounded font-bold tracking-tighter uppercase">Takeaway</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-label-lg uppercase">TK-041</span>
+<span class="font-mono text-status-ready font-bold">45s ago</span>
+</div>
+</div>
+<div class="flex-1">
+<div class="p-md flex items-center gap-md bg-surface-variant/10">
+<div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center font-headline-sm text-primary">2</div>
+<div class="flex-1">
+<span class="block text-[17px] font-medium text-white">Chicken Tacos (3pc)</span>
+<span class="text-sm text-primary/80 italic font-medium">NOTE: Extra spicy sauce</span>
+</div>
+<button class="w-10 h-10 rounded border border-outline-variant flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">check_circle</span>
+</button>
+</div>
+</div>
+<div class="p-sm bg-[#1C1C1C]">
+<button class="w-full h-12 bg-primary text-on-primary font-headline-sm rounded-lg active:scale-95 transition-transform uppercase">MARK ALL READY</button>
+</div>
+</article>
+</div>
+</section>
+<!-- Column 2: IN PROGRESS -->
+<section class="border-r border-outline-variant flex flex-col bg-surface-container-low">
+<header class="h-14 bg-status-progress/20 border-b-2 border-status-progress px-md flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-status-progress flex items-center gap-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">skillet</span> IN PROGRESS
+                </h2>
+<span class="bg-status-progress text-on-primary-fixed px-md py-xs rounded font-bold text-label-lg">02</span>
+</header>
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Ticket ORD-2845 (Warning level) -->
+<article class="w-full bg-[#1C1C1C] border-l-[6px] border-status-progress rounded-lg shadow-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-white/5 bg-[#252525]">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-headline-sm text-headline-sm text-white">ORD-2845</span>
+<span class="bg-purple-600 text-white text-[10px] px-sm py-[2px] rounded font-bold tracking-tighter uppercase">Delivery</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-label-lg uppercase">DoorDash #9281</span>
+<span class="font-mono text-status-progress font-bold">12m ago</span>
+</div>
+</div>
+<div class="p-md flex items-center gap-md border-b border-white/5 bg-primary-container/10">
+<div class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center font-headline-sm">1</div>
+<div class="flex-1">
+<span class="block text-[17px] font-medium text-white">Ribeye Steak - Med</span>
+<span class="text-sm text-on-surface-variant/80">Sides: Asparagus, Mash</span>
+</div>
+<button class="w-10 h-10 rounded border-2 border-primary flex items-center justify-center text-primary bg-primary/20">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+</div>
+<div class="w-full h-1 bg-surface-variant">
+<div class="bg-status-progress h-full w-[60%]"></div>
+</div>
+<div class="p-sm bg-[#1C1C1C]">
+<button class="w-full h-12 bg-primary text-on-primary font-headline-sm rounded-lg active:scale-95 transition-transform uppercase">MARK ALL READY</button>
+</div>
+</article>
+<!-- Ticket ORD-2846 (Critical level pulse) -->
+<article class="w-full bg-[#1C1C1C] border-l-[6px] animate-pulse-red rounded-lg shadow-xl flex flex-col overflow-hidden">
+<div class="p-md border-b border-white/5 bg-[#252525]">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-headline-sm text-headline-sm text-white">ORD-2846</span>
+<span class="bg-blue-600 text-white text-[10px] px-sm py-[2px] rounded font-bold tracking-tighter uppercase">Dine-in</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-label-lg uppercase">Table 12</span>
+<span class="font-mono text-error font-extrabold text-xl">24m ago</span>
+</div>
+</div>
+<div class="p-md flex items-center gap-md border-b border-white/5 bg-error-container/10">
+<div class="w-10 h-10 rounded-full border-2 border-error flex items-center justify-center font-headline-sm text-error">1</div>
+<div class="flex-1">
+<span class="block text-[17px] font-medium text-white">Grilled Salmon</span>
+<span class="text-sm text-on-surface-variant/80">Lemon Butter Sauce</span>
+</div>
+<button class="w-10 h-10 rounded border border-outline-variant flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">check_circle</span>
+</button>
+</div>
+<div class="p-sm bg-[#1C1C1C]">
+<button class="w-full h-12 bg-primary text-on-primary font-headline-sm rounded-lg active:scale-95 transition-transform uppercase">MARK ALL READY</button>
+</div>
+</article>
+</div>
+</section>
+<!-- Column 3: READY -->
+<section class="flex flex-col bg-surface">
+<header class="h-14 bg-status-ready/20 border-b-2 border-status-ready px-md flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-status-ready flex items-center gap-sm uppercase tracking-widest">
+<span class="material-symbols-outlined">check_circle</span> READY
+                </h2>
+<span class="bg-status-ready text-white px-md py-xs rounded font-bold text-label-lg">01</span>
+</header>
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Ticket ORD-2840 -->
+<article class="w-full bg-[#1C1C1C]/40 border-l-[6px] border-outline-variant rounded-lg flex flex-col overflow-hidden opacity-80 grayscale-[0.3]">
+<div class="p-md border-b border-white/5 bg-[#252525]/40">
+<div class="flex justify-between items-start mb-sm">
+<span class="font-headline-sm text-headline-sm text-on-surface-variant">ORD-2840</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-sm py-[2px] rounded font-bold uppercase tracking-tighter">Picked Up</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant/50 font-label-lg uppercase">Table 02</span>
+<span class="font-mono text-on-surface-variant/50 font-bold">18m ago</span>
+</div>
+</div>
+<div class="p-md flex items-center justify-center h-32 flex-col gap-sm">
+<span class="material-symbols-outlined text-[48px] text-status-ready">verified</span>
+<span class="font-label-lg uppercase text-on-surface-variant tracking-widest">Order Completed</span>
+</div>
+<div class="p-sm bg-[#1C1C1C]/20 border-t border-white/5">
+<button class="w-full h-12 border border-outline-variant text-on-surface-variant font-headline-sm rounded-lg active:scale-95 transition-transform uppercase">RECALL TICKET</button>
+</div>
+</article>
+</div>
+</section>
+</main>
+<!-- Bottom Bump Bar Strip -->
+<footer class="h-[44px] bg-[#111111] border-t border-outline-variant fixed bottom-0 w-full z-50 flex items-center justify-between px-lg">
+<div class="flex gap-xl">
+<button class="flex items-center gap-xs text-[11px] font-bold text-on-surface-variant uppercase tracking-[0.2em] hover:text-white transition-colors">
+<span class="w-5 h-5 flex items-center justify-center bg-surface-variant rounded text-[10px]">F1</span> PREV
+            </button>
+<button class="flex items-center gap-xs text-[11px] font-bold text-on-surface-variant uppercase tracking-[0.2em] hover:text-white transition-colors">
+<span class="w-5 h-5 flex items-center justify-center bg-surface-variant rounded text-[10px]">F2</span> NEXT
+            </button>
+<button class="flex items-center gap-xs text-[11px] font-bold text-primary uppercase tracking-[0.2em] hover:text-white transition-colors">
+<span class="w-5 h-5 flex items-center justify-center bg-primary text-on-primary rounded text-[10px]">F3</span> BUMP
+            </button>
+</div>
+<div class="flex gap-xl">
+<button class="flex items-center gap-xs text-[11px] font-bold text-on-surface-variant uppercase tracking-[0.2em] hover:text-white transition-colors">
+<span class="w-5 h-5 flex items-center justify-center bg-surface-variant rounded text-[10px]">F4</span> RECALL
+            </button>
+<button class="flex items-center gap-xs text-[11px] font-bold text-error uppercase tracking-[0.2em] hover:text-white transition-colors">
+<span class="w-5 h-5 flex items-center justify-center bg-error-container text-on-error-container rounded text-[10px]">F5</span> RUSH FLAG
+            </button>
+</div>
+</footer>
+<script>
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                               now.getMinutes().toString().padStart(2, '0') + ':' + 
+                               now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('live-clock').textContent = timeString;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Simulate interaction
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const originalBg = btn.style.backgroundColor;
+                btn.classList.add('brightness-125');
+                setTimeout(() => btn.classList.remove('brightness-125'), 150);
+            });
+        });
+    </script>
+</body></html>

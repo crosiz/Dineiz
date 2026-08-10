@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#565e74",
+                        "on-surface-variant": "#5b4039",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#dae2fd",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-surface": "#271813",
+                        "primary-fixed": "#ffdbd1",
+                        "primary-container": "#ff5722",
+                        "inverse-primary": "#ffb5a0",
+                        "inverse-surface": "#3e2c27",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#fff1ed",
+                        "outline-variant": "#e4beb4",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#ffe2da",
+                        "surface": "#fff8f6",
+                        "tertiary-container": "#007caf",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-background": "#271813",
+                        "tertiary": "#00628c",
+                        "on-secondary-fixed": "#131b2e",
+                        "outline": "#907067",
+                        "tertiary-fixed": "#c8e6ff",
+                        "primary": "#b02f00",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "inverse-on-surface": "#ffede8",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "background": "#fff8f6",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-container": "#541200",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#862200",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface-dim": "#f1d4cc",
+                        "on-primary-fixed": "#3b0900",
+                        "surface-variant": "#fadcd4",
+                        "surface-bright": "#fff8f6",
+                        "surface-tint": "#b02f00",
+                        "surface-container": "#ffe9e4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "page_margin": "24px",
+                        "element": "16px",
+                        "section": "24px",
+                        "grid_gutter": "16px",
+                        "related": "8px"
+                    },
+                    "fontFamily": {
+                        "display": ["Inter"],
+                        "body": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "caption": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+    </style>
+</head>
+<body class="flex min-h-screen text-on-background">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-slate-950 flex flex-col py-6 border-r border-slate-800">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-white leading-none">SwiftServe POS</h1>
+<p class="text-xs text-slate-400 mt-1">Premium Management</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-medium text-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-slate-900 text-orange-500 border-r-4 border-orange-600 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+<span class="font-medium text-sm">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="business_center">business_center</span>
+<span class="font-medium text-sm">Business</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-medium text-sm">Growth</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-medium text-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="extension">extension</span>
+<span class="font-medium text-sm">Integrations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-primary-container hover:bg-orange-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-orange-900/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg" data-icon="add">add</span>
+                New Order
+            </button>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-64 flex-1 min-h-screen">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-40 bg-white border-b border-slate-200 flex justify-between items-center h-16 px-8 w-full shadow-sm">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-slate-600 w-64 font-medium" placeholder="Search deals, products, or codes..." type="text"/>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-slate-200">
+<img alt="User Profile" class="w-8 h-8 rounded-full object-cover border border-slate-200" data-alt="A professional high-resolution headshot of a restaurant manager in a modern, well-lit hospitality setting. The manager wears a sleek, professional charcoal uniform. The background shows soft bokeh of a high-end restaurant interior with warm lighting and a contemporary aesthetic, maintaining a clean and minimalist corporate feel." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+<div class="hidden lg:block text-right">
+<p class="text-xs font-bold text-slate-900">Admin Panel</p>
+<p class="text-[10px] text-slate-500">Premium Account</p>
+</div>
+</div>
+</div>
+</header>
+<div class="p-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-[24px] font-[700] text-slate-900">Deals &amp; Promotions</h2>
+<p class="text-slate-500 text-sm mt-1">Create and manage customer loyalty offers and seasonal discounts.</p>
+</div>
+<button class="bg-[#FF5722] hover:bg-orange-600 text-white px-6 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-md transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg" data-icon="add_circle">add_circle</span>
+                    Create Deal
+                </button>
+</div>
+<!-- Tabs Section -->
+<div class="flex gap-2 mb-8 bg-slate-100 p-1 rounded-xl w-fit">
+<button class="px-6 py-2 rounded-lg text-sm font-semibold bg-[#FF5722] text-white shadow-sm">All (12)</button>
+<button class="px-6 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-white transition-all">Active (5)</button>
+<button class="px-6 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-white transition-all">Scheduled (2)</button>
+<button class="px-6 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-white transition-all">Expired (5)</button>
+</div>
+<!-- Deals Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<!-- Deal Card 1 -->
+<div class="bg-white rounded-[12px] shadow-sm border border-slate-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+<div class="p-6 flex gap-6">
+<!-- Left & Middle (70%) -->
+<div class="flex-1 border-r border-slate-100 pr-6">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-[#FF5722]">
+<span class="material-symbols-outlined text-2xl" data-icon="local_offer">local_offer</span>
+</div>
+<div>
+<h3 class="text-[17px] font-[600] text-slate-900">Zinger Combo Deal</h3>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 mt-1">
+                                            Active
+                                        </span>
+</div>
+</div>
+</div>
+<p class="text-sm text-slate-600 mb-4 bg-slate-50 p-3 rounded-lg border-l-4 border-orange-500">
+                                Buy Zinger Burger + French Fries + Cola = <span class="font-bold text-slate-900">PKR 750</span>
+</p>
+<div class="flex items-end gap-3 mb-4">
+<span class="text-slate-400 line-through text-sm">PKR 1,100</span>
+<span class="text-xl font-bold text-[#FF5722]">PKR 750</span>
+<span class="text-green-600 text-sm font-bold bg-green-50 px-2 py-0.5 rounded">SAVE 32%</span>
+</div>
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_month">calendar_month</span>
+<span>All day • Mon-Sun • All Branches</span>
+</div>
+</div>
+<!-- Right (30%) -->
+<div class="w-32 flex flex-col justify-between items-center text-center">
+<div>
+<p class="text-[23px] font-black text-[#FF5722]">234</p>
+<p class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Times Used</p>
+</div>
+<div class="my-4">
+<p class="text-sm font-bold text-slate-800">PKR 175,500</p>
+<p class="text-[10px] text-slate-400">Revenue</p>
+</div>
+<div class="w-full h-8 flex items-end gap-1">
+<div class="w-full bg-orange-100 h-2 rounded-t-sm"></div>
+<div class="w-full bg-orange-200 h-4 rounded-t-sm"></div>
+<div class="w-full bg-orange-400 h-6 rounded-t-sm"></div>
+<div class="w-full bg-orange-600 h-8 rounded-t-sm"></div>
+<div class="w-full bg-orange-300 h-5 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+<!-- Action Row -->
+<div class="bg-slate-50 border-t border-slate-100 px-6 py-3 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span> Edit
+                            </button>
+<button class="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span> Duplicate
+                            </button>
+<button class="text-red-500 hover:text-red-700 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span> Delete
+                            </button>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-400 uppercase">Pause</span>
+<div class="w-10 h-5 bg-orange-500 rounded-full relative cursor-pointer">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Deal Card 2 -->
+<div class="bg-white rounded-[12px] shadow-sm border border-slate-100 overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+<div class="p-6 flex gap-6">
+<div class="flex-1 border-r border-slate-100 pr-6">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined text-2xl" data-icon="schedule">schedule</span>
+</div>
+<div>
+<h3 class="text-[17px] font-[600] text-slate-900">Breakfast Bonanza</h3>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 mt-1">
+                                            Scheduled
+                                        </span>
+</div>
+</div>
+</div>
+<p class="text-sm text-slate-600 mb-4 bg-slate-50 p-3 rounded-lg border-l-4 border-blue-500">
+                                2 Regular Omelettes + 4 Toast + 2 Coffee = <span class="font-bold text-slate-900">PKR 999</span>
+</p>
+<div class="flex items-end gap-3 mb-4">
+<span class="text-slate-400 line-through text-sm">PKR 1,450</span>
+<span class="text-xl font-bold text-[#FF5722]">PKR 999</span>
+<span class="text-green-600 text-sm font-bold bg-green-50 px-2 py-0.5 rounded">SAVE 31%</span>
+</div>
+<div class="flex items-center gap-2 text-slate-500 text-xs">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_month">calendar_month</span>
+<span>07:00 - 11:00 • Mon-Fri • Selected Branches</span>
+</div>
+</div>
+<div class="w-32 flex flex-col justify-between items-center text-center opacity-40">
+<div>
+<p class="text-[23px] font-black text-slate-400">0</p>
+<p class="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Times Used</p>
+</div>
+<div class="my-4">
+<p class="text-sm font-bold text-slate-400">PKR 0</p>
+<p class="text-[10px] text-slate-400">Revenue</p>
+</div>
+<div class="w-full h-8 flex items-end gap-1">
+<div class="w-full bg-slate-200 h-1 rounded-t-sm"></div>
+<div class="w-full bg-slate-200 h-1 rounded-t-sm"></div>
+<div class="w-full bg-slate-200 h-1 rounded-t-sm"></div>
+<div class="w-full bg-slate-200 h-1 rounded-t-sm"></div>
+<div class="w-full bg-slate-200 h-1 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+<div class="bg-slate-50 border-t border-slate-100 px-6 py-3 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<button class="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span> Edit
+                            </button>
+<button class="text-slate-500 hover:text-slate-900 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="content_copy">content_copy</span> Duplicate
+                            </button>
+<button class="text-red-500 hover:text-red-700 font-bold text-xs uppercase flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span> Delete
+                            </button>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-400 uppercase">Pause</span>
+<div class="w-10 h-5 bg-slate-300 rounded-full relative cursor-pointer">
+<div class="absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State Illustration Placeholder (Only shown when filter results in 0) -->
+<div class="mt-16 flex flex-col items-center justify-center text-center hidden">
+<div class="w-64 h-64 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-8xl text-slate-300" data-icon="sell" style="font-variation-settings: 'wght' 200;">sell</span>
+</div>
+<h3 class="text-xl font-bold text-slate-900">No deals created yet</h3>
+<p class="text-slate-500 mt-2 max-w-sm">Boost your sales by creating seasonal offers, loyalty rewards, or combo deals for your customers.</p>
+<button class="mt-8 bg-[#FF5722] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-900/10 active:scale-[0.98] transition-all">
+                    Create Your First Deal
+                </button>
+</div>
+</div>
+</main>
+</body></html>

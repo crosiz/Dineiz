@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reports - SwiftServe POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#007caf",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed": "#dae2fd",
+                        "surface": "#fff8f6",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-dim": "#f1d4cc",
+                        "background": "#fff8f6",
+                        "on-primary-fixed-variant": "#862200",
+                        "secondary": "#565e74",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "surface-container": "#ffe9e4",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#541200",
+                        "on-surface-variant": "#5b4039",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fff8f6",
+                        "tertiary": "#00628c",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#5c647a",
+                        "on-tertiary-fixed": "#001e2e",
+                        "surface-tint": "#b02f00",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "primary": "#b02f00",
+                        "outline-variant": "#e4beb4",
+                        "inverse-surface": "#3e2c27",
+                        "on-primary": "#ffffff",
+                        "on-background": "#271813",
+                        "on-primary-fixed": "#3b0900",
+                        "on-secondary-fixed": "#131b2e",
+                        "primary-container": "#ff5722",
+                        "on-surface": "#271813",
+                        "inverse-on-surface": "#ffede8",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "secondary-container": "#dae2fd",
+                        "surface-variant": "#fadcd4",
+                        "tertiary-fixed": "#c8e6ff",
+                        "surface-container-low": "#fff1ed",
+                        "primary-fixed": "#ffdbd1",
+                        "outline": "#907067",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#fadcd4"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "page_margin": "24px",
+                        "section": "24px",
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h1": ["Inter"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { background-color: #F8FAFC; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #907067; border-radius: 10px; }
+    </style>
+</head>
+<body class="font-body text-body text-on-background antialiased flex">
+<!-- SideNavBar (Authority Source: JSON) -->
+<aside class="h-screen w-72 fixed left-0 top-0 overflow-y-auto bg-on-secondary-fixed dark:bg-on-secondary-fixed flex flex-col py-section z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h1 class="text-h1 font-h1 text-on-tertiary">Main Street Bistro</h1>
+<p class="text-caption text-on-secondary-fixed-variant">POS Administrator</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span>Operations</span>
+</a>
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span>Business</span>
+</a>
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span>Growth</span>
+</a>
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Analytics</span>
+</a>
+<a class="bg-primary-container text-on-primary-container rounded-lg mx-2 flex items-center gap-3 px-4 py-3 scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="assessment" style="font-variation-settings: 'FILL' 1;">assessment</span>
+<span>Reports</span>
+</a>
+</nav>
+<div class="mt-auto space-y-1">
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<a class="text-on-secondary-fixed-variant hover:text-on-tertiary flex items-center gap-3 px-4 py-3 mx-2 hover:bg-on-secondary-fixed-variant transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-72 min-h-screen">
+<!-- TopNavBar (Authority Source: JSON) -->
+<header class="sticky top-0 right-0 w-full h-16 bg-surface dark:bg-surface-container-low flex justify-between items-center px-page_margin border-b border-outline-variant dark:border-outline shadow-sm dark:shadow-none z-40">
+<div class="flex items-center gap-element">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 text-body focus:ring-2 focus:ring-primary-container w-64" placeholder="Search reports..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-all">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-all">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-all">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a restaurant administrator in a clean-cut suit, set against a blurred modern office background with soft cinematic lighting. The image maintains a corporate yet approachable aesthetic with high-key lighting and a refined, warm color tone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAGsZp6xOlB5CcpVDWzbnZNa2rILOg_0ddviAXMaU5y5Yv1JcyfzRrh8aCCIMpwQe2hPQjlJrSI7aM1rrotI-4zegrOQgPxyVyy1MBBSRxTg2xa7ruxja5fiFK_TkaQvuj2lbF5AKprZxoyRhERs_EYwJNwqNluH_Jaqi5LG4Avb4NVjADiNp46durVto37JO_-AYSO57eZWDINKQYwrZv_u5aSQMAfOF6lb-iUxyGPmZr4qtpiORFBIhdjTvdFyZqIvUgTfrLmi0q1"/>
+</div>
+</div>
+</header>
+<!-- Reports Dashboard Canvas -->
+<div class="p-8 space-y-8">
+<!-- Header Section -->
+<div class="flex justify-between items-end">
+<div>
+<h2 class="text-[26px] font-bold text-on-surface leading-tight">Reports</h2>
+<p class="text-on-surface-variant mt-1">Generate and export detailed business reports</p>
+</div>
+<div class="flex gap-4">
+<button class="px-5 py-2.5 rounded-lg border border-primary text-primary font-semibold hover:bg-primary/5 transition-colors">
+                        Schedule Report
+                    </button>
+<button class="px-5 py-2.5 rounded-lg bg-primary-container text-white font-semibold flex items-center gap-2 hover:brightness-110 transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                        Generate Report
+                    </button>
+</div>
+</div>
+<!-- Report Tabs Pills -->
+<div class="flex items-center gap-3 overflow-x-auto pb-2 custom-scrollbar">
+<button class="px-6 py-2 rounded-full bg-primary-container text-white font-semibold whitespace-nowrap">Sales</button>
+<button class="px-6 py-2 rounded-full bg-white text-on-surface-variant font-medium border border-outline-variant hover:bg-surface-variant whitespace-nowrap transition-colors">Order</button>
+<button class="px-6 py-2 rounded-full bg-white text-on-surface-variant font-medium border border-outline-variant hover:bg-surface-variant whitespace-nowrap transition-colors">Staff</button>
+<button class="px-6 py-2 rounded-full bg-white text-on-surface-variant font-medium border border-outline-variant hover:bg-surface-variant whitespace-nowrap transition-colors">Inventory</button>
+<button class="px-6 py-2 rounded-full bg-white text-on-surface-variant font-medium border border-outline-variant hover:bg-surface-variant whitespace-nowrap transition-colors">Tax</button>
+<button class="px-6 py-2 rounded-full bg-white text-on-surface-variant font-medium border border-outline-variant hover:bg-surface-variant whitespace-nowrap transition-colors">Custom</button>
+</div>
+<!-- Date Range Bar -->
+<div class="bg-white rounded-xl p-4 shadow-sm border border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<span class="text-caption text-on-surface-variant uppercase font-bold">Report Period</span>
+<div class="relative">
+<select class="appearance-none bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 pr-10 text-body font-medium focus:ring-primary focus:border-primary">
+<option>Last 30 Days</option>
+<option>Today</option>
+<option>Yesterday</option>
+<option>This Week</option>
+<option>Custom Range</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+</div>
+</div>
+<div class="h-8 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-3">
+<span class="text-caption text-on-surface-variant uppercase font-bold">Branch</span>
+<div class="relative">
+<select class="appearance-none bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 pr-10 text-body font-medium focus:ring-primary focus:border-primary">
+<option>All Branches</option>
+<option>Clifton</option>
+<option>Defense</option>
+<option>Gulshan-e-Iqbal</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors group" title="Export PDF">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">picture_as_pdf</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors group" title="Export Excel">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary">table_chart</span>
+</button>
+</div>
+</div>
+<!-- Summary Metrics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-grid_gutter">
+<div class="bg-white p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Total Revenue</p>
+<span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">+12.5%</span>
+</div>
+<h3 class="text-h1 font-h1 text-on-surface">PKR 2,847,500</h3>
+<p class="text-[11px] text-on-surface-variant mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">history</span> vs. last period
+                    </p>
+</div>
+<div class="bg-white p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Total Orders</p>
+<span class="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">+8.2%</span>
+</div>
+<h3 class="text-h1 font-h1 text-on-surface">3,247</h3>
+<p class="text-[11px] text-on-surface-variant mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> Avg. 108/day
+                    </p>
+</div>
+<div class="bg-white p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Avg Order Value</p>
+<span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">-2.1%</span>
+</div>
+<h3 class="text-h1 font-h1 text-on-surface">PKR 877</h3>
+<p class="text-[11px] text-on-surface-variant mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">shopping_basket</span> Target: PKR 950
+                    </p>
+</div>
+<div class="bg-white p-5 rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-2">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Top Branch</p>
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 1;">stars</span>
+</div>
+<h3 class="text-h1 font-h1 text-on-surface">Gulshan-e-Iqbal</h3>
+<p class="text-[11px] text-on-surface-variant mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">location_on</span> 34% share of revenue
+                    </p>
+</div>
+</div>
+<!-- Revenue Breakdown Chart Section -->
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm p-6">
+<div class="flex justify-between items-start mb-8">
+<div>
+<h3 class="text-h1 font-h1">Revenue Trends</h3>
+<p class="text-body text-on-surface-variant">Monthly revenue performance across all channels</p>
+</div>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-surface-container-high rounded text-caption font-bold text-primary">Peak: Friday</span>
+<span class="px-3 py-1 bg-surface-container-low rounded text-caption font-bold text-on-surface-variant">Slowest: Monday</span>
+<span class="px-3 py-1 bg-tertiary-container text-white rounded text-caption font-bold">Best Hour: 8 PM</span>
+</div>
+</div>
+<!-- Chart Visual Placeholder -->
+<div class="w-full h-64 bg-slate-50 rounded-lg relative overflow-hidden group">
+<div class="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-primary/10 to-transparent"></div>
+<svg class="w-full h-full absolute inset-0" preserveaspectratio="none" viewbox="0 0 1000 200">
+<path d="M0,150 C50,140 100,180 150,160 C200,140 250,80 300,100 C350,120 400,40 450,60 C500,80 550,100 600,70 C650,40 700,90 750,50 C800,10 850,40 900,30 L1000,20 L1000,200 L0,200 Z" fill="url(#orangeGradient)" fill-opacity="0.2"></path>
+<path d="M0,150 C50,140 100,180 150,160 C200,140 250,80 300,100 C350,120 400,40 450,60 C500,80 550,100 600,70 C650,40 700,90 750,50 C800,10 850,40 900,30 L1000,20" fill="none" stroke="#b02f00" stroke-width="3"></path>
+<defs>
+<lineargradient id="orangeGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#ff5722"></stop>
+<stop offset="100%" stop-color="#ffffff"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Tooltip Marker -->
+<div class="absolute left-[45%] top-[55px] w-4 h-4 bg-primary border-4 border-white rounded-full shadow-lg"></div>
+<div class="absolute left-[46%] top-[20px] bg-on-surface text-white px-3 py-1.5 rounded-lg text-caption font-bold shadow-xl">PKR 142,500 (Jun 15)</div>
+</div>
+<div class="flex justify-between mt-4 px-2">
+<span class="text-caption text-on-surface-variant">Jun 01</span>
+<span class="text-caption text-on-surface-variant">Jun 08</span>
+<span class="text-caption text-on-surface-variant">Jun 15</span>
+<span class="text-caption text-on-surface-variant">Jun 22</span>
+<span class="text-caption text-on-surface-variant">Jun 30</span>
+</div>
+</div>
+<!-- Two-Panel Row -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-grid_gutter">
+<!-- Sales by Branch (58%) -->
+<div class="lg:col-span-7 bg-white rounded-xl border border-outline-variant shadow-sm p-6">
+<h3 class="text-h2 font-h2 mb-6">Sales by Branch</h3>
+<div class="space-y-5">
+<div class="space-y-2">
+<div class="flex justify-between text-body font-medium">
+<span>Gulshan-e-Iqbal</span>
+<span class="text-on-surface-variant">PKR 968,150</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[92%] rounded-full"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body font-medium">
+<span>Defense</span>
+<span class="text-on-surface-variant">PKR 742,300</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[70%] rounded-full opacity-80"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body font-medium">
+<span>Clifton</span>
+<span class="text-on-surface-variant">PKR 654,050</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[62%] rounded-full opacity-60"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-body font-medium">
+<span>Main Branch</span>
+<span class="text-on-surface-variant">PKR 483,000</span>
+</div>
+<div class="w-full h-3 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[45%] rounded-full opacity-40"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Order Type Distribution (42%) -->
+<div class="lg:col-span-5 bg-white rounded-xl border border-outline-variant shadow-sm p-6 flex flex-col">
+<h3 class="text-h2 font-h2 mb-6">Order Type Distribution</h3>
+<div class="flex-1 flex items-center justify-center relative">
+<!-- Simple CSS Donut Chart -->
+<div class="w-48 h-48 rounded-full border-[18px] border-primary-container relative flex items-center justify-center" style="border-right-color: #00628c; border-bottom-color: #5c647a;">
+<div class="text-center">
+<p class="text-caption font-bold text-on-surface-variant uppercase">Total</p>
+<p class="text-h1 font-bold">3,247</p>
+</div>
+</div>
+</div>
+<div class="mt-8 grid grid-cols-3 gap-2">
+<div class="text-center">
+<div class="w-2 h-2 rounded-full bg-primary-container mx-auto mb-1"></div>
+<p class="text-[11px] font-bold text-on-surface-variant">Dine-In</p>
+<p class="text-caption font-bold">52%</p>
+</div>
+<div class="text-center">
+<div class="w-2 h-2 rounded-full bg-tertiary mx-auto mb-1"></div>
+<p class="text-[11px] font-bold text-on-surface-variant">Delivery</p>
+<p class="text-caption font-bold">28%</p>
+</div>
+<div class="text-center">
+<div class="w-2 h-2 rounded-full bg-on-secondary-container mx-auto mb-1"></div>
+<p class="text-[11px] font-bold text-on-surface-variant">Takeaway</p>
+<p class="text-caption font-bold">20%</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Detailed Table Section -->
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+<div class="p-6 border-b border-outline-variant flex justify-between items-center">
+<h3 class="text-h2 font-h2">Daily Breakdown</h3>
+<button class="flex items-center gap-2 text-primary font-bold text-caption uppercase hover:underline">
+                        View Full Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-caption font-bold uppercase text-on-surface-variant tracking-wider">
+<th class="px-6 py-4">Date</th>
+<th class="px-6 py-4">Day</th>
+<th class="px-6 py-4">Orders</th>
+<th class="px-6 py-4">Revenue</th>
+<th class="px-6 py-4">Avg Order</th>
+<th class="px-6 py-4">Top Item</th>
+<th class="px-6 py-4">Payment Split</th>
+</tr>
+</thead>
+<tbody class="text-body">
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 border-b border-outline-variant">June 15, 2024</td>
+<td class="px-6 py-4 border-b border-outline-variant">Saturday</td>
+<td class="px-6 py-4 border-b border-outline-variant">154</td>
+<td class="px-6 py-4 border-b border-outline-variant font-medium">PKR 142,500</td>
+<td class="px-6 py-4 border-b border-outline-variant">PKR 925</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<span class="px-2 py-1 bg-surface-container-high rounded text-[11px] font-medium">Beef Burger</span>
+</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<div class="flex gap-1">
+<span class="w-3 h-3 rounded-full bg-green-500" title="Cash"></span>
+<span class="w-3 h-3 rounded-full bg-blue-500" title="Card"></span>
+<span class="w-3 h-3 rounded-full bg-yellow-500" title="Digital"></span>
+</div>
+</td>
+</tr>
+<tr class="bg-slate-50/50 hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 border-b border-outline-variant">June 14, 2024</td>
+<td class="px-6 py-4 border-b border-outline-variant">Friday</td>
+<td class="px-6 py-4 border-b border-outline-variant">142</td>
+<td class="px-6 py-4 border-b border-outline-variant font-medium">PKR 128,400</td>
+<td class="px-6 py-4 border-b border-outline-variant">PKR 904</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<span class="px-2 py-1 bg-surface-container-high rounded text-[11px] font-medium">Chicken Karahi</span>
+</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<div class="flex gap-1">
+<span class="w-3 h-3 rounded-full bg-green-500"></span>
+<span class="w-3 h-3 rounded-full bg-blue-500"></span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-surface-container transition-colors">
+<td class="px-6 py-4 border-b border-outline-variant">June 13, 2024</td>
+<td class="px-6 py-4 border-b border-outline-variant">Thursday</td>
+<td class="px-6 py-4 border-b border-outline-variant">118</td>
+<td class="px-6 py-4 border-b border-outline-variant font-medium">PKR 102,150</td>
+<td class="px-6 py-4 border-b border-outline-variant">PKR 865</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<span class="px-2 py-1 bg-surface-container-high rounded text-[11px] font-medium">Pizza Margh.</span>
+</td>
+<td class="px-6 py-4 border-b border-outline-variant">
+<div class="flex gap-1">
+<span class="w-3 h-3 rounded-full bg-blue-500"></span>
+<span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+</div>
+</td>
+</tr>
+</tbody>
+<tfoot>
+<tr class="bg-surface-container-highest text-on-surface font-bold">
+<td class="px-6 py-5 text-right uppercase tracking-wider text-caption" colspan="2">Total for Period</td>
+<td class="px-6 py-5">3,247</td>
+<td class="px-6 py-5">PKR 2,847,500</td>
+<td class="px-6 py-5 text-on-surface-variant font-medium">PKR 877 (Avg)</td>
+<td class="px-6 py-5">---</td>
+<td class="px-6 py-5">
+<span class="text-[11px] font-medium">65% Card / 35% Cash</span>
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>

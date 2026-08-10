@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Maitre D' POS - Order Terminal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#271813",
+                        "on-primary-container": "#541200",
+                        "on-surface": "#271813",
+                        "tertiary-container": "#007caf",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#fff1ed",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "secondary": "#565e74",
+                        "primary": "#b02f00",
+                        "primary-fixed": "#ffdbd1",
+                        "surface": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "background": "#fff8f6",
+                        "on-secondary-container": "#5c647a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface-variant": "#fadcd4",
+                        "on-surface-variant": "#5b4039",
+                        "surface-container": "#ffe9e4",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary-container": "#ff5722",
+                        "surface-container-highest": "#fadcd4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-tertiary-container": "#fcfcff",
+                        "inverse-on-surface": "#ffede8",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#907067",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container-high": "#ffe2da",
+                        "outline-variant": "#e4beb4",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fff8f6",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-surface": "#3e2c27",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "inverse-primary": "#ffb5a0",
+                        "tertiary-fixed": "#c8e6ff",
+                        "secondary-fixed": "#dae2fd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "page_margin": "24px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background overflow-hidden h-screen flex flex-col">
+<!-- TopNavBar Shell -->
+<header class="flex justify-between items-center h-16 px-6 w-full sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+<div class="flex items-center gap-related">
+<span class="text-xl font-black tracking-tighter text-orange-600">Maitre D' POS</span>
+<div class="ml-8 flex items-center bg-slate-100 rounded-lg px-3 py-1.5 gap-2 border border-slate-200">
+<span class="material-symbols-outlined text-slate-500 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body font-body outline-none w-48" placeholder="Search menu..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg border border-orange-100">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+<span class="font-h2 text-h2 uppercase tracking-tighter">Dine In</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-500 hover:text-orange-600 cursor-pointer">notifications</span>
+<span class="material-symbols-outlined text-slate-500 hover:text-orange-600 cursor-pointer">account_circle</span>
+<span class="material-symbols-outlined text-slate-500 hover:text-orange-600 cursor-pointer">settings</span>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-slate-950 w-20 md:w-64 border-r border-slate-800 shadow-2xl">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold">S1</div>
+<div class="hidden md:block">
+<p class="text-white text-xs font-semibold uppercase tracking-wider">Station 01</p>
+<p class="text-slate-500 text-[10px]">Main Dining Room</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">table_restaurant</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Floor Plan</span>
+</a>
+<a class="bg-orange-600 text-white rounded-lg mx-2 my-1 flex items-center p-3 gap-3" href="#">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">New Order</span>
+</a>
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Order History</span>
+</a>
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Inventory</span>
+</a>
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Reports</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-4 border-t border-slate-800">
+<button class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg mb-4 hidden md:block transition-colors">
+                    Quick Checkout
+                </button>
+<div class="space-y-1">
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Help</span>
+</a>
+<a class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all rounded-lg gap-3" href="#">
+<span class="material-symbols-outlined">lock_open</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Lock</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-20 md:ml-64 flex flex-col bg-slate-50">
+<!-- TOP SECTION (65% height): Menu Items -->
+<section class="h-[65%] flex flex-col">
+<!-- Category Bar -->
+<div class="bg-white px-6 py-3 border-b border-slate-200 flex items-center gap-4 overflow-x-auto no-scrollbar">
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-orange-600 text-white font-h2 text-h2 shadow-sm">All Items</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Popular</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Starters</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Main Courses</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Steaks</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Seafood</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Desserts</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Beverages</button>
+<button class="whitespace-nowrap px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 font-h2 text-h2 hover:bg-slate-50">Wine List</button>
+</div>
+<!-- Item Grid -->
+<div class="flex-1 overflow-y-auto p-page_margin custom-scrollbar">
+<div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-grid_gutter">
+<!-- Menu Cards -->
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A close-up shot of a gourmet beef steak served on a white ceramic plate, perfectly seared with grill marks. The plate is garnished with a sprig of fresh rosemary and a side of roasted garlic. The lighting is warm and dramatic, highlighting the rich textures and deep reddish-brown colors of the meat in a professional culinary style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAimckbD-N32Fdw2scCBeFMEU3PBDdm_rSCokrPpTruLKifU4B4Yhj1tnqmmPdqh6KgpcMN6mUfsGESUxjQ0mOGA7xL1IoOGbjSpzvBIUI3X5sMuayEf7cTsgqxco7KJJPTNtL3Rd44CrB3y8hXIFKsuBvID4JGRHVCm7SEUkpb9HDzDcchuhN8FcUeGDQ4eUSKsgMhBWcUa3XWtDGIXo2MCqRz-hX7OnXxptnLbSmvH8olC9f_up0dGUWlzfUQ4RVBtXD8HwsFEeKW"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$34.00</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Aged Ribeye Steak</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">12oz dry-aged with butter...</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A beautifully presented grilled salmon fillet with crispy golden skin, resting on a bed of vibrant green asparagus and wild rice. A lemon wedge and a dollop of herb butter garnish the top. The image has a bright, clean aesthetic with soft natural light enhancing the fresh orange and green tones of the dish." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeFj_irqMVA0Ofau-grqztSMN7dLTI4zytPvtWA5eLUNV-36phWy0UgsNdyuE0iLxGiRdaS6zJ4wsw_pKIfMo2y6oyW9D18paAUwYNhvx33YmtGYbiUYGS9Yw1uNh27YlKAfPsQ_20-TA6oOerov8IaOqzxJ5FDDXDAAN2I8bwdA6roOzNXPJobWOVvM1NMAHbaPgfwxrMZiKCr37oQ7f53mi-bh2VaxZHAK5eh1JFt4ksSrDJ0yZPf3z7-z_z3SZt4ThsSs6docP-"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$28.50</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Grilled Atlantic Salmon</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Lemon herb butter, wild rice</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A stack of three thick, fluffy buttermilk pancakes topped with a generous melting pat of butter and drizzled with glistening maple syrup. Fresh blueberries are scattered across the top and around the plate. The morning light creates a cozy, inviting atmosphere with warm golden highlights and soft shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPDSp_tU6SAcuPDfDMjbFmfIrWcKPpyJYNqmvrh0u2zSHpMP96UxKlmF2rOR-2xbgf5bKkn2gGxTsPPikpodfmeo2E8pURMS5nDYVDoho2aKrfMNtVlesbTY58wjWfpLL4DbVJiWwtonHhADQFDmGgJ94vlLULcbR3qysz-ZcXTAymP_X7-gjsKIZNW6qItgZCXQHw87b7UqOD1QyrmMRMR5lnJh0HABWwbt3RVauN3gjghKKcuy1zw87dHZKpXu6S3c8H_F_qQnpK"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$14.00</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Buttermilk Pancakes</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Maple syrup, fresh berries</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A bowl of fresh pasta tossed in a rich, vibrant tomato basil sauce, garnished with a large sprig of fresh basil and a dusting of grated parmesan cheese. The pasta is perfectly al dente, glistening under warm restaurant lighting that accentuates the deep reds and bright greens of the Italian ingredients." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5fVxtohCGVCRklcAJkk-FzbW1CV4F6CyxRRbSJUGMBG5AP_EWoqi-1g-HFYtzB1ZdGy9SuQR-L8qTuNWVB5i4jZi9UA4C-h9a8FuZ0eCD4KHtKyutmRy3i6LsrGdjtAuJuRErZjJPKkCxSwN47YJb_UeOzoO2xOzz8iR4Ok6wgO-eIN3te2St7V491AFSnP_7tahFn1k1n9uLbkRbMaOOx4YCqjLWCEen0x5mXMFJSETW2q3PAWa4gKUq5cqW4eOx0-QBySiyt1YW"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$18.00</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Rigatoni Pomodoro</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Basil, San Marzano tomato</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A crisp, vibrant Caesar salad in a white bowl, featuring crunchy romaine lettuce, large golden croutons, and thin shavings of high-quality parmesan cheese. The dressing is creamy and lightly coats the leaves. The setting is clean and high-contrast, emphasizing freshness and classic presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_TSzEPp1L4O_LE6y43JHVAXp2prSGQW2OgNvLqCVjI7TnLCjr_nJg8rzf-O9GvXXRikMMBZ8Q68gJAaW-EaxO5cuhT0WnJ_uCKZU0_bPFgzeckR7MLrn_XBnmGsxno5rZ79XWU3ZfKVD_pyFKuJjRNUmo5ZGBO0ZMBt0ifgKEZemlPlqvTzCXb-eAjSGcP-1hib6aM1VvtK62YkKHifZJru9SDziTjX72Vby9MRzLwsZt-vM4PnZ15-ckgj-9yRAgKHE6Gcy4GIJo"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$12.50</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Classic Caesar</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">House-made dressing</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="An assortment of fresh sushi rolls and nigiri beautifully arranged on a dark slate platter. The sushi features bright pink tuna, vibrant orange salmon, and fresh green cucumber. Ginger and wasabi are served on the side. The lighting is sophisticated and focused, highlighting the precision and artistry of Japanese cuisine." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUnYbC0XzL9sgUPq6cIX8ujfAADk8GQZiBhIv2ILSa7Gpc8fRwVag8j_QewWwEuAcrm99DY_QHVAtFJsk4GATQWC5sDnf1qcNX2Qm78v8djKqwGfFV4bArmrWvHS8nlVWHgw8NG7ziZbNX_o5JMqxzWWxt9DmLVYyof3JO37sw8OfbIBJMbhOXvM8Zy_W0HcYShfRW-AjiEy9qp3Y3m8vzkZ16NRjhmLYZsYmnXH6fDasWkr7YLC-HdBH4lPJ5xwb6vjEPVwUmKgx6"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$24.00</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Sushi Platter</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Chef's choice assorted</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A selection of artisanal cupcakes with piped swirls of pastel-colored frosting, decorated with edible pearls and tiny flowers. They are arranged on a elegant marble stand. The scene is bright and airy with a soft, romantic feel, perfect for a high-end dessert display." src="https://lh3.googleusercontent.com/aida-public/AB6AXuADTwk4k7rFi5jpCPVPg9c4-EeyfkJLBAvI4LMBCUpvJ6AIC7FxJPsHj07IyQMZWfScd-dH2PyvDeZIUCEXW53LC5AiMls5J1TZO51KzgmCAD7mh016LsLfHUZhIIjV-oM-ibmXMIIAXuu-RU2Z_dY6ZTNQHUdc4ybYIUGlFUY12Y_uiJ7EMv0zkSu2jglTL6tJvg-RSWaJIpxy-T9LvqQzvIUb4tqqddTrDcUttXrGTtHM6ZuaHMMsAn9z1k7PfNrvVF7ofqhKtp1m"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$9.00</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Signature Cupcakes</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Seasonal flavor selection</p>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer hover:border-orange-200 transition-all">
+<div class="aspect-[4/3] bg-slate-200 relative">
+<img class="w-full h-full object-cover" data-alt="A perfect latte with intricate heart-shaped latte art in a sleek white ceramic cup. The coffee is rich and brown with velvety white foam. It sits on a wooden table next to a folded linen napkin. The lighting is soft and natural, creating a warm, comfortable café vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEC-gp3B8a2Gc8fpqbm9DrR0wIViET3nNgOhk3Yk0G2q5db7cvoNOlNoKNRykClG1RF6TGtsW7jBfkS9eInJoIzrlkWballdkgz4d5nqhdO-JEAHxmXolwbKXxsonPgBMkzslzGNQWp9AJIGvKCpw9Cw-VoaSOKNOZap8BJpnr7vHIvcNzN1EaBcUKcwmCXBqJR8Hg5yozh5r9rcCppmCmsYMEuwqr4OLzma2agC924UPIhlIBwKGdvwsy4u2KlP1ZxLiEcd13ZG2Z"/>
+<div class="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-caption font-caption text-orange-600 font-bold">$5.50</div>
+</div>
+<div class="p-3">
+<h3 class="font-h2 text-h2 text-on-background line-clamp-1">Barista Latte</h3>
+<p class="text-caption font-caption text-slate-500 mt-1">Double shot, microfoam</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- BOTTOM BAR (35% height): Checkout Dock -->
+<section class="h-[35%] bg-white border-t-2 border-slate-200 flex flex-col md:flex-row shadow-[0_-4px_20px_rgba(0,0,0,0.05)] relative z-10">
+<!-- Left: Scrollable Cart Items -->
+<div class="w-full md:w-3/5 p-6 flex flex-col">
+<div class="flex justify-between items-center mb-4">
+<div class="flex items-center gap-2">
+<h2 class="font-h1 text-h1 text-slate-900">Current Order</h2>
+<span class="bg-orange-100 text-orange-600 text-caption font-bold px-2 py-0.5 rounded-full">3 Items</span>
+</div>
+<button class="text-slate-400 hover:text-red-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">delete</span>
+<span class="text-caption font-semibold">CLEAR ALL</span>
+</button>
+</div>
+<div class="flex-1 overflow-x-auto overflow-y-hidden custom-scrollbar flex items-center gap-4 pb-2">
+<!-- Cart Item Card -->
+<div class="min-w-[280px] h-full bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col justify-between hover:border-orange-200 transition-colors cursor-pointer">
+<div class="flex justify-between">
+<div>
+<h4 class="font-h2 text-h2 text-slate-900">Aged Ribeye Steak</h4>
+<p class="text-caption font-caption text-slate-500">Medium Rare, Extra Butter</p>
+</div>
+<span class="font-bold text-slate-900">$34.00</span>
+</div>
+<div class="flex justify-between items-center mt-4">
+<div class="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-2 py-1">
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">remove</span></button>
+<span class="font-bold text-sm px-1">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">add</span></button>
+</div>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">edit</span></button>
+</div>
+</div>
+<!-- Cart Item Card -->
+<div class="min-w-[280px] h-full bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col justify-between hover:border-orange-200 transition-colors cursor-pointer">
+<div class="flex justify-between">
+<div>
+<h4 class="font-h2 text-h2 text-slate-900">Classic Caesar</h4>
+<p class="text-caption font-caption text-slate-500">No Croutons</p>
+</div>
+<span class="font-bold text-slate-900">$12.50</span>
+</div>
+<div class="flex justify-between items-center mt-4">
+<div class="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-2 py-1">
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">remove</span></button>
+<span class="font-bold text-sm px-1">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">add</span></button>
+</div>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">edit</span></button>
+</div>
+</div>
+<!-- Cart Item Card -->
+<div class="min-w-[280px] h-full bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col justify-between hover:border-orange-200 transition-colors cursor-pointer">
+<div class="flex justify-between">
+<div>
+<h4 class="font-h2 text-h2 text-slate-900">Barista Latte</h4>
+<p class="text-caption font-caption text-slate-500">Oat Milk</p>
+</div>
+<span class="font-bold text-slate-900">$6.50</span>
+</div>
+<div class="flex justify-between items-center mt-4">
+<div class="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-2 py-1">
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">remove</span></button>
+<span class="font-bold text-sm px-1">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-orange-600"><span class="material-symbols-outlined text-sm">add</span></button>
+</div>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">edit</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right: Totals and Checkout -->
+<div class="w-full md:w-2/5 bg-slate-50 border-l border-slate-200 p-6 flex flex-col">
+<div class="space-y-2 mb-6">
+<div class="flex justify-between items-center">
+<span class="text-slate-500 font-h2 text-h2">Subtotal</span>
+<span class="text-slate-900 font-h2 text-h2">$53.00</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-slate-500 font-h2 text-h2">Tax (8%)</span>
+<span class="text-slate-900 font-h2 text-h2">$4.24</span>
+</div>
+<div class="flex justify-between items-center py-2 border-t border-slate-200 mt-2">
+<span class="text-slate-900 font-bold text-xl">Total</span>
+<span class="text-orange-600 font-bold text-2xl">$57.24</span>
+</div>
+</div>
+<div class="flex gap-4 mt-auto">
+<button class="flex-1 bg-white border border-slate-200 text-slate-600 font-bold py-4 rounded-xl hover:bg-slate-50 active:scale-95 transition-all">
+                            Save Order
+                        </button>
+<button class="flex-[2] bg-orange-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-orange-200 flex items-center justify-center gap-2 hover:bg-orange-700 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span>Collect Payment</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Payment Modal Overlay (Hidden by Default in standard CSS, but shown here as requested) -->
+<!-- Note: To see the page content clearly, this is commented as a structural guide or kept with 'hidden' class -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 hidden">
+<div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h2 class="text-display font-display text-slate-900">Payment Selection</h2>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">close</span></button>
+</div>
+<div class="p-8">
+<div class="text-center mb-8">
+<p class="text-slate-500 font-h2 text-h2 mb-1">Amount Due</p>
+<p class="text-4xl font-black text-slate-900">$57.24</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-orange-600 bg-orange-50 text-orange-600 transition-all group">
+<span class="material-symbols-outlined text-4xl mb-2" data-weight="fill" style="font-variation-settings: 'FILL' 1;">credit_card</span>
+<span class="font-bold text-lg">Card Terminal</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-orange-200 bg-slate-50 hover:bg-white transition-all group">
+<span class="material-symbols-outlined text-4xl mb-2 text-slate-400 group-hover:text-orange-500">payments</span>
+<span class="font-bold text-lg text-slate-600 group-hover:text-slate-900">Cash Payment</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-orange-200 bg-slate-50 hover:bg-white transition-all group">
+<span class="material-symbols-outlined text-4xl mb-2 text-slate-400 group-hover:text-orange-500">qr_code_2</span>
+<span class="font-bold text-lg text-slate-600 group-hover:text-slate-900">Mobile Pay</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-slate-100 hover:border-orange-200 bg-slate-50 hover:bg-white transition-all group">
+<span class="material-symbols-outlined text-4xl mb-2 text-slate-400 group-hover:text-orange-500">confirmation_number</span>
+<span class="font-bold text-lg text-slate-600 group-hover:text-slate-900">Gift Card</span>
+</button>
+</div>
+</div>
+<div class="p-6 bg-slate-50 border-t border-slate-100 flex gap-4">
+<button class="flex-1 bg-white border border-slate-200 text-slate-600 font-bold py-3 rounded-xl">Split Bill</button>
+<button class="flex-1 bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-100">Process Transaction</button>
+</div>
+</div>
+</div>
+</body></html>

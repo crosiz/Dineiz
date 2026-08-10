@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Maître D' POS | QR Ordering Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#3b0900",
+                    "on-error": "#ffffff",
+                    "surface-container": "#ffe9e4",
+                    "surface-dim": "#f1d4cc",
+                    "outline": "#907067",
+                    "on-tertiary-container": "#fcfcff",
+                    "on-error-container": "#93000a",
+                    "surface-variant": "#fadcd4",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-bright": "#fff8f6",
+                    "primary": "#b02f00",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-primary-container": "#541200",
+                    "tertiary": "#00628c",
+                    "outline-variant": "#e4beb4",
+                    "primary-fixed": "#ffdbd1",
+                    "primary-container": "#ff5722",
+                    "on-secondary-fixed": "#131b2e",
+                    "surface-container-low": "#fff1ed",
+                    "tertiary-fixed-dim": "#86cfff",
+                    "surface": "#fff8f6",
+                    "secondary-container": "#dae2fd",
+                    "tertiary-container": "#007caf",
+                    "on-surface": "#271813",
+                    "secondary-fixed": "#dae2fd",
+                    "inverse-surface": "#3e2c27",
+                    "tertiary-fixed": "#c8e6ff",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "on-surface-variant": "#5b4039",
+                    "on-primary-fixed-variant": "#862200",
+                    "error-container": "#ffdad6",
+                    "surface-container-high": "#ffe2da",
+                    "secondary": "#565e74",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "background": "#fff8f6",
+                    "surface-container-highest": "#fadcd4",
+                    "on-tertiary-fixed": "#001e2e",
+                    "on-primary": "#ffffff",
+                    "on-background": "#271813",
+                    "on-tertiary-fixed-variant": "#004c6d",
+                    "inverse-primary": "#ffb5a0",
+                    "on-secondary-container": "#5c647a",
+                    "surface-tint": "#b02f00",
+                    "on-tertiary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#ffede8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "element": "16px",
+                    "section": "24px",
+                    "related": "8px",
+                    "page_margin": "24px",
+                    "grid_gutter": "16px"
+            },
+            "fontFamily": {
+                    "body": ["Inter"],
+                    "display": ["Inter"],
+                    "h2": ["Inter"],
+                    "caption": ["Inter"],
+                    "h1": ["Inter"]
+            },
+            "fontSize": {
+                    "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Side Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 z-50 bg-inverse-surface flex flex-col py-6 gap-related shadow-xl">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">qr_code_2</span>
+</div>
+<div>
+<h2 class="font-h2 text-h2 font-black text-primary-fixed leading-none">Table &amp; QR</h2>
+<p class="font-caption text-caption text-outline-variant">Premium Management</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-surface-variant hover:text-white flex items-center px-4 py-3 mx-2 hover:bg-surface-variant/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-h2 text-h2">Overview</span>
+</a>
+<a class="text-surface-variant hover:text-white flex items-center px-4 py-3 mx-2 hover:bg-surface-variant/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined mr-3">restaurant</span>
+<span class="font-h2 text-h2">Operations</span>
+</a>
+<a class="bg-primary text-on-primary rounded-lg mx-2 flex items-center px-4 py-3 shadow-md translate-x-1 duration-150" href="#">
+<span class="material-symbols-outlined mr-3">qr_code_2</span>
+<span class="font-h2 text-h2">QR Ordering</span>
+</a>
+<a class="text-surface-variant hover:text-white flex items-center px-4 py-3 mx-2 hover:bg-surface-variant/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined mr-3">business</span>
+<span class="font-h2 text-h2">Business</span>
+</a>
+<a class="text-surface-variant hover:text-white flex items-center px-4 py-3 mx-2 hover:bg-surface-variant/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined mr-3">bar_chart</span>
+<span class="font-h2 text-h2">Reports</span>
+</a>
+</nav>
+<div class="mt-auto px-6">
+<div class="flex items-center gap-3 py-4 border-t border-surface-variant/20">
+<img alt="Administrator Profile" class="w-8 h-8 rounded-full border-2 border-primary-fixed" data-alt="A professional headshot of a restaurant administrator in a clean-cut corporate environment. The person is wearing a modern charcoal blazer over a crisp white shirt, looking confident and approachable. The lighting is soft and professional with a blurred high-end restaurant interior in the background, maintaining a premium and authoritative tone." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTj6cdxwF59MXuaeIEU0mPdVtIkr99Nc4onocynUjI1A7L1R7kBA1e0S-0cWLNjwN1yGF8nChUg4xRHO0-61Gx_fmt4ebUPLCZO6BwJPpkTwolMCFFoZrwj2skwUqx7LfY7Y5JMkqv03EomY74OVQpqgp3Qu7T-ELhkwKxR7kvVf2ujGx3e_MXieUGQLT8UfHu9TFjrHr_PibmKvI0p0-aKQvlAzC9sF6r8xWu2L7ERR2hYThW3McqnNArB8YEJd2w76Oa1-CZN_uJ"/>
+<div class="overflow-hidden">
+<p class="text-white text-xs font-bold truncate">Admin User</p>
+<p class="text-outline-variant text-[10px] truncate">Maitre D' POS</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 min-h-screen">
+<!-- Top Bar -->
+<header class="flex justify-between items-center w-full px-section h-16 bg-surface shadow-sm sticky top-0 z-40">
+<div class="flex items-center gap-2">
+<span class="text-outline text-xs font-bold tracking-widest uppercase">Operations</span>
+<span class="material-symbols-outlined text-[10px] text-outline">arrow_forward_ios</span>
+<span class="text-primary text-xs font-bold tracking-widest uppercase">QR Ordering</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">help</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+</div>
+</header>
+<div class="p-page_margin space-y-section">
+<!-- Page Title & Actions -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="font-display text-display text-on-surface">QR Ordering</h1>
+<p class="font-body text-body text-on-surface-variant">Let customers scan, order, and pay — directly from their phone.</p>
+</div>
+<div class="flex gap-related">
+<button class="h-10 px-element rounded-lg border border-outline text-on-surface font-h2 flex items-center gap-2 hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined text-xl">download</span>
+                        Download All QR Codes
+                    </button>
+<button class="h-10 px-element rounded-lg bg-primary-container text-white font-h2 flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-md" onclick="document.getElementById('modal-generate').classList.remove('hidden')">
+<span class="material-symbols-outlined text-xl">add</span>
+                        Generate New QR
+                    </button>
+</div>
+</div>
+<!-- Stats Row -->
+<div class="grid grid-cols-4 gap-grid_gutter">
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex items-center gap-4 border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">table_restaurant</span>
+</div>
+<div>
+<p class="font-caption text-caption text-on-surface-variant">Active QR Tables</p>
+<p class="font-display text-[22px] leading-none mt-1">12</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex items-center gap-4 border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">qr_code_scanner</span>
+</div>
+<div>
+<p class="font-caption text-caption text-on-surface-variant">Scans Today</p>
+<p class="font-display text-[22px] leading-none mt-1">84</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex items-center gap-4 border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_basket</span>
+</div>
+<div>
+<p class="font-caption text-caption text-on-surface-variant">Orders via QR</p>
+<p class="font-display text-[22px] leading-none mt-1">31</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] flex items-center gap-4 border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div>
+<p class="font-caption text-caption text-on-surface-variant">QR Revenue</p>
+<p class="font-display text-[22px] leading-none mt-1">PKR 18,450</p>
+</div>
+</div>
+</div>
+<!-- Main Layout: 2 Columns -->
+<div class="flex gap-section items-start">
+<!-- Left: Table List (60%) -->
+<div class="w-3/5 space-y-section">
+<!-- Filter Bar -->
+<div class="bg-surface-container-lowest p-related rounded-xl shadow-sm border border-outline-variant/30 flex items-center gap-related">
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+<input class="w-full pl-10 pr-4 h-10 rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary focus:border-primary" placeholder="Search table or branch..." type="text"/>
+</div>
+<select class="h-10 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body">
+<option>All Branches</option>
+<option>Main Downtown</option>
+<option>Express Branch</option>
+</select>
+<select class="h-10 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body">
+<option>All Floors</option>
+<option>Ground Floor</option>
+<option>Rooftop</option>
+</select>
+<div class="h-10 flex items-center bg-surface-container-low rounded-lg p-1">
+<button class="px-3 h-8 rounded-md bg-white shadow-sm text-xs font-bold text-primary">All</button>
+<button class="px-3 h-8 rounded-md text-xs font-bold text-on-surface-variant">Active</button>
+</div>
+</div>
+<!-- Grid of Tables -->
+<div class="grid grid-cols-3 gap-grid_gutter">
+<!-- Table Card Template (Repeated 12 times in actual use) -->
+<script>
+                            const tables = [
+                                { id: 1, floor: 'Ground', branch: 'Main', scans: 12, status: true },
+                                { id: 2, floor: 'Ground', branch: 'Main', scans: 8, status: true },
+                                { id: 3, floor: 'Ground', branch: 'Main', scans: 4, status: false },
+                                { id: 4, floor: 'Rooftop', branch: 'Main', scans: 15, status: true },
+                                { id: 5, floor: 'Rooftop', branch: 'Main', scans: 0, status: true },
+                                { id: 6, floor: 'Ground', branch: 'Express', scans: 22, status: true },
+                                { id: 7, floor: 'Ground', branch: 'Express', scans: 5, status: true },
+                                { id: 8, floor: 'Ground', branch: 'Express', scans: 1, status: true },
+                                { id: 9, floor: 'Ground', branch: 'Main', scans: 9, status: false },
+                                { id: 10, floor: 'VIP', branch: 'Main', scans: 0, status: true },
+                                { id: 11, floor: 'VIP', branch: 'Main', scans: 3, status: true },
+                                { id: 12, floor: 'Lobby', branch: 'Main', scans: 6, status: true }
+                            ];
+
+                            tables.forEach(t => {
+                                document.write(`
+                                    <div class="bg-white p-element rounded-xl border border-outline-variant/40 hover:shadow-md transition-all group">
+                                        <div class="flex justify-between items-start mb-related">
+                                            <div class="w-16 h-16 bg-surface-container rounded-lg flex items-center justify-center overflow-hidden border border-outline-variant/20">
+                                                <span class="material-symbols-outlined text-3xl text-primary opacity-30">qr_code_2</span>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" ${t.status ? 'checked' : ''} class="sr-only peer">
+                                                <div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                            </label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h3 class="font-h1 text-h1 text-on-surface">Table ${t.id}</h3>
+                                            <p class="text-caption text-on-surface-variant">${t.floor} Floor</p>
+                                        </div>
+                                        <div class="flex items-center justify-between mb-4">
+                                            <span class="px-2 py-0.5 rounded-full bg-surface-container-high text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">${t.branch} Branch</span>
+                                            <div class="flex items-center gap-1 text-on-surface-variant">
+                                                <span class="material-symbols-outlined text-sm">visibility</span>
+                                                <span class="text-[10px] font-bold">${t.scans} scans</span>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-3 gap-1 pt-3 border-t border-dashed border-outline-variant">
+                                            <button title="Preview" class="h-8 flex items-center justify-center rounded hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-lg">open_in_new</span></button>
+                                            <button title="Download" class="h-8 flex items-center justify-center rounded hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-lg">download</span></button>
+                                            <button title="Regenerate" class="h-8 flex items-center justify-center rounded hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-lg">refresh</span></button>
+                                        </div>
+                                    </div>
+                                `);
+                            });
+                        </script>
+</div>
+</div>
+<!-- Right: Experience Settings (40%) -->
+<div class="w-2/5 sticky top-20">
+<div class="bg-surface-container-lowest rounded-2xl shadow-lg border border-outline-variant/30 overflow-hidden">
+<div class="p-element bg-inverse-surface text-white">
+<h2 class="font-h1 text-h1 flex items-center gap-2">
+<span class="material-symbols-outlined">settings_suggest</span>
+                                QR Experience Settings
+                            </h2>
+<p class="text-xs text-outline-variant mt-1">Configure how customers interact with your digital menu.</p>
+</div>
+<div class="p-section space-y-section max-h-[716px] overflow-y-auto custom-scrollbar">
+<!-- Ordering Mode -->
+<section>
+<label class="block font-h2 text-h2 text-on-surface mb-element">Ordering Mode</label>
+<div class="grid grid-cols-1 gap-related">
+<label class="flex items-start gap-3 p-3 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer">
+<input checked="" class="mt-1 text-primary focus:ring-primary" name="order_mode" type="radio"/>
+<div>
+<p class="font-h2 text-h2 text-on-surface leading-none">Instant Checkout</p>
+<p class="text-caption text-on-surface-variant mt-1">Customers scan, order, and pay before submission.</p>
+</div>
+</label>
+<label class="flex items-start gap-3 p-3 rounded-xl border border-outline-variant hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="mt-1 text-primary focus:ring-primary" name="order_mode" type="radio"/>
+<div>
+<p class="font-h2 text-h2 text-on-surface leading-none">Open Tab</p>
+<p class="text-caption text-on-surface-variant mt-1">Orders go to kitchen; bill is settled later at counter.</p>
+</div>
+</label>
+</div>
+</section>
+<!-- Menu Display -->
+<section class="space-y-element">
+<label class="block font-h2 text-h2 text-on-surface">Menu Display</label>
+<div class="flex items-center justify-between">
+<span class="text-body text-on-surface-variant">Show High-Res Images</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-body text-on-surface-variant">Allow Guest Reviews</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</section>
+<!-- Payment Options -->
+<section>
+<label class="block font-h2 text-h2 text-on-surface mb-element">Accepted Payment Methods</label>
+<div class="grid grid-cols-2 gap-related">
+<div class="flex items-center gap-2 p-2 bg-surface-container rounded-lg">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-bold">JazzCash</span>
+</div>
+<div class="flex items-center gap-2 p-2 bg-surface-container rounded-lg">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-bold">EasyPaisa</span>
+</div>
+<div class="flex items-center gap-2 p-2 bg-surface-container rounded-lg">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-bold">Credit/Debit Card</span>
+</div>
+<div class="flex items-center gap-2 p-2 bg-surface-container rounded-lg">
+<input class="rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-bold">Pay at Counter</span>
+</div>
+</div>
+</section>
+<!-- Branding -->
+<section class="space-y-element">
+<label class="block font-h2 text-h2 text-on-surface">Digital Branding</label>
+<div>
+<p class="text-[10px] uppercase font-bold text-outline tracking-wider mb-1">Welcome Message</p>
+<textarea class="w-full rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary focus:border-primary px-3 py-2" placeholder="e.g. Welcome to The Grand Bistro! Select your meal below." rows="2"></textarea>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person_alert</span>
+<span class="text-body text-on-surface-variant font-medium">Waiter Call Button</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</section>
+</div>
+<div class="p-section border-t border-outline-variant/30 bg-surface-container-low">
+<button class="w-full py-4 rounded-xl bg-primary-container text-white font-h1 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">save</span>
+                                Save QR Settings
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal: Generate QR Code -->
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm hidden" id="modal-generate">
+<div class="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+<div class="px-section py-element flex justify-between items-center border-b border-outline-variant/30">
+<h3 class="font-h1 text-h1 text-on-surface">Generate New QR Code</h3>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors" onclick="document.getElementById('modal-generate').classList.add('hidden')">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-section grid grid-cols-2 gap-section">
+<!-- Form Fields -->
+<div class="space-y-element">
+<div class="space-y-related">
+<label class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Select Branch</label>
+<select class="w-full h-11 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary">
+<option>Main Downtown</option>
+<option>Express Branch</option>
+</select>
+</div>
+<div class="grid grid-cols-2 gap-element">
+<div class="space-y-related">
+<label class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Floor</label>
+<input class="w-full h-11 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary" placeholder="e.g. Ground" type="text"/>
+</div>
+<div class="space-y-related">
+<label class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Table #</label>
+<input class="w-full h-11 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary" placeholder="00" type="number"/>
+</div>
+</div>
+<div class="space-y-related">
+<label class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Table Label (Optional)</label>
+<input class="w-full h-11 px-3 rounded-lg border-outline-variant bg-surface-container-low text-body focus:ring-primary" placeholder="e.g. Window Side" type="text"/>
+</div>
+<div class="space-y-related">
+<label class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Seating Capacity</label>
+<div class="flex items-center gap-related">
+<button class="w-11 h-11 rounded-lg bg-surface-container-high flex items-center justify-center">-</button>
+<div class="flex-1 h-11 flex items-center justify-center border border-outline-variant rounded-lg font-bold">4</div>
+<button class="w-11 h-11 rounded-lg bg-surface-container-high flex items-center justify-center">+</button>
+</div>
+</div>
+</div>
+<!-- Preview Area -->
+<div class="bg-surface-container rounded-2xl flex flex-col items-center justify-center p-section text-center relative overflow-hidden">
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#b02f00 0.5px, transparent 0.5px); background-size: 16px 16px;"></div>
+<div class="relative w-40 h-40 bg-white p-3 rounded-2xl shadow-lg mb-element border-2 border-primary/20">
+<img alt="QR Code Preview" class="w-full h-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtK-TbkQnBuRpiXW5ozElNEu43B245HbxRh00b-_fJ51OPSvzG8DlLRXby0bwtXuzYpO79ZiR-xvqHghC6GypAObTSfUvJtdlxcEtSt5vbiHy8DYZ2oxFPzOK-puHXVvM_qNaMWLlb1y0nXTRpeySOuI2QBC8PRpwfHctA6dC0Dms_VDutB67ObTagZTY0IEydooOzRYoIA-8RS8aoNVeMiGvxX96uMD1ZoMxIUDxc3nBKvi_hT6N6NZ1XWXR73teVfc2n3CbNlmed"/>
+</div>
+<p class="font-h2 text-h2 text-on-surface">Table 01</p>
+<p class="text-caption text-on-surface-variant mt-1">Main Downtown - Ground Floor</p>
+<div class="mt-section flex gap-related">
+<button class="px-4 py-2 bg-white rounded-lg text-xs font-bold border border-outline-variant shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">palette</span>
+                            Customize Style
+                        </button>
+</div>
+</div>
+</div>
+<div class="p-section bg-surface-container-low border-t border-outline-variant/30 flex justify-end gap-element">
+<button class="px-section py-2.5 rounded-lg border border-outline text-on-surface font-h2 hover:bg-surface-container-high transition-all" onclick="document.getElementById('modal-generate').classList.add('hidden')">Cancel</button>
+<button class="px-section py-2.5 rounded-lg bg-primary-container text-white font-h2 shadow-md hover:opacity-90 active:scale-95 transition-all">Confirm &amp; Generate</button>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interactions for toggles
+        document.querySelectorAll('input[type="checkbox"]').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const parent = this.closest('.bg-white');
+                if (parent) {
+                    if (this.checked) {
+                        parent.style.opacity = '1';
+                    } else {
+                        parent.style.opacity = '0.6';
+                    }
+                }
+            });
+        });
+
+        // Close modal on escape
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('modal-generate').classList.add('hidden');
+            }
+        });
+    </script>
+</body></html>

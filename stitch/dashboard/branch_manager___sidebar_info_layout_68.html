@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MaitreD Pro | Clifton Branch Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#907067",
+                        "inverse-on-surface": "#ffede8",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-primary-fixed": "#3b0900",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container": "#ffe9e4",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary-container": "#ff5722",
+                        "surface-container-highest": "#fadcd4",
+                        "on-primary-fixed-variant": "#862200",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "tertiary-fixed": "#c8e6ff",
+                        "secondary-fixed": "#dae2fd",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-surface": "#3e2c27",
+                        "surface-bright": "#fff8f6",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container-high": "#ffe2da",
+                        "outline-variant": "#e4beb4",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "secondary": "#565e74",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "surface-container-low": "#fff1ed",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#541200",
+                        "on-surface": "#271813",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-secondary-container": "#5c647a",
+                        "surface-variant": "#fadcd4",
+                        "surface": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "background": "#fff8f6",
+                        "primary-fixed": "#ffdbd1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .chart-gradient { background: linear-gradient(180deg, rgba(255, 87, 34, 0.1) 0%, rgba(255, 87, 34, 0) 100%); }
+        .pulse-red { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar (Left) -->
+<aside class="fixed left-0 top-0 h-screen w-64 bg-slate-950 flex flex-col py-6 z-50 border-r border-slate-800">
+<div class="px-6 mb-8">
+<h1 class="text-white font-black text-lg tracking-tight uppercase">MaitreD Pro</h1>
+<div class="mt-4 p-3 bg-slate-900 rounded-xl border border-slate-800">
+<p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">My Branch</p>
+<p class="text-white font-semibold text-sm">Clifton Branch</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1 px-3 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 bg-slate-900 text-orange-500 border-r-4 border-orange-600 font-medium text-sm transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">live_tv</span>
+<span>Live Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span>Menu</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">floor</span>
+<span>Floor Plans</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">oven_gen</span>
+<span>KDS</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span>Staff</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">schedule</span>
+<span>Shifts</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Reports</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200 text-sm font-medium" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="px-6 mt-6">
+<button class="w-full bg-orange-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-orange-900/20 active:scale-95 transition-transform">
+                New Reservation
+            </button>
+</div>
+</aside>
+<!-- Branch Status Sidebar (Right) -->
+<aside class="fixed right-0 top-0 h-screen w-72 bg-white flex flex-col p-6 z-50 border-l border-slate-200 overflow-y-auto">
+<div class="space-y-8">
+<!-- Branch Location Info -->
+<div class="bg-gradient-to-br from-primary-container to-[#FF8A50] rounded-2xl p-5 text-white shadow-lg">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined bg-white/20 p-2 rounded-xl">location_on</span>
+<h3 class="font-bold text-lg leading-tight">Clifton Branch</h3>
+</div>
+<p class="text-sm opacity-90 font-medium">Wednesday, April 23 2026</p>
+<div class="mt-6 pt-4 border-t border-white/20 space-y-4">
+<div class="flex items-center gap-3">
+<span class="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></span>
+<span class="text-sm font-semibold">Open since 09:00 AM</span>
+</div>
+<div class="flex items-center gap-3 opacity-90">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-sm font-medium">Closing: 11:00 PM</span>
+</div>
+</div>
+</div>
+<!-- Shift Info -->
+<div>
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-xs font-black text-slate-500 uppercase tracking-widest">Active Shift</h4>
+<button class="text-xs font-bold text-primary hover:underline">Change</button>
+</div>
+<div class="bg-slate-50 border border-slate-100 rounded-xl p-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900">Ahmed</p>
+<p class="text-[10px] font-bold text-slate-500 uppercase">Cashier</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Staffing Summary -->
+<div>
+<h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">On-Duty Staff</h4>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<img alt="Staff" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_x6AnL1WAeO8BOkgji9kYxsC6Bg2bLOuXyusQnFvixupI0tdHpXOZxK7s610HYgde7vj80Pr9rTlu__pMQdjo6rXda6twS-6LxjyZL18H7ORN62FYLvrieecLtBE5F2HbU-7LddljPfJTtD_nEVMlaoKPdApFiTHA3fwAFC85hTHJQEcFiF62dU4i1nbqxqIkgZZV8_2nmjSbWV8Z2AN1pDVSE_X80UNu_4SmEeHk5Bhk1VNCZx93Jk_nly0XjQQZXjfX_pf8q3dd"/>
+<span class="text-sm font-medium text-slate-700">Sarah J.</span>
+</div>
+<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded">Active</span>
+</div>
+<div class="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<img alt="Staff" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSZ-_xgPMoedu7hzpsrKpWXoYrJmtMaX0xLvA4kMHRT-vfvvCwaS54DJPWWYU_BO6e_yn-GNhkqh2oANKOOM2KqdA1QFfP-Ca_-wr5u0V7RlmmpYmrA5OfiZx5wEld7Ykrt7DAo5Dp9on_klvBmMCbtxF2UuXbzVnJ680UpwjZKZhkZENM1-cAbPxwuP6eu5zGJFTJi7USdYPZY2hnzbzbiJdBGrdIb4q22FCM11HoPpPtuBVDnH7Ljs1rPF4cmUSw1gtxM4Xh6ebA"/>
+<span class="text-sm font-medium text-slate-700">Mike R.</span>
+</div>
+<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">Break</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-64 mr-72 min-h-screen">
+<!-- TopAppBar -->
+<header class="h-16 px-8 bg-white flex justify-between items-center sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+<h2 class="font-h1 text-h1 text-slate-900">Good morning, Ahmad ☀️</h2>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-px bg-slate-200 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-slate-900">Ahmad Khan</p>
+<p class="text-[10px] text-slate-500 uppercase font-semibold">Branch Manager</p>
+</div>
+<img alt="Executive Chef Profile" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8v06RUPERCIWbjXKK7i1dmaPGuQRDQgTyI4MSrvRFUtYvc2Q1rk4Qqvgxg_rFn698-P7vkD_dr8U8ESnKzvBOVPaa766WsoRBkCYowTQOJCWHbhhAf1sHLGzbdhgP6-m7O-HbUThm-8_7wrSfTLi39KE8NHKie5Df_7dHuNd_5p4HpwCxPbCV4gczr-3tptp9OZpFXyMvXpmMONkoYJ3Z6B-mwbjK9y2bJgXTYxp0MIOZKXl-iPZpsHbHFwjXKiMU5qdJvGzyv2ff"/>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-8 space-y-6">
+<!-- KPI Cards - Reorganized into 2x2 grid -->
+<section class="grid grid-cols-2 gap-6">
+<!-- Revenue -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between">
+<div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Branch Revenue Today</p>
+<h3 class="text-3xl font-black text-slate-900">PKR 12,450</h3>
+<p class="text-green-600 text-xs font-bold mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">trending_up</span> +12% vs yesterday
+                        </p>
+</div>
+<div class="w-14 h-14 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">payments</span>
+</div>
+</div>
+<!-- Orders -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between">
+<div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Orders Today</p>
+<h3 class="text-3xl font-black text-slate-900">34</h3>
+<p class="text-slate-400 text-xs font-medium mt-2">Avg. Prep Time: 14 mins</p>
+</div>
+<div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">inventory_2</span>
+</div>
+</div>
+<!-- Tables -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between">
+<div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Tables Occupied</p>
+<h3 class="text-3xl font-black text-slate-900">6/12</h3>
+<div class="w-32 h-2.5 bg-slate-100 rounded-full mt-4 overflow-hidden">
+<div class="h-full bg-orange-500 w-1/2"></div>
+</div>
+</div>
+<div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">chair</span>
+</div>
+</div>
+<!-- Staff (Total Count) -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-start justify-between">
+<div>
+<p class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Staff on Shift</p>
+<h3 class="text-3xl font-black text-slate-900">3</h3>
+<div class="flex -space-x-2 mt-4">
+<img alt="Staff" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_x6AnL1WAeO8BOkgji9kYxsC6Bg2bLOuXyusQnFvixupI0tdHpXOZxK7s610HYgde7vj80Pr9rTlu__pMQdjo6rXda6twS-6LxjyZL18H7ORN62FYLvrieecLtBE5F2HbU-7LddljPfJTtD_nEVMlaoKPdApFiTHA3fwAFC85hTHJQEcFiF62dU4i1nbqxqIkgZZV8_2nmjSbWV8Z2AN1pDVSE_X80UNu_4SmEeHk5Bhk1VNCZx93Jk_nly0XjQQZXjfX_pf8q3dd"/>
+<img alt="Staff" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSZ-_xgPMoedu7hzpsrKpWXoYrJmtMaX0xLvA4kMHRT-vfvvCwaS54DJPWWYU_BO6e_yn-GNhkqh2oANKOOM2KqdA1QFfP-Ca_-wr5u0V7RlmmpYmrA5OfiZx5wEld7Ykrt7DAo5Dp9on_klvBmMCbtxF2UuXbzVnJ680UpwjZKZhkZENM1-cAbPxwuP6eu5zGJFTJi7USdYPZY2hnzbzbiJdBGrdIb4q22FCM11HoPpPtuBVDnH7Ljs1rPF4cmUSw1gtxM4Xh6ebA"/>
+<img alt="Staff" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJ-dXxfB063_1ELD4vouK6HnSnAm1jum7R4u7QRZhvzrbX6cwnDvN0iGG3Fn7X1aK2W_J3IKHTCAr3IjPvjKmqcIjYF5_7-pEu-zvag20sSOVG2x5kKWS13_EKlB6n_iycQDjSihqRCcOeu1c2eiNzL4DwG3CB5B5J7z092YgJCwEAGBAUyUyfKwfYOV0EJbBPiV3t9l036Iu4auvWccHemS5Bkjx-nKe8TRmtDUEybNCjPrti9rpEZ44B6Gvb0E6X85CeOrTAUjF_"/>
+</div>
+</div>
+<div class="w-14 h-14 bg-green-50 text-green-600 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">groups</span>
+</div>
+</div>
+</section>
+<!-- Chart & Live Status Side-by-Side -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Hourly Orders Chart -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-full flex flex-col">
+<div class="flex items-center justify-between mb-8">
+<h4 class="font-h2 text-h2 text-slate-900">Order Volume Analysis</h4>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-primary rounded-full"></span>
+<span class="text-xs font-medium text-slate-500">Orders/Hour</span>
+</div>
+</div>
+<div class="relative flex-1 min-h-[200px] w-full flex items-end justify-between px-2">
+<div class="absolute inset-0 border-b border-slate-100"></div>
+<div class="absolute inset-x-0 top-1/2 border-b border-slate-50"></div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/10 rounded-t-lg relative" style="height: 30%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">9AM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/15 rounded-t-lg relative" style="height: 45%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">11AM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/40 rounded-t-lg relative" style="height: 85%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">1PM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/25 rounded-t-lg relative" style="height: 55%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">3PM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/30 rounded-t-lg relative" style="height: 60%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">5PM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/60 rounded-t-lg relative" style="height: 95%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">7PM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/50 rounded-t-lg relative" style="height: 80%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">9PM</span>
+</div>
+<div class="flex-1 flex flex-col items-center gap-2">
+<div class="w-full bg-primary/10 rounded-t-lg relative" style="height: 20%">
+<div class="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-primary rounded-full ring-4 ring-primary/20"></div>
+</div>
+<span class="text-[10px] font-bold text-slate-400">11PM</span>
+</div>
+</div>
+</div>
+<!-- Live Order Status Summary -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col h-full">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<span class="w-3 h-3 bg-red-500 rounded-full pulse-red"></span>
+<h4 class="font-h2 text-h2 text-slate-900">Live Order Status</h4>
+</div>
+<button class="text-primary font-bold text-sm flex items-center gap-1 hover:underline">
+                            View Monitor <span class="material-symbols-outlined text-sm">open_in_new</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-4 flex-1">
+<div class="p-6 rounded-2xl bg-orange-50/50 border border-orange-100 flex flex-col items-center justify-center text-center">
+<p class="text-3xl font-black text-amber-600">2</p>
+<p class="text-[10px] font-black text-amber-700 tracking-widest uppercase mt-2">Pending</p>
+</div>
+<div class="p-6 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col items-center justify-center text-center">
+<p class="text-3xl font-black text-blue-600">5</p>
+<p class="text-[10px] font-black text-blue-700 tracking-widest uppercase mt-2">In Kitchen</p>
+</div>
+<div class="p-6 rounded-2xl bg-green-50/50 border border-green-100 flex flex-col items-center justify-center text-center">
+<p class="text-3xl font-black text-emerald-600">1</p>
+<p class="text-[10px] font-black text-emerald-700 tracking-widest uppercase mt-2">Ready</p>
+</div>
+<div class="p-6 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col items-center justify-center text-center">
+<p class="text-3xl font-black text-slate-500">0</p>
+<p class="text-[10px] font-black text-slate-600 tracking-widest uppercase mt-2">Dispatched</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Orders Table (Full Width) -->
+<section class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+<div class="p-6 border-b border-slate-50 flex items-center justify-between">
+<h4 class="font-h2 text-h2 text-slate-900">Recent Orders</h4>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-xs focus:ring-primary focus:border-primary" placeholder="Search order ID..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-slate-100">
+<span class="material-symbols-outlined text-sm">filter_list</span> Filter
+                        </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-slate-50/50">
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Order #</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Time</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Type</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Table/Token</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Items</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Total</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
+<th class="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="px-6 py-4 font-bold text-slate-900 text-sm">#ORD-4592</td>
+<td class="px-6 py-4 text-slate-500 text-sm">11:24 AM</td>
+<td class="px-6 py-4 text-slate-500">
+<span class="material-symbols-outlined text-orange-600 bg-orange-50 p-1.5 rounded-lg">restaurant</span>
+</td>
+<td class="px-6 py-4 font-semibold text-slate-700 text-sm">Table 04</td>
+<td class="px-6 py-4 text-slate-500 text-sm">Beef Burger x2, Fries...</td>
+<td class="px-6 py-4 text-right font-black text-slate-900 text-sm">PKR 2,450</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full uppercase tracking-tighter">In Kitchen</span>
+</td>
+<td class="px-6 py-4 text-center">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="px-6 py-4 font-bold text-slate-900 text-sm">#ORD-4591</td>
+<td class="px-6 py-4 text-slate-500 text-sm">11:18 AM</td>
+<td class="px-6 py-4 text-slate-500">
+<span class="material-symbols-outlined text-blue-600 bg-blue-50 p-1.5 rounded-lg">shopping_bag</span>
+</td>
+<td class="px-6 py-4 font-semibold text-slate-700 text-sm">Token 12</td>
+<td class="px-6 py-4 text-slate-500 text-sm">Club Sandwich x1</td>
+<td class="px-6 py-4 text-right font-black text-slate-900 text-sm">PKR 850</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-tighter">Ready</span>
+</td>
+<td class="px-6 py-4 text-center">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/50 transition-colors">
+<td class="px-6 py-4 font-bold text-slate-900 text-sm">#ORD-4590</td>
+<td class="px-6 py-4 text-slate-500 text-sm">11:05 AM</td>
+<td class="px-6 py-4 text-slate-500">
+<span class="material-symbols-outlined text-purple-600 bg-purple-50 p-1.5 rounded-lg">delivery_dining</span>
+</td>
+<td class="px-6 py-4 font-semibold text-slate-700 text-sm">FoodPanda</td>
+<td class="px-6 py-4 text-slate-500 text-sm">Family Pizza Deal</td>
+<td class="px-6 py-4 text-right font-black text-slate-900 text-sm">PKR 3,200</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-black rounded-full uppercase tracking-tighter">Pending</span>
+</td>
+<td class="px-6 py-4 text-center">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-4 bg-slate-50/30 flex items-center justify-center">
+<button class="text-xs font-bold text-slate-500 hover:text-primary transition-colors">Load More Orders</button>
+</div>
+</section>
+</div>
+</main>
+</body></html>

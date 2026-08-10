@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-tertiary-container": "#fcfcff",
+                    "on-surface-variant": "#5b4039",
+                    "error-container": "#ffdad6",
+                    "inverse-on-surface": "#ffede8",
+                    "surface-tint": "#b02f00",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#004c6d",
+                    "tertiary-fixed": "#c8e6ff",
+                    "surface-variant": "#fadcd4",
+                    "surface-container": "#ffe9e4",
+                    "surface-bright": "#fff8f6",
+                    "surface-dim": "#f1d4cc",
+                    "on-surface": "#271813",
+                    "surface": "#fff8f6",
+                    "on-secondary-fixed": "#131b2e",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-tertiary-fixed": "#001e2e",
+                    "tertiary-container": "#007caf",
+                    "inverse-primary": "#ffb5a0",
+                    "on-primary-fixed-variant": "#862200",
+                    "outline": "#907067",
+                    "on-secondary-container": "#5c647a",
+                    "inverse-surface": "#3e2c27",
+                    "surface-container-highest": "#fadcd4",
+                    "on-secondary": "#ffffff",
+                    "on-primary-container": "#541200",
+                    "outline-variant": "#e4beb4",
+                    "on-background": "#271813",
+                    "primary": "#b02f00",
+                    "tertiary": "#00628c",
+                    "on-primary-fixed": "#3b0900",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#fff1ed",
+                    "error": "#ba1a1a",
+                    "secondary": "#565e74",
+                    "primary-container": "#ff5722",
+                    "secondary-fixed": "#dae2fd",
+                    "surface-container-high": "#ffe2da",
+                    "secondary-container": "#dae2fd",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#86cfff",
+                    "background": "#fff8f6",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "primary-fixed": "#ffdbd1"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "grid_gutter": "16px",
+                    "element": "16px",
+                    "page_margin": "24px",
+                    "section": "24px",
+                    "related": "8px"
+            },
+            "fontFamily": {
+                    "caption": ["Inter"],
+                    "h2": ["Inter"],
+                    "body": ["Inter"],
+                    "h1": ["Inter"],
+                    "display": ["Inter"]
+            },
+            "fontSize": {
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>.noise-overlay {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuA0bCsMIkzCFHmJhCiyQxLg4J6d4GV1aQHoL1luMOl8QHHuQP0vr49KiXAtTmqk7-UglQQM1KRqP_Qa9QwWbcT7yBSk1kxNzb5zFh-0wP2lR271YGB15bu_SCQBSEqaPDEbD_4JQ3Ts8AR3WB35cJNA1Go8tg1p4oPC3PI0P_OfaK4ILfhZ5J99AoaCsUZQE2eAznplWsfkciE8HFT86w-bbrf115KxzB5FlZuIFm0hXF3QkynPhTpu6vAZ3Q80xlzRl0FuTM_-O1T1);
+    opacity: 0.03
+    }
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24
+    }
+.radial-bg {
+    background: radial-gradient(circle at center, #1A1A2E 0%, #0A0A0F 100%)
+    }</style>
+</head>
+<body class="font-body text-on-background radial-bg min-h-screen flex items-center justify-center overflow-hidden relative">
+<!-- Background Texture -->
+<div class="absolute inset-0 noise-overlay pointer-events-none"></div>
+<!-- Main Container -->
+<main class="w-full max-w-4xl px-page_margin flex flex-col items-center justify-center z-10">
+<!-- Top Section -->
+<header class="flex flex-col items-center mb-section text-center">
+<div class="flex items-center gap-related mb-related">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shadow-lg shadow-primary-container/20">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<h1 class="font-display text-display text-white tracking-tight">SwiftServe</h1>
+</div>
+<p class="font-caption text-caption text-slate-400">Clifton Branch POS Terminal</p>
+<div class="mt-related flex items-center gap-1.5 px-3 py-1 bg-slate-900/50 rounded-full border border-slate-800">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-[10px] font-bold text-emerald-500 tracking-widest uppercase">Open</span>
+</div>
+</header>
+<!-- Content Layout (Bento-style Grid) -->
+<div class="w-full grid grid-cols-1 md:grid-cols-12 gap-section">
+<!-- Staff Selection Section -->
+<section class="md:col-span-12 flex flex-col items-center">
+<h3 class="font-caption text-[11px] font-extrabold text-slate-500 tracking-[0.2em] mb-element">SELECT YOUR PROFILE</h3>
+<div class="flex flex-wrap justify-center gap-element">
+<!-- Manager Profile -->
+<button class="w-[120px] h-[140px] bg-slate-800/40 border-[1.5px] border-slate-700/50 rounded-xl flex flex-col items-center justify-center gap-related transition-all hover:bg-slate-800/60 active:scale-95 group">
+<div class="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center mb-1 border border-emerald-500/30">
+<span class="font-display text-h1 text-emerald-400">AJ</span>
+</div>
+<span class="font-h2 text-h2 text-white group-hover:text-primary-fixed-dim transition-colors">Alex J.</span>
+<span class="font-caption text-[10px] text-slate-500 uppercase tracking-tighter">Manager</span>
+</button>
+<!-- Server Profile (Selected State) -->
+<button class="w-[120px] h-[140px] bg-[#FF572214] border-2 border-primary-container rounded-xl flex flex-col items-center justify-center gap-related shadow-[0_0_20px_rgba(255,87,34,0.15)] transition-all active:scale-95 group">
+<div class="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mb-1 border border-orange-500/30">
+<span class="font-display text-h1 text-orange-400">MD</span>
+</div>
+<span class="font-h2 text-h2 text-white">Maria D.</span>
+<span class="font-caption text-[10px] text-slate-400 uppercase tracking-tighter">Server</span>
+</button>
+<!-- Bartender Profile -->
+<button class="w-[120px] h-[140px] bg-slate-800/40 border-[1.5px] border-slate-700/50 rounded-xl flex flex-col items-center justify-center gap-related transition-all hover:bg-slate-800/60 active:scale-95 group">
+<div class="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center mb-1 border border-blue-500/30">
+<span class="font-display text-h1 text-blue-400">TL</span>
+</div>
+<span class="font-h2 text-h2 text-white group-hover:text-primary-fixed-dim transition-colors">Tom L.</span>
+<span class="font-caption text-[10px] text-slate-500 uppercase tracking-tighter">Bartender</span>
+</button>
+<!-- Cashier Profile -->
+<button class="w-[120px] h-[140px] bg-slate-800/40 border-[1.5px] border-slate-700/50 rounded-xl flex flex-col items-center justify-center gap-related transition-all hover:bg-slate-800/60 active:scale-95 group">
+<div class="w-14 h-14 rounded-full bg-purple-500/20 flex items-center justify-center mb-1 border border-purple-500/30">
+<span class="font-display text-h1 text-purple-400">SR</span>
+</div>
+<span class="font-h2 text-h2 text-white group-hover:text-primary-fixed-dim transition-colors">Sarah R.</span>
+<span class="font-caption text-[10px] text-slate-500 uppercase tracking-tighter">Cashier</span>
+</button>
+</div>
+</section>
+<!-- PIN & Numpad Section -->
+<section class="md:col-span-12 flex flex-col items-center mt-section">
+<div class="w-full max-w-[320px] flex flex-col items-center">
+<h3 class="font-caption text-[11px] font-extrabold text-slate-500 tracking-[0.2em] mb-element">ENTER YOUR PIN</h3>
+<!-- PIN Indicators -->
+<div class="flex gap-4 mb-section">
+<div class="w-4 h-4 rounded-full border-2 border-slate-700"></div>
+<div class="w-4 h-4 rounded-full border-2 border-slate-700"></div>
+<div class="w-4 h-4 rounded-full border-2 border-slate-700"></div>
+<div class="w-4 h-4 rounded-full border-2 border-slate-700"></div>
+</div>
+<!-- Numpad Grid -->
+<div class="grid grid-cols-3 gap-4">
+<!-- Numbers 1-9 -->
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">1</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">2</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">3</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">4</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">5</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">6</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">7</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">8</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">9</button>
+<!-- Utility Buttons -->
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/40 border border-slate-800 flex items-center justify-center text-slate-500 hover:bg-slate-800 active:bg-primary-container active:text-white active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[28px]">backspace</span>
+</button>
+<button class="w-[76px] h-[76px] rounded-full bg-slate-800/60 border border-slate-700/50 flex items-center justify-center font-h1 text-[24px] text-white hover:bg-slate-700/80 active:bg-primary-container active:scale-95 transition-all">0</button>
+<button class="w-[76px] h-[76px] rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 hover:bg-emerald-500 hover:text-white active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</button>
+</div>
+</div>
+</section>
+</div>
+<!-- Footer Info -->
+<footer class="mt-section text-center">
+<p class="font-caption text-slate-600 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">terminal</span>
+                Terminal ID: SS-CLIF-01 • v4.2.0-stable
+            </p>
+</footer>
+</main>
+<!-- Side Decoration (Visual Flair) -->
+<div class="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden opacity-20">
+<div class="absolute -top-[10%] -left-[5%] w-96 h-96 bg-primary-container/20 rounded-full blur-[120px]"></div>
+<div class="absolute -bottom-[10%] -right-[5%] w-96 h-96 bg-on-tertiary-fixed-variant/20 rounded-full blur-[120px]"></div>
+</div>
+</body></html>

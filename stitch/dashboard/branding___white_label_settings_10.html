@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Branding Settings | SwiftServe POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#ffffff",
+                        "border-subtle": "#E2E8F0",
+                        "on-primary-fixed-variant": "#862200",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed": "#e6deff",
+                        "inverse-primary": "#ffb5a0",
+                        "outline": "#907067",
+                        "text-muted": "#64748B",
+                        "tertiary": "#5f46ce",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary-fixed-variant": "#4629b6",
+                        "surface-variant": "#e0e3e5",
+                        "surface-default": "#F8FAFC",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "text-main": "#0F172A",
+                        "on-secondary-fixed": "#131b2e",
+                        "inverse-surface": "#2d3133",
+                        "surface": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#5c647a",
+                        "surface-container": "#eceef0",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#541200",
+                        "secondary-fixed": "#dae2fd",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed": "#1b0063",
+                        "secondary": "#565e74",
+                        "surface-card": "#FFFFFF",
+                        "background": "#f7f9fb",
+                        "on-surface": "#191c1e",
+                        "primary": "#b02f00",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#d8dadc",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary-container": "#29008a",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-surface-variant": "#5b4039",
+                        "tertiary-fixed-dim": "#c9beff",
+                        "tertiary-container": "#927eff",
+                        "primary-fixed": "#ffdbd1",
+                        "surface-tint": "#b02f00",
+                        "surface-container-highest": "#e0e3e5",
+                        "primary-container": "#ff5722",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter-desktop": "24px",
+                        "margin-mobile": "16px",
+                        "max-width": "1200px",
+                        "margin-desktop": "40px",
+                        "gutter-mobile": "16px",
+                        "unit": "4px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .receipt-container {
+            font-family: 'Courier New', Courier, monospace;
+            background: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+        .receipt-container::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(-45deg, transparent 5px, white 5px), linear-gradient(45deg, transparent 5px, white 5px);
+            background-size: 10px 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface-default text-text-main font-body-md overflow-x-hidden">
+<!-- Navigation Shell -->
+<aside class="fixed left-0 top-0 h-full w-[280px] bg-text-main flex flex-col py-6 z-50">
+<div class="px-6 mb-10">
+<h1 class="font-display-lg text-display-lg font-bold text-on-primary">SwiftServe POS</h1>
+<p class="font-label-md text-label-md text-text-muted opacity-80 uppercase tracking-widest mt-1">Enterprise Admin</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Navigation Items Mapping -->
+<a class="flex items-center px-6 py-3 space-x-3 text-text-muted hover:text-on-primary hover:bg-on-secondary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 text-text-muted hover:text-on-primary hover:bg-on-secondary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Orders</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 text-text-muted hover:text-on-primary hover:bg-on-secondary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-md text-label-md">Menu Management</span>
+</a>
+<!-- Active Branding Navigation -->
+<a class="flex items-center px-6 py-3 space-x-3 border-l-[3px] border-primary-container bg-on-secondary-fixed-variant text-on-primary font-bold" href="#">
+<span class="material-symbols-outlined">palette</span>
+<span class="font-label-md text-label-md">Branding</span>
+</a>
+<a class="flex items-center px-6 py-3 space-x-3 text-text-muted hover:text-on-primary hover:bg-on-secondary-fixed-variant transition-colors group" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<div class="px-6 pt-6 border-t border-on-secondary-fixed-variant/50">
+<button class="w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-lg border border-on-secondary-fixed-variant text-on-primary font-label-md hover:bg-on-secondary-fixed-variant transition-all">
+<span class="material-symbols-outlined text-[18px]">support_agent</span>
+<span>Support</span>
+</button>
+<button class="w-full flex items-center space-x-3 py-3 mt-4 text-text-muted hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Log Out</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] min-h-screen">
+<!-- Top Nav Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-280px)] h-16 bg-surface-card border-b border-border-subtle shadow-sm flex justify-between items-center px-gutter-desktop z-40">
+<div class="flex items-center space-x-2">
+<span class="font-headline-md text-headline-md font-bold text-text-main">SwiftServe POS</span>
+</div>
+<div class="flex items-center space-x-6">
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-text-muted cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-text-muted cursor-pointer hover:text-primary transition-colors">help_outline</span>
+</div>
+<div class="h-8 w-[1px] bg-border-subtle"></div>
+<div class="flex items-center space-x-3 cursor-pointer group">
+<div class="w-8 h-8 rounded-full overflow-hidden border-2 border-border-subtle group-hover:border-primary transition-colors">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a restaurant operations manager, a man in a modern clean-cut office setting, soft natural lighting from a nearby window, high-fidelity corporate aesthetic with neutral tones and focused expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhQ1T6TNT6Syi_bJ9Ic3bOSGMYAifSaj1KTb4GrrlzpqAefMm40To1X_QBEant61_XBqPWU2v2c0-dFf_HPmqixU-I08Q_i2kVbK9v1xwPuote4nTo0Eed_WLJAU1g2UJwiaL8AWe0_T4vJulg-rs6SacHWCgfVTenoS9VYchymk_YicwKZNXl4YzIb2Eo6z9D4k4yPgW55Mk1lltHj-DleedoI219DRo1ownVym0NBHqWgV5ozX3FSNY5BkPlwQvv3QzeVPRnYZGQ"/>
+</div>
+<span class="font-label-md text-label-md font-semibold text-text-main group-hover:text-primary transition-colors">Admin Portal</span>
+</div>
+<button class="bg-primary-container text-on-primary px-4 py-2 rounded-lg font-label-md font-bold shadow-sm active:scale-95 transition-all">
+                    New Order
+                </button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="mt-16 p-gutter-desktop flex flex-col items-center">
+<div class="w-full max-w-[900px] py-8">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="text-[26px] font-bold text-text-main leading-tight">Branding</h2>
+<p class="font-body-md text-text-muted mt-1">Customize how SwiftServe looks for your restaurant</p>
+</div>
+<div class="flex space-x-3">
+<button class="px-5 py-2 border border-border-subtle text-text-main rounded-lg font-label-md hover:bg-surface-container-low transition-colors">
+                            Preview Changes
+                        </button>
+<button class="px-5 py-2 bg-primary-container text-on-primary rounded-lg font-label-md font-bold shadow-md hover:brightness-110 active:scale-95 transition-all">
+                            Save All Changes
+                        </button>
+</div>
+</div>
+<!-- Unsaved Changes Banner -->
+<div class="mb-8 flex items-center justify-between p-4 bg-[#FFF7ED] border-l-4 border-primary-container rounded-r-lg shadow-sm">
+<div class="flex items-center space-x-3 text-[#9A3412]">
+<span class="material-symbols-outlined">warning</span>
+<span class="font-body-md font-medium">You have unsaved changes in your Branding settings.</span>
+</div>
+<button class="px-4 py-1.5 bg-primary-container text-on-primary text-label-sm rounded-lg hover:brightness-110">
+                        Save Now
+                    </button>
+</div>
+<!-- Section 1: Restaurant Identity -->
+<section class="bg-surface-card rounded-xl border border-border-subtle shadow-sm mb-8 overflow-hidden">
+<div class="px-8 py-6 border-b border-border-subtle">
+<h3 class="font-headline-md text-headline-md text-text-main">Restaurant Identity</h3>
+</div>
+<div class="p-8 grid grid-cols-1 md:grid-cols-12 gap-10">
+<div class="md:col-span-4 flex flex-col items-center">
+<label class="block font-label-md text-text-muted mb-3 self-start">Business Logo</label>
+<div class="w-full aspect-square border-2 border-dashed border-border-subtle rounded-xl flex flex-col items-center justify-center bg-surface-container-lowest cursor-pointer hover:border-primary-container group transition-all">
+<span class="material-symbols-outlined text-text-muted group-hover:text-primary-container text-[48px] mb-2">add_photo_alternate</span>
+<span class="text-label-sm text-text-muted">Upload PNG/JPG</span>
+<span class="text-label-sm text-text-muted mt-1">Min 200x200px</span>
+</div>
+<p class="text-label-sm text-text-muted mt-4 text-center">Transparent background recommended for POS display.</p>
+</div>
+<div class="md:col-span-8 grid grid-cols-2 gap-6">
+<div class="col-span-2">
+<label class="block font-label-md text-text-main mb-2">Restaurant Name</label>
+<input class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none transition-all" type="text" value="Demo Restaurant"/>
+</div>
+<div class="col-span-2">
+<label class="block font-label-md text-text-main mb-2">Tagline</label>
+<input class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none transition-all" placeholder="The best local flavors..." type="text"/>
+</div>
+<div class="col-span-1">
+<label class="block font-label-md text-text-main mb-2">Business Type</label>
+<select class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none transition-all appearance-none bg-surface-container-lowest">
+<option>Fine Dining</option>
+<option>Quick Service</option>
+<option>Cafe / Bakery</option>
+<option>Bar / Nightclub</option>
+</select>
+</div>
+<div class="col-span-1">
+<label class="block font-label-md text-text-main mb-2">Phone</label>
+<input class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none transition-all" placeholder="+1 (555) 000-0000" type="tel"/>
+</div>
+<div class="col-span-2">
+<label class="block font-label-md text-text-main mb-2">Website</label>
+<input class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none transition-all" placeholder="https://www.yourrestaurant.com" type="url"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Color Scheme -->
+<section class="bg-surface-card rounded-xl border border-border-subtle shadow-sm mb-8 overflow-hidden">
+<div class="px-8 py-6 border-b border-border-subtle">
+<h3 class="font-headline-md text-headline-md text-text-main">Color Scheme</h3>
+</div>
+<div class="p-8 grid grid-cols-1 lg:grid-cols-2 gap-12">
+<div>
+<div class="grid grid-cols-2 gap-6 mb-10">
+<div>
+<label class="block font-label-md text-text-main mb-2">Primary Color</label>
+<div class="flex items-center space-x-2 p-2 border border-border-subtle rounded-lg bg-surface-container-lowest">
+<input class="w-10 h-10 border-none rounded cursor-pointer" type="color" value="#FF5722"/>
+<span class="font-label-md text-text-main">#FF5722</span>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-text-main mb-2">Secondary Color</label>
+<div class="flex items-center space-x-2 p-2 border border-border-subtle rounded-lg bg-surface-container-lowest">
+<input class="w-10 h-10 border-none rounded cursor-pointer" type="color" value="#1A1A2E"/>
+<span class="font-label-md text-text-main">#1A1A2E</span>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-text-main mb-2">Accent Color</label>
+<div class="flex items-center space-x-2 p-2 border border-border-subtle rounded-lg bg-surface-container-lowest">
+<input class="w-10 h-10 border-none rounded cursor-pointer" type="color" value="#FFB300"/>
+<span class="font-label-md text-text-main">#FFB300</span>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-text-main mb-2">Text Color</label>
+<div class="flex items-center space-x-2 p-2 border border-border-subtle rounded-lg bg-surface-container-lowest">
+<input class="w-10 h-10 border-none rounded cursor-pointer" type="color" value="#111827"/>
+<span class="font-label-md text-text-main">#111827</span>
+</div>
+</div>
+</div>
+<label class="block font-label-md text-text-muted mb-4">Preset Themes</label>
+<div class="flex flex-wrap gap-3">
+<button class="px-4 py-2 bg-surface-container-low border border-border-subtle rounded-full text-label-sm font-medium hover:border-primary-container transition-colors flex items-center">
+<div class="w-3 h-3 rounded-full bg-[#FF5722] mr-2"></div> Classic Orange
+                                </button>
+<button class="px-4 py-2 bg-surface-container-low border border-border-subtle rounded-full text-label-sm font-medium hover:border-primary-container transition-colors flex items-center">
+<div class="w-3 h-3 rounded-full bg-[#10B981] mr-2"></div> Bistro Green
+                                </button>
+<button class="px-4 py-2 bg-surface-container-low border border-border-subtle rounded-full text-label-sm font-medium hover:border-primary-container transition-colors flex items-center">
+<div class="w-3 h-3 rounded-full bg-[#3B82F6] mr-2"></div> Modern Blue
+                                </button>
+<button class="px-4 py-2 bg-surface-container-low border border-border-subtle rounded-full text-label-sm font-medium hover:border-primary-container transition-colors flex items-center">
+<div class="w-3 h-3 rounded-full bg-[#8B5CF6] mr-2"></div> Royal Purple
+                                </button>
+<button class="px-4 py-2 bg-surface-container-low border border-border-subtle rounded-full text-label-sm font-medium hover:border-primary-container transition-colors flex items-center">
+<div class="w-3 h-3 rounded-full bg-[#EC4899] mr-2"></div> Rose Petal
+                                </button>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl p-8 flex flex-col items-center">
+<span class="font-label-md text-text-muted mb-6 uppercase tracking-widest">Mini POS Preview</span>
+<div class="w-full max-w-[240px] bg-white rounded-lg shadow-xl overflow-hidden">
+<div class="h-10 bg-[#FF5722] flex items-center px-4 justify-between">
+<div class="w-6 h-1 bg-white opacity-40 rounded"></div>
+<div class="w-3 h-3 rounded-full bg-white opacity-60"></div>
+</div>
+<div class="p-4 space-y-4">
+<div class="flex justify-between items-center">
+<div class="w-16 h-2 bg-surface-container-high rounded"></div>
+<div class="w-8 h-2 bg-surface-container-high rounded"></div>
+</div>
+<div class="flex justify-between items-center">
+<div class="w-20 h-2 bg-surface-container-high rounded"></div>
+<div class="w-10 h-2 bg-surface-container-high rounded"></div>
+</div>
+<div class="pt-4 border-t border-border-subtle flex justify-between">
+<div class="w-12 h-3 bg-text-main rounded"></div>
+<div class="w-10 h-3 bg-[#FF5722] rounded"></div>
+</div>
+<button class="w-full h-8 bg-[#FF5722] rounded text-white text-[10px] font-bold">CHECKOUT</button>
+</div>
+</div>
+<p class="mt-6 text-label-sm text-text-muted text-center px-4">Changes reflect instantly on your customer-facing POS tablets.</p>
+</div>
+</div>
+</section>
+<!-- Section 3: Custom Domain -->
+<section class="bg-surface-card rounded-xl border border-border-subtle shadow-sm mb-8 overflow-hidden">
+<div class="px-8 py-6 border-b border-border-subtle">
+<h3 class="font-headline-md text-headline-md text-text-main">Custom Domain</h3>
+</div>
+<div class="p-8 space-y-8">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<label class="block font-label-md text-text-main mb-2">POS App Domain</label>
+<div class="flex items-center">
+<span class="bg-surface-container-low px-4 py-2.5 border border-r-0 border-border-subtle rounded-l-lg font-body-md text-text-muted">pos.</span>
+<input class="flex-1 border-border-subtle rounded-r-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none" placeholder="your-restaurant.com" type="text"/>
+</div>
+<div class="mt-2 flex items-center text-label-sm text-error">
+<span class="w-2 h-2 rounded-full bg-error mr-2"></span> Not configured
+                                </div>
+</div>
+<button class="px-6 py-2.5 border-2 border-primary-container text-primary-container rounded-lg font-label-md font-bold hover:bg-primary-container/5 transition-all self-end md:self-center">
+                                Setup Custom Domain
+                            </button>
+</div>
+<div class="h-[1px] bg-border-subtle"></div>
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex-1">
+<label class="block font-label-md text-text-main mb-2">Dashboard URL</label>
+<div class="flex items-center opacity-60">
+<span class="bg-surface-container-low px-4 py-2.5 border border-r-0 border-border-subtle rounded-l-lg font-body-md text-text-muted">console.</span>
+<input class="flex-1 border-border-subtle rounded-r-lg py-2.5 px-4 bg-surface-container-low cursor-not-allowed" disabled="" type="text" value="swiftserve-demo.pos.com"/>
+</div>
+<p class="mt-2 text-label-sm text-text-muted italic">Used by administrative staff only.</p>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg border border-border-subtle cursor-pointer hover:bg-surface-container-high transition-colors flex items-center justify-between group">
+<div class="flex items-center space-x-3">
+<span class="material-symbols-outlined text-primary-container">dns</span>
+<span class="font-body-md font-medium text-text-main">Show DNS Configuration Instructions</span>
+</div>
+<span class="material-symbols-outlined transition-transform group-hover:translate-x-1">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Section 4: Receipt Branding -->
+<section class="bg-surface-card rounded-xl border border-border-subtle shadow-sm mb-8 overflow-hidden">
+<div class="px-8 py-6 border-b border-border-subtle">
+<h3 class="font-headline-md text-headline-md text-text-main">Receipt &amp; Invoice Branding</h3>
+</div>
+<div class="p-8 grid grid-cols-1 lg:grid-cols-12 gap-10">
+<div class="lg:col-span-7 space-y-6">
+<div>
+<label class="block font-label-md text-text-main mb-2">Header Message</label>
+<textarea class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none" placeholder="Welcome to Demo Restaurant! Enjoy your meal." rows="3"></textarea>
+</div>
+<div>
+<label class="block font-label-md text-text-main mb-2">Footer Note</label>
+<textarea class="w-full border-border-subtle rounded-lg py-2.5 px-4 focus:ring-primary-container focus:border-primary-container outline-none" placeholder="Thank you for dining with us. Follow us on Instagram @DemoRest" rows="3"></textarea>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-lg">
+<span class="font-label-md text-text-main">Show Logo</span>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary-container cursor-pointer">
+<span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white transition"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-lg">
+<span class="font-label-md text-text-main">Tax Details</span>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary-container cursor-pointer">
+<span class="inline-block h-4 w-4 translate-x-6 rounded-full bg-white transition"></span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-lg">
+<span class="font-label-md text-text-main">Token #</span>
+<div class="relative inline-flex h-6 w-11 items-center rounded-full bg-surface-variant cursor-pointer">
+<span class="inline-block h-4 w-4 translate-x-1 rounded-full bg-white transition"></span>
+</div>
+</div>
+<div>
+<label class="block text-[10px] text-text-muted mb-1 uppercase font-bold">Language</label>
+<select class="w-full border-border-subtle rounded-lg py-2 px-4 focus:ring-primary-container focus:border-primary-container outline-none bg-surface-container-lowest">
+<option>English (US)</option>
+<option>Spanish</option>
+<option>French</option>
+</select>
+</div>
+</div>
+</div>
+<div class="lg:col-span-5 flex flex-col">
+<span class="font-label-md text-text-muted mb-4 uppercase tracking-widest text-center">Thermal Receipt Preview</span>
+<div class="receipt-container p-6 text-[12px] text-gray-800 flex flex-col items-center">
+<div class="font-bold text-[16px] mb-1">DEMO RESTAURANT</div>
+<div class="mb-4 text-center">123 Street Ave, Cityville<br/>Tel: +1 555-000-0000</div>
+<div class="w-full border-t border-dashed border-gray-400 my-2"></div>
+<div class="w-full flex justify-between font-bold py-1">
+<span>ITEM</span>
+<span>PRICE</span>
+</div>
+<div class="w-full flex justify-between">
+<span>2x Truffle Burger</span>
+<span>$32.00</span>
+</div>
+<div class="w-full flex justify-between">
+<span>1x Garden Salad</span>
+<span>$12.50</span>
+</div>
+<div class="w-full flex justify-between">
+<span>3x Craft Soda</span>
+<span>$9.00</span>
+</div>
+<div class="w-full border-t border-dashed border-gray-400 my-2"></div>
+<div class="w-full flex justify-between">
+<span>SUBTOTAL</span>
+<span>$53.50</span>
+</div>
+<div class="w-full flex justify-between">
+<span>TAX (8.5%)</span>
+<span>$4.55</span>
+</div>
+<div class="w-full flex justify-between font-bold text-[14px] mt-2">
+<span>TOTAL</span>
+<span>$58.05</span>
+</div>
+<div class="w-full border-t border-dashed border-gray-400 my-4"></div>
+<div class="text-center italic opacity-75">
+                                    Welcome to Demo Restaurant!<br/>Enjoy your meal.
+                                </div>
+<div class="mt-4 flex flex-col items-center">
+<div class="w-32 h-8 bg-gray-200 flex items-center justify-center font-bold text-[10px] tracking-widest border border-gray-400">BARCODE</div>
+<div class="mt-2">#ORD-90210-A</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 5: App Icons and Favicon -->
+<section class="bg-surface-card rounded-xl border border-border-subtle shadow-sm mb-12 overflow-hidden">
+<div class="px-8 py-6 border-b border-border-subtle">
+<h3 class="font-headline-md text-headline-md text-text-main">App Icons and Favicon</h3>
+</div>
+<div class="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="flex flex-col items-center">
+<label class="block font-label-md text-text-main mb-4">Favicon (32x32)</label>
+<div class="w-20 h-20 border-2 border-dashed border-border-subtle rounded-xl bg-surface-container-lowest flex items-center justify-center cursor-pointer hover:border-primary-container transition-all">
+<span class="material-symbols-outlined text-text-muted">upload_file</span>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="block font-label-md text-text-main mb-4">App Icon (512x512)</label>
+<div class="w-32 h-32 border-2 border-dashed border-border-subtle rounded-xl bg-surface-container-lowest flex items-center justify-center cursor-pointer hover:border-primary-container transition-all">
+<span class="material-symbols-outlined text-text-muted text-[32px]">app_registration</span>
+</div>
+</div>
+<div class="flex flex-col items-center">
+<label class="block font-label-md text-text-main mb-4">OG Image (1200x630)</label>
+<div class="w-full h-32 border-2 border-dashed border-border-subtle rounded-xl bg-surface-container-lowest flex items-center justify-center cursor-pointer hover:border-primary-container transition-all">
+<span class="material-symbols-outlined text-text-muted text-[32px]">image</span>
+</div>
+</div>
+</div>
+<div class="px-8 pb-8">
+<p class="text-label-sm text-text-muted bg-surface-container-low p-3 rounded-lg flex items-start">
+<span class="material-symbols-outlined text-[18px] mr-2 text-primary-container">info</span>
+                            Ensure all app icons maintain high contrast with your brand's primary color for better visibility in mobile app stores and browser tabs.
+                        </p>
+</div>
+</section>
+<footer class="flex items-center justify-between py-6 border-t border-border-subtle">
+<p class="text-label-sm text-text-muted">SwiftServe POS © 2024. All Rights Reserved.</p>
+<div class="flex space-x-6">
+<a class="text-label-sm text-text-muted hover:text-primary-container" href="#">Terms of Service</a>
+<a class="text-label-sm text-text-muted hover:text-primary-container" href="#">Privacy Policy</a>
+</div>
+</footer>
+</div>
+</div>
+</main>
+<script>
+        // Simple interactivity for the toggle switch simulation
+        document.querySelectorAll('.relative.inline-flex').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const dot = this.querySelector('span');
+                const isOff = dot.classList.contains('translate-x-1');
+                
+                if(isOff) {
+                    dot.classList.replace('translate-x-1', 'translate-x-6');
+                    this.classList.replace('bg-surface-variant', 'bg-primary-container');
+                } else {
+                    dot.classList.replace('translate-x-6', 'translate-x-1');
+                    this.classList.replace('bg-primary-container', 'bg-surface-variant');
+                }
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Webhooks Management | SwiftServe POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#fadcd4",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-primary-fixed-variant": "#862200",
+                        "background": "#fff8f6",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "secondary-container": "#dae2fd",
+                        "primary-container": "#ff5722",
+                        "error": "#ba1a1a",
+                        "outline": "#907067",
+                        "on-surface-variant": "#5b4039",
+                        "inverse-surface": "#3e2c27",
+                        "primary-fixed": "#ffdbd1",
+                        "on-primary-container": "#541200",
+                        "inverse-on-surface": "#ffede8",
+                        "outline-variant": "#e4beb4",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-high": "#ffe2da",
+                        "on-primary-fixed": "#3b0900",
+                        "surface-dim": "#f1d4cc",
+                        "surface": "#fff8f6",
+                        "on-error-container": "#93000a",
+                        "surface-tint": "#b02f00",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "secondary": "#565e74",
+                        "on-background": "#271813",
+                        "tertiary-fixed": "#c8e6ff",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#fff8f6",
+                        "surface-container": "#ffe9e4",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#271813",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#001e2e",
+                        "tertiary": "#00628c",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#fff1ed",
+                        "tertiary-container": "#007caf",
+                        "secondary-fixed": "#dae2fd",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-variant": "#fadcd4",
+                        "primary": "#b02f00",
+                        "on-secondary-container": "#5c647a",
+                        "secondary-fixed-dim": "#bec6e0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section": "24px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "caption": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .code-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e4beb4; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body text-body selection:bg-primary-fixed selection:text-on-primary-fixed">
+<div class="flex min-h-screen">
+<!-- SideNavBar - JSON Implementation -->
+<aside class="bg-on-secondary-fixed h-screen sticky left-0 top-0 w-64 flex flex-col shadow-lg z-50">
+<div class="flex flex-col gap-element py-section px-element">
+<div class="flex items-center gap-related mb-section">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container" data-icon="restaurant" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h1 class="font-display text-display text-on-tertiary-container text-[20px] leading-tight">SwiftServe</h1>
+<p class="text-caption text-secondary-fixed-dim uppercase tracking-wider">POS Management</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="text-secondary-fixed-dim hover:text-on-tertiary-container flex items-center gap-related p-element transition-colors hover:bg-on-secondary-fixed-variant rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-h2 text-h2">Overview</span>
+</a>
+<a class="text-secondary-fixed-dim hover:text-on-tertiary-container flex items-center gap-related p-element transition-colors hover:bg-on-secondary-fixed-variant rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span class="font-h2 text-h2">Operations</span>
+</a>
+<a class="text-secondary-fixed-dim hover:text-on-tertiary-container flex items-center gap-related p-element transition-colors hover:bg-on-secondary-fixed-variant rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="font-h2 text-h2">Business</span>
+</a>
+<!-- Active: Integrations -->
+<a class="text-on-primary-fixed bg-primary-container rounded-lg font-bold flex items-center gap-related p-element transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="extension" style="font-variation-settings: 'FILL' 1;">extension</span>
+<span class="font-h2 text-h2">Integrations</span>
+</a>
+<a class="text-secondary-fixed-dim hover:text-on-tertiary-container flex items-center gap-related p-element transition-colors hover:bg-on-secondary-fixed-variant rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-h2 text-h2">Growth</span>
+</a>
+<a class="text-secondary-fixed-dim hover:text-on-tertiary-container flex items-center gap-related p-element transition-colors hover:bg-on-secondary-fixed-variant rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="font-h2 text-h2">Analytics</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-element border-t border-on-secondary-fixed-variant">
+<div class="flex items-center gap-related">
+<img alt="Administrator Profile" class="w-10 h-10 rounded-full border-2 border-primary-container" data-alt="A professional headshot of a middle-aged male administrator with a confident smile, wearing a modern charcoal suit and white shirt. The background is a blurred, high-end restaurant interior with warm ambient lighting. The overall mood is authoritative and trustworthy, reflecting a premium corporate hospitality environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNem2Jg3qEQjsydALU9n8dBVYQbq7-DhjoAbr4EcwvrW0Xpjgh9FhENexvmBV_JSFihoPMwnew6DEIPkv4cIr-dSsywTr48FKwabn-P9aXK6y2R0_HZsbWCcAnfGaF8aDZ_ot9GGfsVcD4HHmzEd32fOugW5r2z5UG9hHaOjJ-eQn4kfIUk8CPjVe0pguNTX7ErtKmxj9pouFPvqkHFE06YEfj4h2zHqIJWnCKUYBITsTb3wHjn3NnS0U7NnjFsvi1cFNfnYCf7bNk"/>
+<div class="overflow-hidden">
+<p class="font-h2 text-h2 text-on-tertiary-container truncate">Admin User</p>
+<p class="text-caption text-secondary-fixed-dim truncate">Downtown Branch</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
+<!-- TopAppBar - JSON Implementation -->
+<header class="docked full-width top-0 sticky z-40 flex justify-between items-center h-16 px-page_margin w-full gap-grid_gutter border-b border-outline-variant bg-surface shadow-sm">
+<div class="flex items-center gap-grid_gutter flex-1">
+<div class="hidden md:flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded-lg border border-outline-variant w-full max-w-md focus-within:ring-2 focus-within:ring-primary focus-within:ring-inset transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body w-full placeholder:text-on-surface-variant" placeholder="Search webhooks, logs, or events..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="flex items-center gap-related px-3 py-1.5 bg-surface-container rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="location_on" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="text-caption font-bold text-on-surface">Downtown Branch</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors relative">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</header>
+<!-- Page Canvas -->
+<div class="flex-1 overflow-y-auto p-page_margin space-y-section pb-20">
+<!-- Breadcrumb & Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-element">
+<div>
+<nav class="flex items-center gap-2 mb-2">
+<span class="text-[11px] font-bold text-on-surface-variant/60 tracking-widest uppercase">INTEGRATIONS</span>
+<span class="material-symbols-outlined text-[12px] text-outline-variant" data-icon="chevron_right">chevron_right</span>
+<span class="text-[11px] font-bold text-primary tracking-widest uppercase">WEBHOOKS</span>
+</nav>
+<h2 class="font-display text-display text-on-surface">Webhooks</h2>
+<p class="text-on-surface-variant max-w-xl">Send real-time event notifications to your external systems to automate workflows and sync data.</p>
+</div>
+<div class="flex gap-related">
+<button class="flex items-center gap-2 px-element py-2 rounded-lg border border-outline text-on-surface font-h2 hover:bg-surface-container-low transition-colors active:scale-95">
+<span>View Docs</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="open_in_new">open_in_new</span>
+</button>
+<button class="flex items-center gap-2 px-element py-2 rounded-lg bg-primary-container text-on-tertiary-container font-h2 hover:opacity-90 transition-all shadow-md active:scale-95" onclick="document.getElementById('modal-overlay').classList.remove('hidden')">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>Add Webhook</span>
+</button>
+</div>
+</div>
+<!-- API Credentials -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant overflow-hidden">
+<div class="px-element py-3 border-b border-outline-variant flex items-center gap-2 bg-surface-container-low">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+<h3 class="font-h2 text-h2 text-on-surface">API Credentials</h3>
+</div>
+<div class="p-element space-y-element">
+<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-element">
+<label class="text-caption font-bold text-on-surface-variant uppercase">API Key</label>
+<div class="md:col-span-2 flex items-center gap-related bg-surface-container p-1 rounded-lg border border-outline-variant">
+<code class="flex-1 px-3 code-font text-body text-on-surface truncate">sk_live_••••••••••••••••••••••2f9a</code>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-surface-container-high rounded text-primary transition-colors" title="Show"><span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 hover:bg-surface-container-high rounded text-primary transition-colors" title="Copy"><span class="material-symbols-outlined text-[18px]" data-icon="content_copy">content_copy</span></button>
+<button class="p-1.5 hover:bg-surface-container-high rounded text-primary transition-colors" title="Regenerate"><span class="material-symbols-outlined text-[18px]" data-icon="refresh">refresh</span></button>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 items-center gap-element">
+<label class="text-caption font-bold text-on-surface-variant uppercase">Signing Secret</label>
+<div class="md:col-span-2 flex items-center gap-related bg-surface-container p-1 rounded-lg border border-outline-variant">
+<code class="flex-1 px-3 code-font text-body text-on-surface truncate">whsec_••••••••••••••••••4d12</code>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-surface-container-high rounded text-primary transition-colors" title="Show"><span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span></button>
+<button class="p-1.5 hover:bg-surface-container-high rounded text-primary transition-colors" title="Copy"><span class="material-symbols-outlined text-[18px]" data-icon="content_copy">content_copy</span></button>
+</div>
+</div>
+</div>
+</div>
+<div class="px-element py-3 bg-secondary-container/30 border-t border-outline-variant flex gap-related items-start">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="info">info</span>
+<p class="text-body text-on-secondary-container">Use this secret to verify incoming webhook payloads using HMAC-SHA256 signature. <a class="underline font-bold decoration-primary" href="#">Learn more in our Security Guide.</a></p>
+</div>
+</div>
+<!-- Endpoints Grid -->
+<section>
+<div class="flex justify-between items-center mb-element">
+<h3 class="font-h1 text-h1 text-on-surface">Endpoints (3)</h3>
+<span class="text-caption text-on-surface-variant">Last updated: Just now</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-grid_gutter">
+<!-- Endpoint 1: Active -->
+<div class="bg-surface-container-lowest p-element rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+<span class="text-caption font-bold text-emerald-600 uppercase">Active</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 hover:bg-surface-container-low rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+<button class="p-1 hover:bg-error-container hover:text-error rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="delete">delete</span></button>
+</div>
+</div>
+<h4 class="font-h2 text-h2 text-on-surface truncate mb-1">ERP Sync Hub</h4>
+<code class="text-caption text-on-surface-variant block truncate mb-4 bg-surface-container-low p-1 rounded">https://myerp.company.com/hooks/swiftserve</code>
+<div class="flex flex-wrap gap-1 mb-4">
+<span class="px-2 py-0.5 bg-surface-container rounded text-[11px] font-bold text-on-surface-variant">order.created</span>
+<span class="px-2 py-0.5 bg-surface-container rounded text-[11px] font-bold text-on-surface-variant">order.completed</span>
+<span class="px-2 py-0.5 bg-surface-container rounded text-[11px] font-bold text-on-surface-variant">+1 more</span>
+</div>
+<div class="pt-4 border-t border-outline-variant grid grid-cols-2 gap-related">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Success Rate</p>
+<p class="text-h2 text-emerald-600">98.2%</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Last Delivery</p>
+<p class="text-caption text-on-surface">2 min ago (200 OK)</p>
+</div>
+</div>
+</div>
+<!-- Endpoint 2: Failing -->
+<div class="bg-surface-container-lowest p-element rounded-xl border-2 border-error/20 shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-error"></div>
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-error ring-4 ring-error/20"></span>
+<span class="text-caption font-bold text-error uppercase">Failing</span>
+</div>
+<div class="flex gap-1">
+<button class="p-1 hover:bg-surface-container-low rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+</div>
+</div>
+<h4 class="font-h2 text-h2 text-on-surface truncate mb-1">Customer Loyalty App</h4>
+<code class="text-caption text-on-surface-variant block truncate mb-4 bg-surface-container-low p-1 rounded">https://api.loyalty-vendor.io/v1/events</code>
+<div class="bg-error-container/30 rounded-lg p-related mb-4 border border-error/10">
+<p class="text-caption text-error font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="warning">warning</span>
+                                    503 Service Unavailable
+                                </p>
+<p class="text-[11px] text-on-error-container/80 mt-1">Failed delivery 12m ago. Retry in 5m.</p>
+</div>
+<button class="w-full py-2 bg-surface-container border border-outline-variant text-on-surface text-caption font-bold rounded-lg hover:bg-surface-container-high transition-colors">Retry Now</button>
+</div>
+<!-- Endpoint 3: Disabled -->
+<div class="bg-surface-container-low p-element rounded-xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group grayscale">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-outline ring-4 ring-outline/20"></span>
+<span class="text-caption font-bold text-on-surface-variant uppercase">Disabled</span>
+</div>
+<div class="flex gap-1">
+<button class="p-1 hover:bg-surface-container-low rounded text-on-surface-variant"><span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span></button>
+</div>
+</div>
+<h4 class="font-h2 text-h2 text-on-surface truncate mb-1">Legacy Reporting Tool</h4>
+<code class="text-caption text-on-surface-variant block truncate mb-4 bg-surface-container p-1 rounded">https://old-system.internal/webhooks</code>
+<p class="text-caption text-on-surface-variant italic">No events configured. This endpoint is currently paused and will not receive data.</p>
+<div class="mt-4 pt-4 border-t border-outline-variant">
+<button class="text-primary text-caption font-bold hover:underline">Enable Endpoint</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Delivery Logs -->
+<section>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-element gap-element">
+<h3 class="font-h1 text-h1 text-on-surface">Recent Deliveries</h3>
+<div class="flex flex-wrap gap-2">
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant">
+<span class="text-caption font-bold text-on-surface-variant uppercase">Endpoint:</span>
+<select class="bg-transparent border-none focus:ring-0 text-caption font-bold p-0">
+<option>All Endpoints</option>
+<option>ERP Sync Hub</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant">
+<span class="text-caption font-bold text-on-surface-variant uppercase">Event:</span>
+<select class="bg-transparent border-none focus:ring-0 text-caption font-bold p-0">
+<option>All Events</option>
+<option>order.created</option>
+</select>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="px-element py-3 text-caption font-bold text-on-surface-variant uppercase">Timestamp</th>
+<th class="px-element py-3 text-caption font-bold text-on-surface-variant uppercase">Event</th>
+<th class="px-element py-3 text-caption font-bold text-on-surface-variant uppercase">Status</th>
+<th class="px-element py-3 text-caption font-bold text-on-surface-variant uppercase">Duration</th>
+<th class="px-element py-3 text-caption font-bold text-on-surface-variant uppercase text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer" onclick="document.getElementById('slide-over').classList.remove('translate-x-full')">
+<td class="px-element py-4 text-body text-on-surface">2023-11-20 14:22:04</td>
+<td class="px-element py-4"><span class="code-font text-caption font-bold px-2 py-0.5 bg-surface-container rounded">order.created</span></td>
+<td class="px-element py-4">
+<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-caption font-bold">200 OK</span>
+</td>
+<td class="px-element py-4 text-body text-on-surface-variant">142ms</td>
+<td class="px-element py-4 text-right">
+<button class="text-primary font-bold text-caption hover:underline">View</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer" onclick="document.getElementById('slide-over').classList.remove('translate-x-full')">
+<td class="px-element py-4 text-body text-on-surface">2023-11-20 14:18:55</td>
+<td class="px-element py-4"><span class="code-font text-caption font-bold px-2 py-0.5 bg-surface-container rounded">order.completed</span></td>
+<td class="px-element py-4">
+<span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-caption font-bold">200 OK</span>
+</td>
+<td class="px-element py-4 text-body text-on-surface-variant">210ms</td>
+<td class="px-element py-4 text-right">
+<button class="text-primary font-bold text-caption hover:underline">View</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors cursor-pointer" onclick="document.getElementById('slide-over').classList.remove('translate-x-full')">
+<td class="px-element py-4 text-body text-on-surface">2023-11-20 14:10:12</td>
+<td class="px-element py-4"><span class="code-font text-caption font-bold px-2 py-0.5 bg-surface-container rounded">inventory.low_stock</span></td>
+<td class="px-element py-4">
+<span class="px-2 py-1 bg-error-container text-error rounded-full text-caption font-bold">503 Error</span>
+</td>
+<td class="px-element py-4 text-body text-on-surface-variant">4500ms</td>
+<td class="px-element py-4 text-right">
+<button class="text-primary font-bold text-caption hover:underline">View</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Modal: Add Webhook -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center bg-inverse-surface/60 backdrop-blur-sm hidden" id="modal-overlay">
+<div class="bg-surface-container-lowest w-full max-w-[560px] rounded-2xl shadow-2xl overflow-hidden scale-100 animate-in fade-in zoom-in duration-200">
+<div class="px-section py-element border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<h3 class="font-h1 text-h1 text-on-surface">Add Webhook</h3>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors" onclick="document.getElementById('modal-overlay').classList.add('hidden')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="p-section space-y-element max-h-[716px] overflow-y-auto">
+<div>
+<label class="block text-caption font-bold text-on-surface-variant uppercase mb-related">Endpoint URL</label>
+<div class="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg border border-outline focus-within:ring-2 focus-within:ring-primary-container transition-all">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="link">link</span>
+<input class="w-full bg-transparent border-none focus:ring-0 text-body p-0" placeholder="https://your-domain.com/webhook" required="" type="url"/>
+</div>
+<p class="text-[11px] text-on-surface-variant/70 mt-1 italic">Note: URL must start with https:// for production security.</p>
+</div>
+<div>
+<label class="block text-caption font-bold text-on-surface-variant uppercase mb-related">Description (Optional)</label>
+<input class="w-full px-3 py-2 bg-surface rounded-lg border border-outline focus:ring-2 focus:ring-primary-container transition-all text-body" placeholder="e.g. For Slack notifications" type="text"/>
+</div>
+<div>
+<label class="block text-caption font-bold text-on-surface-variant uppercase mb-related">Event Selection</label>
+<div class="space-y-4">
+<div class="p-3 bg-surface-container rounded-xl border border-outline-variant">
+<p class="text-caption font-bold text-primary uppercase mb-2">Orders</p>
+<div class="grid grid-cols-2 gap-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-body text-on-surface group-hover:text-primary transition-colors">order.created</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-body text-on-surface group-hover:text-primary transition-colors">order.completed</span>
+</label>
+</div>
+</div>
+<div class="p-3 bg-surface-container rounded-xl border border-outline-variant">
+<p class="text-caption font-bold text-primary uppercase mb-2">Inventory</p>
+<div class="grid grid-cols-2 gap-2">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-body text-on-surface group-hover:text-primary transition-colors">inventory.updated</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span class="text-body text-on-surface group-hover:text-primary transition-colors">inventory.low_stock</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-section bg-surface-container-low border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-element">
+<button class="w-full md:w-auto px-element py-2 rounded-lg border border-outline text-on-surface font-h2 hover:bg-surface-container-high transition-colors">Test Webhook</button>
+<div class="flex gap-related w-full md:w-auto">
+<button class="flex-1 md:flex-none px-element py-2 text-on-surface-variant font-h2 hover:text-on-surface" onclick="document.getElementById('modal-overlay').classList.add('hidden')">Cancel</button>
+<button class="flex-1 md:flex-none px-section py-2 bg-primary-container text-on-tertiary-container font-h2 rounded-lg shadow-md hover:opacity-90 active:scale-95 transition-all">Save Webhook</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Slide-over: Delivery Detail -->
+<div class="fixed inset-0 z-[110] flex justify-end transition-transform transform translate-x-full duration-300" id="slide-over">
+<div class="absolute inset-0 bg-inverse-surface/20" onclick="document.getElementById('slide-over').classList.add('translate-x-full')"></div>
+<div class="relative bg-surface-container-lowest w-full max-w-[480px] h-full shadow-2xl flex flex-col border-l border-outline-variant">
+<div class="px-element py-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low">
+<div>
+<h3 class="font-h1 text-h1 text-on-surface">Delivery Detail</h3>
+<p class="text-caption text-on-surface-variant">ID: del_8u21a0vB91lP</p>
+</div>
+<button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors" onclick="document.getElementById('slide-over').classList.add('translate-x-full')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-element space-y-section">
+<!-- Overview Section -->
+<div class="space-y-3">
+<div class="flex justify-between items-center py-2 border-b border-outline-variant">
+<span class="text-caption font-bold text-on-surface-variant uppercase">Status</span>
+<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-caption font-bold">200 OK</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant">
+<span class="text-caption font-bold text-on-surface-variant uppercase">Delivered At</span>
+<span class="text-body text-on-surface">Nov 20, 2023 14:22:04</span>
+</div>
+<div class="flex justify-between items-center py-2 border-b border-outline-variant">
+<span class="text-caption font-bold text-on-surface-variant uppercase">Endpoint</span>
+<span class="text-body text-on-surface">ERP Sync Hub</span>
+</div>
+</div>
+<!-- Request Payload -->
+<div>
+<div class="flex justify-between items-center mb-related">
+<h4 class="text-caption font-bold text-on-surface-variant uppercase">Request Payload</h4>
+<button class="text-primary text-[11px] font-bold uppercase hover:underline">Copy JSON</button>
+</div>
+<div class="bg-[#1e293b] rounded-lg p-element code-font text-caption text-[#94a3b8] overflow-x-auto border border-[#334155]">
+<pre>{
+  "id": "evt_9a22x0",
+  "type": "order.created",
+  "created_at": 1700490124,
+  "data": {
+    "order_id": "OR-9912",
+    "total": 45.90,
+    "items_count": 3
+  }
+}</pre>
+</div>
+</div>
+<!-- Response Body -->
+<div>
+<div class="flex justify-between items-center mb-related">
+<h4 class="text-caption font-bold text-on-surface-variant uppercase">Response Body</h4>
+</div>
+<div class="bg-[#1e293b] rounded-lg p-element code-font text-caption text-[#94a3b8] overflow-x-auto border border-[#334155]">
+<pre>{
+  "status": "success",
+  "message": "received",
+  "sync_id": "erp_rel_9912"
+}</pre>
+</div>
+</div>
+<!-- Retry History -->
+<div>
+<h4 class="text-caption font-bold text-on-surface-variant uppercase mb-related">Retry History</h4>
+<div class="bg-surface-container rounded-lg p-element border border-outline-variant">
+<div class="flex items-center gap-related">
+<span class="material-symbols-outlined text-emerald-500 text-[16px]" data-icon="check_circle">check_circle</span>
+<p class="text-caption text-on-surface">Attempt 1: Successful at 14:22:04</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-element bg-surface-container-low border-t border-outline-variant">
+<button class="w-full py-2.5 bg-surface-container border border-outline text-on-surface font-h2 rounded-lg hover:bg-surface-container-high transition-colors">Resend This Webhook</button>
+</div>
+</div>
+</div>
+</body></html>

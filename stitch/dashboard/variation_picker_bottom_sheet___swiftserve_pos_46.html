@@ -1,0 +1,248 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Variation Picker - RestoFlow POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "on-surface-variant": "#5b4039",
+                        "text-main": "#0F172A",
+                        "tertiary-container": "#927eff",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#131b2e",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#29008a",
+                        "surface": "#f7f9fb",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary": "#5f46ce",
+                        "secondary-fixed": "#dae2fd",
+                        "surface-card": "#FFFFFF",
+                        "primary-container": "#ff5722",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#565e74",
+                        "outline-variant": "#e4beb4",
+                        "surface-tint": "#b02f00",
+                        "on-surface": "#191c1e",
+                        "inverse-primary": "#ffb5a0",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#4629b6",
+                        "tertiary-fixed-dim": "#c9beff",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-default": "#F8FAFC",
+                        "surface-variant": "#e0e3e5",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary": "#ffffff",
+                        "outline": "#907067",
+                        "on-background": "#191c1e",
+                        "surface-bright": "#f7f9fb",
+                        "primary": "#b02f00",
+                        "on-primary-fixed": "#3b0900",
+                        "border-subtle": "#E2E8F0",
+                        "on-tertiary-fixed": "#1b0063",
+                        "primary-fixed": "#ffdbd1",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed-variant": "#862200",
+                        "surface-container": "#eceef0",
+                        "on-primary-container": "#541200",
+                        "text-muted": "#64748B",
+                        "surface-dim": "#d8dadc",
+                        "tertiary-fixed": "#e6deff",
+                        "on-secondary-container": "#5c647a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-desktop": "40px",
+                        "margin-mobile": "16px",
+                        "gutter-mobile": "16px",
+                        "unit": "4px",
+                        "max-width": "1200px",
+                        "gutter-desktop": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .bottom-sheet-shadow {
+            box-shadow: 0px -8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .custom-checkbox:checked {
+            background-color: #ff5722;
+            border-color: #ff5722;
+        }
+    </style>
+</head>
+<body class="bg-on-secondary-fixed overflow-hidden">
+<!-- BACKGROUND: Dimmed Order Terminal (Simulated) -->
+<div class="fixed inset-0 z-0">
+<img alt="POS Order Terminal Background" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD4PQLxIAfPuTQxKbTVrK3tXE8bJ2sCmvVrbcnBIwfinHJWpJLmEpNX-7Uz6E9O8VYLTlIYU2h_gpZr01VQHFTB4p8T1MG4Tsokth_h90aHRsMxWNbdQZAJWbylimAy6XqbjoIIbtHsHbw8fF6Thuxa031CnFGkEpgcKCMIJ1eQeaILop_smqpRP6EIkf7tSLCUP0H-t_n_sVczvr4w_CddRdy8AGP_qBwhoDJ02g4EWYaCoJZ5myHQorlerOMoOyOWhKOq9SLpWies">
+<div class="absolute inset-0 bg-black/60 backdrop-blur-[2px]"></div>
+</div>
+<!-- BOTTOM SHEET CONTAINER -->
+<div class="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end">
+<div class="w-full max-w-[600px] bg-white rounded-t-[20px] bottom-sheet-shadow transform translate-y-0 transition-transform duration-500 ease-out flex flex-col max-h-[90vh]" id="bottomSheet">
+<!-- Handle -->
+<div class="flex justify-center pt-3 pb-2 cursor-pointer" onclick="toggleSheet()">
+<div class="w-10 h-1.5 bg-surface-container-high rounded-full"></div>
+</div>
+<!-- Item Header -->
+<div class="px-6 py-4 flex items-center justify-between border-b border-surface-container">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A premium, high-resolution close-up of a Mutton Biryani dish presented in a traditional ceramic bowl. The scene features aromatic long-grain basmati rice mixed with tender pieces of mutton and garnished with fresh cilantro. Soft ambient restaurant lighting highlights the rich textures and deep orange spices. The overall aesthetic is professional and culinary-focused, emphasizing high-end restaurant quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBbvemNisvayxwZEcfPBVmfBHsEGFwv6bei3kCr36Ls2DPtuCksL8hmDwZeIcrblnqIsRYVuW4ljxOm0nfe69szoYp_jyWru4z_ZGBmwQ_7FU_t1xtm8WO264nSG7HovWvUsPKZYEUSeFbWOgs9z__j9DPnQQLnil34v_dOSrm6JK4Fgk0s4M9-VCk0_ZycqaUWv0ylNXgOi2O-AozuhdxPW7NNTFqY1sbGwvZFz1njUEx_zpnK0qQ4hsO64OItxkva24ObxoKR4Dmy">
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-text-main">Mutton Biryani Special</h1>
+<p class="font-label-md text-label-md text-primary-container font-bold">PKR 1,250</p>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-low text-secondary hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Content Area (Scrollable) -->
+<div class="flex-1 overflow-y-auto px-6 py-4 space-y-8">
+<!-- Section: CHOOSE SIZE -->
+<section><div class="flex items-center justify-between mb-4 pl-3 border-l-4 border-error">
+    <h2 class="font-label-md text-label-md text-text-main uppercase tracking-wider">Choose Size</h2>
+    <span class="bg-[#FCEBEB] text-[#A32D2D] px-2 py-0.5 rounded-full font-label-sm text-[11px] uppercase tracking-wide">REQUIRED</span>
+</div>
+<div class="flex flex-wrap gap-3">
+    <!-- Selected Pill -->
+    <div class="h-10 px-6 rounded-full flex items-center justify-center bg-[#FF5722] text-white font-medium text-body-md cursor-pointer transition-colors">
+        Regular
+    </div>
+    <!-- Unselected Pill -->
+    <div class="h-10 px-6 rounded-full flex items-center justify-center border border-border-subtle text-text-muted font-medium text-body-md cursor-pointer hover:border-outline transition-colors">
+        Large
+    </div>
+</div></section>
+<!-- Section: ADD EXTRAS -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-label-md text-label-md text-text-main uppercase tracking-wider">Add Extras (Optional)</h2>
+<span class="font-label-sm text-label-sm text-text-muted">SELECT UP TO 3</span>
+</div>
+<div class="space-y-3"><!-- Option 1 -->
+<label class="flex items-center justify-between h-10 px-4 bg-surface-default rounded-lg border border-border-subtle cursor-pointer hover:bg-white transition-colors group">
+    <div class="flex items-center gap-3">
+        <input type="checkbox" class="w-5 h-5 rounded border-2 border-outline text-primary-container focus:ring-0 custom-checkbox">
+        <span class="font-body-md text-body-md text-text-main font-medium">+ Extra Raita</span>
+    </div>
+    <span class="font-label-md text-label-md text-text-muted">PKR 50</span>
+</label>
+<!-- Option 2 -->
+<label class="flex items-center justify-between h-10 px-4 bg-surface-default rounded-lg border border-border-subtle cursor-pointer hover:bg-white transition-colors group">
+    <div class="flex items-center gap-3">
+        <input type="checkbox" class="w-5 h-5 rounded border-2 border-outline text-primary-container focus:ring-0 custom-checkbox">
+        <span class="font-body-md text-body-md text-text-main font-medium">+ Double Meat</span>
+    </div>
+    <span class="font-label-md text-label-md text-text-muted">PKR 450</span>
+</label>
+<!-- Option 3 -->
+<label class="flex items-center justify-between h-10 px-4 bg-surface-default rounded-lg border border-border-subtle cursor-pointer hover:bg-white transition-colors group">
+    <div class="flex items-center gap-3">
+        <input type="checkbox" class="w-5 h-5 rounded border-2 border-outline text-primary-container focus:ring-0 custom-checkbox">
+        <span class="font-body-md text-body-md text-text-main font-medium">+ Spicy Masala</span>
+    </div>
+    <span class="font-label-md text-label-md text-text-muted">PKR 20</span>
+</label></div>
+</section>
+<!-- Quantity Selector -->
+<div class="flex flex-col items-center gap-3 py-4"><p class="font-label-md text-label-md text-text-muted mb-1">Quantity</p>
+<div class="flex items-center gap-4 h-[44px]">
+    <button class="w-12 h-11 rounded-lg bg-surface-container-low flex items-center justify-center text-text-main hover:bg-surface-container-high active:scale-95 transition-all">
+        <span class="material-symbols-outlined !text-[20px]">remove</span>
+    </button>
+    <span class="font-headline-md text-[20px] text-text-main min-w-[48px] text-center font-semibold">1</span>
+    <button class="w-12 h-11 rounded-lg bg-surface-container-low flex items-center justify-center text-text-main hover:bg-surface-container-high active:scale-95 transition-all">
+        <span class="material-symbols-outlined !text-[20px]">add</span>
+    </button>
+</div></div>
+</div>
+<!-- Sticky Action Button -->
+<div class="px-6 py-6 border-t border-surface-container-high bg-white">
+<button class="w-full bg-primary-container text-white py-4 px-6 rounded-xl flex items-center justify-between shadow-lg shadow-primary-container/20 hover:brightness-105 active:scale-[0.98] transition-all">
+<span class="font-headline-md text-headline-md font-bold">Add to Cart</span>
+<div class="flex items-center gap-2">
+<span class="w-px h-6 bg-white/20"></span>
+<span class="font-headline-md text-headline-md font-bold">PKR 1,300</span>
+</div>
+</button>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interaction for the checkboxes (Visual Only)
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const parent = this.closest('label');
+                if(this.checked) {
+                    parent.classList.add('border-primary-container', 'bg-primary-container/5');
+                    parent.classList.remove('border-border-subtle', 'bg-surface-default');
+                } else {
+                    parent.classList.remove('border-primary-container', 'bg-primary-container/5');
+                    parent.classList.add('border-border-subtle', 'bg-surface-default');
+                }
+            });
+        });
+
+        // Simple function to simulate sheet dismissal
+        function toggleSheet() {
+            const sheet = document.getElementById('bottomSheet');
+            if (sheet.classList.contains('translate-y-0')) {
+                sheet.classList.replace('translate-y-0', 'translate-y-full');
+            } else {
+                sheet.classList.replace('translate-y-full', 'translate-y-0');
+            }
+        }
+    </script>
+
+
+</body></html>

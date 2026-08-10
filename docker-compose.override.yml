@@ -1,0 +1,34 @@
+services:
+#  api:
+#    volumes:
+#      - .:/app
+#      - /app/node_modules
+#      - /app/.pnpm-store
+#      - api_nm:/app/apps/api/node_modules
+#
+#  dashboard:
+#    volumes:
+#      - .:/app
+#      - /app/node_modules
+#      - /app/.pnpm-store
+#      - dashboard_nm:/app/apps/dashboard/node_modules
+#
+#  pos:
+#    volumes:
+#      - .:/app
+#      - /app/node_modules
+#      - /app/.pnpm-store
+#      - pos_nm:/app/apps/pos/node_modules
+
+  prisma-migrate:
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.pnpm-store
+      - prisma_nm:/app/packages/db/node_modules
+
+volumes:
+  api_nm:
+  dashboard_nm:
+  pos_nm:
+  prisma_nm:

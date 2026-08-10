@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;family=Courier+Prime:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#00311f",
+                        "on-secondary-fixed-variant": "#39485a",
+                        "surface-container-highest": "#43302b",
+                        "on-error-container": "#ffdad6",
+                        "on-primary": "#5f1500",
+                        "secondary-fixed": "#d4e4fa",
+                        "on-surface": "#fadcd4",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-primary-fixed": "#3b0900",
+                        "inverse-primary": "#b02f00",
+                        "tertiary-container": "#00a572",
+                        "surface-variant": "#43302b",
+                        "on-secondary-container": "#a7b6cc",
+                        "secondary-fixed-dim": "#b9c8de",
+                        "inverse-surface": "#fadcd4",
+                        "surface-dim": "#1e100c",
+                        "surface-container-low": "#271813",
+                        "on-background": "#fadcd4",
+                        "surface-container-high": "#372621",
+                        "primary-fixed": "#ffdbd1",
+                        "on-secondary-fixed": "#0d1c2d",
+                        "surface-container-lowest": "#180b07",
+                        "on-tertiary": "#003824",
+                        "outline-variant": "#5b4039",
+                        "on-primary-fixed-variant": "#862200",
+                        "secondary": "#b9c8de",
+                        "on-error": "#690005",
+                        "inverse-on-surface": "#3e2c27",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#233143",
+                        "surface": "#1e100c",
+                        "outline": "#ab8980",
+                        "tertiary-fixed": "#6ffbbe",
+                        "error-container": "#93000a",
+                        "background": "#1e100c",
+                        "surface-container": "#2c1c17",
+                        "on-primary-container": "#541200",
+                        "surface-tint": "#ffb5a0",
+                        "on-surface-variant": "#e4beb4",
+                        "on-tertiary-fixed": "#002113",
+                        "secondary-container": "#39485a",
+                        "surface-bright": "#483530",
+                        "primary-container": "#ff5722",
+                        "tertiary": "#4edea3",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "primary": "#ffb5a0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "container-padding": "16px",
+                        "grid-gutter": "12px",
+                        "touch-target-min": "48px",
+                        "stack-gap": "12px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "label-xl": ["Space Grotesk"],
+                        "label-sm": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "label-md": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"],
+                        "headline-lg": ["Space Grotesk"],
+                        "body-sm": ["Inter"],
+                        "mono-receipt": ["Courier Prime", "monospace"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                        "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        @keyframes scale-in-bounce {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.15); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .animate-success {
+            animation: scale-in-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .receipt-card {
+            background-image: radial-gradient(circle at 50% 0, #ffffff 0, #ffffff 100%);
+            mask-image: linear-gradient(to bottom, black 95%, transparent 100%);
+        }
+        .dotted-border {
+            background-image: linear-gradient(to right, #64748B 50%, rgba(255,255,255,0) 0%);
+            background-position: bottom;
+            background-size: 8px 1px;
+            background-repeat: repeat-x;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0A0A0F;
+            color: #fadcd4;
+            max-width: 390px;
+            margin: 0 auto;
+            height: 844px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 bg-surface-container flex items-center justify-between px-container-padding h-touch-target-min border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<div class="flex flex-col">
+<h1 class="font-label-md text-white text-md">Payment Complete</h1>
+<p class="font-label-sm text-[#64748B]">Bill #034 • Table 3</p>
+</div>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-variant/50 p-2 rounded-full active:scale-95 transition-transform">close</button>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto px-container-padding py-6 flex flex-col items-center">
+<!-- Success Animation Area -->
+<div class="flex flex-col items-center text-center mb-8">
+<div class="w-16 h-16 bg-tertiary-container rounded-full flex items-center justify-center animate-success mb-4 shadow-[0_0_20px_rgba(78,222,163,0.3)]">
+<span class="material-symbols-outlined text-on-tertiary-container text-[40px]" style="font-variation-settings: 'FILL' 1;">done</span>
+</div>
+<h2 class="font-label-xl text-white mb-1">PKR 1,610 received</h2>
+<p class="font-body-md text-tertiary-fixed-dim">Change: PKR 390 cash</p>
+</div>
+<!-- Receipt Preview -->
+<div class="w-full bg-white text-black p-6 rounded-xl shadow-2xl receipt-card font-mono-receipt transform rotate-[-0.5deg]">
+<div class="text-center mb-4">
+<h3 class="font-bold text-lg mb-1">AHMED BIRYANI HOUSE</h3>
+<p class="text-[10px] text-slate-500 uppercase">G.T. Road, Gujranwala, Punjab<br/>PH: +92 300 1234567</p>
+</div>
+<div class="border-t border-dashed border-slate-300 my-3"></div>
+<div class="flex justify-between text-[11px] text-slate-600 mb-4">
+<div>
+<p>Bill #: 034</p>
+<p>Cashier: Bilal A.</p>
+</div>
+<div class="text-right">
+<p>24 Oct 2023</p>
+<p>08:45 PM</p>
+</div>
+</div>
+<div class="border-t border-dashed border-slate-300 my-3"></div>
+<!-- Items List -->
+<div class="space-y-2 mb-4 text-[13px]">
+<div class="flex justify-between">
+<span>2× Beef Biryani (Full)</span>
+<span class="font-bold">1,200</span>
+</div>
+<div class="flex justify-between">
+<span>1× Chicken Karahi (Half)</span>
+<span class="font-bold">350</span>
+</div>
+<div class="flex justify-between">
+<span>3× Naan</span>
+<span class="font-bold">60</span>
+</div>
+</div>
+<div class="border-t border-dashed border-slate-300 my-3"></div>
+<!-- Summary -->
+<div class="space-y-1 text-[13px] mb-4">
+<div class="flex justify-between">
+<span>Subtotal</span>
+<span>1,610</span>
+</div>
+<div class="flex justify-between">
+<span>Tax (0%)</span>
+<span>0</span>
+</div>
+<div class="flex justify-between font-bold text-lg pt-1">
+<span>TOTAL</span>
+<span>PKR 1,610</span>
+</div>
+</div>
+<div class="border-t border-dashed border-slate-300 my-3"></div>
+<div class="space-y-1 text-[12px] mb-6">
+<div class="flex justify-between">
+<span>Cash Received</span>
+<span>2,000</span>
+</div>
+<div class="flex justify-between font-bold">
+<span>Change</span>
+<span>390</span>
+</div>
+</div>
+<div class="text-center">
+<p class="text-[11px] italic mb-1">Thank you! Visit again</p>
+<div class="flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[12px]">bolt</span>
+<p class="text-[9px] uppercase tracking-wider text-slate-400">Powered by SwiftServe Go</p>
+</div>
+</div>
+<!-- Bottom jagged edge effect -->
+<div class="absolute bottom-0 left-0 right-0 flex overflow-hidden">
+<div class="flex-shrink-0 w-full h-2" style="background: repeating-linear-gradient(45deg, white, white 4px, transparent 4px, transparent 8px)"></div>
+</div>
+</div>
+<div class="h-20"></div> <!-- Spacing for fixed footer -->
+</main>
+<!-- Actions Footer -->
+<footer class="bg-surface-container-high px-container-padding py-4 border-t border-outline-variant space-y-3 z-50">
+<!-- Action Row 1 -->
+<div class="grid grid-cols-2 gap-3">
+<button class="h-touch-target-min flex items-center justify-center gap-2 bg-[#2D2D39] text-white rounded-xl font-label-md active:scale-95 transition-all hover:bg-[#3D3D49]">
+<span class="material-symbols-outlined text-[18px]">print</span>
+                Print Bill
+            </button>
+<button class="h-touch-target-min flex items-center justify-center gap-2 bg-[#25D366] text-white rounded-xl font-label-md active:scale-95 transition-all hover:bg-[#20bd5a]">
+<span class="material-symbols-outlined text-[18px]">share</span>
+                WhatsApp
+            </button>
+</div>
+<!-- Action Row 2 -->
+<button class="w-full h-touch-target-min bg-primary-container/10 border-2 border-primary-container text-primary-container rounded-xl font-label-md active:scale-95 transition-all hover:bg-primary-container/20">
+            New Order for Table 3
+        </button>
+<button class="w-full h-touch-target-min bg-[#2D2D39] text-white rounded-xl font-label-md active:scale-95 transition-all hover:bg-[#3D3D49]">
+            New Order (Different Table)
+        </button>
+<div class="text-center">
+<p class="text-[11px] font-label-sm text-[#64748B] flex items-center justify-center gap-1">
+<span id="countdown">15</span>s Auto-returns in <span class="material-symbols-outlined text-[14px]">timer</span>
+</p>
+</div>
+</footer>
+<script>
+        // Micro-interaction for countdown
+        let count = 15;
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            count--;
+            if(countdownEl) countdownEl.innerText = count;
+            if (count === 0) {
+                clearInterval(timer);
+                // In a real app, logic to navigate back would go here
+            }
+        }, 1000);
+
+        // Tactile feedback on buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', () => {
+                btn.style.filter = 'brightness(1.2)';
+            });
+            btn.addEventListener('touchend', () => {
+                btn.style.filter = 'brightness(1)';
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS Terminal Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-container": "#4a4949",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-lowest": "#140d06",
+                        "on-primary": "#472a00",
+                        "primary-container": "#f59e0b",
+                        "on-surface": "#f0e0d1",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#653e00",
+                        "outline": "#a08e7a",
+                        "surface-dim": "#19120a",
+                        "on-primary-container": "#613b00",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#b1b1ae",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "on-secondary": "#313030",
+                        "on-primary-fixed": "#2a1700",
+                        "surface-container-high": "#31281f",
+                        "on-background": "#f0e0d1",
+                        "outline-variant": "#534434",
+                        "primary": "#ffc174",
+                        "surface-variant": "#3c3329",
+                        "background": "#19120a",
+                        "primary-fixed": "#ffddb8",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#f59e0b",
+                        "surface-container": "#261e15",
+                        "on-secondary-container": "#bab8b7",
+                        "surface-tint": "#ffb95f",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "inverse-primary": "#855300",
+                        "inverse-on-surface": "#382f25",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "on-tertiary": "#2f312f",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "surface-bright": "#41382e",
+                        "surface-container-highest": "#3c3329",
+                        "inverse-surface": "#f0e0d1",
+                        "on-surface-variant": "#d8c3ad",
+                        "tertiary": "#cdccca",
+                        "surface": "#19120a",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-tertiary-container": "#434442",
+                        "on-secondary-fixed-variant": "#474646",
+                        "surface-container-low": "#221a12",
+                        "secondary": "#c9c6c5",
+                        "industrial-black": "#0D0D0D",
+                        "off-white": "#F9F8F5",
+                        "electric-amber": "#F59E0B"
+                    },
+                    fontFamily: {
+                        "clash": ["Clash Display", "sans-serif"],
+                        "inter": ["Inter", "sans-serif"],
+                        "mono": ["Space Mono", "monospace"]
+                    },
+                    transitionDuration: {
+                        '180': '180ms'
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-scale:active {
+            transform: scale(0.93);
+        }
+        .pin-dot {
+            transition: all 180ms ease-out;
+        }
+        .numpad-key:focus {
+            outline: 2px solid #F59E0B;
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body class="bg-industrial-black min-h-screen flex flex-col items-center justify-center p-6 font-inter select-none overflow-hidden">
+<!-- Login Container -->
+<main class="w-[420px] bg-off-white rounded-xl p-xl flex flex-col items-center transition-all duration-180 z-10" id="login-card">
+<!-- Header -->
+<header class="flex flex-col items-center mb-xl">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-electric-amber !text-[28px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<h1 class="font-clash text-[28px] font-bold text-industrial-black leading-none">SwiftServe</h1>
+</div>
+<p class="text-[13px] text-[#6B7280] font-normal tracking-wide">Operator Terminal</p>
+</header>
+<!-- Dynamic Content Area -->
+<div class="w-full relative min-h-[460px]" id="view-container">
+<!-- Role Selection View -->
+<section class="w-full transition-all duration-300" id="role-selection">
+<h2 class="text-[14px] font-medium text-[#374151] mb-lg text-center">Who are you?</h2>
+<div class="grid grid-cols-2 gap-y-lg gap-x-base">
+<!-- Manager -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Manager')">
+<div class="w-20 h-20 rounded-full bg-[#3B82F6] flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="admin_panel_settings">admin_panel_settings</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Manager</span>
+</button>
+<!-- Head Cashier -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Head Cashier')">
+<div class="w-20 h-20 rounded-full bg-electric-amber flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="star">star</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Head Cashier</span>
+</button>
+<!-- Cashier -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Cashier')">
+<div class="w-20 h-20 rounded-full bg-[#10B981] flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="payments">payments</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Cashier</span>
+</button>
+<!-- Waiter -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Waiter')">
+<div class="w-20 h-20 rounded-full bg-[#06B6D4] flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="restaurant">restaurant</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Waiter</span>
+</button>
+<!-- Kitchen -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Kitchen')">
+<div class="w-20 h-20 rounded-full bg-[#FB7185] flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="skillet">skillet</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Kitchen</span>
+</button>
+<!-- Delivery -->
+<button class="active-scale flex flex-col items-center gap-sm group" onclick="showPinEntry('Delivery')">
+<div class="w-20 h-20 rounded-full bg-[#A855F7] flex items-center justify-center text-white transition-all duration-180 group-hover:brightness-110">
+<span class="material-symbols-outlined !text-3xl" data-icon="moped">moped</span>
+</div>
+<span class="text-[12px] font-medium text-industrial-black">Delivery</span>
+</button>
+</div>
+</section>
+<!-- PIN Entry View (Hidden by default) -->
+<section class="hidden w-full transition-all duration-300 opacity-0" id="pin-entry">
+<div class="flex items-center justify-center mb-base">
+<button class="absolute left-0 top-0 p-2 text-[#6B7280] hover:text-industrial-black transition-colors" onclick="resetView()">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h2 class="text-[14px] font-medium text-industrial-black" id="pin-label">Enter your PIN</h2>
+</div>
+<!-- Dot Indicators -->
+<div class="flex justify-center gap-md mb-lg">
+<div class="pin-dot w-8 h-8 rounded-full border-2 border-industrial-black/20" id="dot-1"></div>
+<div class="pin-dot w-8 h-8 rounded-full border-2 border-industrial-black/20" id="dot-2"></div>
+<div class="pin-dot w-8 h-8 rounded-full border-2 border-industrial-black/20" id="dot-3"></div>
+<div class="pin-dot w-8 h-8 rounded-full border-2 border-industrial-black/20" id="dot-4"></div>
+</div>
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-3 justify-items-center">
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('1')">1</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('2')">2</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('3')">3</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('4')">4</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('5')">5</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('6')">6</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('7')">7</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('8')">8</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('9')">9</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-industrial-black flex items-center justify-center hover:bg-gray-50" onclick="clearPin()">
+<span class="material-symbols-outlined">backspace</span>
+</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl border border-[#E5E7EB] bg-white text-[22px] font-medium text-industrial-black hover:bg-gray-50" onclick="inputPin('0')">0</button>
+<button class="numpad-key active-scale w-[72px] h-[64px] rounded-xl bg-electric-amber text-white flex items-center justify-center hover:brightness-110" onclick="submitPin()">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Footer Link -->
+<div class="mt-xl">
+<button class="text-[13px] text-[#6B7280] hover:text-industrial-black transition-colors font-medium">Sign in with email instead</button>
+</div>
+</main>
+<!-- Global Footer -->
+<footer class="fixed bottom-lg w-full px-xl flex justify-between items-center text-[#4B5563]">
+<div class="flex-1"></div>
+<div class="flex-1 text-center text-[11px] font-medium opacity-80">
+            SwiftServe v2.0 · Powered by Google Stitch
+        </div>
+<div class="flex-1 text-right text-[12px] font-mono text-[#6B7280]" id="clock">
+            Friday, 24 Oct 12:45:00
+        </div>
+</footer>
+<script>
+        let currentPin = '';
+        let selectedRole = '';
+
+        function showPinEntry(role) {
+            selectedRole = role;
+            document.getElementById('pin-label').textContent = `Enter PIN for ${role}`;
+            
+            const roleSelection = document.getElementById('role-selection');
+            const pinEntry = document.getElementById('pin-entry');
+            
+            roleSelection.classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                roleSelection.classList.add('hidden');
+                pinEntry.classList.remove('hidden');
+                setTimeout(() => {
+                    pinEntry.classList.remove('opacity-0');
+                    pinEntry.classList.add('opacity-100');
+                }, 50);
+            }, 300);
+        }
+
+        function resetView() {
+            currentPin = '';
+            updateDots();
+            const roleSelection = document.getElementById('role-selection');
+            const pinEntry = document.getElementById('pin-entry');
+            
+            pinEntry.classList.add('opacity-0');
+            setTimeout(() => {
+                pinEntry.classList.add('hidden');
+                roleSelection.classList.remove('hidden');
+                setTimeout(() => {
+                    roleSelection.classList.remove('opacity-0', 'scale-95');
+                }, 50);
+            }, 300);
+        }
+
+        function inputPin(num) {
+            if (currentPin.length < 4) {
+                currentPin += num;
+                updateDots();
+            }
+            if (currentPin.length === 4) {
+                // Auto-submit or visual feedback could go here
+                console.log('PIN Ready');
+            }
+        }
+
+        function clearPin() {
+            currentPin = currentPin.slice(0, -1);
+            updateDots();
+        }
+
+        function updateDots() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i <= currentPin.length) {
+                    dot.classList.add('bg-industrial-black', 'border-industrial-black');
+                    dot.classList.remove('border-industrial-black/20');
+                } else {
+                    dot.classList.remove('bg-industrial-black', 'border-industrial-black');
+                    dot.classList.add('border-industrial-black/20');
+                }
+            }
+        }
+
+        function submitPin() {
+            if (currentPin.length === 4) {
+                const card = document.getElementById('login-card');
+                card.classList.add('scale-95', 'opacity-50');
+                // Simulate Login
+                setTimeout(() => {
+                    alert(`Welcome, ${selectedRole}! Logged in successfully.`);
+                    resetView();
+                    card.classList.remove('scale-95', 'opacity-50');
+                }, 600);
+            }
+        }
+
+        // Live Clock
+        function updateClock() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            const dayName = days[now.getDay()];
+            const dayNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const time = now.toTimeString().split(' ')[0];
+            
+            document.getElementById('clock').textContent = `${dayName}, ${dayNum} ${monthName} ${time}`;
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Keyboard Support for PIN
+        window.addEventListener('keydown', (e) => {
+            if (document.getElementById('pin-entry').classList.contains('hidden')) return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                inputPin(e.key);
+            } else if (e.key === 'Backspace') {
+                clearPin();
+            } else if (e.key === 'Enter') {
+                submitPin();
+            } else if (e.key === 'Escape') {
+                resetView();
+            }
+        });
+    </script>
+</body></html>

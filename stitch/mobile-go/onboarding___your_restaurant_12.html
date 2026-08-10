@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, height=844, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0A0A0F;
+            color: #fadcd4;
+            font-family: 'Inter', sans-serif;
+            width: 390px;
+            height: 844px;
+            margin: 0 auto;
+            overflow: hidden;
+            position: relative;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .input-focus-effect:focus-within {
+            border-color: #ff5722;
+            box-shadow: 0 0 0 1px #ff5722;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#1e100c",
+                      "secondary": "#b9c8de",
+                      "primary-container": "#ff5722",
+                      "surface-container-low": "#271813",
+                      "on-background": "#fadcd4",
+                      "tertiary-fixed": "#6ffbbe",
+                      "surface-bright": "#483530",
+                      "primary": "#ffb5a0",
+                      "on-primary-fixed": "#3b0900",
+                      "secondary-fixed-dim": "#b9c8de",
+                      "surface-container-highest": "#43302b",
+                      "surface-container-high": "#372621",
+                      "surface-tint": "#ffb5a0",
+                      "tertiary": "#4edea3",
+                      "on-secondary-container": "#a7b6cc",
+                      "error": "#ffb4ab",
+                      "outline-variant": "#5b4039",
+                      "on-primary": "#5f1500",
+                      "surface-container-lowest": "#180b07",
+                      "surface-variant": "#43302b",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "inverse-surface": "#fadcd4",
+                      "on-tertiary-container": "#00311f",
+                      "on-secondary": "#233143",
+                      "on-tertiary-fixed": "#002113",
+                      "error-container": "#93000a",
+                      "primary-fixed-dim": "#ffb5a0",
+                      "on-secondary-fixed-variant": "#39485a",
+                      "on-primary-container": "#541200",
+                      "secondary-container": "#39485a",
+                      "secondary-fixed": "#d4e4fa",
+                      "on-error-container": "#ffdad6",
+                      "surface": "#1e100c",
+                      "primary-fixed": "#ffdbd1",
+                      "outline": "#ab8980",
+                      "on-surface": "#fadcd4",
+                      "inverse-primary": "#b02f00",
+                      "inverse-on-surface": "#3e2c27",
+                      "surface-container": "#2c1c17",
+                      "on-tertiary": "#003824",
+                      "on-error": "#690005",
+                      "on-secondary-fixed": "#0d1c2d",
+                      "on-primary-fixed-variant": "#862200",
+                      "background": "#1e100c",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "tertiary-container": "#00a572",
+                      "on-surface-variant": "#e4beb4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-gap": "12px",
+                      "unit": "4px",
+                      "touch-target-min": "48px",
+                      "grid-gutter": "12px",
+                      "container-padding": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Space Grotesk"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Space Grotesk"],
+                      "body-sm": ["Inter"],
+                      "label-md": ["Space Grotesk"],
+                      "headline-lg-mobile": ["Space Grotesk"],
+                      "label-sm": ["Space Grotesk"],
+                      "body-md": ["Inter"],
+                      "label-xl": ["Space Grotesk"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col">
+<!-- Top Navigation / Progress Indicator -->
+<header class="pt-12 px-6 flex flex-col gap-6">
+<div class="flex items-center gap-2 h-2">
+<!-- Step 1: Active Pill -->
+<div class="w-[24px] h-[8px] bg-primary-container rounded-full transition-all duration-300"></div>
+<!-- Step 2: Dot -->
+<div class="w-[8px] h-[8px] bg-white/20 rounded-full"></div>
+<!-- Step 3: Dot -->
+<div class="w-[8px] h-[8px] bg-white/20 rounded-full"></div>
+</div>
+<div class="flex flex-col gap-1">
+<h1 class="text-[22px] font-bold text-white tracking-tight leading-tight">Tell us about your restaurant</h1>
+<p class="text-[14px] text-[#64748B] font-medium">Takes 30 seconds</p>
+</div>
+</header>
+<!-- Main Form Section -->
+<main class="flex-1 px-6 pt-10 overflow-y-auto hide-scrollbar">
+<form class="flex flex-col gap-8 pb-32" id="onboarding-form">
+<!-- Restaurant Name -->
+<div class="flex flex-col gap-2">
+<label class="text-[13px] text-[#94A3B8] font-medium tracking-wide uppercase px-1">Restaurant Name</label>
+<div class="relative group">
+<input class="w-full h-[56px] bg-[#1E293B] border border-white/5 rounded-[12px] px-4 text-white placeholder-[#64748B] focus:outline-none transition-all duration-200 input-focus-effect font-body-md text-body-md" placeholder="e.g. Ahmed Biryani House" type="text"/>
+</div>
+</div>
+<!-- Business Type -->
+<div class="flex flex-col gap-3">
+<label class="text-[13px] text-[#94A3B8] font-medium tracking-wide uppercase px-1">Business Type</label>
+<div class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar -mx-6 px-6">
+<!-- Chip: selected -->
+<button class="flex-shrink-0 px-5 py-2.5 rounded-full border border-primary-container bg-primary-container/15 text-primary-container font-label-md text-label-md transition-all" type="button">
+                        🍛 Dhaba
+                    </button>
+<!-- Chip: default -->
+<button class="flex-shrink-0 px-5 py-2.5 rounded-full border border-white/10 bg-[#1E293B] text-[#94A3B8] font-label-md text-label-md transition-all hover:bg-white/5" type="button">
+                        🍚 Biryani
+                    </button>
+<button class="flex-shrink-0 px-5 py-2.5 rounded-full border border-white/10 bg-[#1E293B] text-[#94A3B8] font-label-md text-label-md transition-all hover:bg-white/5" type="button">
+                        ☕ Café
+                    </button>
+<button class="flex-shrink-0 px-5 py-2.5 rounded-full border border-white/10 bg-[#1E293B] text-[#94A3B8] font-label-md text-label-md transition-all hover:bg-white/5" type="button">
+                        🍕 Fast Food
+                    </button>
+<button class="flex-shrink-0 px-5 py-2.5 rounded-full border border-white/10 bg-[#1E293B] text-[#94A3B8] font-label-md text-label-md transition-all hover:bg-white/5" type="button">
+                        🥘 Restaurant
+                    </button>
+</div>
+</div>
+<!-- City -->
+<div class="flex flex-col gap-2">
+<label class="text-[13px] text-[#94A3B8] font-medium tracking-wide uppercase px-1">City</label>
+<div class="relative group">
+<input class="w-full h-[56px] bg-[#1E293B] border border-white/5 rounded-[12px] px-4 text-white placeholder-[#64748B] focus:outline-none transition-all duration-200 input-focus-effect font-body-md text-body-md" placeholder="Your city" type="text"/>
+</div>
+</div>
+<!-- Phone Number -->
+<div class="flex flex-col gap-2">
+<label class="text-[13px] text-[#94A3B8] font-medium tracking-wide uppercase px-1">Phone Number</label>
+<div class="flex items-center w-full h-[56px] bg-[#1E293B] border border-white/5 rounded-[12px] overflow-hidden transition-all duration-200 input-focus-effect">
+<div class="flex items-center justify-center px-4 h-full border-r border-white/5 bg-white/5">
+<span class="text-white font-label-md text-label-md">+92</span>
+</div>
+<input class="flex-1 h-full bg-transparent border-none focus:ring-0 px-4 text-white placeholder-[#64748B] font-body-md text-body-md" placeholder="300 1234567" type="tel"/>
+</div>
+</div>
+</form>
+</main>
+<!-- Bottom Actions -->
+<div class="fixed bottom-0 left-0 w-full px-6 pb-10 bg-gradient-to-t from-[#0A0A0F] via-[#0A0A0F] to-transparent pt-10">
+<button class="w-full h-[54px] bg-primary-container text-white rounded-[14px] flex items-center justify-center gap-2 shadow-lg shadow-primary-container/20 active:scale-95 transition-all duration-200 group" type="button">
+<span class="font-headline-md text-headline-md font-bold">Continue</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Toggle selected business type
+        const chips = document.querySelectorAll('.flex-shrink-0.rounded-full');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                chips.forEach(c => {
+                    c.classList.remove('border-primary-container', 'bg-primary-container/15', 'text-primary-container');
+                    c.classList.add('border-white/10', 'bg-[#1E293B]', 'text-[#94A3B8]');
+                });
+                chip.classList.add('border-primary-container', 'bg-primary-container/15', 'text-primary-container');
+                chip.classList.remove('border-white/10', 'bg-[#1E293B]', 'text-[#94A3B8]');
+            });
+        });
+
+        // Simple button ripple effect simulation
+        const continueBtn = document.querySelector('button.bg-primary-container');
+        continueBtn.addEventListener('mousedown', function(e) {
+            this.style.transform = 'scale(0.98)';
+        });
+        continueBtn.addEventListener('mouseup', function(e) {
+            this.style.transform = 'scale(1)';
+        });
+        continueBtn.addEventListener('mouseleave', function(e) {
+            this.style.transform = 'scale(1)';
+        });
+    </script>
+</body></html>

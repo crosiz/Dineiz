@@ -1,0 +1,14 @@
+{
+  "name": "@swiftserve/pdf-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "puppeteer": "^24.9.0"
+  }
+}
+

@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#271813",
+                        "surface-container": "#ffe9e4",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#00628c",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary-container": "#5c647a",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed": "#dae2fd",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary-container": "#541200",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-on-surface": "#ffede8",
+                        "primary-fixed": "#ffdbd1",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#f1d4cc",
+                        "primary-container": "#ff5722",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#e4beb4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27",
+                        "background": "#fff8f6",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fff8f6",
+                        "surface-bright": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-variant": "#fadcd4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "outline": "#907067"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "section": "24px",
+                        "related": "8px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "display": ["Inter"],
+                        "h1": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: #fff8f6; }
+        .card-shadow { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .slide-over-shadow { box-shadow: -10px 0 30px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="text-on-background">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-60 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col p-4 gap-y-1 z-50">
+<div class="mb-8 px-4 flex items-center gap-3">
+<div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h1 class="text-2xl font-black text-orange-500 italic leading-none">SwiftServe</h1>
+<p class="text-[10px] text-slate-500 font-bold tracking-widest uppercase">Premium POS</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-inter text-sm">Overview</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">restaurant_menu</span>
+<span class="font-inter text-sm">Operations</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">storefront</span>
+<span class="font-inter text-sm">Business</span>
+</a>
+<div class="space-y-1 pt-2">
+<p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Growth</p>
+<a class="bg-orange-600 text-white rounded-lg flex items-center px-4 py-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mr-3">trending_up</span>
+<span class="font-inter text-sm">Deals &amp; Promotions</span>
+</a>
+</div>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-inter text-sm">Analytics</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">extension</span>
+<span class="font-inter text-sm">Integrations</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-inter text-sm">Settings</span>
+</a>
+</nav>
+<button class="mt-auto bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-orange-900/40 flex items-center justify-center gap-2 hover:bg-orange-500 transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+<span>Create Order</span>
+</button>
+</aside>
+<div class="ml-60 min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="flex justify-between items-center px-6 h-16 w-full sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center gap-4">
+<h2 class="text-xl font-bold text-slate-900 dark:text-white font-inter">SwiftServe POS</h2>
+<span class="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-tight">Main Branch</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-slate-500">
+<span class="material-symbols-outlined hover:text-orange-600 cursor-pointer transition-colors">search</span>
+<span class="material-symbols-outlined hover:text-orange-600 cursor-pointer transition-colors">notifications</span>
+<span class="material-symbols-outlined hover:text-orange-600 cursor-pointer transition-colors">help</span>
+</div>
+<div class="h-8 w-8 rounded-full bg-slate-200 overflow-hidden border-2 border-orange-100">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a restaurant manager wearing a crisp white shirt, set against a blurred modern restaurant interior background. The lighting is warm and natural, creating a welcoming yet authoritative executive appearance. The visual style is high-definition photography with a soft focus on the background to emphasize the person." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAb5yvqWnehalwTqKh9XRMr73KQ27WrvkoGSG99M3juzWZ0sYYktyl1V9NybMz3US0oHKCh3jAdRzcR7TFpUmAvyfIKUMHq9VBJZi2iZUt8BOZC3RKgxxSrM09MQEy7J-NjQcOcj5-PapwBTH4USbf5FefsuXSh8NzR-Hxwbm6VhcCbLOJXYCWly3qzlxTW4cIC4Wzmoy3UpMsfnD9a2HX4Lu3-KfJrK_1CqrUj1cJD02LiQTeoB9HEs80_aPo2Yc3uKmBYKmYx4tUX"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="p-page_margin flex-1">
+<div class="flex justify-between items-end mb-section">
+<div>
+<h1 class="font-display text-display text-on-surface">Deals &amp; Promotions</h1>
+<p class="font-body text-body text-on-surface-variant">Manage your customer incentives and bundles.</p>
+</div>
+<button class="bg-primary-container text-white px-6 py-2.5 rounded-lg font-h2 flex items-center gap-2 hover:opacity-90 shadow-lg shadow-primary-container/20 transition-all">
+<span class="material-symbols-outlined">add</span>
+                    Create Deal
+                </button>
+</div>
+<!-- Tabs -->
+<div class="flex border-b border-outline-variant mb-element">
+<button class="px-6 py-3 font-h2 text-primary border-b-2 border-primary-container flex items-center gap-2">
+                    All <span class="bg-primary-fixed text-on-primary-fixed-variant px-2 py-0.5 rounded-full text-caption">12</span>
+</button>
+<button class="px-6 py-3 font-h2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
+                    Active <span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded-full text-caption">5</span>
+</button>
+<button class="px-6 py-3 font-h2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
+                    Scheduled <span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded-full text-caption">2</span>
+</button>
+<button class="px-6 py-3 font-h2 text-on-surface-variant hover:text-primary transition-colors flex items-center gap-2">
+                    Expired <span class="bg-surface-container-highest text-on-surface-variant px-2 py-0.5 rounded-full text-caption">5</span>
+</button>
+</div>
+<!-- Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-grid_gutter">
+<!-- Deal Card 1 -->
+<div class="bg-white rounded-xl p-element card-shadow border border-outline-variant/30 flex flex-col gap-element relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">sell</span>
+</div>
+<div>
+<h3 class="font-h1 text-on-surface">Zinger Family Combo</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Active</span>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Combo</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="text-right">
+<span class="text-caption text-on-surface-variant line-through">PKR 1750</span>
+<p class="font-h1 text-primary-container">PKR 1500</p>
+<span class="text-[10px] font-bold text-green-600">Save PKR 250 (14.3%)</span>
+</div>
+</div>
+</div>
+<p class="text-body text-on-surface-variant leading-relaxed">
+                        Buy 2 Zinger + 2 Fries + 2 Cola = PKR 1500. Perfect for small families and friend groups.
+                    </p>
+<div class="flex items-center gap-related text-caption text-on-secondary-fixed-variant bg-surface-container-low px-3 py-2 rounded-lg">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+                        All day • Mon-Sun • All branches
+                    </div>
+<div class="grid grid-cols-3 gap-related border-t border-b border-outline-variant/30 py-related my-related">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Usage</p>
+<p class="font-h2 text-on-surface">234</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Revenue</p>
+<p class="font-h2 text-on-surface">PKR 175.5k</p>
+</div>
+<div class="flex items-end justify-end">
+<!-- Placeholder Sparkline -->
+<div class="flex items-end gap-0.5 h-8">
+<div class="w-1 bg-green-200 h-2 rounded-full"></div>
+<div class="w-1 bg-green-300 h-4 rounded-full"></div>
+<div class="w-1 bg-green-400 h-3 rounded-full"></div>
+<div class="w-1 bg-green-500 h-6 rounded-full"></div>
+<div class="w-1 bg-green-600 h-5 rounded-full"></div>
+<div class="w-1 bg-green-500 h-8 rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary-container hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary-container hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">content_copy</span>
+</button>
+<button class="p-2 text-error hover:bg-error-container rounded-lg transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-caption text-on-surface-variant">Pause</span>
+<div class="w-10 h-5 bg-green-500 rounded-full relative cursor-pointer">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Deal Card 2 -->
+<div class="bg-white rounded-xl p-element card-shadow border border-outline-variant/30 flex flex-col gap-element relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-surface-container-high rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">percent</span>
+</div>
+<div>
+<h3 class="font-h1 text-on-surface">Midnight Munchies</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">Active</span>
+<span class="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">% Discount</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<div class="text-right">
+<p class="font-h1 text-primary-container">20% OFF</p>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Sitewide</span>
+</div>
+</div>
+</div>
+<p class="text-body text-on-surface-variant leading-relaxed">
+                        Enjoy flat 20% off on all menu items during the late hours. Valid for dine-in and takeaway.
+                    </p>
+<div class="flex items-center gap-related text-caption text-on-secondary-fixed-variant bg-surface-container-low px-3 py-2 rounded-lg">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                        11:00 PM - 3:00 AM • Daily • Selected Branches
+                    </div>
+<div class="grid grid-cols-3 gap-related border-t border-b border-outline-variant/30 py-related my-related">
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Usage</p>
+<p class="font-h2 text-on-surface">1,052</p>
+</div>
+<div>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Revenue</p>
+<p class="font-h2 text-on-surface">PKR 84.2k</p>
+</div>
+<div class="flex items-end justify-end">
+<div class="flex items-end gap-0.5 h-8">
+<div class="w-1 bg-green-200 h-6 rounded-full"></div>
+<div class="w-1 bg-green-300 h-4 rounded-full"></div>
+<div class="w-1 bg-green-400 h-5 rounded-full"></div>
+<div class="w-1 bg-green-500 h-7 rounded-full"></div>
+<div class="w-1 bg-green-600 h-3 rounded-full"></div>
+<div class="w-1 bg-green-500 h-6 rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between items-center pt-2">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary-container hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary-container hover:bg-surface-container-low rounded-lg transition-colors">
+<span class="material-symbols-outlined">content_copy</span>
+</button>
+<button class="p-2 text-error hover:bg-error-container rounded-lg transition-colors">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-caption text-on-surface-variant">Pause</span>
+<div class="w-10 h-5 bg-green-500 rounded-full relative cursor-pointer">
+<div class="absolute right-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Create Deal Slide-over Overlay -->
+<div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex justify-end">
+<!-- Slide-over Content -->
+<div class="w-[560px] h-full bg-white slide-over-shadow flex flex-col animate-slide-in">
+<!-- Header -->
+<div class="p-page_margin border-b border-outline-variant flex justify-between items-center">
+<div>
+<h2 class="font-display text-h1 text-on-surface">Create New Deal</h2>
+<p class="text-caption text-on-surface-variant">Configure a new bundle or discount for your menu.</p>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">close</span>
+</button>
+</div>
+<!-- Form Body -->
+<div class="flex-1 overflow-y-auto p-page_margin space-y-section">
+<!-- Name -->
+<div class="space-y-related">
+<label class="font-h2 text-on-surface">Deal Name</label>
+<input class="w-full h-10 border-outline-variant rounded-lg px-3 focus:ring-1 focus:ring-primary focus:border-primary-container transition-all" placeholder="e.g., Zinger Family Combo" type="text"/>
+</div>
+<!-- Deal Type -->
+<div class="space-y-related">
+<label class="font-h2 text-on-surface">Deal Type</label>
+<div class="grid grid-cols-4 gap-2">
+<button class="flex flex-col items-center justify-center p-3 border-2 border-primary-container bg-surface-container rounded-xl text-primary transition-all">
+<span class="material-symbols-outlined mb-1">group</span>
+<span class="text-[10px] font-bold uppercase">Combo</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 border-2 border-outline-variant hover:border-primary-container rounded-xl text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined mb-1">exposure_plus_1</span>
+<span class="text-[10px] font-bold uppercase">BOGO</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 border-2 border-outline-variant hover:border-primary-container rounded-xl text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined mb-1">percent</span>
+<span class="text-[10px] font-bold uppercase">% Off</span>
+</button>
+<button class="flex flex-col items-center justify-center p-3 border-2 border-outline-variant hover:border-primary-container rounded-xl text-on-surface-variant hover:text-primary transition-all">
+<span class="material-symbols-outlined mb-1">savings</span>
+<span class="text-[10px] font-bold uppercase">Fixed</span>
+</button>
+</div>
+</div>
+<!-- Combo Section -->
+<div class="p-element bg-surface rounded-xl border border-outline-variant space-y-element">
+<div class="flex justify-between items-center">
+<label class="font-h2 text-on-surface">Items in Bundle</label>
+<button class="text-primary font-h2 text-caption flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                            Add Item
+                        </button>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="bg-white border border-outline-variant px-3 py-1.5 rounded-full text-body flex items-center gap-2 group">
+                            Zinger Burger
+                            <span class="material-symbols-outlined text-xs text-on-surface-variant hover:text-error cursor-pointer">close</span>
+</span>
+<span class="bg-white border border-outline-variant px-3 py-1.5 rounded-full text-body flex items-center gap-2 group">
+                            Fries (L)
+                            <span class="material-symbols-outlined text-xs text-on-surface-variant hover:text-error cursor-pointer">close</span>
+</span>
+<span class="bg-white border border-outline-variant px-3 py-1.5 rounded-full text-body flex items-center gap-2 group">
+                            Cola 500ml
+                            <span class="material-symbols-outlined text-xs text-on-surface-variant hover:text-error cursor-pointer">close</span>
+</span>
+</div>
+<div class="space-y-related">
+<label class="font-h2 text-on-surface">Bundle Deal Price (PKR)</label>
+<div class="relative">
+<span class="absolute left-3 top-2 text-on-surface-variant font-h2">PKR</span>
+<input class="w-full h-10 pl-12 border-outline-variant rounded-lg focus:ring-primary focus:border-primary-container" type="number" value="1500"/>
+</div>
+</div>
+<div class="bg-green-50 border border-green-100 p-3 rounded-lg flex items-start gap-3">
+<span class="material-symbols-outlined text-green-600 mt-0.5">info</span>
+<div>
+<p class="text-caption text-green-800 font-bold">Smart Pricing Logic</p>
+<p class="text-caption text-green-700">Normal total: PKR 1750 • Customer saves: PKR 250 (14.3%)</p>
+</div>
+</div>
+</div>
+<!-- Validity Section -->
+<div class="space-y-element">
+<label class="font-h2 text-on-surface">Availability &amp; Validity</label>
+<div class="space-y-related">
+<p class="text-caption text-on-surface-variant font-bold uppercase tracking-widest">Active Days</p>
+<div class="flex gap-2">
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">M</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">T</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">W</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">T</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">F</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">S</button>
+<button class="w-10 h-10 rounded-lg bg-primary-container text-white font-bold">S</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-element">
+<div class="space-y-related">
+<p class="text-caption text-on-surface-variant font-bold uppercase tracking-widest">Timing</p>
+<select class="w-full h-10 border-outline-variant rounded-lg focus:ring-primary">
+<option>All Day</option>
+<option>Custom Hours</option>
+</select>
+</div>
+<div class="space-y-related">
+<p class="text-caption text-on-surface-variant font-bold uppercase tracking-widest">Branch Selection</p>
+<select class="w-full h-10 border-outline-variant rounded-lg focus:ring-primary">
+<option>All Branches</option>
+<option>Main Branch Only</option>
+<option>Downtown Outlet</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<div class="p-page_margin border-t border-outline-variant flex gap-4">
+<button class="flex-1 py-3 font-h2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors border border-outline-variant">
+                    Cancel
+                </button>
+<button class="flex-2 px-12 py-3 font-h2 bg-primary-container text-white rounded-lg hover:opacity-90 transition-all shadow-lg shadow-primary-container/20">
+                    Save Deal
+                </button>
+</div>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,33 @@
+{
+  "name": "@swiftserve/db",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts",
+    "seed": "tsx seed.ts",
+    "db:studio": "prisma studio",
+    "lint": "eslint \"**/*.ts*\""
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^5.22.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "@swiftserve/config": "workspace:*",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/ws": "^8.18.1",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.4.5"
+  }
+}

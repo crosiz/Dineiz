@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-low": "#fff1ed",
+                    "tertiary": "#00628c",
+                    "outline": "#907067",
+                    "tertiary-fixed-dim": "#86cfff",
+                    "error": "#ba1a1a",
+                    "surface-container-high": "#ffe2da",
+                    "on-tertiary-container": "#fcfcff",
+                    "on-tertiary-fixed": "#001e2e",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "primary": "#b02f00",
+                    "surface-tint": "#b02f00",
+                    "inverse-primary": "#ffb5a0",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-surface": "#271813",
+                    "on-primary-fixed": "#3b0900",
+                    "tertiary-container": "#007caf",
+                    "surface": "#fff8f6",
+                    "secondary": "#565e74",
+                    "on-secondary-container": "#5c647a",
+                    "on-secondary-fixed": "#131b2e",
+                    "surface-container-highest": "#fadcd4",
+                    "on-tertiary": "#ffffff",
+                    "background": "#fff8f6",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#ffdbd1",
+                    "inverse-on-surface": "#ffede8",
+                    "on-tertiary-fixed-variant": "#004c6d",
+                    "on-background": "#271813",
+                    "secondary-fixed": "#dae2fd",
+                    "outline-variant": "#e4beb4",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#ff5722",
+                    "on-error": "#ffffff",
+                    "surface-container": "#ffe9e4",
+                    "surface-bright": "#fff8f6",
+                    "on-primary-container": "#541200",
+                    "surface-variant": "#fadcd4",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#3e2c27",
+                    "on-surface-variant": "#5b4039",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "secondary-container": "#dae2fd",
+                    "surface-container-lowest": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "surface-dim": "#f1d4cc",
+                    "tertiary-fixed": "#c8e6ff",
+                    "on-primary-fixed-variant": "#862200"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "section": "24px",
+                    "grid_gutter": "16px",
+                    "element": "16px",
+                    "related": "8px",
+                    "page_margin": "24px"
+            },
+            "fontFamily": {
+                    "h1": ["Inter"],
+                    "caption": ["Inter"],
+                    "h2": ["Inter"],
+                    "display": ["Inter"],
+                    "body": ["Inter"]
+            },
+            "fontSize": {
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .rail-gradient {
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.5));
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen">
+<!-- SideNavBar (Authority: JSON) -->
+<aside class="fixed left-0 top-0 h-screen w-60 bg-slate-900 border-r border-slate-800 shadow-2xl flex flex-col p-4 gap-y-1 z-50">
+<div class="mb-8 px-4 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-orange-600 flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h2 class="text-2xl font-black text-orange-500 italic leading-none">SwiftServe</h2>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Premium POS</p>
+</div>
+</div>
+<button class="bg-orange-600 text-white rounded-lg flex items-center px-4 py-3 shadow-lg shadow-orange-900/20 mb-6 active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined mr-3">add_circle</span>
+<span class="font-medium">Create Order</span>
+</button>
+<nav class="flex-grow space-y-1">
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span> Overview
+            </a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">restaurant_menu</span> Operations
+            </a>
+<!-- Active Tab: Business (Deals are a business function) -->
+<a class="bg-orange-600 text-white rounded-lg flex items-center px-4 py-2 shadow-lg shadow-orange-900/20" href="#">
+<span class="material-symbols-outlined mr-3">storefront</span> Business
+            </a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">trending_up</span> Growth
+            </a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span> Analytics
+            </a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">extension</span> Integrations
+            </a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3">settings</span> Settings
+            </a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-60 flex flex-col min-h-screen">
+<!-- TopNavBar (Authority: JSON) -->
+<header class="flex justify-between items-center px-6 h-16 w-full sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+<div class="flex items-center gap-4">
+<h1 class="text-xl font-bold text-slate-900">Deals &amp; Promotions</h1>
+<span class="px-2 py-1 bg-surface-container-low text-primary text-[10px] font-bold rounded uppercase tracking-wide">Main Branch</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-slate-50 border border-slate-200 rounded-full px-4 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-slate-400 text-sm mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-slate-700 w-48" placeholder="Search promotions..." type="text"/>
+</div>
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-all">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+<img alt="User Profile" data-alt="A professional headshot of a restaurant manager in a clean, high-end environment. He is wearing a sharp, charcoal-colored blazer over a crisp white shirt, looking confident and approachable. The lighting is sophisticated and warm, reminiscent of a luxury dining room, with a soft-focus background that hints at a modern restaurant interior with elegant wooden textures and metallic accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAj_1Wu9j570D78TJYMo3XuPmINu7eZK5GT2GH701pD30ihKOXP2lYVEM7_b4x1Jk7aSB0L2n_x0Vg_N-9qs1bNVhQjUqFv6kedmKKIqZZRsq1oRQTRWW-HLeawyeiJ5XXaWw5clx1qUVDzBUGCi-HjgFX1GUuEJFuf1lR7ciqefDRvgEwAr6nOvJL1WJSpnd4uBpWUnUM3K8XASJ861QBmxyKKSquOz8XDV8k11fob0_cyiUZSawsCq8PUJJ05Vr1GTKO9nP2viXM"/>
+</div>
+</div>
+</header>
+<!-- Canvas Area -->
+<div class="p-section flex flex-col gap-grid_gutter">
+<!-- Filters & Secondary Header -->
+<div class="flex justify-between items-end bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+<div class="space-y-related">
+<p class="text-caption text-secondary">Promotion Management</p>
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-h2 text-h2 flex items-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">add_circle</span> New Promotion
+                        </button>
+<button class="px-4 py-2 bg-white border border-outline-variant text-on-surface-variant rounded-lg font-h2 text-h2 hover:bg-surface-container-low transition-colors">
+                            Active Deals (12)
+                        </button>
+<button class="px-4 py-2 bg-white border border-outline-variant text-on-surface-variant rounded-lg font-h2 text-h2 hover:bg-surface-container-low transition-colors">
+                            Scheduled (4)
+                        </button>
+</div>
+</div>
+<div class="flex items-center gap-related text-secondary text-caption">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+<span>Sorted by: Most Active</span>
+</div>
+</div>
+<!-- Promotion List (Single Column Layout) -->
+<div class="flex flex-col gap-element">
+<!-- Deal Card 1 -->
+<div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex group hover:shadow-md transition-shadow">
+<!-- Image and Basic Info -->
+<div class="w-1/3 flex border-r border-slate-100">
+<div class="w-32 h-full overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A beautifully plated signature pasta dish featuring golden tagliatelle, fresh basil leaves, and vibrant cherry tomatoes, served on a textured ceramic plate. The image is captured with professional food photography standards, using soft natural side-lighting to highlight the textures of the sauce and pasta. The overall aesthetic is warm, inviting, and high-end, perfectly fitting a premium POS deals interface." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+</div>
+<div class="p-4 flex flex-col justify-between flex-grow">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Active</span>
+<span class="text-caption text-secondary">#DEAL-1092</span>
+</div>
+<h3 class="font-h1 text-h1 text-on-surface mb-1">Golden Hour Specials</h3>
+<p class="text-body text-on-surface-variant line-clamp-2">50% off all appetizers and house cocktails. Monday to Thursday, 4 PM - 6 PM.</p>
+</div>
+<div class="flex items-center gap-4 text-caption text-secondary">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span> Ends in 12 days</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">local_offer</span> 50% Discount</span>
+</div>
+</div>
+</div>
+<!-- Performance Rail (Right Side Section) -->
+<div class="flex-grow flex bg-slate-50/50 p-4 gap-6 items-center">
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Times Used</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">1,248</span>
+<span class="text-green-600 text-caption flex items-center mb-1"><span class="material-symbols-outlined text-[14px]">trending_up</span> 12%</span>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Revenue Generated</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">$4,120</span>
+<span class="text-green-600 text-caption flex items-center mb-1"><span class="material-symbols-outlined text-[14px]">trending_up</span> 8.4%</span>
+</div>
+</div>
+<div class="flex-1 h-12 flex items-end gap-[2px]">
+<!-- Mock Sparkline -->
+<div class="flex-grow bg-primary/10 rounded-t h-[40%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[60%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[30%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[70%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[90%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[50%]"></div>
+<div class="flex-grow bg-primary rounded-t h-[100%] shadow-lg shadow-primary/20"></div>
+</div>
+</div>
+<!-- Actions Column (Far Right) -->
+<div class="w-16 border-l border-slate-100 flex flex-col items-center justify-center gap-4 py-4 bg-white">
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all" title="Edit">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all" title="Duplicate">
+<span class="material-symbols-outlined">content_copy</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-error hover:bg-error-container/20 rounded-lg transition-all" title="Delete">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+<!-- Deal Card 2 -->
+<div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex group hover:shadow-md transition-shadow">
+<div class="w-1/3 flex border-r border-slate-100">
+<div class="w-32 h-full overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A close-up shot of a gourmet prime rib burger with melted cheese and caramelized onions, presented on a dark slate background. The lighting is dramatic and moody, utilizing deep shadows and focused highlights to emphasize the juicy texture of the meat and the sheen of the brioche bun. The composition is artistic and minimalist, evoking a premium steakhouse atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnp5VOgbY9QN3xYUHj371-6iHUB9YWAkloluSFMWClABYaYBLPua90tZbFPz0cj5NoVdZ1gFmKp6rcM7J5OLcfL655EQZdU0vOI83W61wxcAp6vboCagm8pKLlyaBn8ZELy1JzPUoupRn-XWKJd3b7vicX43cBJFY7Rs7h6UpvFbhrc9sGPEuzORVkKtI95bAPQnyHZlSj7b0d2NR6L1gJPR20cgv2X_ZHEoaBgf_2Z83hA1SI0A_Ak1Q0IoY_qm5qOrrZ4ry2bqi8"/>
+</div>
+<div class="p-4 flex flex-col justify-between flex-grow">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded uppercase">Active</span>
+<span class="text-caption text-secondary">#DEAL-1094</span>
+</div>
+<h3 class="font-h1 text-h1 text-on-surface mb-1">Burger Monday Madness</h3>
+<p class="text-body text-on-surface-variant line-clamp-2">Buy one signature burger, get the second half price. Available all day Mondays.</p>
+</div>
+<div class="flex items-center gap-4 text-caption text-secondary">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">calendar_today</span> Ends in 4 days</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">local_offer</span> BOGO 50%</span>
+</div>
+</div>
+</div>
+<div class="flex-grow flex bg-slate-50/50 p-4 gap-6 items-center">
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Times Used</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">856</span>
+<span class="text-red-600 text-caption flex items-center mb-1"><span class="material-symbols-outlined text-[14px]">trending_down</span> 4%</span>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Revenue Generated</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">$2,840</span>
+<span class="text-green-600 text-caption flex items-center mb-1"><span class="material-symbols-outlined text-[14px]">trending_up</span> 2.1%</span>
+</div>
+</div>
+<div class="flex-1 h-12 flex items-end gap-[2px]">
+<div class="flex-grow bg-primary/10 rounded-t h-[80%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[70%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[60%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[50%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[45%]"></div>
+<div class="flex-grow bg-primary/10 rounded-t h-[40%]"></div>
+<div class="flex-grow bg-primary rounded-t h-[35%]"></div>
+</div>
+</div>
+<div class="w-16 border-l border-slate-100 flex flex-col items-center justify-center gap-4 py-4 bg-white">
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all">
+<span class="material-symbols-outlined">content_copy</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-error hover:bg-error-container/20 rounded-lg transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+<!-- Deal Card 3 -->
+<div class="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden flex group hover:shadow-md transition-shadow">
+<div class="w-1/3 flex border-r border-slate-100">
+<div class="w-32 h-full overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="A stack of warm chocolate fudge brownies topped with a dusting of powdered sugar and a sprig of mint, accompanied by a decadent chocolate drizzle. The photo is taken in a brightly lit, modern café setting with clean white backgrounds and soft diffused lighting. The focus is sharp on the texture of the brownie crumb, conveying a sense of indulgence and premium quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_1I1cFXcKbSemy34uHREYgS2isEXju031Dwe6e83fzaCclWsgHPz9qhgD-gllpcndb8_JEA5BbaZiHvYO8Wqa4JKVHX0hl5MRc7SiMyrMLt7DoKmsBOMyAk--ierpF7407iwe8pKrGZt52wpJZsOg0YftBT2ImRpyfAGSyDSE1aVp_vmKB_Aw8oQpAtHykZGTyV1vH5DDH3SaH4-5Z7Sc6tEJ7s0wOMFWux61aWrjJTJyq1_sHmVxL7P0UYJ4_Dvp0CGalX6ztf4A"/>
+</div>
+<div class="p-4 flex flex-col justify-between flex-grow">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-bold rounded uppercase">Paused</span>
+<span class="text-caption text-secondary">#DEAL-1102</span>
+</div>
+<h3 class="font-h1 text-h1 text-on-surface mb-1">Free Dessert Weekend</h3>
+<p class="text-body text-on-surface-variant line-clamp-2">Complementary signature dessert with any main course over $30. Friday to Sunday.</p>
+</div>
+<div class="flex items-center gap-4 text-caption text-secondary">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">pause_circle</span> On Hold</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">local_offer</span> Free Gift</span>
+</div>
+</div>
+</div>
+<div class="flex-grow flex bg-slate-50/50 p-4 gap-6 items-center opacity-60">
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Times Used</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">0</span>
+</div>
+</div>
+<div class="flex-1 space-y-1">
+<p class="text-caption text-secondary uppercase font-bold tracking-wider">Revenue Generated</p>
+<div class="flex items-end gap-2">
+<span class="text-display font-display text-on-surface leading-none">$0</span>
+</div>
+</div>
+<div class="flex-1 h-12 flex items-center justify-center">
+<span class="text-caption text-slate-400 italic font-medium">No activity data available</span>
+</div>
+</div>
+<div class="w-16 border-l border-slate-100 flex flex-col items-center justify-center gap-4 py-4 bg-white">
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all">
+<span class="material-symbols-outlined">play_arrow</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-primary hover:bg-surface-container-low rounded-lg transition-all">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center text-secondary hover:text-error hover:bg-error-container/20 rounded-lg transition-all">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer Stats -->
+<div class="grid grid-cols-4 gap-grid_gutter mt-section">
+<div class="bg-surface-container-low p-6 rounded-xl border border-primary/10">
+<p class="text-caption text-on-primary-container font-bold uppercase tracking-wider mb-2">Total Deals Revenue</p>
+<p class="text-display font-display text-primary">$124,592</p>
+<p class="text-caption text-green-700 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> 18% vs last month
+                    </p>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+<p class="text-caption text-secondary font-bold uppercase tracking-wider mb-2">Conversion Rate</p>
+<p class="text-display font-display text-on-surface">24.8%</p>
+<p class="text-caption text-green-700 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> 2.4% vs last month
+                    </p>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+<p class="text-caption text-secondary font-bold uppercase tracking-wider mb-2">Avg. Order Value</p>
+<p class="text-display font-display text-on-surface">$42.15</p>
+<p class="text-caption text-red-600 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_down</span> 0.5% vs last month
+                    </p>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-100 shadow-sm">
+<p class="text-caption text-secondary font-bold uppercase tracking-wider mb-2">New Customers</p>
+<p class="text-display font-display text-on-surface">412</p>
+<p class="text-caption text-green-700 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">trending_up</span> 142 new this month
+                    </p>
+</div>
+</div>
+</div>
+</main>
+</body></html>

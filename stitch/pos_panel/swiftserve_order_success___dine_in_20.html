@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Order Success</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0D0D0D;
+            color: #f0e0d1;
+        }
+        .receipt-shadow {
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+        .progress-bar-fill {
+            animation: progress-shrink 5s linear forwards;
+        }
+        @keyframes progress-shrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#19120a",
+                      "on-error": "#690005",
+                      "on-secondary-container": "#bab8b7",
+                      "inverse-on-surface": "#382f25",
+                      "on-secondary": "#313030",
+                      "background": "#19120a",
+                      "tertiary-container": "#b1b1ae",
+                      "inverse-surface": "#f0e0d1",
+                      "surface-container-high": "#31281f",
+                      "primary": "#ffc174",
+                      "on-primary-fixed": "#2a1700",
+                      "primary-container": "#f59e0b",
+                      "inverse-primary": "#855300",
+                      "surface-container-highest": "#3c3329",
+                      "surface-tint": "#ffb95f",
+                      "on-background": "#f0e0d1",
+                      "outline": "#a08e7a",
+                      "surface-container": "#261e15",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "on-primary-container": "#613b00",
+                      "on-error-container": "#ffdad6",
+                      "surface-variant": "#3c3329",
+                      "on-tertiary-container": "#434442",
+                      "secondary": "#c9c6c5",
+                      "primary-fixed": "#ffddb8",
+                      "surface-bright": "#41382e",
+                      "on-surface": "#f0e0d1",
+                      "surface": "#19120a",
+                      "secondary-fixed": "#e5e2e1",
+                      "outline-variant": "#534434",
+                      "on-tertiary": "#2f312f",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "on-secondary-fixed-variant": "#474646",
+                      "tertiary": "#cdccca",
+                      "secondary-container": "#4a4949",
+                      "on-primary": "#472a00",
+                      "primary-fixed-dim": "#ffb95f",
+                      "on-surface-variant": "#d8c3ad",
+                      "tertiary-fixed": "#e3e2e0",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "surface-container-low": "#221a12",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "surface-container-lowest": "#140d06",
+                      "on-primary-fixed-variant": "#653e00",
+                      "error-container": "#93000a",
+                      "error": "#ffb4ab",
+                      "fbr-green": "#0F1F14",
+                      "whatsapp": "#25D366"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "sm": "8px",
+                      "margin-mobile": "16px",
+                      "xl": "32px",
+                      "md": "16px",
+                      "lg": "24px",
+                      "gutter": "16px",
+                      "base": "8px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Clash Display"],
+                      "body-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "headline-md": ["Clash Display"],
+                      "display-lg": ["Clash Display"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-sm": ["Clash Display"],
+                      "currency-display": ["Clash Display"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="flex flex-col h-screen overflow-hidden selection:bg-primary selection:text-on-primary">
+<!-- Top App Bar -->
+<header class="flex justify-between items-center w-full px-margin-desktop py-md max-w-full bg-background border-b border-outline-variant z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary" data-icon="table_restaurant">table_restaurant</span>
+<h1 class="text-headline-sm font-headline-sm font-bold text-primary tracking-tight">Table 07 · Payment Complete</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="text-right">
+<p class="font-label-lg text-label-lg text-on-surface">Ahmed</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Cashier</p>
+</div>
+<div class="h-10 w-10 rounded-full bg-surface-container-highest flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person">person</span>
+</div>
+</div>
+</header>
+<!-- Main Scrollable Content -->
+<main class="flex-1 overflow-y-auto px-margin-desktop py-lg space-y-lg pb-32">
+<!-- Success Banner -->
+<section class="w-full bg-fbr-green border border-outline-variant/30 rounded-xl p-lg flex justify-between items-center">
+<div class="flex items-center gap-lg">
+<div class="h-16 w-16 bg-primary-container/20 rounded-full flex items-center justify-center text-primary-container border-2 border-primary-container/50">
+<span class="material-symbols-outlined text-4xl" data-icon="check_circle" data-weight="fill">check_circle</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-white">Payment Received</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant/80">PKR 7,137 · Cash · <span class="text-primary">Change: PKR 863</span></p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-xs border-l border-outline-variant/50 pl-lg">
+<span class="text-[10px] font-bold tracking-[0.2em] text-on-surface-variant uppercase">FBR Fiscal Status</span>
+<div class="flex items-center gap-sm">
+<div class="h-2 w-2 rounded-full bg-primary-container"></div>
+<p class="font-label-lg text-label-lg text-on-surface">INV-20250529001234</p>
+</div>
+<p class="text-[10px] text-on-surface-variant/60 font-mono tracking-wider">SYNCED WITH POS-FBR-SERVICE</p>
+</div>
+</section>
+<div class="grid grid-cols-12 gap-xl">
+<!-- Left Column: Receipt Preview -->
+<div class="col-span-5 space-y-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface-variant px-sm flex items-center gap-sm">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                    Receipt Preview
+                </h3>
+<!-- Physical Receipt Card -->
+<div class="bg-white text-black p-xl rounded-sm receipt-shadow max-w-md mx-auto relative">
+<!-- Serrated Top Edge simulation -->
+<div class="absolute top-0 left-0 w-full h-1 bg-[radial-gradient(circle,transparent_4px,#fff_5px)] bg-[length:12px_12px] -mt-1"></div>
+<div class="text-center space-y-sm pb-lg border-b border-dashed border-gray-300">
+<p class="font-headline-sm text-headline-sm font-extrabold uppercase tracking-tighter">The Grand Bistro</p>
+<p class="text-[12px] leading-tight">Plot 45-C, Khayaban-e-Bukhari, Phase 6<br/>DHA, Karachi, Pakistan</p>
+<p class="text-[12px] font-bold">NTN: 1234567-8 | STRN: 8765432-1</p>
+</div>
+<div class="py-md grid grid-cols-2 gap-y-1 text-[12px]">
+<p class="font-bold">Table: 07</p>
+<p class="text-right">Date: 29-May-2025</p>
+<p>Server: Ahmed</p>
+<p class="text-right">Time: 12:45 PM</p>
+<p>Guests: 4</p>
+<p class="text-right">Order ID: #SS-9921</p>
+</div>
+<table class="w-full text-[12px] border-t border-b border-black py-sm my-md">
+<thead>
+<tr class="border-b border-gray-200">
+<th class="text-left py-2">ITEM</th>
+<th class="text-center py-2">QTY</th>
+<th class="text-right py-2">PRICE</th>
+</tr>
+</thead>
+<tbody class="font-medium">
+<tr>
+<td class="py-2">Double Smash Burger</td>
+<td class="text-center">2</td>
+<td class="text-right">3,200</td>
+</tr>
+<tr>
+<td class="py-2">Margherita Pizza (12")</td>
+<td class="text-center">1</td>
+<td class="text-right">1,850</td>
+</tr>
+<tr>
+<td class="py-2">Loaded Fries</td>
+<td class="text-center">1</td>
+<td class="text-right">750</td>
+</tr>
+<tr>
+<td class="py-2">Mineral Water (Large)</td>
+<td class="text-center">2</td>
+<td class="text-right">300</td>
+</tr>
+</tbody>
+</table>
+<div class="space-y-1 text-[13px]">
+<div class="flex justify-between">
+<span>Subtotal</span>
+<span>6,100</span>
+</div>
+<div class="flex justify-between">
+<span>GST (17%)</span>
+<span>1,037</span>
+</div>
+<div class="flex justify-between">
+<span>Service Charge</span>
+<span>0</span>
+</div>
+<div class="flex justify-between font-extrabold text-lg border-t border-black mt-2 pt-1">
+<span>TOTAL</span>
+<span>PKR 7,137</span>
+</div>
+</div>
+<div class="mt-xl pt-lg border-t-2 border-black flex items-start gap-md">
+<div class="h-20 w-20 bg-gray-200 flex items-center justify-center border border-black p-1 shrink-0">
+<img alt="FBR QR Code" class="w-full h-full grayscale contrast-125" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE5TAcPlZ9TJf4zhMrIiLtOO2Qk-9YBXSCAgh81JxIqWUviis6guXkLUkdz-V7QY2PFyCj5v7Trm-UcuWai4iGQ4qJdzFon0W2-gW3B06UDgZawiu3o8WF5AC8cCRXIr2vyFcKE5BBTET8Z-ABa29vMbRrRNBevdpkoDVrIxasR4kNTcHHEjIdATNCshP3iGnlLbJSEjZG5c0_Yc3R-d5yMjaEQ_D0C4p_0oyq7FFXL8TlcDvHCmXxHAIvEw5Qz5QkulM_CRxa0de-"/>
+</div>
+<div class="flex-1 text-[10px] leading-tight flex flex-col justify-center h-20">
+<p class="font-extrabold text-[12px]">FBR VERIFIED TAX INVOICE</p>
+<p class="mt-1">POS ID: 12345678</p>
+<p>Invoice No: 20250529001234</p>
+<p class="mt-1 font-bold italic">Verify via FBR Tax Asaan App</p>
+</div>
+</div>
+<div class="text-center mt-lg pt-md border-t border-dashed border-gray-300">
+<p class="text-[11px] font-bold italic tracking-wider">THANK YOU FOR DINING WITH US!</p>
+<p class="text-[9px] mt-1 text-gray-500">Powered by SwiftServe Industrial POS</p>
+</div>
+</div>
+</div>
+<!-- Right Column: Actions -->
+<div class="col-span-7 space-y-xl">
+<!-- Send Receipt Section -->
+<div class="space-y-md">
+<p class="font-label-lg text-label-lg text-on-surface-variant flex items-center gap-sm">
+<span class="material-symbols-outlined" data-icon="ios_share">ios_share</span>
+                        SEND RECEIPT
+                    </p>
+<div class="grid grid-cols-2 gap-md">
+<button class="flex items-center justify-center gap-md py-xl px-lg bg-primary text-on-primary font-headline-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition-all border border-primary-container shadow-lg">
+<span class="material-symbols-outlined text-3xl" data-icon="print">print</span>
+                            Print Receipt
+                        </button>
+<button class="flex items-center justify-center gap-md py-xl px-lg bg-[#25D366] text-white font-headline-sm rounded-xl hover:brightness-110 active:scale-[0.98] transition-all shadow-lg">
+<span class="material-symbols-outlined text-3xl" data-icon="chat" data-weight="fill">chat</span>
+                            WhatsApp
+                        </button>
+<button class="flex items-center justify-center gap-md py-xl px-lg bg-surface-container-highest text-on-surface font-headline-sm rounded-xl border border-outline-variant hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined text-3xl" data-icon="mail">mail</span>
+                            Email
+                        </button>
+<button class="flex items-center justify-center gap-md py-xl px-lg bg-transparent text-on-surface-variant font-headline-sm rounded-xl border border-outline-variant/30 hover:border-on-error transition-all">
+<span class="material-symbols-outlined text-3xl" data-icon="block">block</span>
+                            No Receipt
+                        </button>
+</div>
+</div>
+<!-- Table Actions -->
+<div class="space-y-md">
+<p class="font-label-lg text-label-lg text-on-surface-variant flex items-center gap-sm uppercase tracking-widest">
+                        Table 07 Actions
+                    </p>
+<div class="grid grid-cols-2 gap-md">
+<button class="flex flex-col items-center justify-center gap-sm p-lg bg-surface-container rounded-xl border border-outline-variant hover:bg-surface-container-high transition-all group">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary" data-icon="cleaning_services">cleaning_services</span>
+<span class="font-label-lg text-label-lg">Mark as Cleaning</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-sm p-lg bg-surface-container rounded-xl border border-outline-variant hover:bg-surface-container-high transition-all group">
+<div class="flex items-center">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant group-hover:text-primary" data-icon="add_box">add_box</span>
+</div>
+<span class="font-label-lg text-label-lg">New Order · Table 07</span>
+</button>
+</div>
+</div>
+<!-- Primary CTA -->
+<div class="pt-xl border-t border-outline-variant/30">
+<button class="w-full bg-primary-container text-on-primary-container py-xl rounded-xl font-headline-md flex items-center justify-center gap-md hover:brightness-110 active:scale-95 transition-all shadow-xl" onclick="window.location.reload()">
+                        Start Next Order
+                        <span class="material-symbols-outlined text-3xl" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Progress Bar -->
+<div class="mt-md h-2 w-full bg-surface-container-highest rounded-full overflow-hidden">
+<div class="progress-bar-fill h-full bg-primary-container/60 shadow-[0_0_10px_rgba(245,158,11,0.5)]"></div>
+</div>
+<p class="text-center mt-sm font-label-md text-label-md text-on-surface-variant/50">Auto-advancing in 5 seconds...</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (Fixed) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-sm bg-surface-container-lowest border-t border-outline-variant">
+<div class="flex items-center gap-md">
+<span class="font-headline-sm text-headline-sm text-primary">SwiftServe</span>
+<span class="h-4 w-[1px] bg-outline-variant"></span>
+<p class="font-body-sm text-body-sm text-secondary">Terminal ID: #TS-402</p>
+</div>
+<div class="flex items-center gap-xl">
+<p class="font-label-md text-label-md text-on-surface-variant">Powered by Google Stitch</p>
+<div class="flex items-center gap-md">
+<span class="font-label-md text-label-md text-secondary uppercase">v2.4.0-stable</span>
+<span class="font-label-md text-label-md text-secondary">12:45 PM</span>
+</div>
+</div>
+</footer>
+<script>
+        // Auto-redirect simulation
+        setTimeout(() => {
+            console.log("Auto-redirecting to next order...");
+            // In a real app: window.location.href = '/next-order';
+        }, 5000);
+
+        // Simple scale interactions for buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.style.transform = 'scale(0.98)';
+            });
+            btn.addEventListener('mouseup', () => {
+                btn.style.transform = 'scale(1)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                btn.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

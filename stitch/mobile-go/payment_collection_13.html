@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Style Guidance Override & Custom Theme -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-lowest": "#0A0A0F",
+            "error": "#ffb4ab",
+            "surface": "#1e100c",
+            "primary-container": "#ff5722",
+            "background": "#0A0A0F",
+            "on-primary": "#5f1500",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container-highest": "#43302b",
+            "secondary-fixed": "#d4e4fa",
+            "surface-container-high": "#1E293B",
+            "surface-bright": "#483530",
+            "on-error": "#690005",
+            "outline-variant": "#2D2D39",
+            "inverse-surface": "#fadcd4",
+            "secondary-fixed-dim": "#b9c8de",
+            "on-surface": "#fadcd4",
+            "secondary-container": "#39485a",
+            "on-surface-variant": "#64748B",
+            "on-secondary": "#233143",
+            "surface-container": "#16161E",
+            "on-primary-fixed": "#3b0900",
+            "surface-tint": "#ffb5a0",
+            "primary-fixed": "#ffdbd1",
+            "on-primary-fixed-variant": "#862200",
+            "primary": "#FF5722",
+            "on-secondary-fixed": "#0d1c2d",
+            "surface-variant": "#43302b",
+            "tertiary": "#10B981",
+            "surface-container-low": "#271813",
+            "outline": "#ab8980",
+            "tertiary-container": "#00a572",
+            "inverse-primary": "#b02f00",
+            "surface-dim": "#1e100c",
+            "secondary": "#b9c8de",
+            "on-tertiary": "#003824",
+            "on-secondary-fixed-variant": "#39485a",
+            "on-error-container": "#ffdad6",
+            "on-background": "#fadcd4",
+            "on-secondary-container": "#a7b6cc",
+            "tertiary-fixed-dim": "#4edea3",
+            "inverse-on-surface": "#3e2c27",
+            "on-primary-container": "#541200",
+            "on-tertiary-fixed-variant": "#005236",
+            "error-container": "#93000a",
+            "primary-fixed-dim": "#ffb5a0",
+            "on-tertiary-container": "#00311f",
+            "on-tertiary-fixed": "#002113"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem",
+            "twelve": "12px"
+          },
+          "spacing": {
+            "unit": "4px",
+            "stack-gap": "12px",
+            "container-padding": "16px",
+            "grid-gutter": "12px",
+            "touch-target-min": "48px"
+          },
+          "fontFamily": {
+            "headline-lg": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "label-xl": ["Space Grotesk"],
+            "label-sm": ["Space Grotesk"],
+            "body-sm": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "label-md": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+            "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+            "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+            "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+            "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #0A0A0F;
+      color: #fadcd4;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+    }
+    .space-grotesk { font-family: 'Space Grotesk', sans-serif; }
+    .numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .tap-effect:active {
+      transform: scale(0.96);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex items-center justify-center min-h-screen">
+<!-- Mobile Wrapper (390x844) -->
+<div class="w-[390px] h-[844px] bg-background relative overflow-hidden flex flex-col shadow-2xl border border-white/5">
+<!-- Top Bar -->
+<header class="flex items-center justify-between px-container-padding h-touch-target-min sticky top-0 bg-background/80 backdrop-blur-md z-30">
+<div class="flex items-center gap-4">
+<button class="tap-effect w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-variant/30">
+<span class="material-symbols-outlined text-on-surface" style="font-variation-settings: 'wght' 700;">arrow_back_ios_new</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-white font-bold" style="font-size: 16px;">Collect Payment</h1>
+</div>
+<button class="tap-effect w-10 h-10 flex items-center justify-center rounded-full">
+<span class="material-symbols-outlined text-on-surface">info</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto custom-scrollbar px-container-padding pt-4 pb-24">
+<!-- Amount Due Section -->
+<section class="flex flex-col items-center text-center mb-8">
+<span class="font-label-sm text-[11px] tracking-widest text-on-surface-variant uppercase mb-1">Amount Due</span>
+<h2 class="font-headline-lg text-[48px] font-extrabold text-white space-grotesk leading-none tracking-tight">PKR 1,610</h2>
+<p class="font-body-sm text-[13px] text-on-surface-variant mt-2">Bill #034 • Table 3 • 3 items</p>
+</section>
+<!-- Payment Method Selector -->
+<section class="mb-8">
+<div class="flex justify-between items-center gap-2">
+<!-- Cash (Selected) -->
+<div class="flex-1 flex flex-col items-center justify-center h-[56px] bg-primary/10 border-2 border-primary rounded-twelve tap-effect">
+<span class="material-symbols-outlined text-primary text-[20px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-label-sm text-[10px] text-primary font-bold mt-1">Cash</span>
+</div>
+<!-- Card -->
+<div class="flex-1 flex flex-col items-center justify-center h-[56px] bg-surface-container-high rounded-twelve tap-effect opacity-60">
+<span class="material-symbols-outlined text-on-surface text-[20px]">credit_card</span>
+<span class="font-label-sm text-[10px] text-on-surface mt-1">Card</span>
+</div>
+<!-- JazzCash -->
+<div class="flex-1 flex flex-col items-center justify-center h-[56px] bg-surface-container-high rounded-twelve tap-effect opacity-60">
+<span class="material-symbols-outlined text-on-surface text-[20px]">account_balance_wallet</span>
+<span class="font-label-sm text-[10px] text-on-surface mt-1">JazzCash</span>
+</div>
+<!-- Easypaisa -->
+<div class="flex-1 flex flex-col items-center justify-center h-[56px] bg-surface-container-high rounded-twelve tap-effect opacity-60">
+<span class="material-symbols-outlined text-on-surface text-[20px]">send_to_mobile</span>
+<span class="font-label-sm text-[10px] text-on-surface mt-1">Easypaisa</span>
+</div>
+</div>
+</section>
+<!-- Cash Payment Area -->
+<section class="mb-6">
+<label class="block font-label-sm text-on-surface-variant mb-4 uppercase tracking-wider text-[11px]">Cash Received</label>
+<div class="border-b-2 border-primary/40 flex items-baseline pb-2 mb-2">
+<span class="font-headline-md text-on-surface-variant mr-3">PKR</span>
+<span class="font-headline-lg text-[40px] font-bold text-white space-grotesk tracking-tight">2,000</span>
+<span class="ml-1 w-0.5 h-10 bg-primary animate-pulse"></span>
+</div>
+<!-- Change Due Banner -->
+<div class="flex items-center justify-between mt-6">
+<div class="bg-tertiary/10 border border-tertiary/20 px-4 py-3 rounded-xl w-full flex justify-between items-center">
+<span class="font-label-md text-tertiary/80 uppercase text-[12px]">Change Due</span>
+<span class="font-headline-md text-[24px] font-bold text-tertiary space-grotesk">PKR 390</span>
+</div>
+</div>
+</section>
+<!-- Quick Amount Buttons -->
+<section class="mb-8 overflow-x-auto custom-scrollbar">
+<div class="flex gap-2 pb-2">
+<button class="whitespace-nowrap px-6 py-2.5 rounded-full bg-surface-container-high text-on-surface font-label-md tap-effect border border-outline-variant">1,000</button>
+<button class="whitespace-nowrap px-6 py-2.5 rounded-full bg-primary text-white font-label-md tap-effect shadow-lg shadow-primary/20">2,000</button>
+<button class="whitespace-nowrap px-6 py-2.5 rounded-full bg-surface-container-high text-on-surface font-label-md tap-effect border border-outline-variant">5,000</button>
+<button class="whitespace-nowrap px-6 py-2.5 rounded-full bg-surface-container-high text-on-surface font-label-md tap-effect border border-outline-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">check_circle</span> 1,610
+          </button>
+</div>
+</section>
+<!-- Numpad Grid -->
+<section class="numpad-grid mb-4">
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">1</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">2</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">3</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">4</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">5</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">6</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">7</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">8</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">9</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">00</button>
+<button class="h-14 bg-surface-container-high hover:bg-surface-container rounded-twelve text-white font-label-xl space-grotesk tap-effect border border-outline-variant/30">0</button>
+<button class="h-14 bg-surface-container-high/50 hover:bg-surface-container rounded-twelve text-on-surface-variant tap-effect border border-outline-variant/30 flex items-center justify-center">
+<span class="material-symbols-outlined">backspace</span>
+</button>
+</section>
+</main>
+<!-- Fixed Bottom Action Bar -->
+<div class="absolute bottom-0 left-0 w-full p-container-padding bg-background/90 backdrop-blur-xl border-t border-outline-variant/20 z-40">
+<button class="w-full h-[54px] bg-primary text-white font-label-md uppercase tracking-widest font-bold rounded-xl tap-effect shadow-xl shadow-primary/25 flex items-center justify-center gap-3 active:scale-95 transition-transform">
+<span>CONFIRM PAYMENT</span>
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</button>
+</div>
+<!-- Decorative Glow Element -->
+<div class="absolute -bottom-20 -right-20 w-64 h-64 bg-primary/10 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="absolute -top-20 -left-20 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none"></div>
+</div>
+<script>
+    // Micro-interaction: Quick Amount Button Toggling
+    const quickButtons = document.querySelectorAll('section:nth-of-type(4) button');
+    quickButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        quickButtons.forEach(b => {
+          b.classList.remove('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+          b.classList.add('bg-surface-container-high', 'text-on-surface');
+        });
+        btn.classList.add('bg-primary', 'text-white', 'shadow-lg', 'shadow-primary/20');
+        btn.classList.remove('bg-surface-container-high', 'text-on-surface');
+      });
+    });
+
+    // Simple Numpad Feedback (Visual only for this mockup)
+    const numpadKeys = document.querySelectorAll('.numpad-grid button');
+    numpadKeys.forEach(key => {
+        key.addEventListener('click', () => {
+            key.style.backgroundColor = 'rgba(255, 87, 34, 0.2)';
+            setTimeout(() => {
+                key.style.backgroundColor = '';
+            }, 100);
+        });
+    });
+  </script>
+</body></html>

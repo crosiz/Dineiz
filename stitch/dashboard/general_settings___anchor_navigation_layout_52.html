@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - General Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#5c647a",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "inverse-surface": "#2d3133",
+                    "surface-container-high": "#e6e8ea",
+                    "on-background": "#191c1e",
+                    "outline": "#907067",
+                    "primary": "#b02f00",
+                    "on-primary-container": "#541200",
+                    "surface-variant": "#e0e3e5",
+                    "surface-container-highest": "#e0e3e5",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-error-container": "#93000a",
+                    "background": "#f7f9fb",
+                    "secondary-fixed": "#dae2fd",
+                    "secondary-container": "#dae2fd",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed-dim": "#c9beff",
+                    "inverse-on-surface": "#eff1f3",
+                    "outline-variant": "#e4beb4",
+                    "tertiary-fixed": "#e6deff",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#5b4039",
+                    "on-secondary": "#ffffff",
+                    "tertiary-container": "#927eff",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#1b0063",
+                    "surface-bright": "#f7f9fb",
+                    "on-primary-fixed": "#3b0900",
+                    "tertiary": "#5f46ce",
+                    "secondary": "#565e74",
+                    "surface-dim": "#d8dadc",
+                    "on-primary-fixed-variant": "#862200",
+                    "on-surface": "#191c1e",
+                    "inverse-primary": "#ffb5a0",
+                    "surface-container-low": "#f2f4f6",
+                    "surface": "#f7f9fb",
+                    "primary-container": "#ff5722",
+                    "on-tertiary-fixed-variant": "#4629b6",
+                    "border-subtle": "#E2E8F0",
+                    "on-secondary-fixed": "#131b2e",
+                    "text-muted": "#64748B",
+                    "text-main": "#0F172A",
+                    "surface-tint": "#b02f00",
+                    "on-error": "#ffffff",
+                    "surface-card": "#FFFFFF",
+                    "surface-container": "#eceef0",
+                    "surface-default": "#F8FAFC",
+                    "on-tertiary-container": "#29008a",
+                    "primary-fixed": "#ffdbd1",
+                    "surface-container-lowest": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-glow { box-shadow: 0 0 15px rgba(255, 87, 34, 0.3); }
+    </style>
+</head>
+<body class="bg-background text-text-main font-body-md overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<aside class="w-[280px] h-screen fixed left-0 top-0 bg-on-secondary-fixed flex flex-col z-50">
+<div class="p-8">
+<h1 class="font-headline-lg text-headline-lg font-bold text-white tracking-tight">SwiftServe</h1>
+<p class="text-on-secondary-container text-label-md font-label-md mt-1 opacity-70">Admin Terminal</p>
+</div>
+<nav class="flex-grow flex flex-col">
+<a class="flex items-center gap-3 px-6 py-3 text-on-secondary-container hover:text-white hover:bg-on-secondary-fixed-variant transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-secondary-container hover:text-white hover:bg-on-secondary-fixed-variant transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md text-body-md">Transactions</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-secondary-container hover:text-white hover:bg-on-secondary-fixed-variant transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body-md text-body-md">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-secondary-container hover:text-white hover:bg-on-secondary-fixed-variant transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-body-md text-body-md">Customers</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-on-secondary-container hover:text-white hover:bg-on-secondary-fixed-variant transition-colors duration-200 cursor-pointer active:opacity-80" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md text-body-md">Reports</span>
+</a>
+<!-- SETTINGS ACTIVE -->
+<a class="flex items-center gap-3 px-6 py-3 border-l-[3px] border-primary bg-on-secondary-fixed-variant text-white cursor-pointer" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="p-6 border-t border-on-secondary-fixed-variant">
+<button class="w-full py-3 bg-primary-container text-white rounded-lg font-label-md hover:bg-primary transition-all active-glow">
+                Upgrade Plan
+            </button>
+<div class="mt-4 flex flex-col gap-2">
+<a class="flex items-center gap-3 text-on-secondary-container hover:text-white font-label-md" href="#">
+<span class="material-symbols-outlined">help</span> Support
+                </a>
+<a class="flex items-center gap-3 text-on-secondary-container hover:text-white font-label-md" href="#">
+<span class="material-symbols-outlined">logout</span> Logout
+                </a>
+</div>
+</div>
+</aside>
+<!-- TopAppBar (Shared Component) -->
+<header class="flex justify-between items-center w-[calc(100%-280px)] px-10 h-16 bg-surface ml-[280px] fixed top-0 z-40 border-b border-border-subtle">
+<div class="flex items-center gap-8">
+<h2 class="font-headline-md text-headline-md font-extrabold text-on-surface">SwiftServe Settings</h2>
+<nav class="flex gap-6 mt-1">
+<a class="text-primary font-bold border-b-2 border-primary pb-4 font-label-md text-label-md" href="#">Profile</a>
+<a class="text-text-muted hover:text-text-main pb-4 transition-all font-label-md text-label-md" href="#">Security</a>
+<a class="text-text-muted hover:text-text-main pb-4 transition-all font-label-md text-label-md" href="#">Integrations</a>
+<a class="text-text-muted hover:text-text-main pb-4 transition-all font-label-md text-label-md" href="#">Billing</a>
+<a class="text-text-muted hover:text-text-main pb-4 transition-all font-label-md text-label-md" href="#">Notifications</a>
+<a class="text-text-muted hover:text-text-main pb-4 transition-all font-label-md text-label-md" href="#">Hardware</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-text-muted text-[20px]">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full w-64 text-label-md focus:ring-2 focus:ring-primary-container/20 transition-all" placeholder="Search settings..." type="text"/>
+</div>
+<button class="p-2 text-text-muted hover:bg-surface-container rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-surface"></span>
+</button>
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-border-subtle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSjgCTg1BM2P8WIb8nr0qJSOVXXffXJVhVXyNN02_DqxsP0c38Z4L4BaNLWPH8WoyRxhSZkxI-p21AcPightPu78AWdse8m87MUCGbnvFgOra5gc8c1r9RfvshvJZG5PlYqM2IAAIW-UghYh4eln7x7Ipa34-Q3uMQIq2msVhDDFJPqa2eLhAkEOyiEttPRoxANhcS0-aBbxuDf1h9W5gJ_yh4pEjKVQx6xW_oZ7Ftz6IFaVcyYEG5Vovkdtv0p6rXcd510V6UMQQ4"/>
+</div>
+</header>
+<!-- Main Layout Container -->
+<main class="ml-[280px] mt-16 h-[calc(100vh-64px)] flex overflow-hidden relative">
+<!-- Secondary Settings Nav -->
+<aside class="w-[240px] border-r border-border-subtle bg-white p-6 flex flex-col gap-1 sticky top-0 h-full">
+<p class="text-label-sm font-label-sm text-text-muted mb-4 uppercase tracking-widest">Configuration</p>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg bg-primary-container text-white font-label-md shadow-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">tune</span> General
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-text-muted hover:bg-surface-container-low transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">notifications_active</span> Notifications
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-text-muted hover:bg-surface-container-low transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">security</span> Security
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-text-muted hover:bg-surface-container-low transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">account_balance</span> Taxes &amp; Compliance
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-text-muted hover:bg-surface-container-low transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">extension</span> Integrations
+            </a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-text-muted hover:bg-surface-container-low transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">point_of_sale</span> POS Configuration
+            </a>
+<div class="mt-8">
+<a class="flex items-center gap-3 px-4 py-2 rounded-lg text-error hover:bg-error-container/30 transition-colors font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">warning</span> Danger Zone
+                </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-grow p-10 overflow-y-auto custom-scrollbar bg-background scroll-smooth">
+<div class="max-w-[1000px] mx-auto space-y-10"><div class="mb-10"><h3 class="font-display-lg text-display-lg text-text-main">General Settings</h3><p class="text-text-muted font-body-md mt-1">Manage your core business profile and POS preferences.</p></div>
+<!-- Page Title & CTA -->
+<!-- Section: Business Information -->
+<section class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+<div class="p-6 border-b border-border-subtle bg-surface-container-lowest">
+<h4 class="font-headline-md text-headline-md">Business Information</h4>
+<p class="text-text-muted text-body-md mt-1">This information will be used for legal invoicing and identity.</p>
+</div>
+<div class="p-8 space-y-6"><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Business Name</label><input class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all" type="text" value="Demo Restaurant"/></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Legal Business Name</label><input class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all" placeholder="Enter legal name" type="text"/></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Tax Registration Number</label><input class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all" placeholder="1234567-8" type="text"/></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Business Type</label><select class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all"><option>Fine Dining</option><option>Fast Food</option><option>Cafe / Bakery</option><option>Retail Store</option></select></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Country</label><select class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all"><option>Pakistan</option><option>United States</option></select></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Primary City</label><input class="flex-grow border-border-subtle rounded-lg focus:ring-primary focus:border-primary px-4 py-2.5 font-body-md transition-all" type="text" value="Karachi"/></div></div>
+</section>
+<!-- Section: POS Configuration -->
+<section class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+<div class="p-6 border-b border-border-subtle bg-surface-container-lowest">
+<h4 class="font-headline-md text-headline-md">POS Configuration</h4>
+<p class="text-text-muted text-body-md mt-1">Fine-tune the behavior of your terminal software.</p>
+</div>
+<div class="divide-y divide-border-subtle">
+<!-- Toggle Row 1 -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
+<div>
+<p class="font-label-md text-text-main">Auto-print KOT (Kitchen Order Ticket)</p>
+<p class="text-text-muted text-body-md">Instantly send tickets to kitchen printer upon order placement.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Toggle Row 2 -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
+<div>
+<p class="font-label-md text-text-main">Auto-print Receipt</p>
+<p class="text-text-muted text-body-md">Print customer receipt immediately after payment confirmation.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Toggle Row 3 -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
+<div>
+<p class="font-label-md text-text-main">Require Shift Opening</p>
+<p class="text-text-muted text-body-md">Cashiers must perform a shift open with float before taking orders.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Toggle Row 4 -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
+<div>
+<p class="font-label-md text-text-main">Block orders when out of stock</p>
+<p class="text-text-muted text-body-md">Prevent items with 0 inventory from being added to the cart.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Toggle Row 5 -->
+<div class="p-6 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
+<div>
+<p class="font-label-md text-text-main">Offline Mode</p>
+<p class="text-text-muted text-body-md">Allow local data synchronization when internet is unstable.</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+</section>
+<!-- Section: Receipt Settings -->
+<section class="bg-white rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+<div class="p-6 border-b border-border-subtle bg-surface-container-lowest">
+<h4 class="font-headline-md text-headline-md">Receipt Settings</h4>
+<p class="text-text-muted text-body-md mt-1">Customize the physical printed output for customers.</p>
+</div>
+<div class="p-8 space-y-8">
+<div class="p-8 space-y-6"><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Tax Display</label><div class="flex gap-6"><label class="flex items-center gap-2 cursor-pointer"><input checked="" class="w-4 h-4 text-primary border-border-subtle" name="tax_display" type="radio"/><span class="font-body-md">Inclusive</span></label><label class="flex items-center gap-2 cursor-pointer"><input class="w-4 h-4 text-primary border-border-subtle" name="tax_display" type="radio"/><span class="font-body-md">Separate</span></label></div></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Paper Size</label><select class="flex-grow border-border-subtle rounded-lg px-4 py-2 font-body-md"><option>80mm (Standard)</option><option>58mm (Small)</option></select></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Receipt Copies</label><input class="w-32 border-border-subtle rounded-lg px-4 py-2 font-body-md" max="5" min="1" type="number" value="1"/></div><div class="flex items-start gap-6"><label class="w-1/3 font-label-md text-text-muted pt-2">Footer Message</label><textarea class="flex-grow h-24 border-border-subtle rounded-lg px-4 py-2 font-body-md resize-none" placeholder="Thank you for visiting!"></textarea></div></div>
+<div class="p-8 space-y-6"><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Tax Display</label><div class="flex gap-6"><label class="flex items-center gap-2 cursor-pointer"><input checked="" class="w-4 h-4 text-primary border-border-subtle" name="tax_display" type="radio"/><span class="font-body-md">Inclusive</span></label><label class="flex items-center gap-2 cursor-pointer"><input class="w-4 h-4 text-primary border-border-subtle" name="tax_display" type="radio"/><span class="font-body-md">Separate</span></label></div></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Paper Size</label><select class="flex-grow border-border-subtle rounded-lg px-4 py-2 font-body-md"><option>80mm (Standard)</option><option>58mm (Small)</option></select></div><div class="flex items-center gap-6"><label class="w-1/3 font-label-md text-text-muted">Receipt Copies</label><input class="w-32 border-border-subtle rounded-lg px-4 py-2 font-body-md" max="5" min="1" type="number" value="1"/></div><div class="flex items-start gap-6"><label class="w-1/3 font-label-md text-text-muted pt-2">Footer Message</label><textarea class="flex-grow h-24 border-border-subtle rounded-lg px-4 py-2 font-body-md resize-none" placeholder="Thank you for visiting!"></textarea></div></div>
+</div>
+</section>
+<!-- Section Preview: Notifications (Partial Visibility for Context) -->
+<section class="opacity-50 pointer-events-none space-y-4">
+<h4 class="font-headline-md text-headline-md px-1">Upcoming: Notification Preferences</h4>
+<div class="bg-white rounded-xl border border-border-subtle p-8 flex items-center gap-6">
+<div class="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-text-muted">lock_clock</span>
+</div>
+<div>
+<p class="font-label-md text-text-main">Scroll to unlock Notification Channels</p>
+<p class="text-text-muted text-body-md">Email, SMS, Push, and WhatsApp integrations are configured in the next module.</p>
+</div>
+</div>
+</section>
+<!-- Section: Danger Zone -->
+<section class="bg-error-container/10 border-2 border-dashed border-error/20 rounded-xl overflow-hidden mb-20">
+<div class="p-6 border-b border-error/10 bg-error/5 flex items-center gap-3">
+<span class="material-symbols-outlined text-error">warning</span>
+<h4 class="font-headline-md text-headline-md text-error">Danger Zone</h4>
+</div>
+<div class="p-8 space-y-6">
+<div class="flex items-center justify-between">
+<div>
+<p class="font-label-md text-text-main">Export All Business Data</p>
+<p class="text-text-muted text-body-md">Download all transactions, inventory, and customer data in CSV format.</p>
+</div>
+<button class="px-5 py-2 border border-border-subtle bg-white text-text-main rounded-lg font-label-md hover:bg-surface-container transition-all">Export (.zip)</button>
+</div>
+<div class="h-px bg-error/10"></div>
+<div class="flex items-center justify-between">
+<div>
+<p class="font-label-md text-text-main">Pause Subscription</p>
+<p class="text-text-muted text-body-md">Temporarily disable access to your terminal. Data remains preserved.</p>
+</div>
+<button class="px-5 py-2 border border-border-subtle bg-white text-text-main rounded-lg font-label-md hover:bg-surface-container transition-all">Pause Now</button>
+</div>
+<div class="h-px bg-error/10"></div>
+<div class="flex items-center justify-between">
+<div>
+<p class="font-label-md text-error font-bold">Delete Account &amp; Permanent Wipe</p>
+<p class="text-text-muted text-body-md">This action is irreversible. All store data will be permanently deleted.</p>
+</div>
+<button class="px-6 py-2 bg-error text-white rounded-lg font-label-md hover:opacity-90 transition-all shadow-lg shadow-error/20">Delete Account</button>
+</div>
+</div>
+</section>
+</div>
+</div>
+<div class="fixed bottom-8 right-8 flex gap-3 z-50"><button class="px-6 py-3 border border-border-subtle bg-white shadow-lg rounded-lg font-label-md text-text-muted hover:bg-surface-container-low transition-all">Discard Changes</button><button class="px-6 py-3 bg-on-secondary-fixed text-white shadow-lg rounded-lg font-label-md hover:opacity-90 transition-all">Save Changes</button></div></main>
+<script>
+        // Simple micro-interactions
+        document.querySelectorAll('input, select, textarea').forEach(el => {
+            el.addEventListener('focus', () => {
+                el.parentElement.classList.add('scale-[1.01]');
+                el.parentElement.style.transition = 'all 0.2s ease';
+            });
+            el.addEventListener('blur', () => {
+                el.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+    </script>
+</body></html>

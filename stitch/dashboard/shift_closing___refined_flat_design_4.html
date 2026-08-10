@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DineStream POS - End of Shift</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#c9beff",
+                        "on-tertiary-fixed": "#1b0063",
+                        "secondary-container": "#dae2fd",
+                        "tertiary-container": "#927eff",
+                        "on-surface-variant": "#5b4039",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#29008a",
+                        "on-primary-fixed-variant": "#862200",
+                        "secondary-fixed": "#dae2fd",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#f2f4f6",
+                        "surface": "#f7f9fb",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-card": "#FFFFFF",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-container": "#541200",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "text-muted": "#64748B",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface": "#191c1e",
+                        "surface-dim": "#d8dadc",
+                        "outline": "#907067",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#e4beb4",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#191c1e",
+                        "tertiary": "#5f46ce",
+                        "border-subtle": "#E2E8F0",
+                        "on-primary": "#ffffff",
+                        "text-main": "#0F172A",
+                        "secondary": "#565e74",
+                        "primary-fixed": "#ffdbd1",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#b02f00",
+                        "primary-container": "#ff5722",
+                        "tertiary-fixed": "#e6deff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-default": "#F8FAFC",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed-variant": "#4629b6",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-error": "#ffffff",
+                        "charcoal-flat": "#2C2C2A"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "max-width": "1200px",
+                        "gutter-desktop": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "gutter-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .backdrop-blur-custom {
+            backdrop-filter: blur(12px);
+        }
+        .inner-pressed {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+        }
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.15);
+        }
+        /* Custom scrollbar for notes */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background-color: #e0e3e5;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface overflow-hidden">
+<!-- Background Interface (Blurred) -->
+<div class="fixed inset-0 z-0 flex flex-col pointer-events-none opacity-40 blur-md grayscale">
+<header class="bg-surface border-b border-border-subtle shadow-sm flex justify-between items-center px-margin-desktop py-4 w-full">
+<div class="font-display-lg text-display-lg font-bold text-primary">DineStream POS</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-secondary">notifications</span>
+<span class="material-symbols-outlined text-secondary">help</span>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest"></div>
+</div>
+</header>
+<main class="flex-1 p-10 grid grid-cols-12 gap-6">
+<aside class="col-span-3 space-y-4">
+<div class="h-32 bg-surface-card border border-border-subtle rounded-lg"></div>
+<div class="h-64 bg-surface-card border border-border-subtle rounded-lg"></div>
+</aside>
+<div class="col-span-9 grid grid-cols-3 gap-4">
+<div class="h-40 bg-surface-card border border-border-subtle rounded-lg shadow-sm"></div>
+<div class="h-40 bg-surface-card border border-border-subtle rounded-lg shadow-sm"></div>
+<div class="h-40 bg-surface-card border border-border-subtle rounded-lg shadow-sm"></div>
+<div class="col-span-3 h-96 bg-surface-card border border-border-subtle rounded-lg shadow-sm"></div>
+</div>
+</main>
+</div>
+<!-- Dark Overlay Layer -->
+<div class="fixed inset-0 z-10 bg-[#000000CC] backdrop-blur-sm flex items-center justify-center p-6">
+<!-- Shift Closing Card -->
+<div class="w-full max-w-[560px] bg-surface-card rounded-lg shadow-[0_32px_64px_rgba(0,0,0,0.4)] overflow-hidden animate-in fade-in zoom-in duration-300">
+<!-- Header (Flat Charcoal) -->
+<div class="bg-charcoal-flat p-6 space-y-5">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex items-center text-white">
+<span class="material-symbols-outlined mr-1" style="font-variation-settings: 'FILL' 1;">dark_mode</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">light_mode</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-white">End of Shift Summary</h2>
+</div>
+</div>
+<!-- Header Metrics -->
+<div class="grid grid-cols-3 gap-3">
+<div class="bg-white/10 rounded-lg p-3 text-center border border-white/5">
+<p class="font-label-sm text-white/60 uppercase tracking-wider">Duration</p>
+<p class="font-label-md text-white mt-1">8h 12m</p>
+</div>
+<div class="bg-white/10 rounded-lg p-3 text-center border border-white/5">
+<p class="font-label-sm text-white/60 uppercase tracking-wider">Orders</p>
+<p class="font-label-md text-white mt-1">47</p>
+</div>
+<div class="bg-white/10 rounded-lg p-3 text-center border border-white/5">
+<p class="font-label-sm text-white/60 uppercase tracking-wider">Total Sales</p>
+<p class="font-label-md text-white mt-1">PKR 52,400</p>
+</div>
+</div>
+</div>
+<div class="p-8 space-y-6">
+<!-- Sales Context -->
+<div class="flex justify-between items-center px-4 py-2 bg-surface-container-low rounded-lg border border-border-subtle">
+<p class="text-[11px] font-medium text-secondary uppercase tracking-tight">
+                        Cash: <span class="text-on-surface">PKR 26,450</span>
+</p>
+<div class="w-px h-3 bg-border-subtle"></div>
+<p class="text-[11px] font-medium text-secondary uppercase tracking-tight">
+                        Card: <span class="text-on-surface">PKR 24,000</span>
+</p>
+<div class="w-px h-3 bg-border-subtle"></div>
+<p class="text-[11px] font-medium text-secondary uppercase tracking-tight">
+                        Online: <span class="text-on-surface">PKR 1,950</span>
+</p>
+</div>
+<!-- Reconciliation Section -->
+<div class="space-y-5">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-secondary">Expected in drawer</label>
+<span class="font-headline-md text-text-main font-bold">PKR 28,650</span>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-secondary block" for="actual-cash">Actual cash (you count)</label>
+<div class="flex items-stretch h-[48px] rounded-lg border border-border-subtle overflow-hidden focus-within:border-primary transition-colors">
+<div class="flex items-center px-4 bg-surface-container border-r border-border-subtle text-secondary font-label-md">
+                                PKR
+                            </div>
+<input class="flex-1 px-4 py-0 bg-white border-none font-headline-md text-text-main placeholder:text-surface-variant focus:ring-0" id="actual-cash" oninput="calculateVariance(this.value)" placeholder="0.00" type="number"/>
+</div>
+</div>
+<!-- Variance Display -->
+<div class="flex items-center justify-between px-5 py-4 rounded-lg bg-surface-container-low border border-border-subtle transition-all" id="variance-container">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary hidden" id="variance-icon"></span>
+<span class="font-label-md text-secondary" id="variance-label">Variance</span>
+</div>
+<span class="font-label-md font-bold text-secondary" id="variance-text">Enter amount above to see variance</span>
+</div>
+</div>
+<!-- Notes -->
+<div class="space-y-2">
+<label class="font-label-md text-secondary block" for="notes">Shift Notes</label>
+<textarea class="w-full px-4 py-3 bg-white border border-border-subtle rounded-lg font-body-md text-text-main focus:border-primary resize-none transition-all placeholder:text-surface-variant" id="notes" placeholder="Add notes if any variance or incident occurred..." rows="2"></textarea>
+</div>
+<!-- Footer Actions -->
+<div class="flex items-center gap-3 pt-2">
+<button class="px-6 py-4 rounded-lg border border-border-subtle font-label-md text-secondary hover:bg-surface-container-low transition-colors">
+                        Back
+                    </button>
+<button class="flex-1 px-6 py-4 rounded-lg bg-primary-container text-white font-label-md font-bold hover:bg-[#d84315] active:scale-[0.98] shadow-md shadow-primary-container/10 transition-all" id="submit-btn">
+                        Close Shift &amp; Submit
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Success Modal -->
+<div class="hidden fixed inset-0 z-50 bg-[#000000F2] flex items-center justify-center p-6 animate-in fade-in duration-500" id="success-modal">
+<div class="text-center space-y-6 max-w-md">
+<div class="w-20 h-20 bg-primary-container rounded-full flex items-center justify-center mx-auto mb-4">
+<span class="material-symbols-outlined text-white text-[40px]" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<h2 class="font-display-lg text-display-lg text-white">Shift Closed Successfully</h2>
+<p class="text-white/60 font-body-lg">End-of-shift report has been generated and sent to the printer.</p>
+<button class="px-10 py-3 bg-white/10 text-white rounded-lg border border-white/20 font-label-md hover:bg-white/20 transition-all" onclick="location.reload()">Return to Login</button>
+</div>
+</div>
+<script>
+        const expected = 28650;
+        
+        function calculateVariance(val) {
+            const container = document.getElementById('variance-container');
+            const text = document.getElementById('variance-text');
+            const icon = document.getElementById('variance-icon');
+            const label = document.getElementById('variance-label');
+            
+            if (!val || val === "") {
+                text.innerText = "Enter amount above to see variance";
+                text.className = "font-label-md font-bold text-secondary";
+                container.className = "flex items-center justify-between px-5 py-4 rounded-lg bg-surface-container-low border border-border-subtle transition-all";
+                icon.classList.add('hidden');
+                return;
+            }
+
+            const actual = parseFloat(val);
+            const variance = actual - expected;
+            icon.classList.remove('hidden');
+
+            if (variance === 0) {
+                text.innerText = "Balanced";
+                text.className = "font-label-md font-bold text-emerald-700";
+                container.className = "flex items-center justify-between px-5 py-4 rounded-lg bg-emerald-50 border border-emerald-100 transition-all";
+                icon.innerText = "check_circle";
+                icon.className = "material-symbols-outlined text-emerald-600";
+            } else if (variance < 0) {
+                text.innerText = `–PKR ${Math.abs(variance).toLocaleString()} Short`;
+                text.className = "font-label-md font-bold text-red-700";
+                container.className = "flex items-center justify-between px-5 py-4 rounded-lg bg-red-50 border border-red-100 transition-all";
+                icon.innerText = "warning";
+                icon.className = "material-symbols-outlined text-red-600";
+            } else {
+                text.innerText = `+PKR ${variance.toLocaleString()} Over`;
+                text.className = "font-label-md font-bold text-emerald-700";
+                container.className = "flex items-center justify-between px-5 py-4 rounded-lg bg-emerald-50 border border-emerald-100 transition-all";
+                icon.innerText = "trending_up";
+                icon.className = "material-symbols-outlined text-emerald-600";
+            }
+        }
+
+        // Action simulation
+        document.getElementById('submit-btn').addEventListener('click', function() {
+            this.innerText = "Processing...";
+            this.disabled = true;
+            this.style.opacity = "0.7";
+            
+            setTimeout(() => {
+                document.getElementById('success-modal').classList.remove('hidden');
+            }, 1200);
+        });
+    </script>
+</body></html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Delivery Order</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-container": "#bab8b7",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "background": "#0D0D0D",
+                        "on-surface": "#f0e0d1",
+                        "on-primary-container": "#613b00",
+                        "error": "#ffb4ab",
+                        "on-secondary-fixed-variant": "#474646",
+                        "outline-variant": "#1A1A1A",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-primary": "#472a00",
+                        "on-error": "#690005",
+                        "on-background": "#f0e0d1",
+                        "tertiary-fixed": "#e3e2e0",
+                        "primary-container": "#f59e0b",
+                        "primary-fixed": "#ffddb8",
+                        "surface-tint": "#ffb95f",
+                        "on-tertiary-container": "#434442",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "surface-container-lowest": "#140d06",
+                        "inverse-primary": "#855300",
+                        "surface-container": "#111111",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-primary-fixed-variant": "#653e00",
+                        "secondary": "#c9c6c5",
+                        "surface-variant": "#3c3329",
+                        "on-secondary": "#313030",
+                        "inverse-on-surface": "#382f25",
+                        "tertiary": "#cdccca",
+                        "surface-bright": "#41382e",
+                        "on-tertiary": "#2f312f",
+                        "surface-container-low": "#0F0F0F",
+                        "surface-container-highest": "#3c3329",
+                        "inverse-surface": "#f0e0d1",
+                        "primary": "#3B82F6",
+                        "on-primary-fixed": "#2a1700",
+                        "surface-dim": "#0D0D0D",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#a08e7a",
+                        "tertiary-container": "#b1b1ae",
+                        "surface-container-high": "#1A1A1A",
+                        "secondary-container": "#4a4949",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "surface": "#111111",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#d8c3ad",
+                        "delivery-blue": "#3B82F6",
+                        "foodpanda": "#D70F64",
+                        "amber-action": "#f59e0b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "12px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "xs": "4px",
+                        "base": "8px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Clash Display"],
+                        "label-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-sm": ["Clash Display"],
+                        "headline-lg": ["Clash Display"],
+                        "headline-md": ["Clash Display"],
+                        "currency-display": ["Clash Display"],
+                        "label-md": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #0D0D0D; }
+        ::-webkit-scrollbar-thumb { background: #1A1A1A; border-radius: 10px; }
+        .no-shadow { box-shadow: none !important; }
+        input, textarea, select {
+            background-color: #121212 !important;
+            border-color: #1A1A1A !important;
+            color: #f0e0d1 !important;
+        }
+        input:focus, textarea:focus {
+            border-color: #3B82F6 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-delivery-blue/30 overflow-hidden h-screen flex flex-col">
+<!-- Top Bar -->
+<header class="h-[56px] w-full top-0 sticky bg-surface flex justify-between items-center px-lg border-b border-outline-variant z-50">
+<div class="flex items-center gap-md">
+<button class="flex items-center gap-xs text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</button>
+<div class="h-4 w-[1px] bg-outline-variant"></div>
+<div class="bg-delivery-blue/10 text-delivery-blue px-md py-1 rounded-full font-label-md text-label-md border border-delivery-blue/20">
+                DELIVERY
+            </div>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex flex-col items-center">
+<span class="font-headline-sm text-headline-sm text-delivery-blue leading-none">DEL-018</span>
+</div>
+<div class="bg-foodpanda text-white px-md py-1 rounded-sm font-bold text-[10px] tracking-widest">
+                FOODPANDA
+            </div>
+</div>
+<div class="flex items-center gap-lg">
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface">14:42</p>
+<p class="text-[10px] text-on-surface-variant">STAFF: ALEX M.</p>
+</div>
+<img class="w-10 h-10 rounded-lg bg-surface-container-high border border-outline-variant" data-alt="A clean, professional headshot avatar of a restaurant staff member with a friendly expression. The avatar is rendered in a minimalist, modern digital art style with a neutral background and soft, professional lighting to fit an industrial-grade dark mode POS interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCH_Hzvu8bDrQt8lb4DyUEu-BV5aqR-MWmao9JoxxN-qRekr_E1p-n3Y_pDw2kcvd-1x62Clgh8XHIu1AiZLmrrsWT5VMaWeqNZcTPJZAoULiU0lZMvhlTwz4411SktuqUH9Jf4a1esicoxvAvm-9QWOAR6loHAOgtbCZISgdWTyHxrSh_db95qghqzkbkckx0R0RjDajgdoA8aXPHamLQQQegJzafCvNw_4gzMBk6KDyCta7DT8QG-CecMhPb450WFa5rsFOsjlleF"/>
+</div>
+</header>
+<!-- Delivery Info Panel -->
+<section class="h-[120px] bg-surface-container-low border-b border-outline-variant grid grid-cols-4 px-lg py-md gap-lg shrink-0">
+<!-- 1. CUSTOMER -->
+<div class="flex flex-col gap-xs">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Customer Info</label>
+<input class="h-9 px-md rounded-lg font-label-lg text-label-lg" placeholder="Name" type="text" value="Jonathan Wick"/>
+<input class="h-9 px-md rounded-lg font-label-lg text-label-lg" placeholder="Phone" type="text" value="+1 555-0199"/>
+</div>
+<!-- 2. DELIVERY ADDRESS -->
+<div class="flex flex-col gap-xs">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Address &amp; Area</label>
+<div class="relative">
+<textarea class="h-10 w-full px-md py-1 rounded-lg font-label-md text-label-md resize-none leading-tight" placeholder="Address">Continental Hotel, 1 Beaver St, NY</textarea>
+</div>
+<div class="flex gap-xs items-center">
+<input class="h-8 flex-1 px-md rounded-lg font-label-md text-label-md" placeholder="Landmark" type="text" value="Room 402"/>
+<span class="bg-surface-container-high px-md py-1 rounded-full text-[10px] font-bold border border-outline-variant">ZONE A</span>
+</div>
+</div>
+<!-- 3. ESTIMATED DELIVERY -->
+<div class="flex flex-col gap-xs">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Timing &amp; Charge</label>
+<div class="flex items-center justify-between bg-surface-container h-9 px-md rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-delivery-blue">remove</span>
+<span class="font-label-lg text-label-lg">45 MIN</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-delivery-blue">add</span>
+</div>
+<div class="flex justify-between items-center text-[11px] px-xs">
+<span class="text-on-surface-variant">ARRIVE: 15:27</span>
+<span class="text-delivery-blue font-bold">CHARGE: $4.50</span>
+</div>
+</div>
+<!-- 4. ASSIGN RIDER -->
+<div class="flex flex-col gap-xs">
+<label class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Rider Assignment</label>
+<select class="h-9 px-md rounded-lg font-label-lg text-label-lg appearance-none bg-surface-container border border-outline-variant">
+<option>Auto-assign (System)</option>
+<option>Marco Rossi (Active)</option>
+<option>Sarah Jenkins (Nearby)</option>
+<option>Liam Chen (On Way)</option>
+</select>
+<div class="flex items-center gap-xs text-[10px] text-green-500 font-bold mt-1">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<span>8 RIDERS ONLINE</span>
+</div>
+</div>
+</section>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Menu Browser (58%) -->
+<section class="w-[58%] h-full flex flex-col border-r border-outline-variant">
+<!-- Category Pills -->
+<nav class="flex items-center gap-sm p-md overflow-x-auto whitespace-nowrap scrollbar-hide border-b border-outline-variant">
+<button class="bg-delivery-blue text-white px-lg py-2 rounded-lg font-label-lg text-label-lg">All</button>
+<button class="bg-surface-container-high text-on-surface-variant px-lg py-2 rounded-lg font-label-lg text-label-lg hover:bg-surface-bright">Starters</button>
+<button class="bg-surface-container-high text-on-surface-variant px-lg py-2 rounded-lg font-label-lg text-label-lg hover:bg-surface-bright">Mains</button>
+<button class="bg-surface-container-high text-on-surface-variant px-lg py-2 rounded-lg font-label-lg text-label-lg hover:bg-surface-bright">Beverages</button>
+<button class="bg-surface-container-high text-on-surface-variant px-lg py-2 rounded-lg font-label-lg text-label-lg hover:bg-surface-bright">Sides</button>
+<button class="bg-surface-container-high text-on-surface-variant px-lg py-2 rounded-lg font-label-lg text-label-lg hover:bg-surface-bright">Desserts</button>
+</nav>
+<!-- Item Grid -->
+<div class="flex-1 grid grid-cols-3 gap-md p-md overflow-y-auto content-start">
+<!-- Menu Item -->
+<button class="flex flex-col bg-surface-container h-[160px] rounded-xl border border-outline-variant hover:border-delivery-blue transition-all group relative overflow-hidden text-left">
+<img class="h-[80px] w-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="A professional culinary photograph of a gourmet cheeseburger with melting cheddar, crisp lettuce, and fresh tomatoes on a toasted brioche bun. The image is shot from a low angle with dramatic side lighting against a dark, industrial background, maintaining a high-contrast and moody aesthetic consistent with a premium POS system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCimYWSAtLV-IgKUHj5pEIvPXgs488Vyu0UyaFX23-41kwW9kzI2S6B9gJiWRT1fKOiuDz0t5a1_gXYOLxwDFj28eQJuMFrMkRoVJLUkajg1cdSKK8RcGV_fzNkc3Z8eN_Fv9MlFlkfYAmsjbgycosw1n0c5poVJgTW6prBLhQRGiDMKESyJ7wSqxij9C4LXvosbVEsj9byc0OiHZKqSudkOn-NWgDjjjHGCy60j6AmiOObLyN54DF8I4TeSlzyKIzk_7FwSoXJGLxF"/>
+<div class="p-sm flex-1 flex flex-col justify-between">
+<span class="font-headline-sm text-[16px] text-on-surface line-clamp-1">Classic Beef Smash</span>
+<span class="font-currency-display text-headline-sm text-delivery-blue">$12.50</span>
+</div>
+</button>
+<button class="flex flex-col bg-surface-container h-[160px] rounded-xl border border-outline-variant hover:border-delivery-blue transition-all group relative overflow-hidden text-left">
+<img class="h-[80px] w-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="A vibrant and healthy quinoa salad bowl with avocado slices, cherry tomatoes, and microgreens. The photo features a clean top-down perspective with high contrast, sharp textures, and a dark matte background, perfectly suited for a high-end digital restaurant interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoYFcUZPHAyXxNMblTu5NFN_C_mBwL97qU5z1_aNaeqKGwOO1zpQMkERtXj4mX7zLMqHeZ1FekQVJDwLpw6QREOG8OCfEmYREYfJrhq5cE4z8XJz6b114JM-VgGEdoq_ocM8wbTXg-OH4N9ykf7L5rQ1FCuPFA7Oboyh-sZbD9RMnxNhv3uC9C0lNaFvr-iRKF5u1-DjnoBiOU78NQeh75mrvpihzCQCtXyHyKVH2HH_U4Sh2DdZcqrL2vxppsofkbMu4DDmtF7pxN"/>
+<div class="p-sm flex-1 flex flex-col justify-between">
+<span class="font-headline-sm text-[16px] text-on-surface line-clamp-1">Quinoa Power Bowl</span>
+<span class="font-currency-display text-headline-sm text-delivery-blue">$14.00</span>
+</div>
+<div class="absolute top-2 right-2 bg-amber-action text-on-primary-container px-2 rounded-sm font-bold text-xs">2</div>
+</button>
+<button class="flex flex-col bg-surface-container h-[160px] rounded-xl border border-outline-variant hover:border-delivery-blue transition-all group relative overflow-hidden text-left border-delivery-blue ring-1 ring-delivery-blue">
+<img class="h-[80px] w-full object-cover grayscale-0 transition-all" data-alt="A close-up shot of a rustic pepperoni pizza with bubbling mozzarella and fresh basil leaves. The lighting is cinematic and focused, emphasizing the textures of the charred crust and glossy oils, set against a dark industrial steel background to align with the terminal's mechanical and reliable feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdsxxoyNscPme8CLtri1Plsv2vctWKXVZYDoK_uyuPl_AI7i3jj-skt45oB1X1scmdouJ8M-NSGI9Y0cFHpZta7KPZmatMvUR8NKRVgDXhasMp2NXSWgQMrRTAik5mkCyLYcUJYUrmLmYOpN1CxclRTjoIFFk-PrEYHZ8bip_k0fWVCir-T6tsd8YwV_4qgy67nrEuA7h9LokTuATiw6p_vimUlj__q2vzZXj8AxVVVjQ8NtL4r4fqCN-buiuao6m0mgk7A7MiE6nI"/>
+<div class="p-sm flex-1 flex flex-col justify-between">
+<span class="font-headline-sm text-[16px] text-on-surface line-clamp-1">Truffle Mushroom Pizza</span>
+<span class="font-currency-display text-headline-sm text-delivery-blue">$18.90</span>
+</div>
+<div class="absolute top-2 right-2 bg-delivery-blue text-white px-2 rounded-sm font-bold text-xs">1</div>
+</button>
+<button class="flex flex-col bg-surface-container h-[160px] rounded-xl border border-outline-variant hover:border-delivery-blue transition-all group relative overflow-hidden text-left">
+<img class="h-[80px] w-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="A minimalist overhead shot of crispy golden chicken wings served on a black slate tray. The image uses sharp focus and deep shadows to create a premium, industrial aesthetic, emphasizing the texture of the glaze and the clean lines of the presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBL10DtxUYUHzC1_xq-60YbufE3_lW8q6Kdf0R-hkYU5eA7p3VjzEt8fBaze-Lt2wCt2LQ3ZWMLx-nIpXdkSYnf-9NPlmvFJkwI-P7e0V0EmC3JNriWZcHf4gmC_KXDzaqDgRzJMzM_SGYoOZ8ULCnSfCZPsZrdrXWBqoaZcNmiN4Vyo2vb9ye38C7YQ6HnIZN4WC51eMx2fW-kAwHMraUBaZyPyanbf9h1U8FIYNRWepcpt59sav7KIX6kYyaXMX21cH0Nk2ng10p_"/>
+<div class="p-sm flex-1 flex flex-col justify-between">
+<span class="font-headline-sm text-[16px] text-on-surface line-clamp-1">Buffalo Glazed Wings</span>
+<span class="font-currency-display text-headline-sm text-delivery-blue">$9.50</span>
+</div>
+</button>
+<button class="flex flex-col bg-surface-container h-[160px] rounded-xl border border-outline-variant hover:border-delivery-blue transition-all group relative overflow-hidden text-left">
+<img class="h-[80px] w-full object-cover grayscale group-hover:grayscale-0 transition-all" data-alt="A sophisticated presentation of a iced caramel macchiato in a clean glass vessel. The shot features dramatic lighting that highlights the layers of coffee and cream, set against a dark, mechanical background to mirror a modern kitchen terminal environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMey0wzlwMTrdkt5wlILKUkycsQ5Rg4m9G0q89NHWKv_DgkkNjqiK7rIDhR3VAgwzPOrghH00JoJHRgT6Yw4sVNw4DfnzcHj2hMqko0enMo9TCgs2ILdVs98iHfynbnue7cqISOl9Qs1zX-0SeKvaBkuw_jLNj8WtDVjvdZtqyocvnoWRdYTBchLAg09tNRVdpumLroJxRZxpQxEXAQeK63YbcgZ3txfLaMwZMLx8RY-kyQS7w0y56_mWyPSxY37tatH3nVrGwWeL1"/>
+<div class="p-sm flex-1 flex flex-col justify-between">
+<span class="font-headline-sm text-[16px] text-on-surface line-clamp-1">Iced Caramel Brew</span>
+<span class="font-currency-display text-headline-sm text-delivery-blue">$5.50</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Order Cart (42%) -->
+<section class="w-[42%] h-full bg-surface flex flex-col border-l border-outline-variant">
+<div class="p-md border-b border-outline-variant bg-surface-container-low">
+<div class="flex justify-between items-center mb-sm">
+<h2 class="font-headline-md text-headline-md flex items-center gap-sm">
+                        Delivery Order
+                        <span class="bg-delivery-blue/10 text-delivery-blue px-2 py-0.5 rounded text-sm">DEL-018</span>
+</h2>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">more_vert</span>
+</div>
+<p class="text-on-surface-variant text-[11px] leading-tight">
+                    JONATHAN WICK • Continental Hotel, 1 Beaver St, NY • <span class="text-delivery-blue underline">ZONE A</span>
+</p>
+</div>
+<!-- Items List -->
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<div class="flex items-start justify-between group">
+<div class="flex gap-md">
+<span class="font-bold text-delivery-blue w-6">1×</span>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface">Truffle Mushroom Pizza</span>
+<span class="text-[11px] text-on-surface-variant ml-2">• Extra Parmesan</span>
+<span class="text-[11px] text-on-surface-variant ml-2">• Well Done Crust</span>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<span class="font-currency-display text-[16px]">$18.90</span>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 cursor-pointer">close</span>
+</div>
+</div>
+<div class="flex items-start justify-between group">
+<div class="flex gap-md">
+<span class="font-bold text-delivery-blue w-6">2×</span>
+<div class="flex flex-col">
+<span class="font-label-lg text-label-lg text-on-surface">Quinoa Power Bowl</span>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<span class="font-currency-display text-[16px]">$28.00</span>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 cursor-pointer">close</span>
+</div>
+</div>
+</div>
+<!-- Platform Info -->
+<div class="m-md p-md bg-foodpanda/5 border border-foodpanda/20 rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-foodpanda">cloud_download</span>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-foodpanda uppercase tracking-tighter">Integration Active</span>
+<span class="text-[12px] font-bold text-on-surface">Order #FP-88291 imported</span>
+</div>
+</div>
+<span class="text-[10px] text-on-surface-variant">2 mins ago</span>
+</div>
+<!-- Tracker -->
+<div class="px-md pb-md">
+<div class="flex justify-between items-center mb-base">
+<div class="flex flex-col items-center flex-1">
+<div class="w-2 h-2 rounded-full bg-delivery-blue mb-1"></div>
+<span class="text-[9px] font-bold text-delivery-blue uppercase">Placed</span>
+</div>
+<div class="h-[2px] flex-1 bg-outline-variant -mt-3"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-2 h-2 rounded-full bg-outline-variant mb-1"></div>
+<span class="text-[9px] font-bold text-on-surface-variant uppercase">Prep</span>
+</div>
+<div class="h-[2px] flex-1 bg-outline-variant -mt-3"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-2 h-2 rounded-full bg-outline-variant mb-1"></div>
+<span class="text-[9px] font-bold text-on-surface-variant uppercase">Out</span>
+</div>
+<div class="h-[2px] flex-1 bg-outline-variant -mt-3"></div>
+<div class="flex flex-col items-center flex-1">
+<div class="w-2 h-2 rounded-full bg-outline-variant mb-1"></div>
+<span class="text-[9px] font-bold text-on-surface-variant uppercase">Done</span>
+</div>
+</div>
+</div>
+<!-- Totals & Actions -->
+<div class="p-md bg-surface-container-low border-t border-outline-variant">
+<div class="space-y-1 mb-md">
+<div class="flex justify-between text-[13px]">
+<span class="text-on-surface-variant">Subtotal</span>
+<span>$46.90</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-on-surface-variant">Packaging</span>
+<span>$1.50</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-on-surface-variant">Delivery Charge</span>
+<span>$4.50</span>
+</div>
+<div class="flex justify-between text-[13px]">
+<span class="text-on-surface-variant">Service Tax (5%)</span>
+<span>$2.65</span>
+</div>
+<div class="flex justify-between items-end mt-sm pt-sm border-t border-outline-variant">
+<span class="font-headline-sm text-headline-sm">Total Due</span>
+<span class="font-currency-display text-currency-display text-delivery-blue">$55.55</span>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-sm mb-sm">
+<button class="h-10 border border-outline-variant rounded-lg flex items-center justify-center gap-xs font-label-md hover:bg-surface-bright">
+<span class="material-symbols-outlined text-[18px]">percent</span> Discount
+                    </button>
+<button class="h-10 border border-outline-variant rounded-lg flex items-center justify-center gap-xs font-label-md hover:bg-surface-bright">
+<span class="material-symbols-outlined text-[18px]">sticky_note_2</span> Note
+                    </button>
+<button class="h-10 border border-outline-variant rounded-lg flex items-center justify-center gap-xs font-label-md hover:bg-surface-bright">
+<span class="material-symbols-outlined text-[18px]">pause</span> Hold
+                    </button>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<button class="h-14 bg-amber-action text-black font-bold text-lg rounded-xl hover:opacity-90 active:scale-[0.98] transition-all">
+                        SEND TO KITCHEN
+                    </button>
+<button class="h-14 bg-delivery-blue text-white font-bold text-lg rounded-xl hover:opacity-90 active:scale-[0.98] transition-all">
+                        CONFIRM ORDER
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Nav -->
+<footer class="h-[64px] w-full bg-surface-container-high flex justify-around items-center px-md border-t border-outline-variant shrink-0">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-6 py-1 border-2 border-primary transition-all">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-md text-label-md">Menu</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all relative">
+<span class="material-symbols-outlined">confirmation_number</span>
+<span class="font-label-md text-label-md">Tickets</span>
+<div class="absolute top-1 right-3 w-4 h-4 bg-error text-[9px] text-white flex items-center justify-center rounded-full font-bold">3</div>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined">inventory</span>
+<span class="font-label-md text-label-md">Stock</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</button>
+</footer>
+<!-- Delivery Drawer (Slides from Right) -->
+<aside class="fixed right-0 top-[56px] bottom-[64px] w-[320px] bg-surface-container-highest border-l border-outline-variant translate-x-full transition-transform duration-300 z-40 flex flex-col" id="delivery-drawer">
+<div class="p-md border-b border-outline-variant flex justify-between items-center bg-surface-container-highest">
+<h3 class="font-headline-sm text-headline-sm">Active Deliveries</h3>
+<button class="material-symbols-outlined" onclick="toggleDrawer()">close</button>
+</div>
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<!-- Delivery Card -->
+<div class="bg-surface p-md rounded-xl border border-outline-variant space-y-md">
+<div class="flex justify-between items-start">
+<span class="bg-delivery-blue/10 text-delivery-blue px-2 py-0.5 rounded font-bold text-xs">DEL-015</span>
+<span class="text-[10px] text-on-surface-variant">12 MIN REMAINING</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg">Sarah Connor</p>
+<p class="text-[11px] text-on-surface-variant">Skynet Plaza, Floor 8</p>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+<div class="bg-delivery-blue h-full w-[75%]"></div>
+</div>
+<button class="w-full py-2 bg-delivery-blue/10 text-delivery-blue border border-delivery-blue/20 rounded-lg text-xs font-bold hover:bg-delivery-blue hover:text-white transition-all">
+                    MARK DELIVERED
+                </button>
+</div>
+<div class="bg-surface p-md rounded-xl border border-outline-variant space-y-md">
+<div class="flex justify-between items-start">
+<span class="bg-delivery-blue/10 text-delivery-blue px-2 py-0.5 rounded font-bold text-xs">DEL-016</span>
+<span class="text-[10px] text-on-surface-variant">OUT FOR DELIVERY</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg">Bruce Wayne</p>
+<p class="text-[11px] text-on-surface-variant">Wayne Tower, Penthouse</p>
+</div>
+<div class="w-full bg-outline-variant h-1 rounded-full overflow-hidden">
+<div class="bg-delivery-blue h-full w-[40%]"></div>
+</div>
+<button class="w-full py-2 bg-delivery-blue/10 text-delivery-blue border border-delivery-blue/20 rounded-lg text-xs font-bold hover:bg-delivery-blue hover:text-white transition-all">
+                    MARK DELIVERED
+                </button>
+</div>
+</div>
+</aside>
+<!-- Drawer Toggle Trigger (Floating Edge) -->
+<button class="fixed right-0 top-1/2 -translate-y-1/2 bg-delivery-blue text-white w-8 h-16 rounded-l-xl flex items-center justify-center z-50" onclick="toggleDrawer()">
+<span class="material-symbols-outlined" id="drawer-icon">chevron_left</span>
+</button>
+<script>
+        function toggleDrawer() {
+            const drawer = document.getElementById('delivery-drawer');
+            const icon = document.getElementById('drawer-icon');
+            const isClosed = drawer.classList.contains('translate-x-full');
+            
+            if(isClosed) {
+                drawer.classList.remove('translate-x-full');
+                icon.innerText = 'chevron_right';
+            } else {
+                drawer.classList.add('translate-x-full');
+                icon.innerText = 'chevron_left';
+            }
+        }
+    </script>
+</body></html>

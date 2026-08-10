@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Item Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#31281f",
+                        "surface-container-lowest": "#140d06",
+                        "primary-container": "#f59e0b",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-low": "#221a12",
+                        "secondary-container": "#4a4949",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-secondary-container": "#bab8b7",
+                        "tertiary-container": "#b1b1ae",
+                        "on-surface": "#f0e0d1",
+                        "on-secondary": "#313030",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "surface-tint": "#ffb95f",
+                        "surface-container": "#261e15",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-primary": "#472a00",
+                        "on-primary-fixed-variant": "#653e00",
+                        "inverse-primary": "#855300",
+                        "surface-bright": "#41382e",
+                        "primary-fixed": "#ffddb8",
+                        "on-tertiary": "#2f312f",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#19120a",
+                        "on-tertiary-container": "#434442",
+                        "outline-variant": "#534434",
+                        "secondary": "#c9c6c5",
+                        "background": "#19120a",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#3c3329",
+                        "primary": "#ffc174",
+                        "on-primary-container": "#613b00",
+                        "inverse-surface": "#f0e0d1",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "error-container": "#93000a",
+                        "surface": "#19120a",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-highest": "#3c3329",
+                        "primary-fixed-dim": "#ffb95f",
+                        "outline": "#a08e7a",
+                        "on-secondary-fixed-variant": "#474646",
+                        "on-primary-fixed": "#2a1700",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "tertiary": "#cdccca",
+                        "on-background": "#f0e0d1",
+                        "amber-accent": "#F59E0B",
+                        "success-green": "#10B981",
+                        "alert-red": "#EF4444"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "margin-desktop": "32px",
+                        "base": "8px",
+                        "sm": "8px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Clash Display"],
+                        "label-md": ["Inter"],
+                        "currency-display": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Clash Display"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "body-md": ["Inter"],
+                        "label-lg": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scrim-overlay {
+            background-color: rgba(13, 13, 13, 0.75);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #19120a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #534434;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-hidden h-screen w-screen">
+<!-- Background Order Entry Screen (Dimmed) -->
+<div class="fixed inset-0 w-full h-full pointer-events-none opacity-40">
+<img alt="Background POS Screen" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARKxKXpoirKMvNNiZg86Fn-qPTBCMWDKJWN0lk_HfX9NJi9gvaR7uFVwni4Lx-dr9LnH6liQQixUf8oIkTyH5c9g1cmM494KeJR0Urbqs2sp5YUu7Vw73hqF5dNV8YehFg-3kFWYdx-4QA0g3id2bWCoJlO0iOMnb57u2s9X4pv9USbaq5TJip4rclRRwTlngIuXQ5vuz7QhVc-ynv02O3Xp4bPLcrcjrl4kO422FIsjO5-9ygPRTL5vj1xW2Q9pnzZlc1-fvoLwP_"/>
+</div>
+<!-- Scrim Overlay -->
+<div class="fixed inset-0 scrim-overlay z-40"></div>
+<!-- Bottom Sheet Container -->
+<div class="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end h-screen">
+<div class="w-full h-[901px] bg-[#111111] rounded-t-[20px] flex flex-col shadow-2xl border-t border-outline-variant max-w-[1280px] mx-auto">
+<!-- Handle -->
+<div class="w-full flex justify-center py-sm shrink-0">
+<div class="w-12 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<!-- Header (80px Content) -->
+<header class="h-[80px] px-margin-desktop flex items-center justify-between border-b border-outline-variant shrink-0">
+<div class="flex items-center gap-md">
+<div class="w-[56px] h-[56px] rounded-lg overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A close-up high-resolution shot of a gourmet Double Smash Burger with melted cheddar, crisp lettuce, and caramelized onions on a toasted brioche bun. The lighting is dramatic and industrial, highlighting the juicy textures of the beef. The color palette is rich with warm browns and vibrant amber tones, fitting a premium restaurant POS interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcTZYEoasytKprDjAHi65l0QtaCZl1mQLrXwuRc8jZq299AlduSnn2G3kslwqm9ReGIzE2grSuGYQY3O3pvuCUXHuQcBIol2PpOnnxJRjLRHZgQ_ZeqyrXDqMxWwuBoAOvhuyVnvLW7wo7ZUL8WjKniDVLKBpYl_BreYXqklr6c57HM76NhkJwQSGSGtE1zTRqz1mkg2NXyvVw_TbCGQTErW6dZ9kI3cBm5FaEluxaLLbd4h3QtiHeRKZAoFe0fZ-865stQwCPV0_g"/>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md leading-none text-on-surface">Double Smash Burger</h1>
+<div class="flex items-center gap-sm mt-1">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Mains</span>
+<span class="w-1 h-1 bg-outline-variant rounded-full"></span>
+<span class="font-label-md text-label-md text-primary-container">PKR 1,450</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-high px-md py-sm rounded-lg border border-primary-container/30">
+<span class="font-label-md text-label-md text-on-surface-variant mr-sm">CURRENT TOTAL</span>
+<span class="font-currency-display text-headline-sm text-amber-accent">PKR 1,450</span>
+</div>
+</header>
+<!-- Main Content Area (Scrollable) -->
+<main class="flex-1 overflow-y-auto custom-scrollbar px-margin-desktop py-lg space-y-xl">
+<!-- 1. Quantity Stepper -->
+<section>
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest mb-md">Set Quantity</h3>
+<div class="flex items-center gap-md bg-surface-container-low p-sm rounded-xl w-fit border border-outline-variant">
+<button class="w-[64px] h-[64px] flex items-center justify-center rounded-lg bg-surface-variant text-alert-red active:scale-95 transition-transform border border-outline-variant">
+<span class="material-symbols-outlined text-[32px]">remove</span>
+</button>
+<div class="w-[80px] text-center">
+<span class="font-display-lg text-display-lg text-on-surface">1</span>
+</div>
+<button class="w-[64px] h-[64px] flex items-center justify-center rounded-lg bg-surface-variant text-success-green active:scale-95 transition-transform border border-outline-variant">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+</section>
+<!-- 2. Choose Size (Single Select) -->
+<section>
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest">Choose Size</h3>
+<span class="bg-primary-container/10 text-primary-container font-label-md text-label-md px-sm py-1 rounded">REQUIRED</span>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<label class="relative flex items-center justify-between h-[72px] px-lg rounded-xl border-2 border-amber-accent bg-surface-container-high cursor-pointer">
+<input checked="" class="hidden" name="size" type="radio"/>
+<span class="font-headline-sm text-headline-sm text-on-surface">Regular</span>
+<span class="material-symbols-outlined text-amber-accent" style="font-variation-settings: 'FILL' 1;">radio_button_checked</span>
+</label>
+<label class="relative flex items-center justify-between h-[72px] px-lg rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="hidden" name="size" type="radio"/>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Large</span>
+<span class="font-label-md text-label-md text-primary-container">+ PKR 200</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant">radio_button_unchecked</span>
+</label>
+</div>
+</section>
+<!-- 3. Add-ons (Multi Select) -->
+<section>
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest mb-md">Add-ons</h3>
+<div class="space-y-sm">
+<label class="flex items-center justify-between h-[64px] px-lg rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex items-center gap-md">
+<input class="w-6 h-6 rounded border-outline bg-surface text-amber-accent focus:ring-amber-accent focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-lg text-body-lg text-on-surface">Extra Cheese</span>
+</div>
+<span class="font-label-lg text-label-lg text-primary-container">+ PKR 80</span>
+</label>
+<label class="flex items-center justify-between h-[64px] px-lg rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex items-center gap-md">
+<input class="w-6 h-6 rounded border-outline bg-surface text-amber-accent focus:ring-amber-accent focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-lg text-body-lg text-on-surface">Beef Bacon</span>
+</div>
+<span class="font-label-lg text-label-lg text-primary-container">+ PKR 150</span>
+</label>
+<label class="flex items-center justify-between h-[64px] px-lg rounded-xl border border-outline-variant bg-surface-container hover:bg-surface-container-low cursor-pointer transition-colors">
+<div class="flex items-center gap-md">
+<input class="w-6 h-6 rounded border-outline bg-surface text-amber-accent focus:ring-amber-accent focus:ring-offset-0" type="checkbox"/>
+<span class="font-body-lg text-body-lg text-on-surface">Fried Egg</span>
+</div>
+<span class="font-label-lg text-label-lg text-primary-container">+ PKR 50</span>
+</label>
+</div>
+</section>
+<!-- 4. Remove Ingredients -->
+<section>
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest mb-md">Remove Ingredients</h3>
+<div class="flex flex-wrap gap-sm">
+<!-- Removed State -->
+<button class="h-[48px] px-md rounded-full border border-alert-red bg-alert-red/10 text-alert-red flex items-center gap-sm transition-all">
+<span class="material-symbols-outlined text-[20px]">block</span>
+<span class="font-label-lg text-label-lg line-through">Onions</span>
+</button>
+<button class="h-[48px] px-md rounded-full border border-outline-variant bg-surface-container text-on-surface flex items-center gap-sm hover:bg-surface-container-low active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span class="font-label-lg text-label-lg">Pickles</span>
+</button>
+<button class="h-[48px] px-md rounded-full border border-outline-variant bg-surface-container text-on-surface flex items-center gap-sm hover:bg-surface-container-low active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span class="font-label-lg text-label-lg">Lettuce</span>
+</button>
+<button class="h-[48px] px-md rounded-full border border-outline-variant bg-surface-container text-on-surface flex items-center gap-sm hover:bg-surface-container-low active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span class="font-label-lg text-label-lg">Tomato</span>
+</button>
+</div>
+</section>
+<!-- 5. Special Instructions -->
+<section class="pb-xl">
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest mb-md">Special Instructions</h3>
+<textarea class="w-full h-[120px] bg-[#121212] border border-outline-variant rounded-xl p-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-2 focus:ring-amber-accent focus:border-transparent resize-none font-body-md" placeholder="E.g. Sauce on the side, well-done patty..."></textarea>
+</section>
+</main>
+<!-- Footer (80px Fixed) -->
+<footer class="h-[80px] px-margin-desktop bg-[#111111] border-t border-outline-variant flex items-center justify-between shrink-0">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md text-on-surface font-semibold">1× Double Smash Burger</span>
+<span class="font-label-md text-label-md text-alert-red flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">remove_circle</span>
+                        No onions
+                    </span>
+</div>
+<button class="bg-amber-accent text-on-primary-fixed h-[56px] px-xl rounded-xl flex items-center gap-md active:scale-[0.98] transition-all hover:bg-amber-accent/90 shadow-lg shadow-amber-accent/10">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">shopping_cart</span>
+<span class="font-headline-sm text-headline-sm uppercase tracking-tight">Add to Order</span>
+<span class="w-[1px] h-6 bg-on-primary-fixed/20"></span>
+<span class="font-headline-sm text-headline-sm">PKR 1,450</span>
+</button>
+</footer>
+</div>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+        // Simple click interaction for ingredient toggles
+        document.querySelectorAll('button[class*="rounded-full"]').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const isRemoved = this.classList.contains('border-alert-red');
+                const icon = this.querySelector('.material-symbols-outlined');
+                const label = this.querySelector('span:not(.material-symbols-outlined)');
+                
+                if (isRemoved) {
+                    this.classList.remove('border-alert-red', 'bg-alert-red/10', 'text-alert-red');
+                    this.classList.add('border-outline-variant', 'bg-surface-container', 'text-on-surface');
+                    icon.textContent = 'check_circle';
+                    label.classList.remove('line-through');
+                } else {
+                    this.classList.add('border-alert-red', 'bg-alert-red/10', 'text-alert-red');
+                    this.classList.remove('border-outline-variant', 'bg-surface-container', 'text-on-surface');
+                    icon.textContent = 'block';
+                    label.classList.add('line-through');
+                }
+            });
+        });
+
+        // Simple radio selection visual update
+        const radios = document.querySelectorAll('input[name="size"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                radios.forEach(r => {
+                    const parent = r.closest('label');
+                    const icon = parent.querySelector('.material-symbols-outlined');
+                    if (r.checked) {
+                        parent.classList.add('border-amber-accent', 'bg-surface-container-high');
+                        parent.classList.remove('border-outline-variant', 'bg-surface-container');
+                        icon.textContent = 'radio_button_checked';
+                        icon.style.fontVariationSettings = "'FILL' 1";
+                        icon.classList.add('text-amber-accent');
+                    } else {
+                        parent.classList.remove('border-amber-accent', 'bg-surface-container-high');
+                        parent.classList.add('border-outline-variant', 'bg-surface-container');
+                        icon.textContent = 'radio_button_unchecked';
+                        icon.style.fontVariationSettings = "'FILL' 0";
+                        icon.classList.remove('text-amber-accent');
+                    }
+                });
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Kitchen Display System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-container": "#541200",
+                        "background": "#0A0A0F",
+                        "on-tertiary-fixed": "#001e2e",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "inverse-on-surface": "#ffede8",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "primary": "#b02f00",
+                        "tertiary-fixed": "#c8e6ff",
+                        "outline": "#907067",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#271813",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "surface-container": "#ffe9e4",
+                        "surface-bright": "#fff8f6",
+                        "surface-variant": "#fadcd4",
+                        "surface-dim": "#f1d4cc",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#862200",
+                        "error": "#ba1a1a",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#ffdbd1",
+                        "primary-container": "#ff5722",
+                        "inverse-primary": "#ffb5a0",
+                        "inverse-surface": "#3e2c27",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-surface": "#271813",
+                        "on-error-container": "#93000a",
+                        "secondary": "#565e74",
+                        "on-surface-variant": "#5b4039",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#dae2fd",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-highest": "#fadcd4",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#007caf",
+                        "on-secondary": "#ffffff",
+                        "surface": "#fff8f6",
+                        "surface-container-high": "#ffe2da",
+                        "surface-container-low": "#fff1ed",
+                        "outline-variant": "#e4beb4",
+                        "on-primary": "#ffffff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "related": "8px",
+                        "section": "24px",
+                        "grid_gutter": "16px",
+                        "page_margin": "24px",
+                        "element": "16px"
+                    },
+                    fontFamily: {
+                        "h1": ["Inter"],
+                        "caption": ["Inter"],
+                        "h2": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    fontSize: {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #0A0A0F; color: white; }
+        .dot-grid {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .order-card-urgent {
+            box-shadow: 0 0 15px rgba(186, 26, 26, 0.4);
+            border: 1px solid #ba1a1a;
+        }
+    </style>
+</head>
+<body class="font-body text-body selection:bg-primary-container selection:text-white">
+<!-- TOP BAR (Derived from TopNavBar JSON guidance) -->
+<header class="fixed top-0 left-0 right-0 h-[60px] bg-[#111120] border-b border-slate-800 flex items-center px-6 z-50 justify-between">
+<div class="flex items-center gap-4">
+<span class="text-xl font-black text-white uppercase tracking-widest">SwiftServe</span>
+<div class="h-4 w-px bg-slate-700"></div>
+<span class="text-slate-400 font-medium text-sm">Kitchen Display — Clifton Branch</span>
+</div>
+<div class="absolute left-1/2 -translate-x-1/2 flex items-center">
+<h1 class="font-mono text-3xl font-bold tracking-tight text-white">09:43 PM</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-error animate-pulse"></span>
+<span class="text-error font-bold text-xs uppercase tracking-wider">LIVE</span>
+<span class="text-slate-300 text-xs font-mono">23 orders today</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400">notifications</span>
+<span class="material-symbols-outlined text-slate-400">settings</span>
+<img alt="Chef Avatar" class="w-8 h-8 rounded-full border border-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVnzo2zAr9qZMLFGy7HTcJxmNwcgVmMhFLyPce2kg1lnUYJNCo69q6a89Nx0DyiArB6ru0TKZ62UFKL1DGZztdkaws358SaF2wWMN39jWYz0Brxt21d9SoZq9EuwQtL01lL5CP1-VZDG5FcEvWXEHwaq4VPtqeOIP6sAiGrtyZguHV_C5KBJ0Ip0rWvERDHwY_clnBgxBK9drZNdgVFdM5a05U1KdZGOSWVmjqqj2cz50cO35j4wGGOComw2wxs7FH4S7FKFlzXg04"/>
+</div>
+</div>
+</header>
+<!-- STATION TABS (Derived from JSON navigation_links & SideNavBar logic) -->
+<nav class="fixed top-[60px] left-0 right-0 h-[48px] bg-[#0A0A0F] border-b border-slate-800 flex items-center px-6 z-40 gap-8 overflow-x-auto no-scrollbar">
+<button class="h-full px-2 text-sm font-semibold flex items-center gap-2 text-orange-500 border-b-2 border-orange-500 transition-colors">
+            All Stations
+        </button>
+<button class="h-full px-2 text-sm font-semibold flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors">
+            Grill <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-400">● 12</span>
+</button>
+<button class="h-full px-2 text-sm font-semibold flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors">
+            Fryer <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-400">● 8</span>
+</button>
+<button class="h-full px-2 text-sm font-semibold flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors">
+            Cold Section <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-400">● 3</span>
+</button>
+<button class="h-full px-2 text-sm font-semibold flex items-center gap-2 text-slate-500 hover:text-slate-300 transition-colors">
+            Drinks <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded-full text-slate-400">● 4</span>
+</button>
+</nav>
+<!-- MAIN CONTENT: Masonry Grid -->
+<main class="mt-[108px] mb-[44px] p-6 dot-grid min-h-[calc(100vh-152px)]">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-grid_gutter items-start">
+<!-- URGENT ORDER CARD -->
+<div class="bg-[#1A1A2E] border border-error order-card-urgent rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 flex justify-between items-start border-b border-slate-800/50">
+<div class="flex flex-col gap-1">
+<span class="font-mono text-xl font-bold text-white">#047</span>
+<span class="bg-error/10 text-error px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest w-fit">RUSH</span>
+</div>
+<span class="bg-primary/20 text-primary-fixed-dim border border-primary/30 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restaurant</span>
+                        Dine-In T5
+                    </span>
+</div>
+<div class="px-4 py-3 bg-error/5 flex items-center justify-between">
+<span class="text-error font-mono text-2xl font-black">18:45</span>
+<span class="text-error/80 text-[10px] font-bold uppercase tracking-tighter">DELAYED</span>
+</div>
+<div class="p-4 flex-grow flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Zinger Burger <span class="text-primary ml-1">x2</span></p>
+<p class="text-slate-500 text-sm italic">+ Extra Cheese</p>
+<p class="text-slate-500 text-sm italic">+ No Onions</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Loaded Fries <span class="text-primary ml-1">x1</span></p>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full bg-[#10b981] hover:bg-[#059669] text-white py-4 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">check_circle</span>
+                    Mark All Ready
+                </button>
+</div>
+<!-- STANDARD ORDER CARD 1 -->
+<div class="bg-[#1A1A2E] border border-white/10 rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 flex justify-between items-start border-b border-slate-800/50">
+<span class="font-mono text-xl font-bold text-white">#048</span>
+<span class="bg-secondary-container/10 text-secondary-fixed-dim border border-white/10 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">takeout_dining</span>
+                        Takeout
+                    </span>
+</div>
+<div class="px-4 py-3 bg-green-500/5 flex items-center justify-between">
+<span class="text-green-500 font-mono text-2xl font-black">08:32</span>
+<span class="text-green-500/80 text-[10px] font-bold uppercase tracking-tighter">ON TIME</span>
+</div>
+<div class="p-4 flex-grow flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Margherita Pizza <span class="text-primary ml-1">x1</span></p>
+<p class="text-slate-500 text-sm italic">Large, Thin Crust</p>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Coke 500ml <span class="text-primary ml-1">x2</span></p>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full bg-[#10b981] hover:bg-[#059669] text-white py-4 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">check_circle</span>
+                    Mark All Ready
+                </button>
+</div>
+<!-- STANDARD ORDER CARD 2 -->
+<div class="bg-[#1A1A2E] border border-white/10 rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 flex justify-between items-start border-b border-slate-800/50">
+<span class="font-mono text-xl font-bold text-white">#049</span>
+<span class="bg-secondary-container/10 text-secondary-fixed-dim border border-white/10 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">restaurant</span>
+                        Dine-In T12
+                    </span>
+</div>
+<div class="px-4 py-3 bg-green-500/5 flex items-center justify-between">
+<span class="text-green-500 font-mono text-2xl font-black">04:12</span>
+<span class="text-green-500/80 text-[10px] font-bold uppercase tracking-tighter">NEW</span>
+</div>
+<div class="p-4 flex-grow flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Chicken Wings <span class="text-primary ml-1">x12</span></p>
+<p class="text-slate-500 text-sm italic">Buffalo Sauce, Extra Spicy</p>
+</div>
+</div>
+</div>
+</div>
+<button class="w-full bg-[#10b981] hover:bg-[#059669] text-white py-4 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">check_circle</span>
+                    Mark All Ready
+                </button>
+</div>
+<!-- IMAGE ADVERTISEMENT CARD -->
+<div class="bg-[#1A1A2E] border border-white/10 rounded-xl flex flex-col overflow-hidden">
+<img class="w-full h-48 object-cover" data-alt="A cinematic, high-contrast close-up of a professional chef's hands masterfully plating a gourmet burger in a dark, atmospheric kitchen. The lighting is focused and dramatic, highlighting the textures of the fresh ingredients and the polished stainless steel surfaces. The overall aesthetic is high-end corporate minimalism with deep shadows and vibrant food colors, matching the SwiftServe POS system's dark theme." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+<div class="p-4 bg-primary/10">
+<h3 class="text-white font-bold text-lg">Staff Alert</h3>
+<p class="text-slate-400 text-sm">Station 01 Inventory: Low on Brioche Buns. 12 units remaining.</p>
+</div>
+</div>
+<!-- STANDARD ORDER CARD 3 -->
+<div class="bg-[#1A1A2E] border border-white/10 rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 flex justify-between items-start border-b border-slate-800/50">
+<span class="font-mono text-xl font-bold text-white">#050</span>
+<span class="bg-secondary-container/10 text-secondary-fixed-dim border border-white/10 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">delivery_dining</span>
+                        Delivery
+                    </span>
+</div>
+<div class="px-4 py-3 bg-green-500/5 flex items-center justify-between">
+<span class="text-green-500 font-mono text-2xl font-black">01:55</span>
+<span class="text-green-500/80 text-[10px] font-bold uppercase tracking-tighter">NEW</span>
+</div>
+<div class="p-4 flex-grow flex flex-col gap-4">
+<div class="flex items-start gap-3">
+<input class="mt-1 w-5 h-5 rounded border-slate-700 bg-transparent text-primary focus:ring-0" type="checkbox"/>
+<div>
+<p class="text-lg font-bold text-white">Veggie Wrap <span class="text-primary ml-1">x2</span></p>
+</div>
+</div>
+</div>
+<button class="w-full bg-[#10b981] hover:bg-[#059669] text-white py-4 font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">check_circle</span>
+                    Mark All Ready
+                </button>
+</div>
+</div>
+</main>
+<!-- BOTTOM STATUS BAR (Derived from Footer JSON guidance) -->
+<footer class="fixed bottom-0 w-full h-[44px] bg-[#0A0A0F] border-t border-slate-800 flex items-center px-6 justify-between z-50 text-xs font-mono uppercase tracking-tighter">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-white">
+<span class="text-slate-500">IN QUEUE:</span> <span class="font-bold">8</span>
+</div>
+<div class="w-px h-3 bg-slate-800"></div>
+<div class="flex items-center gap-2 text-white">
+<span class="text-slate-500">IN PROGRESS:</span> <span class="font-bold text-orange-500">5</span>
+</div>
+<div class="w-px h-3 bg-slate-800"></div>
+<div class="flex items-center gap-2 text-white">
+<span class="text-slate-500">COMPLETED TODAY:</span> <span class="font-bold">38</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-white">
+<span class="text-slate-500">AVG PREP TIME:</span> <span class="font-bold">12m 30s</span>
+<span class="material-symbols-outlined text-green-500 text-[16px] ml-2">check_circle</span>
+<span class="text-green-500">SYSTEM ONLINE</span>
+</div>
+</footer>
+</body></html>

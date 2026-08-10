@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Forecasting Intelligence | Lumiere Dining</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-dashed { stroke-dasharray: 4; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container": "#ffe9e4",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#007caf",
+                        "surface-container-highest": "#fadcd4",
+                        "surface-container-low": "#fff1ed",
+                        "error": "#ba1a1a",
+                        "surface": "#fff8f6",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary-container": "#ff5722",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-variant": "#fadcd4",
+                        "secondary": "#565e74",
+                        "on-tertiary-fixed": "#001e2e",
+                        "secondary-fixed": "#dae2fd",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-primary-container": "#541200",
+                        "on-secondary-container": "#5c647a",
+                        "outline": "#907067",
+                        "on-surface": "#271813",
+                        "surface-bright": "#fff8f6",
+                        "on-surface-variant": "#5b4039",
+                        "inverse-on-surface": "#ffede8",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#3e2c27",
+                        "secondary-container": "#dae2fd",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-primary": "#ffffff",
+                        "surface-dim": "#f1d4cc",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#ffe2da",
+                        "outline-variant": "#e4beb4",
+                        "tertiary": "#00628c",
+                        "primary-fixed": "#ffdbd1",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#b02f00",
+                        "on-tertiary-container": "#fcfcff",
+                        "background": "#fff8f6",
+                        "on-primary-fixed": "#3b0900",
+                        "on-secondary": "#ffffff",
+                        "on-background": "#271813"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "page_margin": "24px",
+                        "section": "24px",
+                        "element": "16px",
+                        "grid_gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body": ["Inter"],
+                        "caption": ["Inter"],
+                        "h1": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen">
+<!-- SideNavBar (Predicted Content Mapping) -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-inverse-surface dark:bg-surface-container-lowest flex flex-col h-full py-section px-element shadow-md z-[60]">
+<div class="mb-10 px-2">
+<h1 class="font-display text-display text-primary-fixed dark:text-primary tracking-tight">Lumiere Dining</h1>
+<p class="text-caption text-secondary-fixed-dim opacity-70">AI-Driven Insights</p>
+</div>
+<nav class="flex-grow space-y-1">
+<!-- Dashboard -->
+<div class="group flex items-center px-4 py-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-body">Dashboard</span>
+</div>
+<!-- Analytics -->
+<div class="group flex items-center px-4 py-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined mr-3">monitoring</span>
+<span class="font-body">Analytics</span>
+</div>
+<!-- Forecasting (ACTIVE) -->
+<div class="group flex items-center px-4 py-3 rounded-lg text-primary-fixed-dim dark:text-primary font-h2 border-r-4 border-primary-fixed-dim bg-on-secondary-fixed-variant/10 cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined mr-3">query_stats</span>
+<span class="font-body">Forecasting</span>
+</div>
+<!-- Inventory -->
+<div class="group flex items-center px-4 py-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="font-body">Inventory</span>
+</div>
+<!-- Settings -->
+<div class="group flex items-center px-4 py-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-body">Settings</span>
+</div>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full py-3 bg-primary text-on-primary rounded-xl font-h2 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[20px]">description</span>
+                Generate Report
+            </button>
+</div>
+</aside>
+<!-- Main Content Shell -->
+<main class="ml-64 min-h-screen">
+<!-- TopNavBar (Predicted Content Mapping) -->
+<header class="w-full h-16 sticky top-0 z-50 flex justify-between items-center px-page_margin bg-surface dark:bg-surface-dim shadow-sm">
+<div class="flex items-center gap-8">
+<h2 class="font-h1 text-h1 font-bold text-on-surface dark:text-on-surface">Forecasting Intelligence</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-1.5 text-body w-64 focus:ring-2 focus:ring-primary/20 transition-all" placeholder="Search insights..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-full transition-colors">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">cloud_done</span>
+</button>
+<div class="h-8 w-px bg-outline-variant mx-2"></div>
+<button class="flex items-center gap-2 hover:bg-surface-container-low p-1.5 pr-3 rounded-full transition-colors">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of a restaurant manager in a sleek, modern office setting. The lighting is soft and natural, emphasizing a clean and organized workspace. The image uses a minimalist aesthetic with muted tones, reflecting high-end corporate reliability and expertise." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANVuvEUz3U2wNGF9fA5r2Spu-yxPtWOIZE05W4YA7wxAy0WTNEJl3600Kz74HgtZDvV5p95aChx7kNfnbsrWW1QGO2w01TIZrkOVZNawuDvI_QoW6BDHauNguNbiGxmZnF-BW4IalPvdR9nvn8-G1oNkMGZDXLsmgkNBefa1hG0xoLWhYMiOndwzezJ_OQjsi4trausS9BELG0CbaT2iPsHSU2Uu3wl0in8Ctia6fqWv4qnHh5vQfkeSZJl9lAcmaCt4ogaoksWKRv"/>
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+</button>
+</div>
+</header>
+<div class="p-page_margin space-y-section max-w-[1400px] mx-auto">
+<!-- Page Header Area -->
+<div class="flex justify-between items-end">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined text-[32px]">auto_awesome</span>
+</div>
+<div>
+<h3 class="text-display font-display text-on-surface leading-tight">Sales Forecast</h3>
+<p class="text-on-surface-variant flex items-center gap-2">
+                            AI-powered predictions for operational excellence
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20">
+                                Model trained on 847 days
+                            </span>
+</p>
+</div>
+</div>
+<button class="bg-surface-container-lowest border border-outline-variant text-on-surface px-element py-2 rounded-xl flex items-center gap-2 font-h2 hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">settings_suggest</span>
+                    Forecast Settings
+                </button>
+</div>
+<!-- Period Selector Card -->
+<section class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/30 flex justify-between items-center">
+<div class="flex p-1 bg-surface-container-low rounded-lg gap-1">
+<button class="px-6 py-2 bg-primary text-on-primary rounded-md text-caption shadow-sm">Next 7 Days</button>
+<button class="px-6 py-2 text-on-surface-variant hover:bg-white/50 rounded-md text-caption transition-all">Next 30 Days</button>
+<button class="px-6 py-2 text-on-surface-variant hover:bg-white/50 rounded-md text-caption transition-all">Next Quarter</button>
+<button class="px-6 py-2 text-on-surface-variant hover:bg-white/50 rounded-md text-caption transition-all">Custom</button>
+</div>
+<div class="flex items-center gap-element">
+<div class="flex items-center gap-2 px-4 py-2 bg-surface-container rounded-lg border border-primary-fixed-dim/30">
+<span class="text-caption text-on-surface-variant">Confidence:</span>
+<span class="font-h2 text-primary">87%</span>
+</div>
+<div class="h-8 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-2 cursor-pointer text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">storefront</span>
+<span class="font-h2">Branch: All</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</div>
+</div>
+</section>
+<!-- Metrics Row (4 Bento Cards) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-grid_gutter">
+<!-- Card 1: Revenue -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-sm border-l-4 border-primary-container">
+<div class="flex justify-between items-start mb-4">
+<span class="text-caption text-on-surface-variant uppercase tracking-wider">Predicted Revenue</span>
+<span class="material-symbols-outlined text-primary-container">payments</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-display font-display text-on-surface">PKR 3.2M</h4>
+<div class="flex justify-between items-center text-caption">
+<span class="text-on-surface-variant">Next 7 days</span>
+<span class="text-primary-container font-semibold">89% Confidence</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Orders -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-sm border-l-4 border-tertiary-container">
+<div class="flex justify-between items-start mb-4">
+<span class="text-caption text-on-surface-variant uppercase tracking-wider">Predicted Orders</span>
+<span class="material-symbols-outlined text-tertiary-container">shopping_cart</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-display font-display text-on-surface">4,150</h4>
+<p class="text-caption text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-green-600">trending_up</span>
+                            12% vs previous period
+                        </p>
+</div>
+</div>
+<!-- Card 3: Busiest Day -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-sm border-l-4 border-purple-500">
+<div class="flex justify-between items-start mb-4">
+<span class="text-caption text-on-surface-variant uppercase tracking-wider">Busiest Day</span>
+<span class="material-symbols-outlined text-purple-500">local_fire_department</span>
+</div>
+<div class="space-y-1">
+<h4 class="text-h1 font-display text-on-surface">Saturday, May 10</h4>
+<p class="text-caption text-on-surface-variant">Est. 840 orders (Peak at 8:00 PM)</p>
+</div>
+</div>
+<!-- Card 4: Stock Increase -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-sm border-l-4 border-green-500">
+<div class="flex justify-between items-start mb-4">
+<span class="text-caption text-on-surface-variant uppercase tracking-wider">Stock Increase Needs</span>
+<span class="material-symbols-outlined text-green-500">inventory</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-caption border-b border-outline-variant/30 pb-1">
+<span>Chicken</span> <span class="font-bold text-green-600">+18%</span>
+</div>
+<div class="flex justify-between text-caption border-b border-outline-variant/30 pb-1">
+<span>Buns</span> <span class="font-bold text-green-600">+12%</span>
+</div>
+<div class="flex justify-between text-caption">
+<span>Fries</span> <span class="font-bold text-green-600">+22%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Chart Card & Heatmap Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-grid_gutter">
+<!-- Chart Area -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl p-section shadow-sm border border-outline-variant/20">
+<div class="flex justify-between items-center mb-8">
+<h3 class="font-h1 text-on-surface">Revenue Forecast — Next 7 Days</h3>
+<div class="flex items-center gap-4 text-caption">
+<div class="flex items-center gap-1.5"><div class="w-3 h-3 bg-primary rounded-full"></div> Historical</div>
+<div class="flex items-center gap-1.5"><div class="w-3 h-3 border-2 border-primary border-dashed rounded-full"></div> Predicted</div>
+<div class="flex items-center gap-1.5"><div class="w-3 h-1 bg-primary/10 rounded-sm"></div> Confidence Band</div>
+</div>
+</div>
+<!-- Mock Chart SVG -->
+<div class="relative h-64 w-full">
+<svg class="w-full h-full" viewbox="0 0 800 200">
+<!-- Confidence Band -->
+<path d="M0,120 Q100,100 200,130 L400,110 L400,150 L200,170 Q100,140 0,160 Z" fill="rgba(176, 47, 0, 0.05)"></path>
+<path d="M400,110 Q500,90 600,120 T800,80 L800,140 T600,160 Q500,130 400,150 Z" fill="rgba(176, 47, 0, 0.1)"></path>
+<!-- History Line -->
+<path d="M0,140 Q100,120 200,150 L400,130" fill="none" stroke="#b02f00" stroke-width="3"></path>
+<!-- Forecast Line (Dashed) -->
+<path class="chart-dashed" d="M400,130 Q500,110 600,140 T800,100" fill="none" stroke="#b02f00" stroke-width="3"></path>
+<!-- Today Indicator -->
+<line stroke="#907067" stroke-dasharray="4" stroke-width="1" x1="400" x2="400" y1="0" y2="200"></line>
+<text class="text-[10px] fill-outline font-bold" x="405" y="20">TODAY</text>
+</svg>
+<div class="absolute bottom-0 w-full flex justify-between text-caption text-on-surface-variant pt-2">
+<span>Mon</span><span>Tue</span><span>Wed</span><span class="font-bold text-on-surface">Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+</div>
+<!-- Model Performance Card -->
+<div class="bg-surface-container-lowest rounded-xl p-section shadow-sm border border-outline-variant/20 flex flex-col">
+<h3 class="font-h2 text-on-surface mb-6">Model Performance</h3>
+<div class="grid grid-cols-2 gap-element mb-auto">
+<div class="p-3 bg-surface-container rounded-lg">
+<p class="text-caption text-on-surface-variant">MAPE</p>
+<p class="text-h1 font-display text-primary">8.3%</p>
+</div>
+<div class="p-3 bg-surface-container rounded-lg">
+<p class="text-caption text-on-surface-variant">Accuracy</p>
+<p class="text-h1 font-display text-tertiary">91.7%</p>
+</div>
+</div>
+<div class="mt-6">
+<p class="text-caption text-on-surface-variant mb-2">Validation: Forecast vs Actual</p>
+<div class="h-24 w-full bg-surface rounded p-2">
+<svg class="w-full h-full" viewbox="0 0 200 60">
+<path d="M0,40 L30,35 L60,45 L90,20 L120,25 L150,15 L200,10" fill="none" opacity="0.3" stroke="#b02f00" stroke-width="2"></path>
+<path d="M0,42 L35,33 L65,42 L85,22 L125,28 L145,18 L200,12" fill="none" stroke="#b02f00" stroke-width="2"></path>
+</svg>
+</div>
+<p class="text-[10px] text-center text-on-surface-variant mt-2 italic">Based on 847 historical data points</p>
+</div>
+</div>
+</div>
+<!-- Busy Hours Heatmap & Daily Table -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-grid_gutter">
+<!-- Heatmap Card -->
+<div class="bg-surface-container-lowest rounded-xl p-section shadow-sm border border-outline-variant/20">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-h2 text-on-surface">Busy Hours Heatmap</h3>
+<div class="flex items-center gap-1">
+<div class="w-2 h-2 bg-primary-container/20 rounded-sm"></div>
+<div class="w-2 h-2 bg-primary-container/60 rounded-sm"></div>
+<div class="w-2 h-2 bg-primary-container rounded-sm"></div>
+</div>
+</div>
+<div class="overflow-x-auto">
+<div class="grid grid-cols-[30px_repeat(14,1fr)] gap-1 min-w-[400px]">
+<div></div>
+<!-- Hours -->
+<div class="text-[10px] text-center text-on-surface-variant">10a</div>
+<div class="text-[10px] text-center text-on-surface-variant">11a</div>
+<div class="text-[10px] text-center text-on-surface-variant">12p</div>
+<div class="text-[10px] text-center text-on-surface-variant">1p</div>
+<div class="text-[10px] text-center text-on-surface-variant">2p</div>
+<div class="text-[10px] text-center text-on-surface-variant">3p</div>
+<div class="text-[10px] text-center text-on-surface-variant">4p</div>
+<div class="text-[10px] text-center text-on-surface-variant">5p</div>
+<div class="text-[10px] text-center text-on-surface-variant">6p</div>
+<div class="text-[10px] text-center text-on-surface-variant">7p</div>
+<div class="text-[10px] text-center text-on-surface-variant">8p</div>
+<div class="text-[10px] text-center text-on-surface-variant">9p</div>
+<div class="text-[10px] text-center text-on-surface-variant">10p</div>
+<div class="text-[10px] text-center text-on-surface-variant">11p</div>
+<!-- Day Rows (Simulated Heatmap) -->
+<div class="text-[10px] flex items-center justify-end pr-2 text-on-surface-variant">M</div>
+<div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/30 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/5 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div><div class="h-6 bg-primary-container/80 rounded-sm"></div><div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div>
+<div class="text-[10px] flex items-center justify-end pr-2 text-on-surface-variant">T</div>
+<div class="h-6 bg-primary-container/5 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/30 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/30 rounded-sm"></div><div class="h-6 bg-primary-container/50 rounded-sm"></div><div class="h-6 bg-primary-container/70 rounded-sm"></div><div class="h-6 bg-primary-container/90 rounded-sm"></div><div class="h-6 bg-primary-container/50 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/5 rounded-sm"></div>
+<div class="text-[10px] flex items-center justify-end pr-2 text-on-surface-variant">W</div>
+<div class="h-6 bg-primary-container/5 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/30 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div><div class="h-6 bg-primary-container/5 rounded-sm"></div><div class="h-6 bg-primary-container/20 rounded-sm"></div><div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div><div class="h-6 bg-primary-container/80 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div><div class="h-6 bg-primary-container/30 rounded-sm"></div><div class="h-6 bg-primary-container/10 rounded-sm"></div>
+<div class="text-[10px] flex items-center justify-end pr-2 text-on-surface-variant">S</div>
+<div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/80 rounded-sm"></div><div class="h-6 bg-primary-container/50 rounded-sm"></div><div class="h-6 bg-primary-container/40 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div><div class="h-6 bg-primary-container/80 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/100 rounded-sm"></div><div class="h-6 bg-primary-container/80 rounded-sm"></div><div class="h-6 bg-primary-container/60 rounded-sm"></div>
+</div>
+</div>
+</div>
+<!-- Daily Breakdown Table -->
+<div class="xl:col-span-2 bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden flex flex-col">
+<div class="p-section border-b border-outline-variant/20 flex justify-between items-center">
+<h3 class="font-h2 text-on-surface">Daily Predicted Breakdown</h3>
+<button class="text-primary text-caption font-bold hover:underline">Download CSV</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-caption text-on-surface-variant">
+<tr>
+<th class="px-6 py-3 font-semibold">Date</th>
+<th class="px-6 py-3 font-semibold">Predicted Orders</th>
+<th class="px-6 py-3 font-semibold text-primary">Predicted Revenue</th>
+<th class="px-6 py-3 font-semibold">Confidence</th>
+<th class="px-6 py-3 font-semibold">vs Last Week</th>
+<th class="px-6 py-3"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4">
+<p class="font-bold text-on-surface">May 08</p>
+<p class="text-[10px] text-on-surface-variant">Thursday (Today)</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="font-bold">542</span>
+<svg class="w-12 h-6" viewbox="0 0 50 20">
+<path d="M0,15 L10,12 L20,18 L30,5 L40,8 L50,2" fill="none" stroke="#007caf" stroke-width="2"></path>
+</svg>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-primary">PKR 421k</td>
+<td class="px-6 py-4">
+<div class="w-full bg-outline-variant/30 h-1.5 rounded-full overflow-hidden w-24">
+<div class="bg-primary h-full" style="width: 92%"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-green-600 font-medium">+8.4%</td>
+<td class="px-6 py-4">
+<button class="p-1 hover:bg-surface-container rounded transition-colors">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4">
+<p class="font-bold text-on-surface">May 09</p>
+<p class="text-[10px] text-on-surface-variant">Friday</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="font-bold">610</span>
+<svg class="w-12 h-6" viewbox="0 0 50 20">
+<path d="M0,10 L15,15 L30,8 L50,3" fill="none" stroke="#007caf" stroke-width="2"></path>
+</svg>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-primary">PKR 498k</td>
+<td class="px-6 py-4">
+<div class="w-full bg-outline-variant/30 h-1.5 rounded-full overflow-hidden w-24">
+<div class="bg-primary h-full" style="width: 88%"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-green-600 font-medium">+12.1%</td>
+<td class="px-6 py-4">
+<button class="p-1 hover:bg-surface-container rounded transition-colors">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4">
+<p class="font-bold text-on-surface">May 10</p>
+<p class="text-[10px] text-on-surface-variant">Saturday</p>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-4">
+<span class="font-bold">840</span>
+<svg class="w-12 h-6" viewbox="0 0 50 20">
+<path d="M0,18 L10,15 L25,5 L40,8 L50,0" fill="none" stroke="#007caf" stroke-width="2"></path>
+</svg>
+</div>
+</td>
+<td class="px-6 py-4 font-bold text-primary">PKR 654k</td>
+<td class="px-6 py-4">
+<div class="w-full bg-outline-variant/30 h-1.5 rounded-full overflow-hidden w-24">
+<div class="bg-primary h-full" style="width: 85%"></div>
+</div>
+</td>
+<td class="px-6 py-4 text-green-600 font-medium">+15.2%</td>
+<td class="px-6 py-4">
+<button class="p-1 hover:bg-surface-container rounded transition-colors">
+<span class="material-symbols-outlined text-[20px] text-on-surface-variant">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Inventory Forecast Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden">
+<div class="p-section border-b border-outline-variant/20">
+<h3 class="font-h1 text-on-surface">Inventory Prediction &amp; Optimization</h3>
+<p class="text-caption text-on-surface-variant">Automated supply chain recommendations based on demand patterns</p>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-caption text-on-surface-variant">
+<tr>
+<th class="px-6 py-3">Ingredient</th>
+<th class="px-6 py-3">Current Stock</th>
+<th class="px-6 py-3">Predicted Need</th>
+<th class="px-6 py-3">Shortfall</th>
+<th class="px-6 py-3">Recommended Order</th>
+<th class="px-6 py-3">Urgency</th>
+<th class="px-6 py-3"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 text-body">
+<tr>
+<td class="px-6 py-4 font-bold">Prime Chicken Breast</td>
+<td class="px-6 py-4">42.0 kg</td>
+<td class="px-6 py-4">88.5 kg</td>
+<td class="px-6 py-4 text-error font-bold">-46.5 kg</td>
+<td class="px-6 py-4">50.0 kg</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-error-container text-on-error-container rounded-full text-caption font-bold">Order Now</span>
+</td>
+<td class="px-6 py-4">
+<button class="bg-primary text-on-primary px-4 py-1.5 rounded-lg text-caption hover:opacity-90">Auto-Order</button>
+</td>
+</tr>
+<tr>
+<td class="px-6 py-4 font-bold">Sesame Buns (Bulk)</td>
+<td class="px-6 py-4">240 pcs</td>
+<td class="px-6 py-4">410 pcs</td>
+<td class="px-6 py-4 text-error font-bold">-170 pcs</td>
+<td class="px-6 py-4">200 pcs</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-error-container text-on-error-container rounded-full text-caption font-bold">Order Now</span>
+</td>
+<td class="px-6 py-4">
+<button class="bg-primary text-on-primary px-4 py-1.5 rounded-lg text-caption hover:opacity-90">Auto-Order</button>
+</td>
+</tr>
+<tr>
+<td class="px-6 py-4 font-bold">French Fries (Frozen)</td>
+<td class="px-6 py-4">60.0 kg</td>
+<td class="px-6 py-4">78.0 kg</td>
+<td class="px-6 py-4 text-on-surface-variant font-bold">-18.0 kg</td>
+<td class="px-6 py-4">20.0 kg</td>
+<td class="px-6 py-4">
+<span class="px-3 py-1 bg-surface-variant text-on-surface-variant rounded-full text-caption font-bold">Monitor</span>
+</td>
+<td class="px-6 py-4">
+<button class="border border-outline-variant px-4 py-1.5 rounded-lg text-caption hover:bg-surface-container">Queue</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</body></html>

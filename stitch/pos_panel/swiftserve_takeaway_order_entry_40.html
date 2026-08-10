@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TERRA POS | Takeaway Order</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0D0D0D;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #140d06;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3c3329;
+            border-radius: 2px;
+        }
+        .order-grid {
+            display: grid;
+            grid-template-columns: 58fr 42fr;
+            height: calc(100vh - 56px - 80px - 64px);
+        }
+        .active-focus {
+            outline: 2px solid #ffc174;
+            outline-offset: 2px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#653e00",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-container": "#bab8b7",
+                        "surface-container-lowest": "#140d06",
+                        "on-tertiary": "#2f312f",
+                        "surface-tint": "#ffb95f",
+                        "secondary-container": "#4a4949",
+                        "outline-variant": "#534434",
+                        "on-secondary": "#313030",
+                        "surface-bright": "#41382e",
+                        "surface-container-highest": "#3c3329",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline": "#a08e7a",
+                        "primary": "#ffc174",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-primary-container": "#613b00",
+                        "on-background": "#f0e0d1",
+                        "surface-variant": "#3c3329",
+                        "on-secondary-fixed-variant": "#474646",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "tertiary-container": "#b1b1ae",
+                        "primary-container": "#f59e0b",
+                        "surface-container-high": "#31281f",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-low": "#221a12",
+                        "on-tertiary-container": "#434442",
+                        "on-surface": "#f0e0d1",
+                        "on-primary": "#472a00",
+                        "inverse-surface": "#f0e0d1",
+                        "surface": "#19120a",
+                        "inverse-primary": "#855300",
+                        "on-primary-fixed": "#2a1700",
+                        "error": "#ffb4ab",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "secondary": "#c9c6c5",
+                        "background": "#19120a",
+                        "tertiary": "#cdccca",
+                        "primary-fixed": "#ffddb8",
+                        "surface-dim": "#19120a",
+                        "surface-container": "#261e15",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "tertiary-fixed": "#e3e2e0"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "base": "8px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "currency-display": ["Clash Display"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Clash Display"],
+                        "headline-lg": ["Clash Display"],
+                        "headline-md": ["Clash Display"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background">
+<!-- ZONE 1: TOP BAR -->
+<header class="h-[56px] w-full top-0 sticky bg-[#111111] border-b border-[#1A1A1A] flex justify-between items-center px-lg z-50">
+<div class="flex items-center gap-md">
+<a class="flex items-center gap-xs text-[#6B7280] font-body-sm text-[13px] hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                Home
+            </a>
+</div>
+<div class="bg-[#1C1700] border border-[#F59E0B] rounded-full px-md py-1 flex items-center gap-sm">
+<span class="material-symbols-outlined text-[#F59E0B] text-[18px]">shopping_bag</span>
+<span class="text-[#F59E0B] font-body-md text-[15px] font-semibold">New Takeaway Order</span>
+</div>
+<div class="flex items-center gap-lg">
+<div class="bg-[#161616] px-md py-1 rounded">
+<span class="font-['Space_Mono'] text-[#6B7280] text-[14px]">TK-042</span>
+</div>
+<span class="font-body-md text-on-surface-variant">20:14</span>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center overflow-hidden border border-outline-variant">
+<img alt="Staff Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOBzMwZI7QiI5ThrRm9MF4cNkAeSm8Ujul2UlzpEa9K3-_56U0FLlTwtTDnZ4f2i3d9qJh5q-MhubLXWS6AY0IboyaYd5vTVTXbU3JoEu2MFbMtfYpjCJo0XMEklK39EO_vF4yFRkKOSWh927nQV-10LmzcY4d1jjGLS5Y5eitj2GMccBc7db2C71K_YqBqwH53u5HcTSWXErBJ4kV4uAAIA4Xmu9kscOW1za8iEoQ1evUOrNgOHPBWl6Dsxx2fjomkoh2WZ3P1zg4"/>
+</div>
+</div>
+</header>
+<!-- ZONE 2: CUSTOMER INFO BAR -->
+<section class="h-[80px] bg-[#0F0F0F] border-b border-[#1A1A1A] flex items-center px-lg gap-xl">
+<!-- Inputs -->
+<div class="flex gap-md flex-1">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">person</span>
+<input class="w-full h-11 bg-[#161616] border-none rounded-lg pl-10 pr-4 text-on-surface placeholder:text-[#474646] focus:ring-1 focus:ring-primary" placeholder="Customer name" type="text"/>
+</div>
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">call</span>
+<input class="w-full h-11 bg-[#161616] border-none rounded-lg pl-10 pr-4 text-on-surface placeholder:text-[#474646] focus:ring-1 focus:ring-primary" placeholder="+92 3XX XXXXXXX" type="text"/>
+</div>
+</div>
+<!-- Stepper -->
+<div class="flex flex-col items-center">
+<span class="text-on-surface-variant font-label-md text-[11px] uppercase tracking-wider mb-1">Pickup in</span>
+<div class="flex items-center bg-[#161616] rounded-lg h-10 border border-outline-variant">
+<button class="px-3 hover:bg-surface-container-highest transition-colors h-full rounded-l-lg border-r border-outline-variant active:scale-95">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="px-6 font-semibold text-primary font-body-md">15 min</span>
+<button class="px-3 hover:bg-surface-container-highest transition-colors h-full rounded-r-lg border-l border-outline-variant active:scale-95">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+<span class="text-[#6B7280] font-label-md text-[10px] mt-1">Ready at 8:29 PM</span>
+</div>
+<!-- Selectors -->
+<div class="flex bg-[#161616] p-1 rounded-lg border border-outline-variant">
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant font-label-md hover:bg-surface-container-highest transition-all">Walk-in</button>
+<button class="px-4 py-1.5 rounded-md bg-primary text-on-primary font-label-md font-bold">Called-in</button>
+<button class="px-4 py-1.5 rounded-md text-on-surface-variant font-label-md hover:bg-surface-container-highest transition-all">App Order</button>
+</div>
+</section>
+<!-- ZONE 3: MAIN CONTENT -->
+<main class="order-grid">
+<!-- LEFT: MENU BROWSER -->
+<section class="border-r border-[#1A1A1A] flex flex-col bg-[#0D0D0D]">
+<!-- Categories & Search -->
+<div class="p-md space-y-md">
+<div class="flex gap-sm overflow-x-auto pb-2 no-scrollbar">
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary-container font-headline-sm text-sm whitespace-nowrap">Family Deals</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface-variant font-headline-sm text-sm whitespace-nowrap border border-outline-variant">Single Platters</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface-variant font-headline-sm text-sm whitespace-nowrap border border-outline-variant">Beverages</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface-variant font-headline-sm text-sm whitespace-nowrap border border-outline-variant">Appetizers</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface-variant font-headline-sm text-sm whitespace-nowrap border border-outline-variant">Desserts</button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-[#161616] border-none rounded-lg h-12 pl-10 pr-4 text-on-surface focus:ring-1 focus:ring-primary" placeholder="Search items..." type="text"/>
+</div>
+</div>
+<!-- Menu Grid -->
+<div class="flex-1 overflow-y-auto p-md grid grid-cols-3 gap-md content-start pb-24">
+<!-- Item 1 -->
+<div class="bg-[#161616] rounded-xl overflow-hidden border border-[#1A1A1A] active:scale-[0.98] transition-transform cursor-pointer relative group">
+<div class="h-32 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A close-up high-contrast photograph of a gourmet double beef burger with melting cheese and fresh lettuce, shot in a professional studio setting with dark industrial lighting. The aesthetic is premium and moody, emphasizing the textures of the charred meat and crispy bun, following an electric amber and midnight black color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmGgDoBEl7BaifZKRagGMnlT9_wwv9avQq38f8M9svlYHGQThhYARIcLbHPdlJnDyn_IlYsAohnAC0JxfPu6e37F-n_ZZ3ZEyWK5DdZNrMVbf_6soKuLi_T3huOppiu4aOcow2P5uv8t8PIY94B_KuW9wFI6VCFpq58XOOHEoRZEOLci3OiPm0rzC9oFTQktUDwVhQBpRRWpfr-C2SVJTeApx1Gqhz-8pr3x7eO9N0cshmsA46Eb3PULQIHgAgzyUGGQTrSlptnUhM"/>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-[15px] text-on-surface leading-tight">The Boss Platter</h3>
+<span class="bg-[#2a1700] text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">PKG +80</span>
+</div>
+<p class="text-primary font-['Space_Mono'] font-bold text-sm">PKR 1,850</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-[#161616] rounded-xl overflow-hidden border border-primary active:scale-[0.98] transition-transform cursor-pointer relative group">
+<div class="h-32 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A top-down shot of a large artisanal pepperoni pizza with bubbling mozzarella and fresh basil leaves, presented on a dark slate background. The lighting is cinematic with warm amber highlights against deep shadows, creating a high-contrast industrial-grade food visual that matches a dark terminal interface aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBF2USXiwpctGYzpduYtqt3Dd8KnEjj6ZyQBO0JIAOvbhiLNbd6JUGCeygUlhbgCZYUbwzF32aJuCWKfEa-WLORxCnC2O5q7BpcCydg0zsnsqXeCM48iMT0Z7m2HPeAek8LDhW-AwoZ8CPIRP6wSbxi_1tgNvKQfTxDcv80x6x5J_Gs0wqMDRWakaJEmXSngDiUTCRYlqD3yu2yCyOMQtwtCO2LDUo5qHEBZ-rOhUCkLwBMQlsEXblRCdtFv4kW6z7-ifsM5i3YdYge"/>
+</div>
+<div class="absolute top-2 right-2 bg-primary text-on-primary w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs">2</div>
+<div class="p-3">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-[15px] text-on-surface leading-tight">Family Feast XXL</h3>
+<span class="bg-[#2a1700] text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">PKG +80</span>
+</div>
+<p class="text-primary font-['Space_Mono'] font-bold text-sm">PKR 4,200</p>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="bg-[#161616] rounded-xl overflow-hidden border border-[#1A1A1A] active:scale-[0.98] transition-transform cursor-pointer relative group">
+<div class="h-32 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A professional food photograph of spicy buffalo wings stacked on a black metallic tray, glistening with sauce and garnished with green onions. The setting is a modern dark kitchen environment with high-contrast spotlighting and a minimalist industrial feel, utilizing the brand's electric amber and charcoal tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuB5qVtmD90QWa0ajmkfCI4Y6mldAFgBN9C89EYLKf-O1zbsZEOSRrI738jrjfUvmRdjFcvuehcRkRTF0hMJPcNxBzOPjGIH9FL4h0MQCNHEPMQaRattkR8JI-AHxur-PNk9u2XFyCrdMmGkHHOtSGEw1GFPm_Er_kBjeeg_Zz1yj5r4TPO7qN7mM55BpsvBJmUjreoDTLFzh-FxVcN_1ubpLVu0lGavseWPkAoqCfGlG6ewUjbT5g4IAXBqBzTNY4cwnNN8szpodJ"/>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-[15px] text-on-surface leading-tight">Zinger Stack Pack</h3>
+<span class="bg-[#2a1700] text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">PKG +80</span>
+</div>
+<p class="text-primary font-['Space_Mono'] font-bold text-sm">PKR 1,250</p>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="bg-[#161616] rounded-xl overflow-hidden border border-[#1A1A1A] active:scale-[0.98] transition-transform cursor-pointer relative group">
+<div class="h-32 w-full overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" data-alt="A close-up of a crispy chicken slider with coleslaw and pickles, served on a black wood board. Professional high-contrast lighting captures every detail of the crispy texture and fresh ingredients. The image has a dark, industrial modernist vibe with subtle amber warm glows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk3vBi5x4bU5Akj-biRJ2hLYK9YbgmJ_ezfBNkPcxrXmFdsrO6hZ7YnJGAhRHnZ7Ns6lcJr5niecOXL4c_Sj5n3u40P9AkIXm8vu-2fMNFaX8Y7FdpBx7K_xRp5q8fSViI7YofyIjBRMd2ZeqWO6bX9DYIQs8yFF43RshK92WJ4tfZfTi4-GqUQwqGs-bkmEAE-C4fOUtF9Ph8JEt3eHYCaY4wh0biOQimgmIXS5yc8Glrv2zaIRCNQuag3nyuz-CsSUr568UHjJNF"/>
+</div>
+<div class="p-3">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-[15px] text-on-surface leading-tight">Mini Slider Box</h3>
+<span class="bg-[#2a1700] text-primary px-1.5 py-0.5 rounded text-[10px] font-bold">PKG +40</span>
+</div>
+<p class="text-primary font-['Space_Mono'] font-bold text-sm">PKR 850</p>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT: ORDER CART -->
+<section class="bg-[#111111] flex flex-col">
+<!-- Header -->
+<div class="p-md border-b border-[#1A1A1A]">
+<div class="flex justify-between items-center mb-md">
+<div class="flex items-center gap-sm">
+<h2 class="font-headline-md text-primary">Takeaway Order</h2>
+<span class="font-['Space_Mono'] bg-[#161616] px-2 py-0.5 rounded text-xs text-on-surface-variant">TK-042</span>
+</div>
+<div class="text-right">
+<p class="font-body-md font-bold text-on-surface">Ahmed</p>
+<p class="text-on-surface-variant text-[12px]">+923001234567</p>
+</div>
+</div>
+</div>
+<!-- Cart Items -->
+<div class="flex-1 overflow-y-auto p-md space-y-md">
+<div class="flex gap-md group">
+<span class="font-['Space_Mono'] font-bold text-primary w-6">2x</span>
+<div class="flex-1">
+<div class="flex justify-between mb-1">
+<span class="font-body-md font-semibold text-on-surface">Family Feast XXL</span>
+<span class="font-['Space_Mono'] text-on-surface">PKR 4,200</span>
+</div>
+<ul class="text-[12px] text-on-surface-variant space-y-0.5 pl-2 border-l border-outline-variant">
+<li>• Extra Cheese (+150)</li>
+<li>• No Onions</li>
+<li>• 1.5L Coke</li>
+</ul>
+</div>
+<button class="opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-error text-[20px]">delete</span>
+</button>
+</div>
+<div class="pt-md border-t border-[#1A1A1A]">
+<p class="font-label-md text-[#6B7280] uppercase tracking-widest text-[10px] mb-sm">Packaging</p>
+<div class="flex justify-between text-on-surface-variant text-sm mb-1">
+<span>Large Carry Bag (x2)</span>
+<span class="font-['Space_Mono']">PKR 40</span>
+</div>
+<div class="flex justify-between text-on-surface-variant text-sm">
+<span>Safe-Seal Container (x3)</span>
+<span class="font-['Space_Mono']">PKR 60</span>
+</div>
+</div>
+</div>
+<!-- Totals & Token -->
+<div class="p-md bg-[#0D0D0D] border-t border-[#1A1A1A] space-y-md">
+<div class="grid grid-cols-2 gap-md">
+<div class="space-y-1">
+<div class="flex justify-between text-on-surface-variant text-sm">
+<span>Subtotal</span>
+<span class="font-['Space_Mono']">PKR 4,200</span>
+</div>
+<div class="flex justify-between text-on-surface-variant text-sm">
+<span>Packaging</span>
+<span class="font-['Space_Mono']">PKR 100</span>
+</div>
+<div class="flex justify-between text-on-surface-variant text-sm">
+<span>Tax (5%)</span>
+<span class="font-['Space_Mono']">PKR 215</span>
+</div>
+<div class="flex justify-between items-end pt-2">
+<span class="font-headline-sm text-primary">Total</span>
+<span class="font-currency-display text-[22px] text-primary">PKR 4,515</span>
+</div>
+</div>
+<div class="bg-[#161616] rounded-xl border border-[#F59E0B] flex flex-col items-center justify-center py-2">
+<span class="text-[10px] text-primary uppercase font-bold tracking-tighter">TOKEN</span>
+<span class="font-['Space_Mono'] text-[32px] font-bold text-primary">#42</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="space-y-sm">
+<div class="grid grid-cols-3 gap-sm">
+<button class="h-10 bg-surface-container border border-outline-variant rounded-lg text-sm font-semibold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">percent</span> Discount
+                        </button>
+<button class="h-10 bg-surface-container border border-outline-variant rounded-lg text-sm font-semibold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">notes</span> Note
+                        </button>
+<button class="h-10 bg-surface-container border border-outline-variant rounded-lg text-sm font-semibold flex items-center justify-center gap-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]">pause</span> Hold
+                        </button>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<button class="h-14 bg-primary text-on-primary rounded-xl font-bold text-lg active:scale-95 transition-transform">SEND TO KITCHEN</button>
+<button class="h-14 bg-[#161616] border border-outline-variant text-primary rounded-xl font-bold text-lg active:scale-95 transition-transform">CHARGE NOW</button>
+</div>
+<button class="w-full h-10 border border-outline-variant rounded-lg text-on-surface-variant font-semibold flex items-center justify-center gap-2 hover:bg-surface-container active:scale-[0.99] transition-all">
+<span class="material-symbols-outlined text-[18px]">print</span> Print Token Slip
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- ZONE 4: BOTTOM NAV -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center h-[64px] bg-surface-container-low border-t border-outline-variant px-md pb-safe z-50">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all px-6 h-full">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-[12px] font-medium">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary relative after:content-[''] after:absolute after:-bottom-1 after:w-1 after:h-1 after:bg-primary after:rounded-full px-6 h-full">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-md text-[12px] font-medium">Menu</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all px-6 h-full">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-[12px] font-medium">Tickets</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all px-6 h-full">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-[12px] font-medium">Stock</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all px-6 h-full">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-[12px] font-medium">Admin</span>
+</button>
+</nav>
+<script>
+        // Simple Micro-interaction for the stepper
+        let currentMinutes = 15;
+        const stepperDisplay = document.querySelector('.stepper-val') || { innerText: '15 min' }; // logic only
+        
+        // Add active state to order tiles on click
+        document.querySelectorAll('.order-grid .grid-cols-3 > div').forEach(tile => {
+            tile.addEventListener('click', () => {
+                tile.classList.add('active-focus');
+                setTimeout(() => tile.classList.remove('active-focus'), 300);
+            });
+        });
+    </script>
+</body></html>

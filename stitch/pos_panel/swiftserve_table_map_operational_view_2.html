@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Table Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0A0A0F;
+            color: #f0e0d1;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .canvas-dot-pattern {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .wood-gradient {
+            background: linear-gradient(135deg, #3d2b1f 0%, #1a110a 100%);
+        }
+        .table-active {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+        }
+        @keyframes pulse-red {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-status {
+            animation: pulse-red 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#cdccca",
+                        "on-surface": "#f0e0d1",
+                        "on-secondary-container": "#bab8b7",
+                        "secondary": "#c9c6c5",
+                        "outline": "#a08e7a",
+                        "on-error": "#690005",
+                        "on-primary": "#472a00",
+                        "inverse-on-surface": "#382f25",
+                        "background": "#19120a",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-primary-fixed": "#2a1700",
+                        "primary-container": "#f59e0b",
+                        "error": "#ffb4ab",
+                        "inverse-surface": "#f0e0d1",
+                        "on-tertiary-container": "#434442",
+                        "on-primary-container": "#613b00",
+                        "surface-container-lowest": "#140d06",
+                        "surface-bright": "#41382e",
+                        "primary-fixed": "#ffddb8",
+                        "on-error-container": "#ffdad6",
+                        "outline-variant": "#534434",
+                        "surface-container-highest": "#3c3329",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "inverse-primary": "#855300",
+                        "error-container": "#93000a",
+                        "surface-tint": "#ffb95f",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-background": "#f0e0d1",
+                        "tertiary-container": "#b1b1ae",
+                        "surface-dim": "#19120a",
+                        "secondary-container": "#4a4949",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "primary": "#ffc174",
+                        "surface": "#19120a",
+                        "secondary-fixed": "#e5e2e1",
+                        "surface-variant": "#3c3329",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "on-primary-fixed-variant": "#653e00",
+                        "surface-container-low": "#221a12",
+                        "on-secondary-fixed-variant": "#474646",
+                        "surface-container-high": "#31281f",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "tertiary-fixed": "#e3e2e0",
+                        "surface-container": "#261e15",
+                        "on-tertiary": "#2f312f",
+                        "on-secondary": "#313030"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "base": "8px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Clash Display"],
+                        "label-md": ["Inter"],
+                        "currency-display": ["Clash Display"],
+                        "body-md": ["Inter"],
+                        "headline-sm": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "display-lg": ["Clash Display"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<!-- TOP BAR -->
+<header class="h-[52px] bg-[#111827] border-b border-white/10 flex items-center justify-between px-md shrink-0 z-50">
+<div class="flex items-center gap-md">
+<button class="text-[#94A3B8] hover:text-white transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-semibold text-white text-[16px]">Select Table</h1>
+</div>
+<div class="flex items-center bg-[#1E293B] rounded-full p-1 gap-1">
+<button class="flex items-center gap-2 bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full text-sm font-semibold transition-all">
+<span class="w-2 h-2 rounded-full bg-white"></span>
+                Ground Floor
+            </button>
+<button class="text-[#64748B] px-4 py-1.5 rounded-full text-sm font-semibold hover:text-white transition-all">
+                First Floor
+            </button>
+</div>
+<div class="flex items-center gap-md">
+<div class="text-[#64748B] text-[12px] font-medium">
+                12 tables • <span class="text-green-500">6 Free</span> • <span class="text-red-400">4 Occupied</span>
+</div>
+<button class="bg-primary-container hover:bg-primary-container/90 text-on-primary-container px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+                Quick Takeaway
+            </button>
+</div>
+</header>
+<!-- LEGEND ROW -->
+<section class="h-[36px] bg-[#0F172A] border-b border-white/5 flex items-center px-lg shrink-0 overflow-x-auto gap-lg no-scrollbar">
+<div class="flex items-center gap-2 shrink-0">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+<span class="text-[11px] text-[#64748B] font-medium">Free</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="w-2 h-2 rounded-full bg-[#EF4444]"></span>
+<span class="text-[11px] text-[#64748B] font-medium">Occupied</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="w-2 h-2 rounded-full bg-[#3B82F6]"></span>
+<span class="text-[11px] text-[#64748B] font-medium">Bill Requested</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="w-2 h-2 rounded-full bg-[#8B5CF6]"></span>
+<span class="text-[11px] text-[#64748B] font-medium">Reserved</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+<span class="text-[11px] text-[#64748B] font-medium">Needs Cleaning</span>
+</div>
+</section>
+<!-- FLOOR CANVAS -->
+<main class="flex-1 bg-[#1A1A2E] relative overflow-hidden canvas-dot-pattern">
+<!-- Floor Boundaries / Walls -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 1000 1000">
+<path d="M 50 50 L 950 50 L 950 850 L 50 850 Z" fill="#1E2640" stroke="#374151" stroke-dasharray="8 4" stroke-width="2"></path>
+<!-- Inner Walls -->
+<line stroke="#1E293B" stroke-width="8" x1="300" x2="300" y1="50" y2="250"></line>
+<line stroke="#1E293B" stroke-width="8" x1="700" x2="700" y1="50" y2="250"></line>
+<!-- Door Swing -->
+<path d="M 50 400 Q 150 400 150 500" fill="none" stroke="#374151" stroke-width="2"></path>
+</svg>
+<!-- Static Features -->
+<div class="absolute top-[80px] left-[350px] w-[300px] h-[60px] bg-[#1A2A1A] border-2 border-[#14532D] flex items-center justify-center rounded-sm">
+<span class="text-[#14532D] font-bold text-xs">MAIN COUNTER &amp; KITCHEN PASS</span>
+</div>
+<!-- Decorative Plants -->
+<div class="absolute top-16 left-16 w-10 h-10 bg-[#14532D] rounded-full blur-[2px] border border-green-400/20"></div>
+<div class="absolute bottom-40 right-16 w-12 h-12 bg-[#14532D] rounded-full blur-[2px] border border-green-400/20"></div>
+<!-- Interactive Tables -->
+<div class="relative w-full h-full">
+<!-- FREE TABLE T-1 -->
+<div class="absolute top-[150px] left-[150px] cursor-pointer group transition-transform active:scale-95" id="table-t1" onclick="showPanel('panel-free')">
+<div class="relative w-[88px] h-[88px] wood-gradient border-2 border-[#10B981] rounded-lg flex items-center justify-center table-active">
+<span class="font-headline-sm text-white">T-1</span>
+<div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#10B981]"></div>
+<!-- Chairs -->
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-8 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-2.5 h-8 bg-[#2C2016] rounded-sm"></div>
+</div>
+</div>
+<!-- FREE TABLE T-2 -->
+<div class="absolute top-[150px] left-[750px] cursor-pointer group transition-transform active:scale-95">
+<div class="relative w-[88px] h-[88px] wood-gradient border-2 border-[#10B981] rounded-lg flex items-center justify-center">
+<span class="font-headline-sm text-white">T-2</span>
+<div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#10B981]"></div>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+</div>
+</div>
+<!-- OCCUPIED TABLE T-4 -->
+<div class="absolute top-[400px] left-[450px] cursor-pointer group transition-transform active:scale-95" id="table-t4" onclick="showFloatingCard('card-occupied')">
+<div class="relative w-[88px] h-[88px] wood-gradient border-2 border-[#EF4444] rounded-lg flex items-center justify-center">
+<span class="font-headline-sm text-white">T-4</span>
+<div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#F59E0B] pulse-status"></div>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-8 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -right-3 top-1/2 -translate-y-1/2 w-2.5 h-8 bg-[#2C2016] rounded-sm"></div>
+</div>
+<div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[#EF4444] text-[10px] font-bold whitespace-nowrap">18 min elapsed</div>
+</div>
+<!-- BILL REQUESTED T-5 -->
+<div class="absolute top-[400px] left-[750px] cursor-pointer group transition-transform active:scale-95">
+<div class="relative w-[88px] h-[88px] wood-gradient border-2 border-[#3B82F6] rounded-lg flex items-center justify-center">
+<span class="font-headline-sm text-white">T-5</span>
+<div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#3B82F6]"></div>
+<span class="material-symbols-outlined text-white text-[20px] absolute opacity-80">credit_card</span>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+</div>
+</div>
+<!-- FREE TABLE T-3 -->
+<div class="absolute top-[400px] left-[150px] cursor-pointer group transition-transform active:scale-95">
+<div class="relative w-[88px] h-[88px] wood-gradient border-2 border-[#10B981] rounded-lg flex items-center justify-center">
+<span class="font-headline-sm text-white">T-3</span>
+<div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#10B981]"></div>
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-2.5 bg-[#2C2016] rounded-sm"></div>
+</div>
+</div>
+</div>
+<!-- Zoom Controls -->
+<div class="absolute bottom-10 left-lg flex flex-col gap-2 z-20">
+<button class="w-10 h-10 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg flex items-center justify-center text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg flex items-center justify-center text-white transition-all">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="w-10 h-10 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg flex items-center justify-center text-white transition-all">
+<span class="material-symbols-outlined">center_focus_strong</span>
+</button>
+</div>
+<!-- INTERACTION: FLOATING CARD (Occupied T-4) -->
+<div class="hidden absolute top-[180px] left-[450px] w-[280px] bg-[#1E293B] border border-white/10 rounded-xl shadow-2xl z-40 transform -translate-x-1/2" id="card-occupied">
+<div class="p-4">
+<div class="flex justify-between items-start mb-3">
+<div>
+<h3 class="font-bold text-white text-[16px]">T-4 • Order #ORD-1047</h3>
+<p class="text-primary text-[12px] font-medium">18 minutes ago</p>
+</div>
+<button class="text-[#64748B] hover:text-white" onclick="hideFloatingCard('card-occupied')"><span class="material-symbols-outlined text-[20px]">close</span></button>
+</div>
+<div class="space-y-2 mb-4">
+<div class="flex justify-between text-[13px] text-on-surface-variant">
+<span>2x Margherita Pizza</span>
+<span>PKR 1,800</span>
+</div>
+<div class="flex justify-between text-[13px] text-on-surface-variant">
+<span>1x Garlic Bread</span>
+<span>PKR 450</span>
+</div>
+<div class="flex justify-between text-[13px] text-on-surface-variant">
+<span>2x Coke Zero</span>
+<span>PKR 200</span>
+</div>
+<div class="border-t border-white/5 pt-2 flex justify-between font-bold text-primary">
+<span>TOTAL</span>
+<span>PKR 2,450</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-2 bg-white/5 border border-white/10 rounded-lg text-[11px] font-bold text-white hover:bg-white/10">+ Add Items</button>
+<button class="py-2 bg-white/5 border border-white/10 rounded-lg text-[11px] font-bold text-white hover:bg-white/10">Print Bill</button>
+<button class="col-span-2 py-2.5 bg-primary-container text-on-primary-container rounded-lg text-[12px] font-extrabold active:scale-95 transition-transform">COLLECT PAYMENT</button>
+</div>
+</div>
+<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#1E293B] border-r border-b border-white/10 rotate-45"></div>
+</div>
+<!-- INTERACTION: SLIDE-UP PANEL (Free T-1) -->
+<div class="hidden absolute bottom-0 left-0 w-full bg-[#111827] border-t border-white/10 rounded-t-3xl h-[200px] z-40 p-lg flex flex-col justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transform translate-y-full transition-transform duration-300" id="panel-free">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-4">
+<div class="w-16 h-16 wood-gradient border-2 border-[#10B981] rounded-xl flex items-center justify-center font-bold text-2xl">T-1</div>
+<div>
+<h2 class="text-white text-2xl font-bold">Table T-1 — 4 Seats</h2>
+<p class="text-[#64748B]">Status: Available for immediate seating</p>
+</div>
+</div>
+<button class="text-[#64748B] hover:text-white" onclick="hidePanel('panel-free')"><span class="material-symbols-outlined text-[32px]">close</span></button>
+</div>
+<div class="flex gap-4">
+<button class="flex-1 py-4 bg-[#1E293B] border border-white/10 rounded-xl font-bold text-white hover:bg-[#2D3748] transition-all">RESERVE TABLE</button>
+<button class="flex-1 py-4 bg-primary-container text-on-primary-container rounded-xl font-extrabold text-lg active:scale-[0.98] transition-all">START ORDER</button>
+</div>
+</div>
+</main>
+<!-- BOTTOM NAV SHELL -->
+<footer class="h-[64px] bg-[#0A0A0F] border-t border-outline-variant flex justify-around items-center px-md shrink-0 z-50">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all group">
+<span class="material-symbols-outlined mb-1 group-active:scale-90 transition-transform">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 border-2 border-primary active:scale-98 transition-all">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">restaurant_menu</span>
+<span class="font-label-md text-label-md">Menu</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined mb-1">confirmation_number</span>
+<span class="font-label-md text-label-md">Tickets</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined mb-1">inventory</span>
+<span class="font-label-md text-label-md">Stock</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-label-md text-label-md">Admin</span>
+</button>
+</footer>
+<!-- SYSTEM STATUS BAR -->
+<div class="fixed bottom-[74px] right-lg flex items-center gap-4 pointer-events-none">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+<span class="text-[11px] font-bold text-[#64748B] tracking-wider uppercase">System Status Online • V2.4</span>
+</div>
+<button class="w-10 h-10 bg-primary-container text-on-primary-container rounded-full flex items-center justify-center shadow-lg pointer-events-auto active:scale-90 transition-transform">
+<span class="material-symbols-outlined">power_settings_new</span>
+</button>
+</div>
+<script>
+        function showPanel(id) {
+            const panel = document.getElementById(id);
+            panel.classList.remove('hidden');
+            setTimeout(() => {
+                panel.classList.remove('translate-y-full');
+            }, 10);
+        }
+
+        function hidePanel(id) {
+            const panel = document.getElementById(id);
+            panel.classList.add('translate-y-full');
+            setTimeout(() => {
+                panel.classList.add('hidden');
+            }, 300);
+        }
+
+        function showFloatingCard(id) {
+            const card = document.getElementById(id);
+            card.classList.toggle('hidden');
+        }
+
+        function hideFloatingCard(id) {
+            const card = document.getElementById(id);
+            card.classList.add('hidden');
+        }
+
+        // Add some basic pan behavior (simulated)
+        const canvas = document.querySelector('main');
+        let isDown = false;
+        let startX;
+        let startY;
+        let scrollLeft;
+        let scrollTop;
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - canvas.offsetLeft;
+            startY = e.pageY - canvas.offsetTop;
+            scrollLeft = canvas.scrollLeft;
+            scrollTop = canvas.scrollTop;
+        });
+        canvas.addEventListener('mouseleave', () => { isDown = false; });
+        canvas.addEventListener('mouseup', () => { isDown = false; });
+        canvas.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - canvas.offsetLeft;
+            const y = e.pageY - canvas.offsetTop;
+            const walkX = (x - startX) * 1.5;
+            const walkY = (y - startY) * 1.5;
+            // Note: In this fixed viewport implementation, we don't truly scroll the main container,
+            // we'd normally translate a wrapper div, but for the demo we'll keep it simple.
+        });
+    </script>
+</body></html>

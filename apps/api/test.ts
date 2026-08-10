@@ -1,0 +1,1 @@
+import { CustomerCreateSchema, AdjustPointsSchema } from './src/routes/customers/customers.schema'; console.log('Create:', CustomerCreateSchema.safeParse({name: 'Test', phone: '0300'}).error?.issues || 'OK'); console.log('Adjust:', AdjustPointsSchema.safeParse({points: 10, reason: 'test'}).error?.issues || 'OK');

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-dim": "#1e100c",
+                    "secondary": "#b9c8de",
+                    "primary-container": "#ff5722",
+                    "surface-container-low": "#271813",
+                    "on-background": "#fadcd4",
+                    "tertiary-fixed": "#6ffbbe",
+                    "surface-bright": "#483530",
+                    "primary": "#ffb5a0",
+                    "on-primary-fixed": "#3b0900",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "surface-container-highest": "#43302b",
+                    "surface-container-high": "#372621",
+                    "surface-tint": "#ffb5a0",
+                    "tertiary": "#4edea3",
+                    "on-secondary-container": "#a7b6cc",
+                    "error": "#ffb4ab",
+                    "outline-variant": "#5b4039",
+                    "on-primary": "#5f1500",
+                    "surface-container-lowest": "#180b07",
+                    "surface-variant": "#43302b",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "inverse-surface": "#fadcd4",
+                    "on-tertiary-container": "#00311f",
+                    "on-secondary": "#233143",
+                    "on-tertiary-fixed": "#002113",
+                    "error-container": "#93000a",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "on-primary-container": "#541200",
+                    "secondary-container": "#39485a",
+                    "secondary-fixed": "#d4e4fa",
+                    "on-error-container": "#ffdad6",
+                    "surface": "#0a0a0f",
+                    "primary-fixed": "#ffdbd1",
+                    "outline": "#ab8980",
+                    "on-surface": "#ffffff",
+                    "inverse-primary": "#b02f00",
+                    "inverse-on-surface": "#3e2c27",
+                    "surface-container": "#1e293b",
+                    "on-tertiary": "#003824",
+                    "on-error": "#690005",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "on-primary-fixed-variant": "#862200",
+                    "background": "#0a0a0f",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "tertiary-container": "#00a572",
+                    "on-surface-variant": "#64748b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "9999px",
+                    "card": "14px"
+            },
+            "spacing": {
+                    "stack-gap": "12px",
+                    "unit": "4px",
+                    "touch-target-min": "48px",
+                    "grid-gutter": "12px",
+                    "container-padding": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Space Grotesk"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Space Grotesk"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Space Grotesk"],
+                    "headline-lg-mobile": ["Space Grotesk"],
+                    "label-sm": ["Space Grotesk"],
+                    "body-md": ["Inter"],
+                    "label-xl": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0F;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .step-indicator { transition: all 0.3s ease; }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .toggle-track {
+            width: 44px;
+            height: 24px;
+            background: #2D2D39;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-track.active { background: #FF5722; }
+        .toggle-thumb {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+        .toggle-track.active .toggle-thumb { transform: translateX(20px); }
+    </style>
+</head>
+<body class="font-body-md text-on-surface selection:bg-primary-container selection:text-white">
+<main class="flex flex-col min-h-screen max-w-[390px] mx-auto relative overflow-hidden px-container-padding pb-8">
+<!-- Step Indicator -->
+<div class="flex justify-center gap-2 pt-12 pb-8">
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-8 h-2 rounded-full bg-primary-container step-indicator"></div>
+</div>
+<!-- Header -->
+<header class="text-center mb-10">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-1">Connect a printer</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Optional — you can skip this</p>
+</header>
+<!-- Illustration -->
+<div class="flex justify-center items-center mb-12 relative group h-48">
+<div class="absolute inset-0 bg-primary-container/10 blur-3xl rounded-full opacity-50 group-hover:opacity-70 transition-opacity"></div>
+<img alt="Bluetooth Thermal Printer Illustration" class="relative z-10 w-full max-w-[200px] object-contain drop-shadow-2xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAiMX43-vj0Z92xtJmo_dnH8lTms3iPmYgGaQmx3wWqmGswxzUGGD1kiZQW8fozsvtxuDHIg9x6J__Yx8_QHv5iSsKujv9VN2BBkBbbg45RhUks0Kd3XBmthO6EFzafe0WRusPGpPH5iUGoPtampghoAFilHlWuCcG_uGLhzr0gyM2O_buOIl5uiWfQ9CbCPf5tLt62wTQOOD6HCt5jHKu83v5mQaKEOhX_l5eRYEQOdspY282tMLYxsg"/>
+</div>
+<!-- Options Section -->
+<div class="space-y-stack-gap flex-1">
+<!-- Option 1: Bluetooth Printer -->
+<div class="bg-surface-container p-5 rounded-card flex flex-col gap-4 border border-outline-variant/30 hover:border-primary-container/50 transition-colors">
+<div class="flex gap-4">
+<div class="w-12 h-12 bg-primary-container/20 rounded-xl flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bluetooth</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-0.5">Bluetooth Printer</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Works with 58mm and 80mm thermal printers</p>
+</div>
+</div>
+<div class="flex justify-end">
+<button class="px-6 h-touch-target-min border border-primary-container text-primary-container rounded-full font-label-md text-label-md hover:bg-primary-container/10 active:scale-95 transition-all">
+                        Scan for Printers
+                    </button>
+</div>
+</div>
+<!-- Option 2: Print to Screen -->
+<div class="bg-surface-container p-5 rounded-card flex items-center justify-between border border-outline-variant/30 transition-colors">
+<div class="flex gap-4 items-center">
+<div class="w-12 h-12 bg-secondary-container rounded-xl flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined">smartphone</span>
+</div>
+<div class="flex-1">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-0.5">Print to Screen</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Show customer a digital receipt</p>
+</div>
+</div>
+<div class="toggle-track active" onclick="this.classList.toggle('active')">
+<div class="toggle-thumb"></div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="mt-12 space-y-6">
+<div class="flex justify-center">
+<button class="text-on-surface-variant font-label-md text-label-md hover:text-on-surface transition-colors">
+                    I'll Set Up Printer Later
+                </button>
+</div>
+<button class="w-full bg-primary-container text-white h-14 rounded-full font-headline-md text-headline-md flex items-center justify-center gap-2 shadow-lg shadow-primary-container/20 hover:brightness-110 active:scale-[0.98] transition-all">
+                Finish Setup
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- Visual Sparkle Interactions -->
+<script>
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.style.opacity = '0.8';
+            });
+            button.addEventListener('touchend', () => {
+                button.style.opacity = '1';
+            });
+        });
+    </script>
+</body></html>

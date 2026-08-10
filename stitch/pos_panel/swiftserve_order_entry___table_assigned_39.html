@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Order Terminal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#31281f",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "on-primary-fixed": "#2a1700",
+                      "on-error-container": "#ffdad6",
+                      "surface-tint": "#ffb95f",
+                      "surface-container": "#261e15",
+                      "on-background": "#f0e0d1",
+                      "error-container": "#93000a",
+                      "inverse-on-surface": "#382f25",
+                      "surface-container-lowest": "#140d06",
+                      "surface-dim": "#19120a",
+                      "surface-variant": "#3c3329",
+                      "primary": "#ffc174",
+                      "on-tertiary": "#2f312f",
+                      "on-primary-container": "#613b00",
+                      "on-error": "#690005",
+                      "inverse-primary": "#855300",
+                      "error": "#ffb4ab",
+                      "tertiary-fixed": "#e3e2e0",
+                      "outline": "#a08e7a",
+                      "surface-container-low": "#221a12",
+                      "tertiary": "#cdccca",
+                      "surface-container-highest": "#3c3329",
+                      "outline-variant": "#534434",
+                      "tertiary-container": "#b1b1ae",
+                      "primary-fixed-dim": "#ffb95f",
+                      "on-primary": "#472a00",
+                      "on-secondary": "#313030",
+                      "inverse-surface": "#f0e0d1",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "on-primary-fixed-variant": "#653e00",
+                      "background": "#19120a",
+                      "primary-container": "#f59e0b",
+                      "secondary-fixed": "#e5e2e1",
+                      "surface-bright": "#41382e",
+                      "primary-fixed": "#ffddb8",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "on-surface-variant": "#d8c3ad",
+                      "on-secondary-fixed-variant": "#474646",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "surface": "#19120a",
+                      "on-tertiary-container": "#434442",
+                      "on-secondary-container": "#bab8b7",
+                      "on-surface": "#f0e0d1",
+                      "secondary": "#c9c6c5",
+                      "secondary-container": "#4a4949"
+              },
+              "borderRadius": {
+                      "DEFAULT": "8px",
+                      "lg": "8px",
+                      "xl": "12px",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "sm": "8px",
+                      "margin-desktop": "32px",
+                      "xs": "4px",
+                      "md": "16px",
+                      "lg": "24px",
+                      "base": "8px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Clash Display"],
+                      "body-sm": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "headline-md": ["Clash Display"],
+                      "label-md": ["Inter"],
+                      "headline-lg": ["Clash Display"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Clash Display"],
+                      "currency-display": ["Clash Display"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: #19120a;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #140d06;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #534434;
+            border-radius: 2px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-red {
+            animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen select-none">
+<!-- Top App Bar -->
+<header class="h-[52px] bg-[#111111] border-b border-[#1A1A1A] flex justify-between items-center px-lg shrink-0 z-50">
+<div class="flex items-center">
+<a class="text-[#6B7280] font-medium text-[13px] flex items-center gap-1 hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+                Tables
+            </a>
+</div>
+<!-- Center Context Area -->
+<button class="px-md py-1.5 rounded-lg hover:bg-white/5 transition-colors group">
+<div class="text-[#f59e0b] font-medium text-[14px] flex items-center gap-1.5">
+<span class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#f59e0b]"></span>
+                    Table 07
+                </span>
+<span class="text-[#374151] mx-0.5">•</span> 
+                2 guests 
+                <span class="text-[#374151] mx-0.5">•</span> 
+                Dine-in
+                <span class="material-symbols-outlined text-sm text-[#4B5563] group-hover:text-[#f59e0b] transition-colors ml-1">expand_more</span>
+</div>
+</button>
+<div class="flex items-center gap-md">
+<div class="font-mono text-[13px] text-[#4B5563]" id="clock">14:42:05</div>
+<div class="flex items-center gap-sm">
+<span class="text-[#C9C9C9] text-[13px] font-medium">Staff: Alex</span>
+<div class="w-8 h-8 rounded-full bg-[#f59e0b] flex items-center justify-center text-[#472a00] font-bold text-xs">A</div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Main Content Split -->
+<main class="flex flex-1 overflow-hidden">
+<!-- LEFT - MENU BROWSER (58%) -->
+<section class="w-[58%] flex flex-col bg-background border-r border-outline-variant relative">
+<!-- Category Bar -->
+<div class="h-[52px] bg-surface-dim border-b border-outline-variant flex items-center px-md gap-sm overflow-x-auto no-scrollbar shrink-0">
+<button class="px-md h-9 bg-primary text-on-primary rounded-full font-label-lg whitespace-nowrap">All</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Starters</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Mains</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Grills</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Pizza</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Pasta</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Desserts</button>
+<button class="px-md h-9 border border-outline-variant text-on-surface rounded-full font-label-lg whitespace-nowrap hover:bg-surface-variant">Drinks</button>
+</div>
+<!-- Search Bar -->
+<div class="p-md bg-surface-dim shrink-0">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-on-surface-variant">search</span>
+<input class="w-full h-11 bg-surface-container-low border border-outline-variant rounded-lg pl-12 pr-4 text-on-surface placeholder:text-outline font-body-md focus:ring-2 focus:ring-primary focus:border-transparent transition-all outline-none" placeholder="Search items or scan barcode..." type="text"/>
+</div>
+</div>
+<!-- Menu Grid -->
+<div class="flex-1 overflow-y-auto custom-scrollbar p-md grid grid-cols-3 gap-md pb-24">
+<!-- Item 1 -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden group cursor-pointer active:scale-95 transition-transform flex flex-col h-64 relative">
+<div class="absolute top-2 left-2 z-10">
+<span class="bg-[#10b981] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider">POPULAR</span>
+</div>
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Signature Burger" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFX8oXybAZyiWiQq8W1kO36Di6-QYUriWgBiRESxR6GJ78Nhhzav0psjFdCKuVGtQUaYZvMTuU5XeS9UaOKv5EtV38V7y2EUu4-ArnLKbSZTTHixPGB7BvTm_qpbd_5HBp0vNFY3aBqeHtZF3ZiVGCSZKj1j976GNk9Sy6ZA1n3-tNTXTT-CN5W1RwGMhhWvfxXgEiFLFFbCjz-V_K-L_6WefizCe710_ABuTvv1THyp8sjlJuYXtcVN7t6yqRgKrb28nlGkvEIO9Y"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">MAINS</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">Double Smash Burger</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 1,450</p>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden group cursor-pointer active:scale-95 transition-transform flex flex-col h-64 relative">
+<div class="absolute top-2 left-2 z-10">
+<span class="bg-[#3b82f6] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider">NEW</span>
+</div>
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Truffle Pizza" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqDp47m3gVxi0bnzbOXh94Nonoh7o5eQYFABoCeFJYPBUYu8FeWhUQmmC7mj5bsBRIOVC8mAkRu5wHe35p4DsSVxx0sRdAAnUSsy7zmrI6cOJ_DJ8Y6vArNCLPqsJZ5lr8Usg9kkgJGQ5dPaZp5UL5GIFoJwa9aNel1tNpLu88kcDahFXP7CGRbmvfGhBdCubxAHEBMt_zVY31qoATPg7A5NbPrRERuCX_53S--diP7mXuRMNGNYW2kSy8q-3eQOPQAkyBDocbxtfL"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">PIZZA</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">Truffle &amp; Mushroom</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 1,850</p>
+</div>
+</div>
+<!-- Item 3 - Sold Out -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden flex flex-col h-64 relative opacity-50 cursor-not-allowed">
+<div class="absolute inset-0 z-20 flex items-center justify-center">
+<span class="bg-surface-container-lowest/80 text-on-surface text-xs font-bold border border-outline-variant px-3 py-1 rounded-sm rotate-[-12deg]">SOLD OUT</span>
+</div>
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Short Ribs" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1vFQgJKnpJW9AW245c9GdRH3eONTCxWptLNoPsl_sSX79DPtUV3UbY6JeSDgZvKoBkW9acJ2owslT57gx3vQr8zzQRWLLuvZunw_QByb-Okiw8UG-5VgaIoE0SVeUpLtvo67I4GErKzCDxGu9IQ5CGlqGpRXaC-Ys42z_1zkOS8cEY1BzzO-3AYYukxRD42iDaZcTXuQwtnKz7f-kkVBpWTzDjziNEWXMh1iyPAjPPfKKWG3rIZndjKuSylqrzGxJBRuyGnBPPJoe"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">GRILLS</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">Braised Beef Short Ribs</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 2,900</p>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden group cursor-pointer active:scale-95 transition-transform flex flex-col h-64 relative">
+<div class="absolute top-2 left-2 z-10">
+<span class="bg-[#ef4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-sm tracking-wider">SPICY</span>
+</div>
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Buffalo Wings" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDb2IvU3QNFYaFgquZyVhI0CLPE2iaYkfszyEJOLyxdaWwFsvdGi1Z-Cxbv372o2josYFjcOt-Hdoxv_p8QiT2ypiozF-rVp0ETnupyFq5I2YtE9GUGMUEOooioC04OIia9nd-bAXKTOom_8aGHGwPI53PEkrLKOkU3YoGLWxANeGsC9x1ONht_g-IYuCgVOlx8plOsSAoZPzv9ejAZ1eqIii6EPOReFKpeCRvpNrfGAiz59-IY6i1Tp2vXMWd698iNtvcBVL1p49We"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">STARTERS</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">Firecracker Wings (12pc)</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 980</p>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden group cursor-pointer active:scale-95 transition-transform flex flex-col h-64 relative">
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Fish and Chips" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBqnzVBOShQGV2ficd87Jc5ccLACqc9Qn0WZQbfGRfHfeDww2jRzpSDcTTX6kKTOJrRI0H0qFEawILIjOzblurQNiOb22TdCCK62t7sNiNgrPP4KtyR8rdIQSoRpV9YOQftkm2x1ZK80tOM9Q2yLyuQTjnFugoHNdhjp8FwsslZQfqx0d2YXhyCebo6SrbliPEzlviYHpUdpX5AP-Ctqw1usivP-3T9Dn5OFX6a5pewFW7jlrjkv0OfHnBPkjvjxKlzteFoAOpvuU9-"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">MAINS</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">English Fish &amp; Chips</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 1,650</p>
+</div>
+</div>
+<!-- Item 6 -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl overflow-hidden group cursor-pointer active:scale-95 transition-transform flex flex-col h-64">
+<div class="h-[55%] relative overflow-hidden">
+<img alt="Greek Bowl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9yA8qJ5fUPItqGj8mlFt-3iZOYQ6O0jJZGfwzZsTsa__DmBX-9gieed3FwU3G9bNOcnCT7_d9IYVPlLpf4ryDBxpvQ1fz1S-4tkm_Z9AxdYtQXktaJWWnsRK508SjhO3lAFkWw2G8uJ07GNoq2ELfEYT46qHcMRZcnNUK5PZJaw8a0B_WfmrDJ8TyfCk7OEgbV2anDM6_4eMeGIdgtMjDYzk9jETcxn0Ysun-TtHRMdzltIvsvKkBCKm3z0G5HiEija-6StokeGqF"/>
+</div>
+<div class="h-[45%] p-sm flex flex-col justify-between">
+<div>
+<p class="text-[10px] text-outline uppercase font-bold tracking-widest mb-1">STARTERS</p>
+<h3 class="text-on-surface font-medium text-[14px] leading-tight">Quinoa Power Bowl</h3>
+</div>
+<p class="text-primary-container font-headline-sm font-bold">PKR 1,120</p>
+</div>
+</div>
+</div>
+<!-- Floating Buttons -->
+<div class="absolute bottom-6 left-6 flex gap-sm">
+<button class="w-11 h-11 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center text-primary hover:bg-primary-container hover:text-on-primary-container transition-all">
+<span class="material-symbols-outlined">table_chart</span>
+</button>
+<button class="w-11 h-11 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center text-primary hover:bg-primary-container hover:text-on-primary-container transition-all">
+<span class="material-symbols-outlined">dialpad</span>
+</button>
+<button class="w-11 h-11 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center text-primary hover:bg-primary-container hover:text-on-primary-container transition-all">
+<span class="material-symbols-outlined">barcode_scanner</span>
+</button>
+</div>
+</section>
+<!-- RIGHT - ORDER CART (42%) -->
+<section class="w-[42%] flex flex-col bg-surface-container-low border-l border-outline-variant">
+<!-- Cart Header -->
+<div class="p-lg bg-surface-dim border-b border-outline-variant shrink-0">
+<div class="flex justify-between items-start mb-1">
+<h2 class="font-headline-sm text-on-surface">Current Order</h2>
+<span class="bg-surface-container-highest text-on-surface-variant font-label-md px-2 py-0.5 rounded border border-outline-variant uppercase tracking-tighter opacity-50">New Order</span>
+</div>
+<p class="text-outline text-[12px]">No items added yet</p>
+</div>
+<!-- Empty Cart State -->
+<div class="flex-1 flex flex-col items-center justify-center text-center p-lg opacity-40">
+<span class="material-symbols-outlined text-5xl mb-4">shopping_cart_checkout</span>
+<p class="font-medium text-lg">Your cart is empty</p>
+<p class="text-sm mt-1 max-w-[240px]">Select items from the menu to start building the order for Table 07.</p>
+</div>
+<!-- Cart Footer / Totals -->
+<div class="bg-surface-dim border-t border-outline-variant p-lg space-y-md shrink-0">
+<div class="space-y-sm text-sm">
+<div class="flex justify-between text-on-surface-variant">
+<span>Subtotal</span>
+<span>0</span>
+</div>
+<div class="flex justify-between text-on-surface-variant">
+<span>Tax (17% GST)</span>
+<span>0</span>
+</div>
+</div>
+<div class="flex justify-between items-end pt-sm border-t border-outline-variant/30">
+<span class="font-display-lg text-headline-sm uppercase tracking-wider text-outline">Order Total</span>
+<div class="text-right">
+<p class="text-primary-container font-currency-display leading-none">PKR 0</p>
+</div>
+</div>
+<!-- Actions -->
+<div class="space-y-sm pt-md">
+<div class="grid grid-cols-3 gap-sm">
+<button class="h-11 border border-outline-variant rounded-lg font-label-md flex items-center justify-center gap-1 hover:bg-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-sm">percent</span>
+                                Discount
+                            </button>
+<button class="h-11 border border-outline-variant rounded-lg font-label-md flex items-center justify-center gap-1 hover:bg-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-sm">notes</span>
+                                Note
+                            </button>
+<button class="h-11 border border-outline-variant rounded-lg font-label-md flex items-center justify-center gap-1 hover:bg-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-sm">pause_circle</span>
+                                Hold
+                            </button>
+</div>
+<div class="flex gap-sm h-14">
+<button class="flex-[0.45] bg-primary-container/20 text-primary-container/50 border border-primary-container/30 rounded-xl font-headline-sm text-sm flex items-center justify-center gap-2 cursor-not-allowed" disabled="">
+<span class="material-symbols-outlined">print</span>
+                                KITCHEN
+                            </button>
+<button class="flex-[0.55] bg-on-surface/20 text-on-surface/30 rounded-xl font-headline-sm text-sm flex items-center justify-center gap-2 cursor-not-allowed" disabled="">
+<span class="material-symbols-outlined">payments</span>
+                                CHARGE
+                            </button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Bottom Navigation -->
+<nav class="h-[64px] bg-[#0D0D0D] border-t border-[#1A1A1A] flex items-center justify-around px-xl shrink-0 z-50">
+<button class="flex flex-col items-center gap-1 group transition-colors">
+<span class="material-symbols-outlined text-[22px] text-[#4B5563]">home</span>
+<span class="font-normal text-[10px] uppercase text-[#4B5563] tracking-wider">Home</span>
+</button>
+<button class="flex flex-col items-center gap-0.5 relative group transition-colors">
+<div class="w-1 h-1 bg-[#F59E0B] rounded-full mb-0.5"></div>
+<span class="material-symbols-outlined text-[22px] text-[#F59E0B]" data-weight="fill">restaurant_menu</span>
+<span class="font-normal text-[10px] uppercase text-[#F59E0B] tracking-wider">Menu</span>
+</button>
+<button class="flex flex-col items-center gap-1 group transition-colors">
+<span class="material-symbols-outlined text-[22px] text-[#4B5563]">receipt_long</span>
+<span class="font-normal text-[10px] uppercase text-[#4B5563] tracking-wider">Tickets</span>
+</button>
+<button class="flex flex-col items-center gap-1 group transition-colors">
+<span class="material-symbols-outlined text-[22px] text-[#4B5563]">inventory_2</span>
+<span class="font-normal text-[10px] uppercase text-[#4B5563] tracking-wider">Stock</span>
+</button>
+<button class="flex flex-col items-center gap-1 group transition-colors">
+<span class="material-symbols-outlined text-[22px] text-[#4B5563]">admin_panel_settings</span>
+<span class="font-normal text-[10px] uppercase text-[#4B5563] tracking-wider">Admin</span>
+</button>
+</nav>
+<script>
+        // Update live clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toTimeString().split(' ')[0];
+            document.getElementById('clock').textContent = time;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Simple interaction for menu items
+        document.querySelectorAll('.cursor-pointer').forEach(item => {
+            item.addEventListener('click', function() {
+                this.classList.toggle('border-primary');
+                this.classList.toggle('border-outline-variant');
+            });
+        });
+    </script>
+</body></html>

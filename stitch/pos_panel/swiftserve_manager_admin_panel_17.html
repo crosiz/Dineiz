@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Manager Admin Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#f0e0d1",
+                        "primary-fixed-dim": "#ffb95f",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-lowest": "#140d06",
+                        "surface-variant": "#3c3329",
+                        "surface-container-highest": "#3c3329",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "on-secondary-fixed-variant": "#474646",
+                        "on-error-container": "#ffdad6",
+                        "secondary": "#c9c6c5",
+                        "on-tertiary-container": "#434442",
+                        "on-primary-container": "#613b00",
+                        "on-secondary-container": "#bab8b7",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-tertiary": "#2f312f",
+                        "surface-container-high": "#31281f",
+                        "inverse-surface": "#f0e0d1",
+                        "inverse-primary": "#855300",
+                        "surface-container": "#261e15",
+                        "surface-tint": "#ffb95f",
+                        "secondary-container": "#4a4949",
+                        "tertiary-container": "#b1b1ae",
+                        "surface-bright": "#41382e",
+                        "background": "#0A0A0F",
+                        "on-surface": "#f0e0d1",
+                        "primary-container": "#f59e0b",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-surface-variant": "#d8c3ad",
+                        "tertiary-fixed": "#e3e2e0",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "outline": "#a08e7a",
+                        "surface-container-low": "#221a12",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-primary-fixed": "#2a1700",
+                        "on-error": "#690005",
+                        "error-container": "#93000a",
+                        "tertiary": "#cdccca",
+                        "on-primary-fixed-variant": "#653e00",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#19120a",
+                        "primary": "#ffc174",
+                        "on-secondary": "#313030",
+                        "on-primary": "#472a00",
+                        "outline-variant": "rgba(255,255,255,0.06)",
+                        "surface": "#111827",
+                        "primary-fixed": "#ffddb8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "margin-mobile": "16px",
+                        "base": "8px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "margin-desktop": "32px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Clash Display"],
+                        "currency-display": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "headline-lg": ["Clash Display"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0F;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-card {
+            background: #1A1A1A;
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .bento-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+<!-- Top Bar -->
+<header class="h-[52px] bg-surface border-b border-outline-variant flex items-center justify-between px-md z-50">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-on-surface hover:bg-surface-variant rounded-full p-1 transition-colors">arrow_back</button>
+<h1 class="font-headline-sm text-[16px] text-white font-semibold">Manager Panel</h1>
+</div>
+<div class="flex items-center gap-sm">
+<div class="text-right">
+<p class="font-label-lg text-white leading-none">Amna Butt</p>
+<p class="font-label-md text-on-surface-variant">Manager</p>
+</div>
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container font-bold overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a female restaurant manager with a friendly expression, set against a warm industrial kitchen background with amber lighting. The style is crisp and modern, matching a high-end commercial aesthetic with rich contrast." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCB2tD445w4BdINnE2fcXgscOCQcvY5OYPxSfoXqeaWGWsYF470UX1dMvU6JQT_o6aJTxE0ri0w3vt2UGV9uwOQ07pZFOFDzfgh36NYRntYSemOiP-A4QlAUrVLiD6zAYoaieuwGdCshRMknjTrlAg2PqvCp6r04lgjW1FkG4uugbKJ3rq0G9dQHP1xjnos-jXNGOg_95iHRGGcu3B1zzzUW8N0kw_NHTeFk_w-il6rX5cMMTgG-GnUMA2IYWVB2ACLuACYNyAWnve_"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto p-md">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-sm max-w-6xl mx-auto">
+<!-- TILE 1: SHIFT SUMMARY -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#F59E0B] flex flex-col justify-between min-h-[160px]">
+<div>
+<div class="flex items-center gap-sm mb-md">
+<span class="material-symbols-outlined text-primary">assessment</span>
+<h3 class="font-headline-sm text-white">Shift Summary</h3>
+</div>
+<p class="font-display-lg text-[20px] text-on-surface tracking-tight mb-2">47 Orders • PKR 52,400 • 8h 12m</p>
+</div>
+<a class="text-primary font-label-lg flex items-center gap-xs hover:underline mt-auto" href="#">
+                    View Full Report <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<!-- TILE 2: APPLY DISCOUNT -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#3B82F6] space-y-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[#3B82F6]">percent</span>
+<h3 class="font-headline-sm text-white">Apply Discount</h3>
+</div>
+<div class="grid grid-cols-2 gap-sm">
+<div class="relative">
+<input class="w-full bg-[#121212] border-outline-variant text-white rounded-lg focus:ring-primary focus:border-primary text-body-lg h-12 px-md" placeholder="0" type="number"/>
+<span class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant">%</span>
+</div>
+<select class="w-full bg-[#121212] border-outline-variant text-white rounded-lg focus:ring-primary focus:border-primary text-body-md h-12 px-md">
+<option>Reason</option>
+<option>Staff Meal</option>
+<option>Service Issue</option>
+<option>Voucher</option>
+</select>
+</div>
+<button class="w-full h-12 bg-primary-container text-on-primary-container font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all">
+                    Apply to Current Order
+                </button>
+</div>
+<!-- TILE 3: VOID ORDER -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#EF4444] flex flex-col">
+<div class="flex items-center gap-sm mb-sm">
+<span class="material-symbols-outlined text-[#EF4444]">delete_forever</span>
+<h3 class="font-headline-sm text-white">Void Order</h3>
+</div>
+<p class="text-on-surface-variant font-body-sm mb-lg">Requires reason. Logged permanently in the system for audit.</p>
+<button class="mt-auto w-full h-12 border border-[#EF4444] text-[#EF4444] font-bold rounded-lg hover:bg-[#EF4444]/10 active:scale-95 transition-all">
+                    VOID TRANSACTION
+                </button>
+</div>
+<!-- TILE 4: REPRINT -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#8B5CF6] flex flex-col">
+<div class="flex items-center gap-sm mb-sm">
+<span class="material-symbols-outlined text-[#8B5CF6]">print</span>
+<h3 class="font-headline-sm text-white">Reprint</h3>
+</div>
+<p class="text-on-surface-variant font-body-sm mb-lg">Last receipt or select specific order from history.</p>
+<button class="mt-auto w-full h-12 border border-[#8B5CF6] text-[#8B5CF6] font-bold rounded-lg hover:bg-[#8B5CF6]/10 active:scale-95 transition-all">
+                    REPRINT LAST
+                </button>
+</div>
+<!-- TILE 5: OVERRIDE PRICE -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#F59E0B] space-y-md">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">edit_square</span>
+<h3 class="font-headline-sm text-white">Override Price</h3>
+</div>
+<div class="space-y-xs">
+<p class="text-on-surface-variant font-label-md">Session only</p>
+<div class="relative">
+<span class="absolute left-md top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant">search</span>
+<input class="w-full bg-[#121212] border-outline-variant text-white rounded-lg focus:ring-primary focus:border-primary text-body-md h-12 pl-xl pr-md" placeholder="Search item to override..." type="text"/>
+</div>
+</div>
+</div>
+<!-- TILE 6: CLOSE SHIFT -->
+<div class="bento-card p-lg rounded-xl border-l-[3px] border-l-[#EF4444] space-y-md flex flex-col">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[#EF4444]">lock_clock</span>
+<h3 class="font-headline-sm text-white">Close Shift</h3>
+</div>
+<p class="text-on-surface-variant font-body-sm">Active: 8h 12m elapsed since last checkout.</p>
+<button class="mt-auto w-full h-12 bg-error-container text-on-error-container font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all">
+                    FINALIZE &amp; CLOSE
+                </button>
+</div>
+</div>
+<!-- Bottom Link -->
+<div class="mt-xl text-center pb-xl">
+<button class="text-on-surface-variant hover:text-white transition-colors underline underline-offset-4 font-label-lg">
+                End Manager Session
+            </button>
+</div>
+</main>
+<!-- Bottom Navigation (Shared Component Logic) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-md pb-safe bg-surface-container h-20 border-t border-outline-variant z-50">
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-lg">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-lg">Menu</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-lg">Tickets</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-lg">Stock</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-4 py-1">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-lg">Admin</span>
+</div>
+</nav>
+<script>
+        // Simple interactivity for demonstration
+        document.querySelectorAll('.bento-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.borderColor = 'rgba(255,255,255,0.15)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.borderColor = 'rgba(255,255,255,0.06)';
+            });
+        });
+    </script>
+</body></html>

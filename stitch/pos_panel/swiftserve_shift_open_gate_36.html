@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Open Shift</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#ffb95f",
+                        "on-secondary-fixed-variant": "#474646",
+                        "tertiary-container": "#b1b1ae",
+                        "secondary-container": "#4a4949",
+                        "on-tertiary-container": "#434442",
+                        "surface": "#19120a",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "surface-container-low": "#221a12",
+                        "primary": "#ffc174",
+                        "on-primary-container": "#613b00",
+                        "on-error": "#690005",
+                        "surface-container": "#261e15",
+                        "on-primary-fixed": "#2a1700",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "inverse-surface": "#f0e0d1",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "tertiary": "#cdccca",
+                        "on-primary": "#472a00",
+                        "error": "#ffb4ab",
+                        "primary-fixed": "#ffddb8",
+                        "background": "#0A0A0F", /* User requested specific background */
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-primary-fixed-variant": "#653e00",
+                        "surface-container-lowest": "#140d06",
+                        "inverse-primary": "#855300",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#f0e0d1",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "outline-variant": "#534434",
+                        "primary-fixed-dim": "#ffb95f",
+                        "surface-variant": "#3c3329",
+                        "surface-container-highest": "#3c3329",
+                        "on-secondary": "#313030",
+                        "outline": "#a08e7a",
+                        "on-tertiary": "#2f312f",
+                        "surface-dim": "#19120a",
+                        "surface-bright": "#41382e",
+                        "on-background": "#f0e0d1",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-secondary-container": "#bab8b7",
+                        "surface-container-high": "#31281f",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#d8c3ad",
+                        "inverse-on-surface": "#382f25",
+                        "secondary": "#c9c6c5",
+                        "primary-container": "#f59e0b",
+                        "secondary-fixed": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1.25rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "margin-desktop": "32px",
+                        "margin-mobile": "16px",
+                        "lg": "24px",
+                        "xl": "32px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "currency-display": ["Clash Display"],
+                        "headline-md": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "headline-lg": ["Clash Display"],
+                        "body-md": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .custom-shadow {
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
+        }
+        .orange-gradient {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        }
+        /* Custom scrollbar for denomination grid if needed */
+        .denomination-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .denomination-scroll::-webkit-scrollbar-thumb {
+            background: #E2E8F0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-[#0A0A0F] min-h-screen flex items-center justify-center font-body-md overflow-hidden antialiased">
+<!-- SwiftServe TopNavBar (Hidden on this transactional screen as per Semantic Shell Mandate) -->
+<!-- The prompt requires a focused journey, so global navigation is suppressed to prioritize the Canvas. -->
+<main class="relative z-10 w-full max-w-[480px] px-4">
+<div class="bg-white rounded-[20px] custom-shadow overflow-hidden">
+<!-- CARD TOP: HEADER SECTION -->
+<header class="orange-gradient p-[28px] text-white flex flex-col items-center">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-[20px]">☀️</span>
+<h1 class="font-headline-sm text-[20px] font-bold">Good Morning!</h1>
+</div>
+<p class="text-[14px] text-white/75 font-body-sm mb-4">Gulshan-e-Iqbal Branch</p>
+<div class="text-[40px] font-bold tracking-tight mb-1 font-display-lg">
+                    09:15 AM
+                </div>
+<p class="text-[14px] text-white/65 font-body-sm">Monday, June 29</p>
+</header>
+<!-- CARD BODY -->
+<div class="bg-white p-[28px]">
+<!-- STAFF IDENTITY ROW -->
+<div class="flex items-center gap-4 bg-[#F8FAFC] border border-[#F1F5F9] rounded-[10px] p-[12px_16px] mb-5">
+<div class="w-11 h-11 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold text-[15px]">
+                        AB
+                    </div>
+<div class="flex flex-col">
+<span class="text-[15px] font-bold text-[#0F172A] font-headline-sm">Amna Butt</span>
+<span class="text-[12px] text-[#64748B] font-body-sm">Cashier — Gulshan-e-Iqbal</span>
+</div>
+<div class="ml-auto">
+<span class="material-symbols-outlined text-[#64748B]">verified_user</span>
+</div>
+</div>
+<!-- OPENING FLOAT SECTION -->
+<section>
+<div class="flex flex-col mb-5">
+<label class="text-[13px] font-bold uppercase text-[#374151] tracking-[0.05em] font-label-lg">Opening Cash Float</label>
+<p class="text-[12px] text-[#94A3B8] mt-1 font-body-sm">Count the cash in your drawer and enter the total</p>
+</div>
+<!-- LARGE INPUT -->
+<div class="relative group mb-4">
+<div class="h-[68px] border-2 border-[#E2E8F0] group-focus-within:border-primary-container rounded-[12px] bg-[#F9FAFB] flex items-center px-4 transition-all duration-200">
+<div class="flex items-center">
+<span class="text-[16px] font-bold text-[#94A3B8] mr-3">PKR</span>
+<div class="w-[2px] h-6 bg-[#E2E8F0]"></div>
+</div>
+<input class="w-full bg-transparent border-none text-right text-[24px] font-bold text-[#0F172A] focus:ring-0 placeholder:text-[#94A3B8]/50" id="floatInput" placeholder="0" type="number"/>
+</div>
+</div>
+<!-- QUICK FLOAT PILLS -->
+<div class="flex gap-2 mb-6">
+<button class="flex-1 border-[1.5px] border-[#E2E8F0] hover:border-primary-container hover:bg-primary-container/10 transition-colors rounded-full py-2 px-3 text-[13px] font-bold text-[#374151] active:scale-95 duration-150" onclick="setFloat(2000)">
+                            PKR 2,000
+                        </button>
+<button class="flex-1 border-[1.5px] border-[#E2E8F0] hover:border-primary-container hover:bg-primary-container/10 transition-colors rounded-full py-2 px-3 text-[13px] font-bold text-[#374151] active:scale-95 duration-150" onclick="setFloat(5000)">
+                            PKR 5,000
+                        </button>
+<button class="flex-1 border-[1.5px] border-[#E2E8F0] hover:border-primary-container hover:bg-primary-container/10 transition-colors rounded-full py-2 px-3 text-[13px] font-bold text-[#374151] active:scale-95 duration-150" onclick="setFloat(10000)">
+                            PKR 10,000
+                        </button>
+</div>
+<!-- DENOMINATION TOGGLE -->
+<div class="mb-8">
+<button class="text-[#F59E0B] text-[12px] font-bold underline flex items-center gap-1 hover:text-[#D97706] transition-colors" id="toggleDenominations">
+                            Count by denomination 
+                            <span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+<!-- Hidden Expanded Section (Denominations) -->
+<div class="hidden mt-4 grid grid-cols-2 gap-3 max-h-[200px] overflow-y-auto pr-2 denomination-scroll" id="denominationGrid">
+<!-- Note: 5000 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">5000</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+<!-- Note: 1000 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">1000</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+<!-- Note: 500 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">500</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+<!-- Note: 100 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">100</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+<!-- Note: 50 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">50</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+<!-- Note: 10 -->
+<div class="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#F1F5F9]">
+<span class="text-[12px] font-bold text-[#475569]">10</span>
+<input class="w-12 h-8 text-center bg-white border-[#E2E8F0] rounded text-[12px] focus:ring-primary-container" placeholder="0" type="number"/>
+</div>
+</div>
+</div>
+</section>
+<!-- FOOTER -->
+<footer class="flex flex-col items-center">
+<button class="w-full h-[54px] bg-[#F59E0B] hover:bg-[#D97706] active:translate-y-0.5 text-white font-bold text-[16px] rounded-[12px] flex items-center justify-center gap-2 transition-all duration-150 mb-3 group shadow-lg shadow-primary-container/20">
+                        Start Shift
+                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<p class="text-[11px] text-[#94A3B8] text-center font-body-sm px-4">
+                        Your shift record and all orders will be tracked from now
+                    </p>
+</footer>
+</div>
+</div>
+</main>
+<!-- Background Subtle Atmospheric Elements -->
+<div class="absolute inset-0 z-0 pointer-events-none opacity-20">
+
+</div>
+<!-- Micro-Interactions -->
+<script>
+        // Set Float Value
+        function setFloat(val) {
+            const input = document.getElementById('floatInput');
+            input.value = val;
+            
+            // Subtle flash effect on set
+            input.parentElement.classList.add('ring-2', 'ring-primary-container');
+            setTimeout(() => {
+                input.parentElement.classList.remove('ring-2', 'ring-primary-container');
+            }, 300);
+        }
+
+        // Toggle Denominations
+        const toggleBtn = document.getElementById('toggleDenominations');
+        const grid = document.getElementById('denominationGrid');
+        
+        toggleBtn.addEventListener('click', () => {
+            grid.classList.toggle('hidden');
+            const icon = toggleBtn.querySelector('.material-symbols-outlined');
+            if (grid.classList.contains('hidden')) {
+                icon.innerText = 'expand_more';
+            } else {
+                icon.innerText = 'expand_less';
+                // Focus first input
+                grid.querySelector('input').focus();
+            }
+        });
+
+        // Current Time Update (Optional polish)
+        function updateTime() {
+            const timeDisplay = document.querySelector('.font-display-lg');
+            const dateDisplay = document.querySelector('.text-white\\/65');
+            const now = new Date();
+            
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            
+            if (timeDisplay) timeDisplay.innerText = timeStr;
+            if (dateDisplay) dateDisplay.innerText = dateStr;
+        }
+        
+        // Initial set and interval
+        updateTime();
+        setInterval(updateTime, 1000 * 30); // Refresh every 30s
+    </script>
+</body></html>

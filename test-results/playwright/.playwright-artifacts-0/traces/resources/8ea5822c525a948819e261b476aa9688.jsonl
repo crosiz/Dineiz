@@ -1,0 +1,7 @@
+{"type":"send","time":1784761032903.4092,"opcode":1,"data":"{\"type\":\"log-opt-in\"}"}
+{"type":"send","time":1784761032903.4521,"opcode":1,"data":"{\"type\":\"register-entrypoints\",\"entryPoints\":[\"http://localhost:8084/node_modules/.pnpm/expo-router@6.0.24_@expo+metro-runtime@6.1.2_@react-native-masked-view+masked-view@0.3.2_reac_3hh7itogxj5tsoldjma2hot2g4/node_modules/expo-router/entry.bundle?platform=web&dev=true&hot=false&lazy=true&transform.engine=hermes&transform.routerRoot=app&unstable_transformProfile=hermes-stable\"]}"}
+{"type":"send","time":1784761032903.4631,"opcode":1,"data":"{\"type\":\"log\",\"level\":\"log\",\"platform\":\"web\",\"mode\":\"BRIDGE\",\"data\":[\"[web] Logs will appear in the browser console\"]}"}
+{"type":"receive","time":1784761032910.4321,"opcode":1,"data":"{\"type\":\"update-start\",\"body\":{\"isInitialUpdate\":true}}"}
+{"type":"receive","time":1784761032915.8872,"opcode":1,"data":"{\"type\":\"update\",\"body\":{\"revisionId\":\"f25622da9b0ed2e9\",\"isInitialUpdate\":true,\"added\":[],\"modified\":[],\"deleted\":[]}}"}
+{"type":"receive","time":1784761032916.1602,"opcode":1,"data":"{\"type\":\"update-done\"}"}
+{"type":"receive","time":1784761032916.308,"opcode":1,"data":"{\"type\":\"bundle-registered\"}"}

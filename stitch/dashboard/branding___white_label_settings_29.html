@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Admin | Branding &amp; White-Label</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#ffb5a0",
+                        "on-secondary-fixed": "#141b2b",
+                        "primary-container": "#ff5722",
+                        "surface": "#f8f9fa",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-secondary-container": "#5c6274",
+                        "surface-variant": "#e1e3e4",
+                        "surface-bright": "#f8f9fa",
+                        "tertiary-container": "#8a91a0",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary-fixed": "#151c27",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#f0f1f2",
+                        "background": "#f8f9fa",
+                        "inverse-surface": "#2e3132",
+                        "on-primary-fixed": "#3b0900",
+                        "secondary": "#575e70",
+                        "primary": "#b02f00",
+                        "outline": "#907067",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#404754",
+                        "on-surface-variant": "#5b4039",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-surface": "#191c1d",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container": "#edeeef",
+                        "tertiary-fixed": "#dce2f3",
+                        "on-error-container": "#93000a",
+                        "on-background": "#191c1d",
+                        "tertiary": "#585f6c",
+                        "surface-container-low": "#f3f4f5",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#c0c7d6",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "secondary-fixed": "#dce2f7",
+                        "surface-tint": "#b02f00",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#404758",
+                        "outline-variant": "#e4beb4",
+                        "secondary-fixed-dim": "#c0c6db",
+                        "on-primary-container": "#541200",
+                        "primary-fixed": "#ffdbd1",
+                        "on-tertiary-container": "#232a36",
+                        "secondary-container": "#d9dff5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "sm": "8px",
+                        "xl": "40px",
+                        "unit": "4px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "xs": "4px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-mono": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "data-mono": ["14px", {"lineHeight": "20px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .preview-pane { height: calc(100vh - 120px); overflow-y: auto; scrollbar-width: none; }
+        .preview-pane::-webkit-scrollbar { display: none; }
+        .receipt-jagged {
+            background: #fff;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+            position: relative;
+        }
+        .receipt-jagged::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(-45deg, transparent 5px, #fff 5px), linear-gradient(45deg, transparent 5px, #fff 5px);
+            background-size: 10px 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 right-0 z-30 flex justify-between items-center w-full h-16 px-margin-desktop bg-surface/80 backdrop-blur-md border-b border-surface-container-highest">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-black text-on-surface">SwiftServe Admin</span>
+<div class="flex items-center gap-2 bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant">
+<span class="material-symbols-outlined text-[18px] text-primary">search</span>
+<input class="bg-transparent border-none focus:ring-0 font-body-md text-body-md w-48" placeholder="Search settings..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-lg">
+<button class="flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-low p-2 rounded-lg transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-low p-2 rounded-lg transition-all">
+<span class="material-symbols-outlined">history</span>
+</button>
+<div class="h-8 w-[1px] bg-outline-variant"></div>
+<div class="flex items-center gap-sm">
+<img alt="Admin Avatar" class="w-10 h-10 rounded-full border border-outline-variant object-cover" data-alt="A professional close-up headshot of a restaurant administrator in a modern office environment. The lighting is soft and professional with a shallow depth of field. The image has a clean, airy, light-mode aesthetic with neutral colors and a subtle touch of corporate orange in the background detail." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDla4W3Cs53kbJ1o-dm5U9kn6hJW87x1WOj8cp3odDcSj1NsEazkcdDtNdUByZqPQ9Ca5w5T_wvS565raK8U7nhVUh3Tc6OOezAu6TeDxpp_Jbrmy1qP3A5d7BU0ZisG0pk_Q7AKvXtLqeshPpQvkdw4J0ccyksk51YIh27mC1IUcnc-C7Tkiz65toJoBiwfYxeummItDWww5I4EMjFZJ7oAEXQyDikfJAuEE7VU6CahKpyF00Qy6-xrhFKndgZz6D8B2-0FHlFjNr3"/>
+</div>
+</div>
+</header>
+<div class="flex min-h-[calc(100vh-64px)]">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full z-40 border-r border-outline-variant w-80 bg-inverse-surface hidden md:flex flex-col pt-16">
+<div class="p-6">
+<div class="bg-primary-container text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-lg mb-8">
+<div>
+<p class="font-label-md text-label-md opacity-80 uppercase tracking-wider">Admin Terminal</p>
+<p class="font-headline-md text-headline-md font-bold">SwiftServe</p>
+</div>
+<span class="material-symbols-outlined text-[32px]">restaurant</span>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-md text-surface-variant hover:text-on-primary-fixed-variant px-4 py-3 mx-2 rounded-lg hover:bg-surface-variant/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md text-surface-variant hover:text-on-primary-fixed-variant px-4 py-3 mx-2 rounded-lg hover:bg-surface-variant/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Orders</span>
+</a>
+<a class="flex items-center gap-md text-surface-variant hover:text-on-primary-fixed-variant px-4 py-3 mx-2 rounded-lg hover:bg-surface-variant/10 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-md text-label-md">Menu Management</span>
+</a>
+<a class="flex items-center gap-md bg-primary text-on-primary rounded-lg px-4 py-3 mx-2 shadow-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-1 border-t border-white/10">
+<a class="flex items-center gap-md text-surface-variant hover:text-on-primary-fixed-variant px-4 py-3 mx-2" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<button class="w-full flex items-center gap-md text-surface-variant hover:text-on-primary-fixed-variant px-4 py-3 mx-2">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Log out</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-80 pb-24">
+<!-- Breadcrumb & Header -->
+<div class="px-margin-desktop pt-8 pb-4">
+<nav class="flex items-center gap-2 text-on-surface-variant font-label-md text-label-md mb-2">
+<span class="uppercase">Settings</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="uppercase font-bold text-primary">Branding</span>
+</nav>
+<div class="flex justify-between items-end">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Branding &amp; White-Label</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-1">Customize how your restaurant appears across the platform.</p>
+</div>
+<div class="flex gap-md">
+<button class="px-6 py-2 rounded-lg border border-outline-variant font-bold text-on-surface hover:bg-surface-container transition-all flex items-center gap-2">
+<span>Preview Branding</span>
+<span class="material-symbols-outlined text-[18px]">open_in_new</span>
+</button>
+<button class="px-6 py-2 rounded-lg bg-primary-container text-white font-bold shadow-md hover:opacity-90 transition-all">
+                            Save Changes
+                        </button>
+</div>
+</div>
+</div>
+<!-- Two Column Layout -->
+<div class="px-margin-desktop grid grid-cols-12 gap-lg mt-8">
+<!-- Left Column: Form Cards -->
+<div class="col-span-12 lg:col-span-8 space-y-lg">
+<!-- Business Identity -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary">store</span>
+<h2 class="font-headline-md text-headline-md">Business Identity</h2>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<div class="col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">Business Name</label>
+<input class="w-full bg-white border border-outline-variant rounded-lg p-3 focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-all" type="text" value="Demo Restaurant"/>
+<p class="mt-2 text-body-md text-on-surface-variant opacity-70">The main name used in receipts and notifications.</p>
+</div>
+<div class="col-span-2">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">Tagline</label>
+<input class="w-full bg-white border border-outline-variant rounded-lg p-3 focus:border-primary-container focus:ring-1 focus:ring-primary-container outline-none transition-all" placeholder="Great food, fast service" type="text"/>
+</div>
+<div class="col-span-1">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">Business Logo (120x80)</label>
+<div class="border-2 border-dashed border-outline-variant rounded-lg p-4 flex flex-col items-center justify-center bg-surface-container-low gap-3 h-32">
+<img alt="Logo Thumbnail" class="h-12 w-12 object-contain bg-white p-1 rounded" data-alt="A minimalist and modern restaurant logo featuring a stylized flame and fork icon in vibrant orange and deep slate gray. The design is clean, professional, and centered against a pristine white background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvIngfw281PJ5UaQ_z6LkeumdO0dyVnu9o2B7aJVIR798ZEPCGGstn0K-puQF_wm31l2GBC_2KPCETbTaAKV_YBRlrahW1JBa1Xoiaa1p-Z3B9gWMkO53Y36yy6bubXvPMA45DF75VeHrvRIlVdSgxfgxfZ1dD4ycjE6sOYTfgcOS-oANEr34WQW5Jyrhu_4FOAhavRxUjZm_dgYXciW9K_2JcBT0MwakSZPgRJ3BZPd9mf2UuOgLw6QRgm1sq_E44aKadR7ducjg_"/>
+<div class="flex gap-2">
+<button class="text-[11px] font-bold uppercase text-primary border border-primary px-2 py-1 rounded">Upload New</button>
+<button class="text-[11px] font-bold uppercase text-error-container bg-error/10 px-2 py-1 rounded">Remove</button>
+</div>
+</div>
+</div>
+<div class="col-span-1">
+<label class="font-label-md text-label-md text-on-surface-variant mb-2 block">Favicon (32x32)</label>
+<div class="border-2 border-dashed border-outline-variant rounded-lg p-4 flex flex-col items-center justify-center bg-surface-container-low gap-3 h-32">
+<div class="w-8 h-8 bg-white border border-outline-variant rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[16px]">restaurant</span>
+</div>
+<button class="text-[11px] font-bold uppercase text-on-surface border border-outline-variant px-3 py-1 rounded">Select File</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Colors & Theme -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary">palette</span>
+<h2 class="font-headline-md text-headline-md">Colors &amp; Theme</h2>
+</div>
+<div class="grid grid-cols-3 gap-lg">
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant block">Primary Color</label>
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-lg bg-[#FF5722] border border-outline-variant shadow-inner"></div>
+<input class="flex-1 font-data-mono text-data-mono border-outline-variant rounded-lg px-2 py-2" type="text" value="#FF5722"/>
+</div>
+</div>
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant block">Secondary Color</label>
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-lg bg-[#1A1A2E] border border-outline-variant shadow-inner"></div>
+<input class="flex-1 font-data-mono text-data-mono border-outline-variant rounded-lg px-2 py-2" type="text" value="#1A1A2E"/>
+</div>
+</div>
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant block">Accent Color</label>
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-lg bg-[#FFB300] border border-outline-variant shadow-inner"></div>
+<input class="flex-1 font-data-mono text-data-mono border-outline-variant rounded-lg px-2 py-2" type="text" value="#FFB300"/>
+</div>
+</div>
+</div>
+<div class="mt-8 p-4 bg-surface-container rounded-lg border border-outline-variant">
+<p class="font-label-md text-label-md text-on-surface mb-3 opacity-60">Component Preview</p>
+<div class="flex items-center gap-4">
+<button class="px-4 py-2 bg-[#FF5722] text-white rounded-lg font-bold text-sm">Action Button</button>
+<div class="px-3 py-1 bg-[#FFB300]/20 text-[#B07B00] border border-[#FFB300] rounded-full text-xs font-black">ACTIVE</div>
+<div class="flex items-center gap-2 text-[#1A1A2E]">
+<span class="material-symbols-outlined">home</span>
+<span class="font-bold text-sm">Dashboard Item</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Custom Domain -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary">public</span>
+<h2 class="font-headline-md text-headline-md">Custom Domain</h2>
+</div>
+<div class="bg-[#FFF9C4] border border-[#FBC02D] rounded-lg p-4 mb-6 flex items-start gap-3">
+<span class="material-symbols-outlined text-[#FBC02D]">warning</span>
+<div class="text-body-md text-[#616161]">
+<p class="font-bold">Custom domain not configured</p>
+<p>Set up a white-labeled URL for your customers to access their receipts and menus.</p>
+</div>
+</div>
+<div class="space-y-4">
+<label class="font-label-md text-label-md text-on-surface-variant block">Custom Domain URL</label>
+<div class="flex gap-2">
+<input class="flex-1 bg-white border border-outline-variant rounded-lg p-3 outline-none focus:ring-1 focus:ring-primary" placeholder="pos.myrestaurant.com" type="text"/>
+<button class="px-6 py-2 bg-inverse-surface text-white rounded-lg font-bold hover:opacity-90">Verify Domain</button>
+</div>
+</div>
+<details class="mt-6 border-t border-outline-variant pt-4 group">
+<summary class="flex items-center justify-between cursor-pointer list-none">
+<span class="font-label-md text-label-md text-on-surface">How to set up CNAME records?</span>
+<span class="material-symbols-outlined group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="mt-4 bg-surface-container-low p-4 rounded-lg font-data-mono text-data-mono text-xs leading-relaxed space-y-2">
+<p>1. Go to your domain registrar (e.g., GoDaddy, Cloudflare).</p>
+<p>2. Create a new <span class="bg-white px-1 rounded font-bold">CNAME</span> record.</p>
+<p>3. Host: <span class="bg-white px-1 rounded font-bold">pos</span></p>
+<p>4. Points to: <span class="bg-white px-1 rounded font-bold">proxy.swiftserve.app</span></p>
+</div>
+</details>
+</section>
+</div>
+<!-- Right Column: Sticky Preview -->
+<div class="col-span-12 lg:col-span-4">
+<div class="sticky top-24 space-y-lg">
+<div class="bg-inverse-surface rounded-xl p-lg text-white shadow-xl">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md">Live Preview</h3>
+<div class="bg-primary px-2 py-1 rounded-full text-[10px] font-black uppercase">Realtime</div>
+</div>
+<!-- Preview Tabs -->
+<div class="flex bg-white/10 p-1 rounded-lg mb-8">
+<button class="flex-1 py-2 text-xs font-bold bg-white text-on-surface rounded-md">Receipt</button>
+<button class="flex-1 py-2 text-xs font-bold text-white/60 hover:text-white">QR Menu</button>
+<button class="flex-1 py-2 text-xs font-bold text-white/60 hover:text-white">App Icon</button>
+</div>
+<!-- Receipt Preview -->
+<div class="flex justify-center pb-4">
+<div class="receipt-jagged w-72 text-on-surface p-6 font-data-mono text-[10px]">
+<div class="text-center space-y-1 mb-4">
+<div class="flex justify-center mb-2">
+<span class="material-symbols-outlined text-primary text-[24px]">restaurant</span>
+</div>
+<p class="font-bold text-xs">DEMO RESTAURANT</p>
+<p>123 Gourmet Street, Food City</p>
+<p>+1 (555) 012-3456</p>
+</div>
+<div class="border-y border-dashed border-on-surface/20 py-2 my-2 space-y-1">
+<p>Order: #ST-4829 | TBL: 12</p>
+<p>Date: Oct 24, 2023 | 07:45 PM</p>
+</div>
+<div class="space-y-2 mb-4">
+<div class="flex justify-between">
+<span>1x Zinger Burger Max</span>
+<span>$12.50</span>
+</div>
+<div class="flex justify-between">
+<span>1x Large Cajun Fries</span>
+<span>$4.50</span>
+</div>
+<div class="flex justify-between">
+<span>2x Coke Zero</span>
+<span>$5.00</span>
+</div>
+</div>
+<div class="border-t border-on-surface/20 pt-2 flex justify-between font-bold text-xs mb-4">
+<span>TOTAL</span>
+<span>$22.00</span>
+</div>
+<div class="text-center text-[8px] opacity-60">
+<p>Tax: $1.82 (13%) Included</p>
+<p class="mt-2 italic">"Great food, fast service"</p>
+<p class="mt-1">Thank you for dining with us!</p>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant rounded-xl p-md">
+<p class="text-body-md text-on-surface-variant italic">"Tip: Brand colors will automatically apply to your customer mobile ordering experience and digital receipts."</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Sticky Bottom Banner -->
+<div class="fixed bottom-0 left-0 right-0 z-50 bg-inverse-surface/95 backdrop-blur-md border-t border-white/10 p-4 md:ml-80">
+<div class="max-w-screen-xl mx-auto flex items-center justify-between px-margin-desktop">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-inverse-primary animate-pulse">info</span>
+<p class="text-white font-bold text-sm">You have unsaved changes in your branding settings.</p>
+</div>
+<div class="flex gap-4">
+<button class="text-white/60 hover:text-white font-bold text-sm px-4 py-2">Discard</button>
+<button class="bg-primary text-white font-black text-sm px-8 py-2 rounded-lg shadow-[0_0_20px_rgba(255,87,34,0.3)] hover:scale-105 transition-transform">Save Changes</button>
+</div>
+</div>
+</div>
+<script>
+        // Micro-interaction for inputs
+        const inputs = document.querySelectorAll('input, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('scale-[1.01]');
+                input.parentElement.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+
+        // Sticky Banner Logic
+        let originalData = "Demo Restaurant";
+        const nameInput = document.querySelector('input[value="Demo Restaurant"]');
+        const banner = document.querySelector('.fixed.bottom-0');
+        
+        nameInput.addEventListener('input', (e) => {
+            if (e.target.value !== originalData) {
+                banner.style.transform = 'translateY(0)';
+                banner.style.opacity = '1';
+            }
+        });
+    </script>
+</body></html>

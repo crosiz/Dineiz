@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MaitreD Pro | Floor Plan Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#907067",
+                        "on-tertiary-container": "#fcfcff",
+                        "inverse-on-surface": "#ffede8",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-primary-fixed": "#3b0900",
+                        "surface-container": "#ffe9e4",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary-container": "#ff5722",
+                        "surface-container-highest": "#fadcd4",
+                        "on-primary-fixed-variant": "#862200",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "inverse-primary": "#ffb5a0",
+                        "tertiary-fixed": "#c8e6ff",
+                        "secondary-fixed": "#dae2fd",
+                        "on-tertiary": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-surface": "#3e2c27",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container-high": "#ffe2da",
+                        "outline-variant": "#e4beb4",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fff8f6",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "secondary": "#565e74",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-container": "#541200",
+                        "on-surface": "#271813",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "on-secondary-container": "#5c647a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface-variant": "#fadcd4",
+                        "surface": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "background": "#fff8f6",
+                        "primary-fixed": "#ffdbd1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "display": ["Inter"],
+                        "body": ["Inter"],
+                        "h1": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(circle, #cbd5e1 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface-bright font-body text-on-background overflow-hidden">
+<!-- SIDE NAV BAR -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-slate-950 flex flex-col py-6 border-r border-slate-800">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h2 class="text-lg font-black text-white leading-none">The Grand Brasserie</h2>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Premium Management</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-inter text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 bg-slate-900 text-orange-500 border-r-4 border-orange-600" href="#">
+<span class="material-symbols-outlined">restaurant</span>
+<span class="font-inter text-sm font-medium">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-inter text-sm font-medium">Business</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-inter text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-primary-container hover:bg-primary text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+            New Reservation
+        </button>
+</div>
+</aside>
+<!-- MAIN CONTENT WRAPPER -->
+<main class="ml-64 flex flex-col h-screen relative">
+<!-- EDITOR HEADER -->
+<header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 shrink-0">
+<div class="flex items-center gap-4">
+<h1 class="text-h1 font-h1 text-slate-900">Floor Plan Editor</h1>
+<span class="px-3 py-1 bg-slate-100 text-slate-600 text-caption rounded-full font-medium">Clifton Branch</span>
+</div>
+<div class="flex bg-slate-100 p-1 rounded-lg">
+<button class="px-6 py-1.5 bg-white shadow-sm rounded-md text-body font-semibold text-slate-900 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">view_quilt</span>
+                2D Layout
+            </button>
+<button class="px-6 py-1.5 text-slate-500 hover:text-slate-700 text-body font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">3d_rotation</span>
+                3D Preview
+            </button>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg text-body font-semibold transition-colors">Discard Changes</button>
+<button class="px-5 py-2 bg-primary-container hover:bg-primary text-white rounded-lg text-body font-semibold shadow-sm transition-colors">Save Floor Plan</button>
+</div>
+</header>
+<!-- WORKSPACE AREA -->
+<div class="flex flex-1 overflow-hidden bg-[#F1F5F9] relative">
+<!-- LEFT TOOLBAR -->
+<aside class="w-[72px] bg-white border-r border-slate-200 flex flex-col items-center py-6 gap-6 z-10">
+<button class="flex flex-col items-center gap-1 text-primary group">
+<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">near_me</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Select</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+<div class="w-10 h-10 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">table_restaurant</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Table</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+<div class="w-10 h-10 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">edit_square</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Wall</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+<div class="w-10 h-10 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">chair</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Decor</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+<div class="w-10 h-10 rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined">dashboard_customize</span>
+</div>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Zone</span>
+</button>
+<div class="w-8 h-px bg-slate-100 my-2"></div>
+<button class="text-slate-400 hover:text-slate-600 transition-colors"><span class="material-symbols-outlined">zoom_in</span></button>
+<button class="text-slate-400 hover:text-slate-600 transition-colors"><span class="material-symbols-outlined">zoom_out</span></button>
+<button class="text-slate-900"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_on</span></button>
+</aside>
+<!-- CENTER CANVAS - Occupies Full Available Width -->
+<section class="flex-1 relative overflow-auto canvas-grid bg-[#F8FAFC]">
+<div class="absolute inset-0 p-section">
+<!-- Zones Labels -->
+<div class="absolute top-10 left-10 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pointer-events-none">Main Dining Hall</div>
+<div class="absolute top-10 right-1/4 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pointer-events-none">Private Booths</div>
+<div class="absolute bottom-20 left-20 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pointer-events-none">Outdoor Terrace</div>
+<!-- Architectural Elements -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 bg-white border-2 border-slate-300 h-2 w-32 flex items-center justify-center">
+<div class="absolute -top-4 text-[10px] font-bold text-slate-400 uppercase">Main Entrance</div>
+</div>
+<div class="absolute top-1/2 -right-1 translate-y-[-50%] bg-slate-200 w-4 h-48 rounded-l-lg border-l-2 border-slate-300 flex items-center justify-center">
+<span class="text-[10px] font-bold text-slate-500 uppercase rotate-90 whitespace-nowrap">Bar Counter</span>
+</div>
+<!-- Tables -->
+<div class="absolute top-24 left-24 w-24 h-24 bg-white border-2 border-slate-200 rounded-lg flex flex-col items-center justify-center shadow-sm hover:border-slate-300 cursor-move">
+<div class="w-2 h-2 rounded-full bg-green-500 absolute top-2 right-2"></div>
+<span class="text-body font-bold text-slate-900">T-1</span>
+<span class="text-caption text-slate-500">4 Seats</span>
+</div>
+<div class="absolute top-24 left-64 w-24 h-24 bg-white border-2 border-slate-200 rounded-full flex flex-col items-center justify-center shadow-sm hover:border-slate-300 cursor-move">
+<div class="w-2 h-2 rounded-full bg-green-500 absolute top-2 right-2"></div>
+<span class="text-body font-bold text-slate-900">T-2</span>
+<span class="text-caption text-slate-500">2 Seats</span>
+</div>
+<div class="absolute top-64 left-24 w-48 h-24 bg-white border-2 border-slate-200 rounded-lg flex flex-col items-center justify-center shadow-sm hover:border-slate-300 cursor-move">
+<div class="w-2 h-2 rounded-full bg-slate-300 absolute top-2 right-2"></div>
+<span class="text-body font-bold text-slate-900">T-3</span>
+<span class="text-caption text-slate-500">6 Seats</span>
+</div>
+<!-- Table 5 (SELECTED) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-white border-2 border-primary-container rounded-lg flex flex-col items-center justify-center shadow-[0_0_15px_rgba(176,47,0,0.2)] cursor-move z-10">
+<div class="w-2 h-2 rounded-full bg-green-500 absolute top-2 right-2"></div>
+<span class="text-h1 font-black text-slate-900">T-5</span>
+<span class="text-body text-slate-500">4 Seats</span>
+<div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-primary-container rounded-sm"></div>
+<div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-primary-container rounded-sm"></div>
+<div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-primary-container rounded-sm"></div>
+<div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-primary-container rounded-sm"></div>
+<div class="absolute -left-20 top-1/2 w-20 border-t border-dashed border-primary-container/40"></div>
+<div class="absolute -top-20 left-1/2 h-20 border-l border-dashed border-primary-container/40"></div>
+</div>
+</div>
+</section>
+<!-- BOTTOM-DOCKED PROPERTIES PANEL (Slides up) -->
+<aside class="absolute bottom-0 left-[72px] right-0 bg-white border-t border-slate-200 shadow-[0_-8px_30px_rgb(0,0,0,0.08)] transform transition-transform duration-300 z-30 translate-y-0 h-[380px] flex flex-col overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-3">
+<h2 class="text-[15px] font-semibold text-slate-900">Table Properties</h2>
+<span class="text-caption bg-primary/10 text-primary px-2 py-0.5 rounded font-bold">T-5</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="text-slate-400 hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+<div class="w-px h-4 bg-slate-200 mx-2"></div>
+<button class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-x-auto custom-scrollbar p-6">
+<div class="flex gap-10 min-w-max h-full">
+<!-- General Settings -->
+<div class="space-y-6 w-64 shrink-0">
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Table Name/ID</label>
+<input class="w-full h-10 rounded-lg border-slate-200 focus:border-primary focus:ring-0 text-body font-medium" type="text" value="T-5"/>
+</div>
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Table Shape</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="h-10 rounded-lg border-2 border-primary bg-primary/5 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined">square</span>
+</button>
+<button class="h-10 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-400 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">circle</span>
+</button>
+<button class="h-10 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-400 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">rectangle</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Layout Settings -->
+<div class="space-y-6 w-72 shrink-0">
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Capacity</label>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50">-</button>
+<div class="flex-1 h-10 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-900">4</div>
+<button class="w-10 h-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50">+</button>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Width</label>
+<div class="relative">
+<input class="w-full h-10 rounded-lg border-slate-200 text-body pr-8" type="text" value="120"/>
+<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">CM</span>
+</div>
+</div>
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Height</label>
+<div class="relative">
+<input class="w-full h-10 rounded-lg border-slate-200 text-body pr-8" type="text" value="120"/>
+<span class="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">CM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Placement Settings -->
+<div class="space-y-6 w-64 shrink-0">
+<div class="space-y-related">
+<div class="flex justify-between items-center">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Rotation</label>
+<span class="text-caption font-bold text-slate-900">0°</span>
+</div>
+<input class="w-full accent-primary h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer mt-2" type="range"/>
+</div>
+<div class="space-y-related">
+<label class="text-caption text-slate-500 uppercase tracking-wider">Zone Assignment</label>
+<select class="w-full h-10 rounded-lg border-slate-200 focus:border-primary focus:ring-0 text-body font-medium">
+<option>Main Dining Hall</option>
+<option>Private Booths</option>
+<option>Outdoor Terrace</option>
+</select>
+</div>
+</div>
+<!-- Operational Settings -->
+<div class="space-y-4 w-64 shrink-0">
+<h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Operational Settings</h3>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-body font-medium text-slate-700">Allow Reservations</span>
+<div class="relative inline-flex items-center">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-body font-medium text-slate-700">Joinable Table</span>
+<div class="relative inline-flex items-center">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</div>
+</label>
+<div class="pt-2 space-y-2">
+<button class="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-body font-semibold border border-slate-200 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                Duplicate Table
+                            </button>
+<button class="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-body font-semibold border border-slate-200 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">grid_view</span>
+                                Align to Grid
+                            </button>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- FOOTER STRIP -->
+<footer class="h-10 bg-slate-900 px-6 flex items-center justify-between text-white border-t border-slate-800 shrink-0 z-40">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Coordinates</span>
+<span class="text-[11px] font-mono text-primary-fixed-dim">X: 420, Y: 180</span>
+</div>
+<div class="w-px h-3 bg-slate-700"></div>
+<div class="flex items-center gap-1.5">
+<span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Object</span>
+<span class="text-[11px] text-slate-300">Table (Square)</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="text-[11px] text-slate-400">Last autosaved at 11:24 AM</span>
+</div>
+</footer>
+</main>
+</body></html>

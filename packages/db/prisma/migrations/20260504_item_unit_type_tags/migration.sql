@@ -1,0 +1,3 @@
+-- AddColumn: Item.unitType and Item.tags
+ALTER TABLE "Item" ADD COLUMN IF NOT EXISTS "unitType" TEXT DEFAULT 'Per Item';
+ALTER TABLE "Item" ADD COLUMN IF NOT EXISTS "tags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

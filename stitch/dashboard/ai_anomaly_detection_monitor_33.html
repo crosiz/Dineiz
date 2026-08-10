@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Anomaly Detection | SwiftServe POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#ff5722",
+                        "secondary-fixed": "#dae2fd",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-primary": "#ffffff",
+                        "surface-container-high": "#ffe2da",
+                        "primary-fixed": "#ffdbd1",
+                        "inverse-primary": "#ffb5a0",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "surface-dim": "#f1d4cc",
+                        "on-surface-variant": "#5b4039",
+                        "surface-variant": "#fadcd4",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#b02f00",
+                        "surface-bright": "#fff8f6",
+                        "on-tertiary-container": "#fcfcff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "primary": "#b02f00",
+                        "outline-variant": "#e4beb4",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-surface": "#271813",
+                        "tertiary": "#00628c",
+                        "on-error-container": "#93000a",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface": "#fff8f6",
+                        "inverse-surface": "#3e2c27",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#541200",
+                        "outline": "#907067",
+                        "on-background": "#271813",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#862200",
+                        "surface-container-highest": "#fadcd4",
+                        "surface-container": "#ffe9e4",
+                        "background": "#fff8f6",
+                        "tertiary-container": "#007caf",
+                        "surface-container-low": "#fff1ed",
+                        "secondary-container": "#dae2fd",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-secondary-fixed": "#131b2e",
+                        "inverse-on-surface": "#ffede8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "page_margin": "24px",
+                        "element": "16px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "h1": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .shadow-premium {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background antialiased">
+<!-- SIDEBAR (SideNavBar Component) -->
+<aside class="fixed left-0 top-0 h-full w-64 border-r border-slate-800 bg-slate-900 flex flex-col py-6 z-50">
+<div class="px-6 mb-8">
+<h1 class="text-lg font-bold text-white tracking-wide">SwiftServe</h1>
+<p class="text-slate-400 text-[10px] uppercase tracking-[0.2em] font-semibold mt-1">Premium Management</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="bg-orange-600 text-white rounded-lg mx-2 my-1 px-4 py-2 flex items-center gap-3 transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Anomalies</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span>Operations</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="business_center">business_center</span>
+<span>Business</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span>Growth</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span>Analytics</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-800">
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</a>
+<a class="text-slate-400 hover:text-white mx-2 my-1 px-4 py-2 flex items-center gap-3 hover:bg-slate-800 rounded-lg transition-all scale-98 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- MAIN CONTENT -->
+<main class="ml-64 p-page_margin min-h-screen">
+<!-- TOP NAV BAR -->
+<header class="flex justify-between items-center mb-section">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined text-2xl" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<h2 class="font-display text-display text-on-surface">Anomaly Detection</h2>
+<p class="text-body text-on-surface-variant">AI-powered monitoring detects unusual patterns in real time</p>
+</div>
+</div>
+<div class="flex items-center gap-related">
+<div class="text-right mr-4">
+<p class="text-caption text-on-surface-variant font-medium">Last scan: 2 minutes ago</p>
+</div>
+<button class="bg-surface-container-lowest border border-outline text-on-surface px-4 py-2 rounded-lg text-body font-semibold flex items-center gap-2 hover:bg-surface transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+                    Alert Settings
+                </button>
+</div>
+</header>
+<!-- STATUS BANNERS -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-grid_gutter mb-section">
+<!-- STATE A: WARNING -->
+<div class="bg-gradient-to-r from-orange-500 to-primary-container p-page_margin rounded-xl text-white shadow-xl flex items-center gap-6">
+<div class="bg-white/20 p-3 rounded-full">
+<span class="material-symbols-outlined text-3xl" data-icon="warning" data-weight="fill" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div>
+<h3 class="text-h1 font-bold">3 anomalies detected</h3>
+<p class="text-body opacity-90">Significant deviations identified in transaction volume and cancellation rates.</p>
+</div>
+</div>
+<!-- STATE B: SUCCESS -->
+<div class="bg-emerald-600 p-page_margin rounded-xl text-white shadow-xl flex items-center gap-6">
+<div class="bg-white/20 p-3 rounded-full">
+<span class="material-symbols-outlined text-3xl" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h3 class="text-h1 font-bold">All systems normal</h3>
+<p class="text-body opacity-90">All 14 active restaurant branches are performing within expected historical bounds.</p>
+</div>
+</div>
+</div>
+<div class="bento-grid">
+<!-- ANOMALY LIST (Left 8 Columns) -->
+<section class="col-span-8 space-y-element">
+<div class="flex items-center justify-between px-2 mb-2">
+<h3 class="text-h1 text-on-surface">Recent Incidents</h3>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-primary-container text-white text-caption rounded-full font-bold">3 OPEN</span>
+<span class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-caption rounded-full">12 RESOLVED</span>
+</div>
+</div>
+<!-- CRITICAL CARD -->
+<div class="bg-surface-container-lowest border border-error-container rounded-xl shadow-premium overflow-hidden border-l-4 border-l-error">
+<div class="p-page_margin">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-error-container flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="error_med" data-weight="fill" style="font-variation-settings: 'FILL' 1;">error_med</span>
+</div>
+<div>
+<h4 class="text-h2 text-on-surface">Revenue Drop Spike - Main Street Branch</h4>
+<p class="text-caption text-on-surface-variant">Detected 14:22 PM • 45 minutes duration</p>
+</div>
+</div>
+<span class="bg-error text-white px-3 py-1 rounded-lg text-caption font-black tracking-widest uppercase">CRITICAL</span>
+</div>
+<div class="grid grid-cols-2 gap-section bg-surface-container-low p-element rounded-lg mb-element">
+<div>
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">What happened</p>
+<div class="flex items-end gap-4 h-16 mb-2">
+<!-- Simple SVG Sparkline visualization -->
+<div class="flex-1 bg-white p-2 rounded border border-outline-variant relative overflow-hidden h-full flex items-center">
+<svg class="w-full h-full stroke-error fill-none stroke-[2]" viewbox="0 0 100 30">
+<path d="M0,5 L20,7 L40,6 L50,25 L60,28 L80,26 L100,27"></path>
+</svg>
+</div>
+<div class="text-error font-black text-h1">-38%</div>
+</div>
+<p class="text-body text-on-surface">Revenue fell significantly below the expected $4.2k threshold for Tuesday afternoon.</p>
+</div>
+<div class="border-l border-outline-variant pl-element">
+<p class="text-caption font-bold text-primary uppercase mb-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="smart_toy">smart_toy</span>
+                                    AI Insight
+                                </p>
+<p class="text-body italic text-on-surface leading-relaxed">
+                                    "This drop correlates with a sudden increase in 'System Offline' logs. It's likely a local internet outage affecting terminal synchronization rather than a lack of customer volume."
+                                </p>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-related">
+<button class="bg-primary text-white px-4 py-2 rounded-lg text-body font-bold hover:bg-surface-tint transition-all">Mark Resolved</button>
+<button class="bg-white border border-outline text-on-surface px-4 py-2 rounded-lg text-body font-semibold hover:bg-surface transition-all">View Orders</button>
+</div>
+<div class="flex gap-related">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all" title="Create Alert Rule">
+<span class="material-symbols-outlined" data-icon="add_alert">add_alert</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all" title="Dismiss">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- WARNING CARD -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-premium overflow-hidden border-l-4 border-l-primary-container">
+<div class="p-page_margin">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+</div>
+<div>
+<h4 class="text-h2 text-on-surface">Abnormal Cancellation Rate</h4>
+<p class="text-caption text-on-surface-variant">Detected 12:05 PM • Ongoing</p>
+</div>
+</div>
+<span class="bg-primary-container text-white px-3 py-1 rounded-lg text-caption font-black tracking-widest uppercase">WARNING</span>
+</div>
+<div class="grid grid-cols-2 gap-section bg-surface-container-low p-element rounded-lg mb-element">
+<div>
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">What happened</p>
+<div class="flex items-end gap-4 h-16 mb-2">
+<div class="flex-1 bg-white p-2 rounded border border-outline-variant relative overflow-hidden h-full flex items-center">
+<svg class="w-full h-full stroke-primary-container fill-none stroke-[2]" viewbox="0 0 100 30">
+<path d="M0,25 L20,24 L40,22 L50,5 L70,8 L100,10"></path>
+</svg>
+</div>
+<div class="text-primary-container font-black text-h1">+22%</div>
+</div>
+<p class="text-body text-on-surface">Voided items and total order cancellations have spiked across the 'West Side' cluster.</p>
+</div>
+<div class="border-l border-outline-variant pl-element">
+<p class="text-caption font-bold text-primary uppercase mb-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="smart_toy">smart_toy</span>
+                                    AI Insight
+                                </p>
+<p class="text-body italic text-on-surface leading-relaxed">
+                                    "Pattern analysis indicates several high-value voided items originated from a single employee terminal (ID: 442). Monitoring for potential internal fraud is recommended."
+                                </p>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-related">
+<button class="bg-primary text-white px-4 py-2 rounded-lg text-body font-bold hover:bg-surface-tint transition-all">Mark Resolved</button>
+<button class="bg-white border border-outline text-on-surface px-4 py-2 rounded-lg text-body font-semibold hover:bg-surface transition-all">Audit Logs</button>
+</div>
+<div class="flex gap-related">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all"><span class="material-symbols-outlined" data-icon="add_alert">add_alert</span></button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant rounded-lg transition-all"><span class="material-symbols-outlined" data-icon="close">close</span></button>
+</div>
+</div>
+</div>
+</div>
+<!-- LOW CARD -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-premium overflow-hidden border-l-4 border-l-secondary">
+<div class="p-page_margin">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-lg bg-secondary-fixed flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="info">info</span>
+</div>
+<div>
+<h4 class="text-h2 text-on-surface">Unusual Order Customization Frequency</h4>
+<p class="text-caption text-on-surface-variant">Detected 09:30 AM • 2 hours duration</p>
+</div>
+</div>
+<span class="bg-secondary text-white px-3 py-1 rounded-lg text-caption font-black tracking-widest uppercase">LOW</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<p class="text-body text-on-surface-variant italic">Artificial Intelligence flagged a 15% increase in allergen-related modifications for breakfast menu items.</p>
+<button class="text-primary font-bold text-caption hover:underline">View Analysis</button>
+</div>
+</div>
+</div>
+</section>
+<!-- SIDEBAR WIDGETS (Right 4 Columns) -->
+<section class="col-span-4 space-y-section">
+<!-- TREND CHART -->
+<div class="bg-surface-container-lowest p-page_margin rounded-xl shadow-premium border border-outline-variant">
+<h3 class="text-h2 text-on-surface mb-section">Anomaly Frequency — Last 30 Days</h3>
+<div class="flex items-end justify-between h-40 gap-1 mb-4">
+<!-- Mock bars -->
+<div class="w-3 bg-emerald-500 rounded-t h-[60%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[70%]"></div>
+<div class="w-3 bg-orange-500 rounded-t h-[85%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[40%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[55%]"></div>
+<div class="w-3 bg-red-500 rounded-t h-[100%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[30%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[45%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[60%]"></div>
+<div class="w-3 bg-orange-500 rounded-t h-[75%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[50%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[40%]"></div>
+<div class="w-3 bg-red-500 rounded-t h-[90%]"></div>
+<div class="w-3 bg-emerald-500 rounded-t h-[20%]"></div>
+</div>
+<div class="flex justify-between text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">
+<span>30 Days ago</span>
+<span>Today</span>
+</div>
+<div class="mt-section grid grid-cols-3 gap-2">
+<div class="text-center">
+<p class="text-caption text-on-surface-variant">Critical</p>
+<p class="text-h2 text-error">4</p>
+</div>
+<div class="text-center border-x border-outline-variant">
+<p class="text-caption text-on-surface-variant">Warning</p>
+<p class="text-h2 text-primary-container">12</p>
+</div>
+<div class="text-center">
+<p class="text-caption text-on-surface-variant">Normal</p>
+<p class="text-h2 text-emerald-600">84%</p>
+</div>
+</div>
+</div>
+<!-- ALERT RULES -->
+<div class="bg-surface-container-lowest p-page_margin rounded-xl shadow-premium border border-outline-variant">
+<div class="flex justify-between items-center mb-section">
+<h3 class="text-h2 text-on-surface">Active Rules</h3>
+<button class="text-primary material-symbols-outlined" data-icon="add_circle">add_circle</button>
+</div>
+<ul class="space-y-element">
+<li class="flex items-center justify-between p-element bg-surface rounded-lg">
+<div>
+<p class="text-body font-bold text-on-surface">Revenue drops &gt; 25%</p>
+<p class="text-caption text-on-surface-variant">Critical threshold</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</li>
+<li class="flex items-center justify-between p-element bg-surface rounded-lg">
+<div>
+<p class="text-body font-bold text-on-surface">Cancellation rate &gt; 15%</p>
+<p class="text-caption text-on-surface-variant">Warning threshold</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</li>
+<li class="flex items-center justify-between p-element bg-surface rounded-lg opacity-60">
+<div>
+<p class="text-body font-bold text-on-surface">Average ticket &lt; $10</p>
+<p class="text-caption text-on-surface-variant">Paused rule</p>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</li>
+</ul>
+</div>
+<!-- AI TRAINING STATUS -->
+<div class="relative overflow-hidden bg-slate-900 rounded-xl p-page_margin text-white shadow-xl">
+<div class="relative z-10">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-orange-400" data-icon="psychology">psychology</span>
+<h4 class="text-body font-bold uppercase tracking-wider">AI Training</h4>
+</div>
+<p class="text-caption opacity-80 mb-4">Neural models are currently learning peak-hour patterns for the Holiday season.</p>
+<div class="w-full bg-white/10 rounded-full h-1.5 mb-2">
+<div class="bg-orange-500 h-1.5 rounded-full" style="width: 72%"></div>
+</div>
+<p class="text-right text-[10px] font-black uppercase text-orange-400">72% Optimized</p>
+</div>
+<!-- Abstract Background Pattern -->
+<div class="absolute -right-10 -bottom-10 opacity-10">
+<span class="material-symbols-outlined text-[160px]" data-icon="schema">schema</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

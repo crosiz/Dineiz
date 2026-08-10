@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Maitre D' POS - Order Terminal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#271813",
+                        "on-primary-container": "#541200",
+                        "on-surface": "#271813",
+                        "tertiary-container": "#007caf",
+                        "error-container": "#ffdad6",
+                        "surface-container-low": "#fff1ed",
+                        "tertiary": "#00628c",
+                        "surface-tint": "#b02f00",
+                        "secondary": "#565e74",
+                        "primary": "#b02f00",
+                        "primary-fixed": "#ffdbd1",
+                        "surface": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "background": "#fff8f6",
+                        "on-secondary-container": "#5c647a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface-variant": "#fadcd4",
+                        "on-surface-variant": "#5b4039",
+                        "surface-container": "#ffe9e4",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "primary-container": "#ff5722",
+                        "surface-container-highest": "#fadcd4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-tertiary-container": "#fcfcff",
+                        "inverse-on-surface": "#ffede8",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#907067",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container-high": "#ffe2da",
+                        "outline-variant": "#e4beb4",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#fff8f6",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-surface": "#3e2c27",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "inverse-primary": "#ffb5a0",
+                        "tertiary-fixed": "#c8e6ff",
+                        "secondary-fixed": "#dae2fd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "page_margin": "24px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background overflow-hidden h-screen flex">
+<!-- SideNavBar (Left Fixed) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col z-40 bg-slate-950 h-full w-20 md:w-64 border-r border-slate-800 shadow-2xl">
+<div class="p-6 flex flex-col items-center md:items-start">
+<span class="text-xl font-black tracking-tighter text-orange-500 mb-8">MAITRE D'</span>
+<div class="space-y-1 w-full">
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined mr-3">table_restaurant</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Floor Plan</span>
+</div>
+<div class="bg-orange-600 text-white rounded-lg mx-2 my-1 flex items-center p-3 scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined mr-3">add_shopping_cart</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">New Order</span>
+</div>
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined mr-3">receipt_long</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Order History</span>
+</div>
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined mr-3">inventory_2</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Inventory</span>
+</div>
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 transition-all scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Reports</span>
+</div>
+</div>
+</div>
+<div class="mt-auto border-t border-slate-800 p-4">
+<div class="flex items-center space-x-3 mb-6 px-4">
+<div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-white">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</div>
+<div class="hidden md:block">
+<p class="text-white text-[10px] font-bold uppercase tracking-widest">Station 01</p>
+<p class="text-slate-500 text-[10px] uppercase">Main Dining Room</p>
+</div>
+</div>
+<div class="space-y-1">
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 cursor-pointer">
+<span class="material-symbols-outlined mr-3">help_outline</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Help</span>
+</div>
+<div class="text-slate-400 hover:text-white flex items-center p-3 mx-2 my-1 hover:bg-slate-800 cursor-pointer">
+<span class="material-symbols-outlined mr-3">lock_open</span>
+<span class="hidden md:block font-['Inter'] text-xs font-semibold uppercase tracking-wider">Lock</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Workspace Container (Three-Column Layout) -->
+<main class="ml-20 md:ml-64 flex-1 flex flex-col h-full bg-[#F8FAFC]">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-6 w-full sticky top-0 z-50 bg-white shadow-sm border-b border-slate-200">
+<div class="flex items-center space-x-4">
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<span class="material-symbols-outlined text-lg">search</span>
+</span>
+<input class="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent w-64" placeholder="Search menu..." type="text"/>
+</div>
+<div class="flex items-center space-x-2 bg-slate-100 p-1 rounded-lg">
+<button class="px-4 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-primary uppercase">Dine-In</button>
+<button class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 uppercase">Takeaway</button>
+<button class="px-4 py-1.5 text-xs font-bold rounded-md text-slate-500 hover:text-slate-700 uppercase">Delivery</button>
+</div>
+</div>
+<div class="flex items-center space-x-4">
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 mx-2"></div>
+<div class="text-right">
+<p class="font-h2 text-on-background">Order #842</p>
+<p class="text-caption text-slate-500">Table 12 • Server: Alex</p>
+</div>
+</div>
+</header>
+<!-- Content Area: Three Columns -->
+<div class="flex flex-1 overflow-hidden">
+<!-- LEFT COLUMN (20%): Vertical Category Navigation -->
+<nav class="w-1/5 bg-slate-900 overflow-y-auto p-4 flex flex-col space-y-3">
+<button class="group flex flex-col items-center justify-center p-4 bg-orange-600 rounded-xl text-white transition-all transform active:scale-95 shadow-lg">
+<span class="material-symbols-outlined text-3xl mb-2">lunch_dining</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Burgers</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-slate-800 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-3xl mb-2">local_pizza</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Pizza</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-slate-800 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-3xl mb-2">restaurant_menu</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Sides</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-slate-800 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-3xl mb-2">local_bar</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Drinks</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-slate-800 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-3xl mb-2">cake</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Desserts</span>
+</button>
+<button class="group flex flex-col items-center justify-center p-4 bg-slate-800 rounded-xl text-slate-400 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-3xl mb-2">breakfast_dining</span>
+<span class="font-h2 text-[13px] uppercase tracking-wider">Appetizers</span>
+</button>
+</nav>
+<!-- CENTER COLUMN (45%): Large Menu Item Grid -->
+<section class="w-[45%] overflow-y-auto p-6 bg-slate-50">
+<div class="flex items-center justify-between mb-6">
+<h2 class="font-display text-on-background">Burgers Selection</h2>
+<span class="text-caption bg-orange-100 text-orange-800 px-3 py-1 rounded-full">12 Items</span>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Menu Item Card 1 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A gourmet cheeseburger with melting cheddar, crisp lettuce, and artisan brioche bun, presented on a minimalist white ceramic plate under bright professional food lighting. The atmosphere is upscale and clean, highlighting the rich textures of the ingredients against a soft-focus modern restaurant background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxTI9MpOEOLTejy-diGEo2w65K9S5R3XlODO7G40dW-uygn4LC4XQKuOcjtOxwHJfakQhS1bT4jAL-7jtJOh90qY2q_dA1BPAko6l6rOSu-so_P0nCYj7bM_Vtltpgq5hia5wRPLlgE6n0LakrN_mxe3TWLYLN6oWgcWqqXjL4UJApv9d5Qi-3B-Bjt6melXWDxZkeNWZ7LsGIG15Pdty9fF26ntVe9zETB7T42UPtVtrBoJDbB-zZyfLde8ikj78L1ipFp3d9tTU9"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Classic Beef Smash</h3>
+<p class="text-primary font-bold text-sm">$14.50</p>
+</div>
+<!-- Menu Item Card 2 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A premium wagyu burger with caramelized onions and truffle aioli, served on a dark slate board. The lighting is cinematic with deep orange undertones and high contrast, evoking a luxury dining experience. The textures of the juicy beef and toasted bun are vividly captured in a professional editorial food photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0ZwgoF0p-AAoNZCFuz_UtTCfztXdwOoBWB9JbPZdjHvz3Vl-xPu3tYoqdzHCQr41O8q9mCRkHV3miMolXEq7AP1dw7qSlez0-jcx7kjM7dbZ-TchwQCZn6hUnTsvkXwAaheTAM_0r0NtoDJX5m6xSptgO5ya221L3Cob6YXhafmZmQCgVh4whDmLkHPVCI2badzDFedxOTUApc9yod6x_p2Q6fUlpdjXGLzlfkNMyJTTVd1yvUBf9QwtstaHoPCwscGAUxMfYxjY4"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Truffle Wagyu</h3>
+<p class="text-primary font-bold text-sm">$18.95</p>
+</div>
+<!-- Menu Item Card 3 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A stacked double bacon cheeseburger with crispy strips of bacon and molten cheese dripping over the sides. The background is a clean, modern commercial kitchen environment with soft ambient lighting. The color palette emphasizes the golden-brown tones of the bread and the vibrant orange of the cheese." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDYzjXrzLkmDNtaQrFVu3A8GDheIEVXV7cCLvYzuiQo49IX5sAYyRqpwlqjGRgeLb6yXi-txKO2WscTjyOoO9ezpTeBHrUwA_zCM-7JebmHLHSmHOCEkA80DvHhe1BfEXCetmwchIud6-A9dIhqFNQmwJRKVPEc3H7_HnWsleiciK0thP-y-nL3-oHvQ8glncCxfhbNNBOSAkXoII8JMS6_7gFjc7R5J0jhgeVN35Yur2uu5cPV_t7dLGwvwK164yb6f3EVZdP67n-8"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Double Bacon Stack</h3>
+<p class="text-primary font-bold text-sm">$16.20</p>
+</div>
+<!-- Menu Item Card 4 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A plant-based garden burger topped with fresh avocado and sprouts on a whole-grain bun. The shot is bright and airy with high-key lighting, emphasizing freshness and health. The overall aesthetic is minimalist and contemporary, fitting for a modern upscale café setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE2vi38hL9gxxDRUgl-fnyAWknzJmIuvYYU6BQc1idYqS5GbdEyHUpBVW2aTuIXjS0JIh2aRs4k4jB-wd1aUzrMI7UFdZGu3M5ailDZsV7PctnQoxCovPC-akp3lmTBHjXCSWpcUPK_NJUbxTjS93qa-gZ9Rwo6Pyw1lN0gUqYzJCpr9vSf-EplxhNnDU0uXu0cJ6SBMf58WjHkBIQ4Y9T6eHPWoj78-0CcH4cUjqRHvEpyO00XLPIebt6jcnAZ-b5gDvR_najDe60"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Garden Avocado</h3>
+<p class="text-primary font-bold text-sm">$13.50</p>
+</div>
+<!-- Menu Item Card 5 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A spicy buffalo chicken burger with blue cheese dressing and crisp celery slaw. The image captures the vibrant red sauce and contrasting creamy dressing in sharp detail. The lighting is focused and warm, creating a mouth-watering appeal for a high-traffic urban dining venue." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDy4xpjCD82HkA_o9PGeDo6HIOBluoIJWaVFDszjUwqs2zkiPQIAARGt6jCFuVpZadmvL0iDT7TyYn_udM2hQ7jWXMWoMEiNApGXzFs58wTZq9SjQGtaCZhMlohqpS6ByvvnZHoz5toC5RS-MgOl8B_uc6wAQsqe15s_YMIGfb-UiIrbavp8DfDHnGYOngSrH0rddZeNollb7VGpOKZNkCodrsjtoXvZyRzsyQwACsY_zD-CmVAAXDA4nbti38pONTFvfCey6Z6FdKR"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Buffalo Hot Crispy</h3>
+<p class="text-primary font-bold text-sm">$12.95</p>
+</div>
+<!-- Menu Item Card 6 -->
+<div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 hover:border-primary-container transition-all cursor-pointer group">
+<div class="aspect-square rounded-lg overflow-hidden mb-3">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform" data-alt="A classic portobello mushroom burger with roasted peppers and swiss cheese. The scene is illuminated by soft, natural-looking side light that enhances the earthy textures of the mushroom and the melt of the cheese. The background is a clean, neutral restaurant interior with minimal distractions." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCffBgpClNL7i9rn6znRUCcjwrPgJsShhhGd3jkzefiE8WP4KgcYeS_b-Oyxup3yU6GEzcyFacy1fRSFGgYHJnj_NFi2NPwTptFUmFO-gBDgpV9Mdf38m48y-4aiDqy4Rph-QBC5CXwi4HsZDB3Be5mLKVpj-OGwKmm4c3Dz0WcdWyDtlDlJ45ocdtmHwEoWZ6UzA63d6FTvsdp1DA5KlEDif5JD440mgYpoEw6wISEWt31scleLh328CBxMYim5NKN8raaO-lKBr0G"/>
+</div>
+<h3 class="font-h2 text-sm leading-tight mb-1">Portobello Roast</h3>
+<p class="text-primary font-bold text-sm">$11.80</p>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN (35%): Persistent Order Cart -->
+<aside class="w-[35%] bg-white border-l border-slate-200 flex flex-col">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<div>
+<h2 class="font-h1 text-on-background">Current Order</h2>
+<p class="text-caption text-slate-500">3 Items listed</p>
+</div>
+<button class="text-error font-bold text-xs uppercase tracking-widest px-3 py-1 hover:bg-error-container rounded-md transition-colors">Clear All</button>
+</div>
+<div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+<!-- Cart Item 1 -->
+<div class="flex items-start justify-between group">
+<div class="flex space-x-3">
+<div class="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Classic Beef Smash item thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_mjtqHTmm7PhLW5XJK1QFACHEpU5pmt29ectGsQ63NyUg7ysHGOF-JgUbyHRIpoU5APuxx0NM-h_5PYyTt7rVNdsyWxV_0f9stIpBewBpV0d63BfSuloxM9CjQFPtv5RD6BOYtYcbg9b-1vrp_zcQL7CEdjpOvaWw18VczgSRJDPjvFvpPam2HTfu-VaAdL_jrd7NQ4twzSIVFjpHvjh19z0U9w7U9u3idaeSl35hKHa3zfPrWrjkbG2AKAJMrS7x-jNFtW2USJch"/>
+</div>
+<div>
+<h4 class="font-h2 text-sm">Classic Beef Smash</h4>
+<p class="text-caption text-slate-500">Medium Well, No Onions</p>
+<div class="flex items-center space-x-2 mt-1">
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">-</button>
+<span class="text-sm font-bold w-4 text-center">1</span>
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">+</button>
+</div>
+</div>
+</div>
+<p class="font-bold text-sm text-on-background">$14.50</p>
+</div>
+<!-- Cart Item 2 -->
+<div class="flex items-start justify-between group">
+<div class="flex space-x-3">
+<div class="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Double Bacon Stack item thumbnail" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkd_86Tn3_jhBUFA1rBMXmcM78QkWPHvg9adoH9tOsLQ7XkOnFN1w3HAhisEnOgqJKfW3juPP1O2hzxlxxxqqvEXI5p-BV6_H-o-ezs9FJ5t8ABu4rDn0xUe_NFzIdKxWizrsr1d7-myCcbPUD4f7zhOvV02KT0ak42JNW-CMV5eGdjNTRXF__sVZpP9hmIYp2eM45ZHZB84oj8e0EJaB6SD0jcojsy5QQSLQ0KrGgkfmD_FFUokzH8egII0IQ9Uhd4EaUtXW2A4mv"/>
+</div>
+<div>
+<h4 class="font-h2 text-sm">Double Bacon Stack</h4>
+<p class="text-caption text-slate-500">Extra Cheese</p>
+<div class="flex items-center space-x-2 mt-1">
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">-</button>
+<span class="text-sm font-bold w-4 text-center">2</span>
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">+</button>
+</div>
+</div>
+</div>
+<p class="font-bold text-sm text-on-background">$32.40</p>
+</div>
+<!-- Cart Item 3 -->
+<div class="flex items-start justify-between group">
+<div class="flex space-x-3">
+<div class="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined">local_drink</span>
+</div>
+<div>
+<h4 class="font-h2 text-sm">Craft Cola Large</h4>
+<p class="text-caption text-slate-500">Less Ice</p>
+<div class="flex items-center space-x-2 mt-1">
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">-</button>
+<span class="text-sm font-bold w-4 text-center">1</span>
+<button class="w-6 h-6 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-50 text-slate-600">+</button>
+</div>
+</div>
+</div>
+<p class="font-bold text-sm text-on-background">$4.50</p>
+</div>
+</div>
+<!-- Totals & Actions -->
+<div class="p-6 bg-slate-50 border-t border-slate-200">
+<div class="space-y-2 mb-6">
+<div class="flex justify-between text-caption text-slate-600">
+<span>Subtotal</span>
+<span>$51.40</span>
+</div>
+<div class="flex justify-between text-caption text-slate-600">
+<span>Tax (8.5%)</span>
+<span>$4.37</span>
+</div>
+<div class="flex justify-between font-display text-on-background pt-2 border-t border-slate-200">
+<span>Total</span>
+<span>$55.77</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<button class="py-4 border border-slate-300 bg-white rounded-xl font-bold text-xs uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors">Draft</button>
+<button class="py-4 bg-primary-container text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg hover:shadow-orange-200/50 transition-all">Quick Checkout</button>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Payment Modal Overlay (Hidden by Default) -->
+<div class="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center hidden" id="payment-modal">
+<div class="bg-white rounded-2xl w-[500px] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+<div class="p-6 bg-slate-950 text-white flex justify-between items-center">
+<div>
+<p class="text-[10px] uppercase tracking-widest opacity-60">Payment Gateway</p>
+<h3 class="font-display text-xl">Amount Due: $55.77</h3>
+</div>
+<button class="p-2 hover:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-8">
+<p class="text-caption text-slate-500 mb-6 text-center">Select your preferred payment method to complete the transaction.</p>
+<div class="grid grid-cols-2 gap-4">
+<button class="flex flex-col items-center justify-center p-6 border-2 border-primary-container bg-primary-container/5 rounded-xl transition-all">
+<span class="material-symbols-outlined text-4xl text-primary mb-2">payments</span>
+<span class="font-bold text-sm">Cash</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 border-2 border-slate-100 hover:border-primary-container rounded-xl transition-all">
+<span class="material-symbols-outlined text-4xl text-slate-600 mb-2">credit_card</span>
+<span class="font-bold text-sm">Card</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 border-2 border-slate-100 hover:border-primary-container rounded-xl transition-all">
+<span class="material-symbols-outlined text-4xl text-slate-600 mb-2">contactless</span>
+<span class="font-bold text-sm">Mobile Pay</span>
+</button>
+<button class="flex flex-col items-center justify-center p-6 border-2 border-slate-100 hover:border-primary-container rounded-xl transition-all">
+<span class="material-symbols-outlined text-4xl text-slate-600 mb-2">splitscreen</span>
+<span class="font-bold text-sm">Split Bill</span>
+</button>
+</div>
+</div>
+<div class="p-6 border-t border-slate-100 flex space-x-3">
+<button class="flex-1 py-4 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs uppercase tracking-widest">Cancel</button>
+<button class="flex-1 py-4 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg">Confirm Payment</button>
+</div>
+</div>
+</div>
+</body></html>

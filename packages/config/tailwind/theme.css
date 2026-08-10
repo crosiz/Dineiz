@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: var(--color-brand-primary, #FF5722);
+  --color-brand-secondary: var(--color-brand-secondary, #FF8A65);
+  --color-surface-base: var(--color-surface-base, #0F0F0F);
+  --color-surface-raised: var(--color-surface-raised, #1A1A1A);
+  --color-surface-overlay: var(--color-surface-overlay, #242424);
+  --color-border: var(--color-border, #2E2E2E);
+  --color-text-primary: var(--color-text-primary, #F5F5F5);
+  --color-text-secondary: var(--color-text-secondary, #9E9E9E);
+  --color-text-disabled: var(--color-text-disabled, #555555);
+
+  --color-status-new: #2196F3;
+  --color-status-prep: #FF9800;
+  --color-status-ready: #4CAF50;
+  --color-status-dispatched: #9C27B0;
+  --color-status-cancelled: #F44336;
+  --color-status-rush: #FF1744;
+  --color-cash: #66BB6A;
+  --color-card: #42A5F5;
+
+  --font-sans: "Inter", "Cairo", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Custom HTML Config from Branding Page */
+  --color-on-secondary: #ffffff;
+  --color-border-subtle: #E2E8F0;
+  --color-on-primary-fixed-variant: #862200;
+  --color-error-container: #ffdad6;
+  --color-tertiary-fixed: #e6deff;
+  --color-inverse-primary: #ffb5a0;
+  --color-outline: #907067;
+  --color-text-muted: #64748B;
+  --color-tertiary: #5f46ce;
+  --color-on-primary-fixed: #3b0900;
+  --color-on-tertiary-fixed-variant: #4629b6;
+  --color-surface-variant: #e0e3e5;
+  --color-surface-default: #F8FAFC;
+  --color-primary-fixed-dim: #ffb5a0;
+  --color-text-main: #0F172A;
+  --color-on-secondary-fixed: #131b2e;
+  --color-inverse-surface: #2d3133;
+  --color-surface: #f7f9fb;
+  --color-on-tertiary: #ffffff;
+  --color-on-secondary-container: #5c647a;
+  --color-surface-container: #eceef0;
+  --color-on-primary: #ffffff;
+  --color-surface-container-high: #e6e8ea;
+  --color-surface-container-low: #f2f4f6;
+  --color-on-background: #191c1e;
+  --color-secondary-fixed-dim: #bec6e0;
+  --color-on-error-container: #93000a;
+  --color-on-primary-container: #541200;
+  --color-secondary-fixed: #dae2fd;
+  --color-inverse-on-surface: #eff1f3;
+  --color-on-tertiary-fixed: #1b0063;
+  --color-secondary: #565e74;
+  --color-surface-card: #FFFFFF;
+  --color-background: #f7f9fb;
+  --color-on-surface: #191c1e;
+  --color-primary: #b02f00;
+  --color-error: #ba1a1a;
+  --color-surface-dim: #d8dadc;
+  --color-secondary-container: #dae2fd;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-bright: #f7f9fb;
+  --color-on-tertiary-container: #29008a;
+  --color-on-secondary-fixed-variant: #3f465c;
+  --color-on-surface-variant: #5b4039;
+  --color-tertiary-fixed-dim: #c9beff;
+  --color-tertiary-container: #927eff;
+  --color-primary-fixed: #ffdbd1;
+  --color-surface-tint: #b02f00;
+  --color-surface-container-highest: #e0e3e5;
+  --color-primary-container: #ff5722;
+  --color-on-error: #ffffff;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-md: 13px;
+  --text-label-md--line-height: 18px;
+  --text-label-md--letter-spacing: 0.01em;
+  --text-label-md--font-weight: 500;
+
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--font-weight: 600;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+  --text-body-lg--font-weight: 400;
+
+  --text-headline-lg-mobile: 20px;
+  --text-headline-lg-mobile--line-height: 28px;
+  --text-headline-lg-mobile--font-weight: 600;
+
+  --text-display-lg: 32px;
+  --text-display-lg--line-height: 40px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 700;
+
+  --text-label-sm: 12px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--font-weight: 600;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --spacing-gutter-desktop: 24px;
+  --spacing-gutter-mobile: 16px;
+  --spacing-margin-desktop: 40px;
+  --spacing-margin-mobile: 16px;
+  --spacing-max-width: 1200px;
+  --spacing-unit: 4px;
+}

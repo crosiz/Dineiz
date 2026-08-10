@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#f1d4cc",
+                        "primary-container": "#ff5722",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#e4beb4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27",
+                        "background": "#fff8f6",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fff8f6",
+                        "surface-bright": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-variant": "#fadcd4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "outline": "#907067",
+                        "on-surface": "#271813",
+                        "surface-container": "#ffe9e4",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#00628c",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary-container": "#5c647a",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed": "#dae2fd",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary-container": "#541200",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-on-surface": "#ffede8",
+                        "primary-fixed": "#ffdbd1",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-hidden">
+<!-- Sidebar Component (Immutable Logic) -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 bg-slate-900 dark:bg-black border-r border-slate-800 shadow-2xl font-['Inter'] antialiased text-sm font-medium">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<h1 class="text-xl font-black text-white tracking-tight">SwiftServe</h1>
+<p class="text-xs text-slate-400">POS Intelligence</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 bg-orange-600 text-white rounded-lg px-4 py-2.5 mx-2 my-1" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+                Operations
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+                Business
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+                Growth
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors hover:bg-slate-800" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+</div>
+</aside>
+<!-- Header Component -->
+<header class="fixed top-0 right-0 left-64 h-16 w-[calc(100%-16rem)] z-40 bg-[#F8FAFC] dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 font-['Inter'] text-slate-900 dark:text-slate-50">
+<div class="flex justify-between items-center px-8 w-full h-full backdrop-blur-sm bg-opacity-90">
+<div class="flex items-center gap-4">
+<span class="text-lg font-bold text-slate-900 dark:text-white">Main Branch</span>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="search">search</span>
+</span>
+<input class="pl-10 pr-4 py-1.5 bg-white dark:bg-slate-800 border-none rounded-full text-xs focus:ring-1 focus:ring-orange-600 w-64" placeholder="Search operations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500" data-icon="notifications">notifications</span>
+</button>
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500" data-icon="apps">apps</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+<img alt="User" data-alt="A professional headshot of a hospitality manager in a bright, modern office setting. The lighting is soft and natural, emphasizing a friendly yet authoritative professional persona. The background is slightly blurred, showing a clean, high-end minimalist interior with neutral tones and corporate sophistication." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcslp4lfr4NGp07OfOeKhJ5mPjCEB85OsZ6PWT7HEhhsUSKNwF38Ww0UaMZtLcWvRxfuSe_cg5hyjdz_nNx6di95TT-QGskSlsrMTkkyRbOyvH5IlGvBI_Qy3I7m_epqWyhE5wJ86gB1_eIMbX3c89lEjVNTqyMqNQeeFFTJWBpzkslRVz1UghwCvbS23o8CVOaLAKJgK6jSPE_76IN50YRbzSGnY7LSp6f9InL3ZYlPi_U6lw8m9cJiYH554KUHJs9w8gLGNOe3zA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="ml-64 pt-16 h-screen overflow-y-auto">
+<div class="p-page_margin flex flex-col gap-section">
+<!-- Page Title -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="add_business">add_business</span>
+<h2 class="font-h1 text-h1 text-on-surface">Branch Management</h2>
+</div>
+<!-- Central Form Area with Vertical Stepper -->
+<div class="flex gap-grid_gutter">
+<!-- Left Sidebar within the main card: Step Progress -->
+<div class="w-48 bg-white border border-outline-variant rounded-xl p-6 flex flex-col gap-8 shadow-sm">
+<div class="space-y-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-caption">1</div>
+<span class="text-caption font-medium text-on-surface-variant">Basic Info</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-caption">2</div>
+<span class="text-caption font-medium text-on-surface-variant">Location</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-caption ring-4 ring-primary-container/20">3</div>
+<span class="text-caption font-bold text-primary">Settings</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-secondary flex items-center justify-center font-bold text-caption">4</div>
+<span class="text-caption font-medium text-secondary">Review</span>
+</div>
+</div>
+</div>
+<!-- Main Content: Settings Form (Expanded) -->
+<div class="flex-1 bg-white border border-outline-variant rounded-xl shadow-2xl flex flex-col overflow-hidden">
+<div class="p-6 border-b border-surface-variant">
+<div class="flex items-center justify-between mb-2">
+<span class="px-3 py-1 bg-primary-container/10 text-primary text-caption font-bold rounded-full">Step 3 of 4</span>
+</div>
+<h2 class="font-display text-display text-on-surface">Branch Settings</h2>
+<p class="font-body text-body text-secondary mt-1">Configure operational behaviors and localization.</p>
+</div>
+<div class="p-6 grid grid-cols-2 gap-section">
+<!-- Dropdowns Section -->
+<div class="space-y-element">
+<div>
+<label class="block font-caption text-caption text-on-surface-variant mb-related">Currency</label>
+<div class="relative">
+<select class="w-full h-12 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest font-body text-body appearance-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all">
+<option>USD - United States Dollar ($)</option>
+<option>EUR - Euro (€)</option>
+<option>GBP - British Pound (£)</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-3 text-secondary pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block font-caption text-caption text-on-surface-variant mb-related">Timezone</label>
+<div class="relative">
+<select class="w-full h-12 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest font-body text-body appearance-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all">
+<option>(GMT-05:00) Eastern Time (US &amp; Canada)</option>
+<option>(GMT-08:00) Pacific Time (US &amp; Canada)</option>
+<option>(GMT+00:00) London</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-3 text-secondary pointer-events-none" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Toggles Section -->
+<div class="space-y-related">
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="monitor">monitor</span>
+</div>
+<div>
+<div class="font-h2 text-body font-semibold text-on-surface">KDS Enabled</div>
+</div>
+</div>
+<button class="w-10 h-5 bg-primary-container rounded-full relative transition-colors">
+<div class="absolute right-1 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="print">print</span>
+</div>
+<div>
+<div class="font-h2 text-body font-semibold text-on-surface">KOT Auto-print</div>
+</div>
+</div>
+<button class="w-10 h-5 bg-primary-container rounded-full relative transition-colors">
+<div class="absolute right-1 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+</div>
+<div>
+<div class="font-h2 text-body font-semibold text-on-surface">Online Orders</div>
+</div>
+</div>
+<button class="w-10 h-5 bg-primary-container rounded-full relative transition-colors">
+<div class="absolute right-1 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="local_shipping">local_shipping</span>
+</div>
+<div>
+<div class="font-h2 text-body font-semibold text-on-surface">Delivery Available</div>
+</div>
+</div>
+<button class="w-10 h-5 bg-surface-dim rounded-full relative transition-colors">
+<div class="absolute left-1 top-0.5 w-4 h-4 bg-white rounded-full shadow-sm"></div>
+</button>
+</div>
+</div>
+</div>
+<div class="p-6 bg-surface-container-lowest border-t border-surface-variant flex gap-4">
+<button class="px-8 flex items-center justify-center gap-2 h-12 border border-outline-variant rounded-xl font-h2 text-h2 text-secondary hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_back">arrow_back</span>
+                        Back
+                    </button>
+<button class="flex-1 flex items-center justify-center gap-2 h-12 bg-primary-container rounded-xl font-h2 text-h2 text-white hover:opacity-90 transition-opacity">
+                        Next Step
+                        <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Info Boxes: Bottom Horizontal Row -->
+<div class="grid grid-cols-3 gap-grid_gutter">
+<!-- Preview Card -->
+<div class="bg-surface-container-low p-6 rounded-xl border border-outline-variant flex flex-col justify-between">
+<div>
+<h3 class="font-h2 text-h2 mb-related">Current Configuration</h3>
+<p class="font-body text-body text-on-surface-variant mb-4">Configuring operational parameters for 'Downtown'.</p>
+</div>
+<div class="space-y-related">
+<div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-primary-container text-sm" data-icon="location_on">location_on</span>
+<div class="font-body text-caption font-semibold truncate">124 Merchant St, Downtown</div>
+</div>
+<div class="flex items-center gap-3 bg-white p-3 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-tertiary text-sm" data-icon="restaurant_menu">restaurant_menu</span>
+<div class="font-body text-caption font-semibold truncate">Standard Premium Dining</div>
+</div>
+</div>
+</div>
+<!-- Step 4 Summary Card -->
+<div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm relative overflow-hidden flex flex-col">
+<div class="absolute top-0 right-0 w-16 h-16 bg-primary-container/5 rounded-bl-full -mr-4 -mt-4"></div>
+<h3 class="font-h2 text-h2 mb-3">Step 4: Final Summary</h3>
+<div class="flex-1 space-y-1 mb-4">
+<div class="flex justify-between py-1 border-b border-surface-variant">
+<span class="text-caption text-secondary">Currency</span>
+<span class="text-caption font-medium">USD ($)</span>
+</div>
+<div class="flex justify-between py-1 border-b border-surface-variant">
+<span class="text-caption text-secondary">Kitchen Display</span>
+<span class="text-caption font-medium text-primary">Enabled</span>
+</div>
+<div class="flex justify-between py-1">
+<span class="text-caption text-secondary">Online Orders</span>
+<span class="text-caption font-medium text-primary">Accepted</span>
+</div>
+</div>
+<button class="w-full bg-primary-container text-white py-2 rounded-lg font-h2 text-body hover:opacity-90 transition-opacity">
+                    Create Branch
+                </button>
+</div>
+<!-- Image Card -->
+<div class="relative rounded-xl overflow-hidden h-full">
+<img alt="Restaurant Interior" class="w-full h-full object-cover grayscale opacity-40 mix-blend-multiply" data-alt="A high-angle, wide-lens shot of a luxury restaurant dining room at dusk. Warm golden ambient lighting from minimalist chandeliers illuminates polished marble floors and dark wood furniture. The atmosphere is quiet, refined, and sophisticated, mirroring the precision of a high-end POS system interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCv4-YZP8toezw7EKuIpZm7wAstjm2S-ic0lF-cn2c2_xI3d6OAoWggCu3N5w3B9ZQJWeXKKODa3pnKbjX6GXK120rjwLR5fyrCEZMNmAdXhm6EVtmm9K6tZpeKuRJXt_a4n7992yH4Dqs0evQtRq8ArBCmmnrMVjSlALAjIBQBqq11QZu2DQ9lTq0lVL4s7k388FQkgyuKkmrYul740P59Z7p2X9ObyLnMZQCTWQtMa1pD-5WwFR_woWAqWKHuPhuJBWfd-3VUYlf6"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

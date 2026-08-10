@@ -1,0 +1,19 @@
+{
+  "redirects": [
+    { "source": "/app", "destination": "https://play.google.com/store/apps/details?id=pk.dineiz.go", "permanent": false },
+    { "source": "/signup", "destination": "https://console.dineiz.com/signup", "permanent": false },
+    { "source": "/login", "destination": "https://console.dineiz.com/login", "permanent": false },
+    { "source": "/dashboard", "destination": "https://console.dineiz.com", "permanent": false }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

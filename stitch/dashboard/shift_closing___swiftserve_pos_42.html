@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DineStream POS - End of Shift</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#c9beff",
+                        "on-tertiary-fixed": "#1b0063",
+                        "secondary-container": "#dae2fd",
+                        "tertiary-container": "#927eff",
+                        "on-surface-variant": "#5b4039",
+                        "inverse-surface": "#2d3133",
+                        "background": "#f7f9fb",
+                        "on-tertiary-container": "#29008a",
+                        "on-primary-fixed-variant": "#862200",
+                        "secondary-fixed": "#dae2fd",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#f2f4f6",
+                        "surface": "#f7f9fb",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-card": "#FFFFFF",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#5c647a",
+                        "on-primary-container": "#541200",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary": "#ffffff",
+                        "text-muted": "#64748B",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface": "#191c1e",
+                        "surface-dim": "#d8dadc",
+                        "outline": "#907067",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#e4beb4",
+                        "surface-bright": "#f7f9fb",
+                        "on-secondary-fixed": "#131b2e",
+                        "on-background": "#191c1e",
+                        "tertiary": "#5f46ce",
+                        "border-subtle": "#E2E8F0",
+                        "on-primary": "#ffffff",
+                        "text-main": "#0F172A",
+                        "secondary": "#565e74",
+                        "primary-fixed": "#ffdbd1",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container": "#eceef0",
+                        "on-primary-fixed": "#3b0900",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#b02f00",
+                        "primary-container": "#ff5722",
+                        "tertiary-fixed": "#e6deff",
+                        "surface-container-high": "#e6e8ea",
+                        "surface-default": "#F8FAFC",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed-variant": "#4629b6",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-error": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "max-width": "1200px",
+                        "gutter-desktop": "24px",
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "40px",
+                        "gutter-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .backdrop-blur-custom {
+            backdrop-filter: blur(12px);
+        }
+        .inner-pressed {
+            box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+        }
+        input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface overflow-hidden">
+<!-- Background Interface (Blurred) -->
+<div class="fixed inset-0 z-0 flex flex-col pointer-events-none opacity-40 blur-md grayscale">
+<!-- TopNavBar Mock -->
+<header class="bg-surface border-b border-border-subtle shadow-sm flex justify-between items-center px-margin-desktop py-4 w-full">
+<div class="font-display-lg text-display-lg font-bold text-primary">DineStream POS</div>
+<div class="flex items-center gap-6">
+<span class="material-symbols-outlined text-secondary">notifications</span>
+<span class="material-symbols-outlined text-secondary">help</span>
+<div class="w-10 h-10 rounded-full bg-surface-container-highest"></div>
+</div>
+</header>
+<!-- Content Mock -->
+<main class="flex-1 p-10 grid grid-cols-12 gap-6">
+<aside class="col-span-3 space-y-4">
+<div class="h-32 bg-surface-card border border-border-subtle rounded-xl"></div>
+<div class="h-64 bg-surface-card border border-border-subtle rounded-xl"></div>
+</aside>
+<div class="col-span-9 grid grid-cols-3 gap-4">
+<div class="h-40 bg-surface-card border border-border-subtle rounded-xl shadow-sm"></div>
+<div class="h-40 bg-surface-card border border-border-subtle rounded-xl shadow-sm"></div>
+<div class="h-40 bg-surface-card border border-border-subtle rounded-xl shadow-sm"></div>
+<div class="col-span-3 h-96 bg-surface-card border border-border-subtle rounded-xl shadow-sm"></div>
+</div>
+</main>
+</div>
+<!-- Dark Overlay Layer -->
+<div class="fixed inset-0 z-10 bg-[#000000D9] backdrop-blur-sm flex items-center justify-center p-6">
+<!-- Shift Closing Card -->
+<div class="w-full max-w-[520px] bg-surface-card rounded-[20px] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in duration-300">
+<!-- Header -->
+<div class="bg-gradient-to-r from-[#862200] to-[#b02f00] p-[28px] flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="dark_mode">dark_mode</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-white">🌙 End of Shift Summary</h2>
+</div>
+<div class="p-[28px] space-y-6">
+<!-- Summary Strip -->
+<div class="bg-surface-default border border-border-subtle p-4 rounded-[10px] flex justify-between items-center text-center">
+<div>
+<p class="font-label-sm text-text-muted">Duration</p>
+<p class="font-label-md text-on-surface">8h 12m</p>
+</div>
+<div class="w-px h-8 bg-border-subtle"></div>
+<div>
+<p class="font-label-sm text-text-muted">Orders</p>
+<p class="font-label-md text-on-surface">47</p>
+</div>
+<div class="w-px h-8 bg-border-subtle"></div>
+<div>
+<p class="font-label-sm text-text-muted">Total Sales</p>
+<p class="font-label-md text-on-surface">PKR 52,400</p>
+</div>
+</div>
+<!-- Reconciliation Section -->
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-secondary">Expected in drawer</label>
+<span class="font-headline-md text-text-main">PKR 28,650</span>
+</div>
+<div class="space-y-2">
+<label class="font-label-md text-secondary block" for="actual-cash">Actual cash (you count)</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted font-label-md">PKR</span>
+<input class="w-full pl-14 pr-4 py-4 bg-surface-container-low border border-border-subtle rounded-xl font-headline-lg text-text-main focus:border-primary transition-all" id="actual-cash" oninput="calculateVariance(this.value)" placeholder="0.00" type="number"/>
+</div>
+</div>
+<!-- Variance Display -->
+<div class="flex items-center justify-between px-4 py-3 rounded-lg bg-surface-container transition-all" id="variance-container">
+<span class="font-label-md text-secondary">Variance</span>
+<span class="font-label-md font-bold text-secondary" id="variance-text">Enter actual cash</span>
+</div>
+</div>
+<!-- Notes -->
+<div class="space-y-2">
+<label class="font-label-md text-secondary block" for="notes">Shift Notes</label>
+<textarea class="w-full px-4 py-3 bg-surface-container-low border border-border-subtle rounded-xl font-body-md text-text-main focus:border-primary resize-none transition-all" id="notes" placeholder="Add notes if any variance or incident occurred..." rows="3"></textarea>
+</div>
+<!-- Footer Actions -->
+<div class="flex items-center gap-4 pt-2">
+<button class="flex-1 px-6 py-4 rounded-xl border border-border-subtle font-label-md text-secondary hover:bg-surface-container-low active:scale-[0.98] transition-all">
+                        ← Back
+                    </button>
+<button class="flex-[2] px-6 py-4 rounded-xl bg-primary-container text-white font-label-md font-bold inner-pressed hover:bg-[#d84315] active:scale-[0.98] shadow-lg shadow-primary-container/20 transition-all">
+                        Close Shift &amp; Submit
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Success Modal (Hidden by default) -->
+<div class="hidden fixed inset-0 z-50 bg-[#000000F2] flex items-center justify-center p-6 animate-in fade-in duration-500" id="success-modal">
+<div class="text-center space-y-6">
+<div class="w-24 h-24 bg-primary-container rounded-full flex items-center justify-center mx-auto animate-bounce">
+<span class="material-symbols-outlined text-white text-[48px]" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+<h2 class="font-display-lg text-display-lg text-white">Shift Closed Successfully</h2>
+<p class="text-white/60 font-body-lg">Printing end-of-shift report...</p>
+<button class="px-8 py-3 bg-white/10 text-white rounded-full font-label-md hover:bg-white/20 transition-all" onclick="location.reload()">Return to Login</button>
+</div>
+</div>
+<script>
+        const expected = 28650;
+        
+        function calculateVariance(val) {
+            const container = document.getElementById('variance-container');
+            const text = document.getElementById('variance-text');
+            
+            if (!val) {
+                text.innerText = "Enter actual cash";
+                text.className = "font-label-md font-bold text-secondary";
+                container.className = "flex items-center justify-between px-4 py-3 rounded-lg bg-surface-container transition-all";
+                return;
+            }
+
+            const actual = parseFloat(val);
+            const variance = actual - expected;
+
+            if (variance === 0) {
+                text.innerText = "Balanced";
+                text.className = "font-label-md font-bold text-on-tertiary-fixed-variant";
+                container.className = "flex items-center justify-between px-4 py-3 rounded-lg bg-tertiary-fixed transition-all";
+            } else if (variance < 0) {
+                text.innerText = `–PKR ${Math.abs(variance).toLocaleString()} Short`;
+                text.className = "font-label-md font-bold text-error";
+                container.className = "flex items-center justify-between px-4 py-3 rounded-lg bg-error-container transition-all";
+            } else {
+                text.innerText = `+PKR ${variance.toLocaleString()} Over`;
+                text.className = "font-label-md font-bold text-on-primary-fixed-variant";
+                container.className = "flex items-center justify-between px-4 py-3 rounded-lg bg-primary-fixed transition-all";
+            }
+        }
+
+        // Action simulation
+        document.querySelector('.bg-primary-container').addEventListener('click', () => {
+            const btn = document.querySelector('.bg-primary-container');
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                document.getElementById('success-modal').classList.remove('hidden');
+            }, 1200);
+        });
+    </script>
+</body></html>

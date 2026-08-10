@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Table Selection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#613b00",
+                        "on-background": "#f0e0d1",
+                        "secondary-fixed": "#e5e2e1",
+                        "primary-container": "#f59e0b",
+                        "inverse-primary": "#855300",
+                        "surface-container-high": "#31281f",
+                        "inverse-on-surface": "#382f25",
+                        "outline-variant": "#534434",
+                        "on-secondary-fixed-variant": "#474646",
+                        "surface-container-low": "#221a12",
+                        "on-secondary": "#313030",
+                        "surface-container": "#261e15",
+                        "on-secondary-container": "#bab8b7",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#3c3329",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "on-error": "#690005",
+                        "tertiary-container": "#b1b1ae",
+                        "on-surface": "#f0e0d1",
+                        "surface-dim": "#19120a",
+                        "surface": "#19120a",
+                        "surface-container-highest": "#3c3329",
+                        "secondary": "#c9c6c5",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "primary": "#ffc174",
+                        "surface-bright": "#41382e",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed-variant": "#653e00",
+                        "tertiary": "#cdccca",
+                        "on-tertiary": "#2f312f",
+                        "primary-fixed": "#ffddb8",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-tertiary-container": "#434442",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "background": "#19120a",
+                        "outline": "#a08e7a",
+                        "on-primary-fixed": "#2a1700",
+                        "inverse-surface": "#f0e0d1",
+                        "error-container": "#93000a",
+                        "tertiary-fixed": "#e3e2e0",
+                        "surface-tint": "#ffb95f",
+                        "on-primary": "#472a00",
+                        "on-surface-variant": "#d8c3ad",
+                        "secondary-container": "#4a4949",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "surface-container-lowest": "#140d06",
+                        "brand-amber": "#f59e0b",
+                        "midnight": "#121212",
+                        "sage-green": "#2d5a27"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "lg": "24px",
+                        "base": "8px",
+                        "xl": "32px",
+                        "sm": "8px",
+                        "gutter": "16px",
+                        "xs": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Clash Display"],
+                        "label-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Clash Display"],
+                        "headline-md": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "headline-sm": ["Clash Display"],
+                        "currency-display": ["Clash Display"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .table-grid {
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md overflow-hidden select-none">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-lg py-sm h-[64px] bg-background border-b border-outline-variant docked full-width top-0 z-50">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-display-lg text-display-lg font-bold text-primary">SwiftServe POS</h1>
+</div>
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="wifi">wifi</span>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="battery_full">battery_full</span>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="settings">settings</span>
+</div>
+</div>
+</header>
+<!-- Amber Info Bar -->
+<div class="h-[40px] w-full flex items-center justify-between px-lg bg-[#1C1700] border-b border-brand-amber/20 z-40">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-brand-amber text-[18px]" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-label-lg text-brand-amber uppercase tracking-wider">Select an available table to start a new order</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant/60 font-label-md">
+<span>or tap</span>
+<span class="material-symbols-outlined text-[16px]" data-icon="arrow_back">arrow_back</span>
+<span>to go back</span>
+</div>
+</div>
+<!-- Main Content (Table Map) -->
+<main class="flex-grow relative table-grid overflow-hidden bg-surface-container-lowest">
+<!-- Floor Map Controls -->
+<div class="absolute top-md left-md flex flex-col gap-xs z-20">
+<button class="bg-surface-container-high border border-outline-variant p-md flex flex-col items-center justify-center rounded-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="layers">layers</span>
+<span class="font-label-md mt-xs">Indoor</span>
+</button>
+<button class="bg-surface-container border border-outline-variant p-md flex flex-col items-center justify-center rounded-lg opacity-50">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="deck">deck</span>
+<span class="font-label-md mt-xs">Patio</span>
+</button>
+</div>
+<!-- Tables Layout (Abstracted) -->
+<div class="absolute inset-0 flex items-center justify-center p-xl">
+<div class="grid grid-cols-4 grid-rows-3 gap-xl w-full max-w-[1000px] h-full max-h-[600px]">
+<!-- Table 01: Occupied -->
+<div class="bg-surface-container-highest border border-outline-variant rounded-xl flex flex-col items-center justify-center relative">
+<span class="font-headline-sm text-on-surface-variant">01</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-error"></div>
+</div>
+<!-- Table 02: Occupied -->
+<div class="bg-surface-container-highest border border-outline-variant rounded-xl flex flex-col items-center justify-center relative">
+<span class="font-headline-sm text-on-surface-variant">02</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-error"></div>
+</div>
+<!-- Table 03: Available -->
+<div class="bg-surface-container border border-sage-green/50 rounded-xl flex flex-col items-center justify-center relative hover:bg-surface-bright transition-colors cursor-pointer">
+<span class="font-headline-sm text-on-surface">03</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-sage-green"></div>
+</div>
+<!-- Table 04: Reserved -->
+<div class="bg-surface-container-high border border-outline-variant rounded-xl flex flex-col items-center justify-center relative opacity-40">
+<span class="font-headline-sm text-on-surface-variant">04</span>
+</div>
+<!-- Table 05: Available -->
+<div class="bg-surface-container border border-sage-green/50 rounded-xl flex flex-col items-center justify-center relative cursor-pointer">
+<span class="font-headline-sm text-on-surface">05</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-sage-green"></div>
+</div>
+<!-- Table 06: Occupied -->
+<div class="bg-surface-container-highest border border-outline-variant rounded-xl flex flex-col items-center justify-center relative">
+<span class="font-headline-sm text-on-surface-variant">06</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-error"></div>
+</div>
+<!-- TABLE 07: SELECTED (HIGHLIGHTED) -->
+<div class="bg-surface-bright border-2 border-brand-amber rounded-xl flex flex-col items-center justify-center relative ring-4 ring-brand-amber/20 z-30 transform scale-105 transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+<span class="font-headline-md text-brand-amber">07</span>
+<span class="font-label-md text-on-surface-variant">4 SEATS</span>
+<div class="absolute top-2 right-2 w-4 h-4 rounded-full bg-brand-amber flex items-center justify-center">
+<span class="material-symbols-outlined text-[12px] text-midnight font-bold" data-icon="check">check</span>
+</div>
+</div>
+<!-- Table 08: Available -->
+<div class="bg-surface-container border border-sage-green/50 rounded-xl flex flex-col items-center justify-center relative cursor-pointer">
+<span class="font-headline-sm text-on-surface">08</span>
+<div class="absolute top-2 right-2 w-3 h-3 rounded-full bg-sage-green"></div>
+</div>
+<!-- Bar Section (T9-T12) -->
+<div class="col-span-4 bg-surface-container-low border border-outline-variant rounded-2xl p-lg flex justify-around items-center">
+<div class="w-16 h-16 rounded-full border border-outline flex items-center justify-center"><span class="font-label-lg">T9</span></div>
+<div class="w-16 h-16 rounded-full border border-outline flex items-center justify-center"><span class="font-label-lg">T10</span></div>
+<div class="w-16 h-16 rounded-full border border-outline flex items-center justify-center"><span class="font-label-lg">T11</span></div>
+<div class="w-16 h-16 rounded-full border border-outline flex items-center justify-center"><span class="font-label-lg">T12</span></div>
+</div>
+</div>
+</div>
+<!-- Dimmer Overlay -->
+<div class="absolute inset-0 bg-midnight/40 z-30 pointer-events-none"></div>
+</main>
+<!-- Table Confirmation Bottom Sheet -->
+<div class="fixed bottom-0 left-0 w-full h-[260px] bg-[#111111] rounded-t-[20px] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-outline-variant z-50 p-lg flex flex-col gap-lg animate-slide-up">
+<!-- Top Row -->
+<div class="flex justify-between items-start">
+<div>
+<h2 class="font-headline-md text-on-background">Table 07</h2>
+<div class="flex items-center gap-sm mt-xs">
+<span class="font-body-sm text-on-surface-variant">Indoor - 4 seats - Available</span>
+</div>
+</div>
+<div class="bg-sage-green/20 text-sage-green px-md py-xs rounded-full border border-sage-green/30 font-label-lg">
+                Available
+            </div>
+</div>
+<!-- Middle: Party Size -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="font-body-md text-on-surface-variant">Party size (optional):</span>
+<div class="flex items-center bg-surface-container-highest border border-outline-variant rounded-lg overflow-hidden">
+<button class="w-12 h-12 flex items-center justify-center hover:bg-surface-bright active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<div class="w-12 h-12 flex items-center justify-center border-x border-outline-variant font-headline-sm text-brand-amber">
+                        2
+                    </div>
+<button class="w-12 h-12 flex items-center justify-center hover:bg-surface-bright active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<a class="font-label-lg text-primary underline underline-offset-4" href="#">Skip</a>
+</div>
+<!-- Main Button -->
+<div class="flex flex-col gap-sm">
+<button class="w-full h-[64px] bg-brand-amber rounded-xl flex flex-col items-center justify-center active:scale-[0.98] transition-all hover:brightness-110">
+<span class="font-headline-sm text-midnight">Start New Order - Table 07</span>
+<span class="font-label-md text-midnight/70 uppercase tracking-tighter">Table 07 - 2 guests - Dine-in</span>
+</button>
+<div class="w-full text-center">
+<a class="font-label-md text-on-surface-variant/60 underline hover:text-on-surface-variant transition-colors" href="#">Choose a different table</a>
+</div>
+</div>
+</div>
+<!-- Hidden Bottom Nav for top-level context (suppressed by relevance check but kept for shell structure) -->
+<nav class="hidden md:flex fixed bottom-0 left-0 w-full z-10 justify-around items-center px-margin-desktop h-[80px] bg-surface-container border-t border-outline-variant opacity-20 pointer-events-none">
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-lg">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-label-lg">Menu</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-xl py-xs border-2 border-primary">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-lg">Tickets</span>
+</div>
+</nav>
+<style>
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+    </style>
+<script>
+        // Micro-interactions for stepper
+        const partySizeDisplay = document.querySelector('.font-headline-sm.text-brand-amber');
+        const buttons = document.querySelectorAll('button');
+        
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Haptic-like visual feedback already handled by Tailwind active:scale-95
+                if (this.querySelector('[data-icon="add"]')) {
+                    let val = parseInt(partySizeDisplay.innerText);
+                    partySizeDisplay.innerText = val + 1;
+                }
+                if (this.querySelector('[data-icon="remove"]')) {
+                    let val = parseInt(partySizeDisplay.innerText);
+                    if (val > 1) partySizeDisplay.innerText = val - 1;
+                }
+            });
+        });
+    </script>
+</body></html>

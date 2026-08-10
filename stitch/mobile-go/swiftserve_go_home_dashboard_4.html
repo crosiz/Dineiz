@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Go - Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0A0A0F;
+            color: #fadcd4;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glow-orange {
+            box-shadow: 0 0 15px rgba(255, 87, 34, 0.15);
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#43302b",
+                    "secondary-fixed": "#d4e4fa",
+                    "outline-variant": "#5b4039",
+                    "inverse-on-surface": "#3e2c27",
+                    "surface-container-highest": "#43302b",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "on-primary-container": "#541200",
+                    "on-background": "#fadcd4",
+                    "inverse-surface": "#fadcd4",
+                    "on-tertiary": "#003824",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "primary": "#ffb5a0",
+                    "on-tertiary-fixed": "#002113",
+                    "surface-bright": "#483530",
+                    "primary-fixed": "#ffdbd1",
+                    "surface": "#1e100c",
+                    "secondary-container": "#39485a",
+                    "surface-container-low": "#271813",
+                    "surface-container-lowest": "#180b07",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-error-container": "#ffdad6",
+                    "background": "#1e100c",
+                    "on-surface-variant": "#e4beb4",
+                    "on-primary-fixed": "#3b0900",
+                    "secondary": "#b9c8de",
+                    "tertiary": "#4edea3",
+                    "on-surface": "#fadcd4",
+                    "tertiary-container": "#00a572",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "inverse-primary": "#b02f00",
+                    "tertiary-fixed": "#6ffbbe",
+                    "on-secondary-container": "#a7b6cc",
+                    "error-container": "#93000a",
+                    "on-error": "#690005",
+                    "on-tertiary-container": "#00311f",
+                    "on-primary-fixed-variant": "#862200",
+                    "primary-container": "#ff5722",
+                    "surface-dim": "#1e100c",
+                    "on-secondary": "#233143",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "error": "#ffb4ab",
+                    "surface-tint": "#ffb5a0",
+                    "outline": "#ab8980",
+                    "surface-container-high": "#372621",
+                    "surface-container": "#2c1c17",
+                    "on-primary": "#5f1500"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "touch-target-min": "48px",
+                    "grid-gutter": "12px",
+                    "unit": "4px",
+                    "container-padding": "16px",
+                    "stack-gap": "12px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Space Grotesk"],
+                    "headline-lg": ["Space Grotesk"],
+                    "label-xl": ["Space Grotesk"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Space Grotesk"],
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Space Grotesk"],
+                    "headline-lg-mobile": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col min-h-screen">
+<!-- TopAppBar Mapping -->
+<header class="fixed top-0 w-full z-50 bg-[#111827] pt-[52px] pb-[16px] px-[20px] flex justify-between items-center">
+<div class="flex flex-col">
+<span class="text-white font-bold text-[17px] leading-tight">Ahmed Biryani House</span>
+<span class="text-[#64748B] text-[13px] font-medium">Good afternoon, Ahmed 🌤</span>
+</div>
+<div class="w-[40px] h-[40px] bg-[#FF5722] rounded-full flex items-center justify-center text-white font-bold text-sm glow-orange">
+            AH
+        </div>
+</header>
+<main class="flex-1 mt-[112px] pb-[100px]">
+<!-- PERFORMANCE STRIP -->
+<section class="overflow-hidden">
+<div class="flex gap-[12px] px-[20px] overflow-x-auto hide-scrollbar py-4">
+<!-- Card 1: Revenue -->
+<div class="flex-shrink-0 w-[140px] bg-[#1A1A2E] border border-white/5 rounded-[14px] p-[16px]">
+<p class="text-[#64748B] text-[10px] font-bold tracking-wider uppercase mb-1">Today</p>
+<p class="text-white text-[20px] font-bold">PKR 12,450</p>
+<p class="text-[#10B981] text-[11px] font-medium mt-1">+8% vs yesterday</p>
+</div>
+<!-- Card 2: Orders -->
+<div class="flex-shrink-0 w-[140px] bg-[#1A1A2E] border border-white/5 rounded-[14px] p-[16px]">
+<p class="text-[#64748B] text-[10px] font-bold tracking-wider uppercase mb-1">Orders</p>
+<p class="text-white text-[32px] font-bold leading-none">34</p>
+<p class="text-[#64748B] text-[11px] font-medium mt-2">Last: 4 min ago</p>
+</div>
+<!-- Card 3: Average -->
+<div class="flex-shrink-0 w-[140px] bg-[#1A1A2E] border border-white/5 rounded-[14px] p-[16px]">
+<p class="text-[#64748B] text-[10px] font-bold tracking-wider uppercase mb-1">Avg Order</p>
+<p class="text-white text-[20px] font-bold">PKR 366</p>
+<div class="flex items-end gap-[2px] mt-2 h-[20px]">
+<div class="w-[3px] h-[40%] bg-primary/40 rounded-t-sm"></div>
+<div class="w-[3px] h-[60%] bg-primary/60 rounded-t-sm"></div>
+<div class="w-[3px] h-[100%] bg-primary rounded-t-sm"></div>
+<div class="w-[3px] h-[70%] bg-primary/80 rounded-t-sm"></div>
+<div class="w-[3px] h-[40%] bg-primary/40 rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- QUICK ACTIONS -->
+<section class="px-[20px] mt-6">
+<h2 class="text-white text-[15px] font-semibold mb-4">Quick Actions</h2>
+<div class="grid grid-cols-2 gap-[12px]">
+<button class="flex flex-col items-center justify-center h-[100px] bg-[#FF5722] rounded-xl active:scale-95 transition-transform duration-150 shadow-lg shadow-[#FF5722]/20">
+<span class="material-symbols-outlined text-white text-[32px] mb-2" data-icon="bolt">bolt</span>
+<span class="text-white text-[18px] font-bold">NEW ORDER</span>
+</button>
+<button class="flex flex-col items-center justify-center h-[100px] bg-[#1A1A2E] border border-white/10 rounded-xl active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[#64748B] text-[28px] mb-2" data-icon="shopping_bag">shopping_bag</span>
+<span class="text-white text-[16px] font-semibold">TAKEAWAY</span>
+</button>
+<button class="flex flex-col items-center justify-center h-[100px] bg-[#1A1A2E] border border-white/10 rounded-xl active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[#64748B] text-[28px] mb-2" data-icon="receipt">receipt</span>
+<span class="text-white text-[16px] font-semibold">VIEW BILLS</span>
+</button>
+<button class="flex flex-col items-center justify-center h-[100px] bg-[#1A1A2E] border border-white/10 rounded-xl active:scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-[#64748B] text-[28px] mb-2" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="text-white text-[16px] font-semibold">MENU</span>
+</button>
+</div>
+</section>
+<!-- RECENT ORDERS -->
+<section class="px-[20px] mt-8">
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-white text-[15px] font-semibold">Recent Orders</h2>
+<button class="text-primary-container text-sm font-semibold">See all</button>
+</div>
+<div class="space-y-0">
+<!-- Order 1 -->
+<div class="flex items-center justify-between h-[64px] border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex flex-col">
+<span class="text-white font-bold text-[15px]">#034</span>
+<span class="text-[#64748B] text-[12px]">Table 3 • 3 items</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[#64748B] text-[11px] mb-1">12:45 PM</span>
+<div class="flex items-center gap-3">
+<span class="text-white font-bold text-[14px]">PKR 850</span>
+<span class="bg-[#10B981]/20 text-[#10B981] text-[10px] font-bold px-2 py-[2px] rounded-sm">PAID</span>
+</div>
+</div>
+</div>
+<!-- Order 2 -->
+<div class="flex items-center justify-between h-[64px] border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex flex-col">
+<span class="text-white font-bold text-[15px]">#033</span>
+<span class="text-[#64748B] text-[12px]">Takeaway • 1 item</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[#64748B] text-[11px] mb-1">12:30 PM</span>
+<div class="flex items-center gap-3">
+<span class="text-white font-bold text-[14px]">PKR 220</span>
+<span class="bg-[#10B981]/20 text-[#10B981] text-[10px] font-bold px-2 py-[2px] rounded-sm">PAID</span>
+</div>
+</div>
+</div>
+<!-- Order 3 -->
+<div class="flex items-center justify-between h-[64px] border-b border-white/5 active:bg-white/5 transition-colors">
+<div class="flex flex-col">
+<span class="text-white font-bold text-[15px]">#032</span>
+<span class="text-[#64748B] text-[12px]">Table 1 • 5 items</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[#64748B] text-[11px] mb-1">12:15 PM</span>
+<div class="flex items-center gap-3">
+<span class="text-white font-bold text-[14px]">PKR 1,450</span>
+<span class="bg-[#10B981]/20 text-[#10B981] text-[10px] font-bold px-2 py-[2px] rounded-sm">PAID</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Visual Decorative Element (Abstract) -->
+<div class="mt-12 px-[20px]">
+<div class="relative w-full h-32 bg-gradient-to-br from-[#1A1A2E] to-background border border-white/5 rounded-2xl overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-30">
+<span class="material-symbols-outlined text-[64px] text-primary" data-icon="trending_up">trending_up</span>
+</div>
+<div class="relative z-10 p-6">
+<p class="text-white font-semibold text-[16px]">Night Shift Ready</p>
+<p class="text-[#64748B] text-[13px] mt-1 max-w-[200px]">Dark mode is active to reduce eye strain during evening peak hours.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Mapping -->
+<nav class="fixed bottom-0 w-full h-[80px] z-50 bg-[#0A0A0F] border-t border-white/5 flex justify-around items-center px-[12px]">
+<!-- Home Tab (Active) -->
+<button class="flex flex-col items-center justify-center p-2 transition-all duration-150 active:scale-90">
+<span class="material-symbols-outlined text-[#FF5722] mb-1" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[#FF5722] text-[10px] font-bold tracking-wide">HOME</span>
+</button>
+<!-- Orders Tab -->
+<button class="flex flex-col items-center justify-center p-2 transition-all duration-150 active:scale-90 opacity-60">
+<span class="material-symbols-outlined text-white mb-1" data-icon="list_alt">list_alt</span>
+<span class="text-white text-[10px] font-medium tracking-wide">ORDERS</span>
+</button>
+<!-- Menu Tab -->
+<button class="flex flex-col items-center justify-center p-2 transition-all duration-150 active:scale-90 opacity-60">
+<span class="material-symbols-outlined text-white mb-1" data-icon="menu_book">menu_book</span>
+<span class="text-white text-[10px] font-medium tracking-wide">MENU</span>
+</button>
+<!-- More Tab -->
+<button class="flex flex-col items-center justify-center p-2 transition-all duration-150 active:scale-90 opacity-60">
+<span class="material-symbols-outlined text-white mb-1" data-icon="more_horiz">more_horiz</span>
+<span class="text-white text-[10px] font-medium tracking-wide">MORE</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('touchstart', function() {
+                this.classList.add('opacity-70');
+            });
+            btn.addEventListener('touchend', function() {
+                this.classList.remove('opacity-70');
+            });
+        });
+    </script>
+</body></html>

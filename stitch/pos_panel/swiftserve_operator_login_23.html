@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS | Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "secondary-container": "#4a4949",
+                "background": "#19120a",
+                "primary-fixed-dim": "#ffb95f",
+                "primary": "#ffc174",
+                "on-tertiary-fixed": "#1a1c1a",
+                "surface-dim": "#19120a",
+                "on-primary-fixed-variant": "#653e00",
+                "surface": "#19120a",
+                "secondary-fixed-dim": "#c9c6c5",
+                "surface-container": "#261e15",
+                "surface-container-lowest": "#140d06",
+                "secondary": "#c9c6c5",
+                "on-background": "#f0e0d1",
+                "on-error": "#690005",
+                "on-primary": "#472a00",
+                "on-tertiary-container": "#434442",
+                "tertiary": "#cdccca",
+                "inverse-surface": "#f0e0d1",
+                "on-secondary-fixed-variant": "#474646",
+                "surface-bright": "#41382e",
+                "primary-container": "#f59e0b",
+                "tertiary-container": "#b1b1ae",
+                "surface-container-low": "#221a12",
+                "on-tertiary-fixed-variant": "#464745",
+                "on-primary-fixed": "#2a1700",
+                "primary-fixed": "#ffddb8",
+                "tertiary-fixed-dim": "#c7c6c4",
+                "on-secondary-container": "#bab8b7",
+                "on-surface-variant": "#d8c3ad",
+                "surface-container-high": "#31281f",
+                "error-container": "#93000a",
+                "inverse-on-surface": "#382f25",
+                "on-secondary": "#313030",
+                "inverse-primary": "#855300",
+                "outline-variant": "#534434",
+                "on-secondary-fixed": "#1c1b1b",
+                "on-primary-container": "#613b00",
+                "surface-tint": "#ffb95f",
+                "on-tertiary": "#2f312f",
+                "tertiary-fixed": "#e3e2e0",
+                "on-error-container": "#ffdad6",
+                "outline": "#a08e7a",
+                "error": "#ffb4ab",
+                "on-surface": "#f0e0d1",
+                "secondary-fixed": "#e5e2e1",
+                "surface-container-highest": "#3c3329",
+                "surface-variant": "#3c3329",
+                "pos-amber": "#F59E0B",
+                "pos-dark": "#0D0D0D",
+                "pos-light": "#F9F8F5"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "2xl": "1rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "lg": "24px",
+                "base": "8px",
+                "gutter": "16px",
+                "margin-mobile": "16px",
+                "sm": "8px",
+                "xs": "4px",
+                "margin-desktop": "32px",
+                "md": "16px",
+                "xl": "32px"
+            },
+            "fontFamily": {
+                "headline-sm": ["Clash Display"],
+                "label-lg": ["Inter"],
+                "headline-md": ["Clash Display"],
+                "body-lg": ["Inter"],
+                "body-md": ["Inter"],
+                "display-lg": ["Clash Display"],
+                "body-sm": ["Inter"],
+                "headline-lg": ["Clash Display"],
+                "label-md": ["Inter"]
+            },
+            "keyframes": {
+                "shake": {
+                    "0%, 100%": { "transform": "translateX(0)" },
+                    "20%, 60%": { "transform": "translateX(-6px)" },
+                    "40%, 80%": { "transform": "translateX(6px)" }
+                },
+                "flash-red": {
+                    "0%, 100%": { "background-color": "transparent", "border-color": "#D1D5DB" },
+                    "50%": { "background-color": "#EF4444", "border-color": "#EF4444" }
+                },
+                "flash-white": {
+                    "0%": { "opacity": "0" },
+                    "50%": { "opacity": "1" },
+                    "100%": { "opacity": "0" }
+                }
+            },
+            "animation": {
+                "shake": "shake 200ms ease-in-out",
+                "flash-red": "flash-red 400ms ease-in-out",
+                "flash-white": "flash-white 800ms ease-out forwards"
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #0D0D0D;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .clash { font-family: 'Clash Display', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .role-btn, .key-btn {
+            transition: all 180ms ease-out;
+        }
+        .role-btn:active, .key-btn:active {
+            transform: scale(0.93) !important;
+        }
+        .role-btn.selected {
+            transform: scale(1.05);
+            border: 2px solid #F59E0B;
+        }
+        .view-transition {
+            transition: opacity 180ms ease-out, transform 180ms ease-out;
+        }
+        .pin-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 9999px;
+            border: 2px solid #D1D5DB;
+            transition: background-color 180ms ease-out, border-color 180ms ease-out;
+        }
+        .pin-dot.filled {
+            background-color: #0D0D0D;
+            border-color: #0D0D0D;
+        }
+        .pin-dot.success {
+            background-color: #10B981 !important;
+            border-color: #10B981 !important;
+        }
+        .pin-dot.error-flash {
+            animation: flash-red 400ms ease-in-out;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .role-btn, .key-btn, .view-transition, .pin-dot, * {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-md text-on-surface">
+<div class="fixed top-8 left-0 w-full flex justify-center pointer-events-none z-50">
+<div class="bg-surface-container-high px-4 py-1.5 rounded-full text-[11px] font-semibold text-pos-amber border border-outline-variant opacity-0 transition-opacity duration-300" id="session-timer">
+        Session will expire in <span id="timer-count">30</span>s
+    </div>
+</div>
+<div class="fixed inset-0 bg-white pointer-events-none z-[100] opacity-0" id="flash-overlay"></div>
+<main class="flex-grow flex items-center justify-center w-full">
+<div class="bg-[#F9F8F5] w-[420px] rounded-2xl p-[48px] flex flex-col items-center shadow-2xl relative overflow-hidden transition-all duration-300" id="login-card">
+<!-- Header Section -->
+<header class="flex flex-col items-center mb-[32px] w-full">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-pos-amber text-[28px]" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<h1 class="clash text-[28px] font-bold text-pos-dark tracking-tight leading-none">SwiftServe</h1>
+</div>
+<p class="text-[13px] text-gray-500 font-medium">Operator Terminal</p>
+</header>
+<!-- Role Selection View -->
+<div class="w-full view-transition opacity-100 translate-y-0" id="view-role-selection">
+<label class="block text-[14px] font-medium text-gray-700 mb-6">Who are you?</label>
+<div class="grid grid-cols-3 gap-y-8 gap-x-4">
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Manager', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#3B82F6] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="manage_accounts">manage_accounts</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Manager</span>
+</button>
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Head Cashier', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#F59E0B] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="stars">stars</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Head Cashier</span>
+</button>
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Cashier', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#10B981] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="payments">payments</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Cashier</span>
+</button>
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Waiter', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#06B6D4] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="restaurant">restaurant</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Waiter</span>
+</button>
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Kitchen', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#FB7185] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="skillet">skillet</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Kitchen</span>
+</button>
+<button class="role-btn flex flex-col items-center gap-2 group rounded-xl p-2 border-2 border-transparent" onclick="selectRole('Delivery', this)">
+<div class="w-[80px] h-[80px] rounded-full bg-[#A855F7] flex items-center justify-center text-white group-hover:brightness-110">
+<span class="material-symbols-outlined text-3xl" data-icon="moped">moped</span>
+</div>
+<span class="text-[12px] font-medium text-pos-dark">Delivery</span>
+</button>
+</div>
+</div>
+<!-- PIN Entry View -->
+<div class="hidden w-full view-transition opacity-0 translate-y-4 flex flex-col items-center" id="view-pin-entry">
+<div class="flex items-center justify-between w-full mb-6">
+<button class="text-gray-500 hover:text-pos-dark flex items-center transition-standard" onclick="backToRoles()">
+<span class="material-symbols-outlined text-xl" data-icon="arrow_back">arrow_back</span>
+</button>
+<label class="text-[14px] font-medium text-pos-dark" id="pin-label">Enter PIN</label>
+<div class="w-5"></div>
+</div>
+<!-- PIN Indicators -->
+<div class="flex gap-4 mb-4">
+<div class="pin-dot" id="dot-1"></div>
+<div class="pin-dot" id="dot-2"></div>
+<div class="pin-dot" id="dot-3"></div>
+<div class="pin-dot" id="dot-4"></div>
+</div>
+<div class="h-6 text-[12px] text-red-500 font-medium mb-4 opacity-0 transition-opacity duration-150" id="error-message"></div>
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-3 w-full" id="numpad">
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('1')">1</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('2')">2</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('3')">3</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('4')">4</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('5')">5</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('6')">6</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('7')">7</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('8')">8</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('9')">9</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-gray-400 text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100 flex items-center justify-center" onclick="pressKey('clear')">
+<span class="material-symbols-outlined" data-icon="backspace">backspace</span>
+</button>
+<button class="key-btn w-full h-[64px] rounded-xl border border-gray-200 text-pos-dark text-[22px] font-medium hover:bg-gray-50 active:bg-gray-100" onclick="pressKey('0')">0</button>
+<button class="key-btn w-full h-[64px] rounded-xl bg-pos-amber text-white opacity-40 flex items-center justify-center" id="enter-btn" onclick="pressKey('enter')">
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="hidden flex flex-col items-center mt-4" id="locked-state">
+<p class="text-red-500 font-bold mb-4">Account locked. Call manager.</p>
+<button class="w-full py-3 bg-pos-dark text-white rounded-xl font-medium" onclick="resetLock()">Manager Override</button>
+</div>
+</div>
+<!-- Dashboard Loading View -->
+<div class="hidden w-full view-transition opacity-0 translate-y-4 flex flex-col items-center py-10" id="view-loading">
+<div class="w-12 h-12 border-4 border-pos-amber border-t-transparent rounded-full animate-spin mb-6"></div>
+<p class="clash text-[20px] font-bold text-pos-dark">Initializing Terminal...</p>
+<p class="text-[13px] text-gray-500">Syncing with cloud database</p>
+</div>
+<footer class="mt-[48px] w-full flex justify-center" id="card-footer">
+<a class="text-[14px] text-gray-500 hover:text-pos-dark transition-standard font-medium" href="#">Sign in with email instead</a>
+</footer>
+</div>
+</main>
+<!-- Global Footer -->
+<div class="fixed bottom-0 left-0 w-full px-margin-desktop py-lg flex justify-between items-center">
+<div class="flex-grow flex justify-center">
+<p class="text-[11px] text-gray-600 font-medium">SwiftServe v2.0 · Powered by Google Stitch</p>
+</div>
+<div class="absolute right-margin-desktop">
+<p class="text-[12px] font-mono text-gray-500" id="clock" style="font-family: 'Inter', monospace;"></p>
+</div>
+</div>
+<script>
+    let pin = "";
+    let selectedRole = "";
+    let attempts = 0;
+    let isLocked = false;
+    let countdown = 30;
+    let timerInterval;
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        countdown = 30;
+        const timerEl = document.getElementById('session-timer');
+        timerEl.classList.remove('opacity-0');
+        document.getElementById('timer-count').innerText = countdown;
+        
+        timerInterval = setInterval(() => {
+            countdown--;
+            document.getElementById('timer-count').innerText = countdown;
+            if (countdown <= 0) {
+                location.reload();
+            }
+        }, 1000);
+    }
+
+    // Interaction reset
+    window.addEventListener('mousedown', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('touchstart', resetTimer);
+
+    function selectRole(role, btn) {
+        if (isLocked) return;
+        
+        // Visual selection
+        btn.classList.add('selected');
+        selectedRole = role;
+        
+        setTimeout(() => {
+            document.getElementById('pin-label').innerText = `Enter PIN for ${role}`;
+            
+            const roleView = document.getElementById('view-role-selection');
+            const pinView = document.getElementById('view-pin-entry');
+            
+            roleView.classList.replace('opacity-100', 'opacity-0');
+            roleView.classList.add('-translate-y-4');
+            
+            setTimeout(() => {
+                roleView.classList.add('hidden');
+                pinView.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    pinView.classList.replace('opacity-0', 'opacity-100');
+                    pinView.classList.replace('translate-y-4', 'translate-y-0');
+                });
+            }, 180);
+            
+            pin = "";
+            updatePinDots();
+        }, 100);
+    }
+
+    function backToRoles() {
+        const roleView = document.getElementById('view-role-selection');
+        const pinView = document.getElementById('view-pin-entry');
+        
+        document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('selected'));
+        
+        pinView.classList.replace('opacity-100', 'opacity-0');
+        pinView.classList.add('translate-y-4');
+        
+        setTimeout(() => {
+            pinView.classList.add('hidden');
+            roleView.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                roleView.classList.replace('opacity-0', 'opacity-100');
+                roleView.classList.replace('-translate-y-4', 'translate-y-0');
+            });
+        }, 180);
+        
+        pin = "";
+        attempts = 0;
+        hideError();
+    }
+
+    function pressKey(key) {
+        if (isLocked) return;
+        
+        if (key === 'clear') {
+            pin = pin.slice(0, -1);
+        } else if (key === 'enter') {
+            if (pin.length === 4) {
+                validatePin();
+            }
+        } else if (pin.length < 4) {
+            pin += key;
+        }
+        updatePinDots();
+    }
+
+    function updatePinDots() {
+        const enterBtn = document.getElementById('enter-btn');
+        for (let i = 1; i <= 4; i++) {
+            const dot = document.getElementById(`dot-${i}`);
+            if (i <= pin.length) {
+                dot.classList.add('filled');
+            } else {
+                dot.classList.remove('filled');
+            }
+        }
+        
+        if (pin.length === 4) {
+            enterBtn.classList.replace('opacity-40', 'opacity-100');
+            enterBtn.classList.add('hover:brightness-110', 'active:scale-95');
+        } else {
+            enterBtn.classList.replace('opacity-100', 'opacity-40');
+            enterBtn.classList.remove('hover:brightness-110', 'active:scale-95');
+        }
+    }
+
+    function validatePin() {
+        const numpad = document.getElementById('numpad');
+        
+        if (pin === '1234') {
+            handleSuccess();
+        } else {
+            attempts++;
+            handleError();
+        }
+    }
+
+    function handleSuccess() {
+        const dots = document.querySelectorAll('.pin-dot');
+        const card = document.getElementById('login-card');
+        const pinView = document.getElementById('view-pin-entry');
+        const loadingView = document.getElementById('view-loading');
+        const flash = document.getElementById('flash-overlay');
+
+        // Green dots sequentially
+        dots.forEach((dot, i) => {
+            setTimeout(() => dot.classList.add('success'), i * 80);
+        });
+
+        setTimeout(() => {
+            card.classList.add('scale-[1.03]');
+            flash.classList.add('animate-flash-white');
+            
+            setTimeout(() => {
+                pinView.classList.add('hidden');
+                loadingView.classList.remove('hidden');
+                loadingView.classList.replace('opacity-0', 'opacity-100');
+                loadingView.classList.replace('translate-y-4', 'translate-y-0');
+                document.getElementById('card-footer').classList.add('hidden');
+            }, 300);
+        }, 500);
+    }
+
+    function handleError() {
+        const numpad = document.getElementById('numpad');
+        const errorText = document.getElementById('error-message');
+        const dots = document.querySelectorAll('.pin-dot');
+
+        numpad.classList.add('animate-shake');
+        dots.forEach(dot => dot.classList.add('error-flash'));
+        
+        if (attempts >= 3) {
+            isLocked = true;
+            document.getElementById('numpad').classList.add('hidden');
+            document.getElementById('locked-state').classList.remove('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+        } else {
+            errorText.innerText = `Incorrect PIN. ${3 - attempts} attempts remaining.`;
+            errorText.classList.replace('opacity-0', 'opacity-100');
+        }
+
+        setTimeout(() => {
+            numpad.classList.remove('animate-shake');
+            dots.forEach(dot => dot.classList.remove('error-flash'));
+            pin = "";
+            updatePinDots();
+        }, 400);
+    }
+
+    function hideError() {
+        const errorText = document.getElementById('error-message');
+        errorText.classList.replace('opacity-100', 'opacity-0');
+    }
+
+    function resetLock() {
+        isLocked = false;
+        attempts = 0;
+        document.getElementById('numpad').classList.remove('hidden');
+        document.getElementById('locked-state').classList.add('hidden');
+        document.getElementById('error-message').classList.remove('hidden');
+        hideError();
+        pin = "";
+        updatePinDots();
+    }
+
+    function updateClock() {
+        const now = new Date();
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const hours = now.getHours().toString().padStart(2, '0');
+        const mins = now.getMinutes().toString().padStart(2, '0');
+        const secs = now.getSeconds().toString().padStart(2, '0');
+        const timeStr = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${hours}:${mins}:${secs}`;
+        document.getElementById('clock').innerText = timeStr;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+    resetTimer();
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('view-pin-entry').classList.contains('hidden')) return;
+        if (e.key >= '0' && e.key <= '9') pressKey(e.key);
+        if (e.key === 'Backspace') pressKey('clear');
+        if (e.key === 'Enter') pressKey('enter');
+        if (e.key === 'Escape') backToRoles();
+    });
+</script>
+</body></html>

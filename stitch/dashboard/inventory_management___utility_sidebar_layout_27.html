@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#271813",
+                        "tertiary-container": "#007caf",
+                        "on-primary-fixed-variant": "#862200",
+                        "error": "#ba1a1a",
+                        "background": "#fff8f6",
+                        "surface-container-high": "#ffe2da",
+                        "surface-container-highest": "#fadcd4",
+                        "on-surface-variant": "#5b4039",
+                        "on-tertiary": "#ffffff",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface": "#271813",
+                        "tertiary": "#00628c",
+                        "surface-bright": "#fff8f6",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#b02f00",
+                        "outline-variant": "#e4beb4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-low": "#fff1ed",
+                        "primary-fixed": "#ffdbd1",
+                        "surface-container": "#ffe9e4",
+                        "primary": "#b02f00",
+                        "on-primary": "#ffffff",
+                        "outline": "#907067",
+                        "primary-container": "#ff5722",
+                        "on-secondary": "#ffffff",
+                        "inverse-on-surface": "#ffede8",
+                        "on-error": "#ffffff",
+                        "on-tertiary-container": "#fcfcff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "surface": "#fff8f6",
+                        "secondary-container": "#dae2fd",
+                        "on-secondary-container": "#5c647a",
+                        "surface-variant": "#fadcd4",
+                        "on-tertiary-fixed": "#001e2e",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#dae2fd",
+                        "on-primary-container": "#541200",
+                        "on-secondary-fixed": "#131b2e",
+                        "inverse-primary": "#ffb5a0",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "secondary": "#565e74",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "section": "24px",
+                        "page_margin": "24px"
+                    },
+                    "fontFamily": {
+                        "body": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "h1": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-on-background bg-background antialiased">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 bg-slate-900 border-r border-slate-800 shadow-2xl font-body text-sm font-medium">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg">restaurant</span>
+</div>
+<div>
+<h1 class="text-xl font-black text-white tracking-tight leading-none">SwiftServe</h1>
+<p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">POS Intelligence</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span> Overview
+                </a>
+<a class="flex items-center gap-3 bg-orange-600 text-white rounded-lg px-4 py-2.5 mx-2 my-1" href="#">
+<span class="material-symbols-outlined">restaurant</span> Operations
+                </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">storefront</span> Business
+                </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">trending_up</span> Growth
+                </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span> Analytics
+                </a>
+</nav>
+<div class="mt-auto px-2">
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span> Settings
+                </a>
+<div class="mt-4 p-4 mx-2 bg-slate-800 rounded-xl">
+<div class="flex items-center gap-3">
+<img alt="Profile" class="w-8 h-8 rounded-full border border-slate-700" data-alt="A professional headshot of a restaurant manager in a high-contrast, modern office setting. The lighting is crisp and cool-toned, matching a sleek digital workspace aesthetic. The composition is a close-up portrait with a shallow depth of field, emphasizing a clean and authoritative corporate brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1gqLvu3EF__xZN_n5V9jtnLzGKVeVL6URORocrQHfTzke_S6mq43Fpd95aqLdnz7ahWgBKWb4TQrnpjotA3-UzBfE9hYr_Gzp8FDyGEgFiwKBxRnkolhsfXALSTJYaF30Kj-9Ihofk7AzOGxJ8rfyvKBuIUbTLAvSUWPKBs8O5kyp1RtZSaGiejtucHxN5y2QkcoqHs7uzvCJbaBv_c2GK0DUy0iymlAmQKHC_rH8VWmv7mPkaUhnl-cHIk1ggtgrmPfYcGQUNvdL"/>
+<div class="overflow-hidden">
+<p class="text-white text-xs font-bold truncate">Alex Chen</p>
+<p class="text-slate-500 text-[10px] truncate">Admin Access</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen flex flex-col">
+<!-- Top Header Bar -->
+<header class="h-16 flex items-center justify-between px-8 bg-[#F8FAFC] border-b border-slate-200 sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<h2 class="font-display text-h1 text-on-surface">Main Branch Inventory</h2>
+<span class="px-2 py-0.5 rounded-full bg-primary-container/10 text-primary text-[10px] font-bold tracking-wide uppercase">Live Sync</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="absolute inset-y-0 left-3 flex items-center text-slate-400 group-focus-within:text-primary">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-full text-body focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Global search..." type="text"/>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-all">
+<span class="material-symbols-outlined">apps</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Dynamic Content Area -->
+<div class="p-page_margin space-y-section">
+<!-- Full-width Status Strip -->
+<section class="space-y-related">
+<div class="flex overflow-x-auto hide-scrollbar gap-grid_gutter pb-2">
+<!-- Status Cards -->
+<div class="min-w-[240px] bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-center justify-between mb-2">
+<span class="text-caption text-secondary">Healthy Stock</span>
+<span class="material-symbols-outlined text-green-600">check_circle</span>
+</div>
+<div class="text-display text-on-surface">1,248</div>
+<div class="text-[10px] text-green-600 font-bold mt-1">+12% from yesterday</div>
+</div>
+<div class="min-w-[240px] bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-center justify-between mb-2">
+<span class="text-caption text-secondary">Low Stock Alert</span>
+<span class="material-symbols-outlined text-orange-600" style="font-variation-settings: 'FILL' 1;">warning</span>
+</div>
+<div class="text-display text-on-surface">14</div>
+<div class="text-[10px] text-orange-600 font-bold mt-1">Requires immediate order</div>
+</div>
+<div class="min-w-[240px] bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-center justify-between mb-2">
+<span class="text-caption text-secondary">Out of Stock</span>
+<span class="material-symbols-outlined text-error">dangerous</span>
+</div>
+<div class="text-display text-on-surface">3</div>
+<div class="text-[10px] text-error font-bold mt-1">Action required for 2 menus</div>
+</div>
+<!-- Wide Alert Banner -->
+<div class="flex-1 min-w-[400px] bg-primary rounded-xl p-element flex items-center justify-between text-white relative overflow-hidden group">
+<div class="relative z-10">
+<h3 class="font-display text-h2 mb-1">Monthly Stock Audit Due</h3>
+<p class="text-caption opacity-90">Your quarterly inventory reconciliation period starts in 48 hours. Ensure all logs are finalized.</p>
+</div>
+<button class="relative z-10 bg-white text-primary px-4 py-2 rounded-lg font-bold text-caption hover:bg-opacity-90 transition-all shadow-lg">Start Prep</button>
+<div class="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 transition-transform group-hover:scale-110">
+<span class="material-symbols-outlined text-[120px]">inventory</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Layout: Table + Sidebar -->
+<div class="flex gap-section items-start">
+<!-- Inventory Table (flex-1) -->
+<div class="flex-1 space-y-grid_gutter">
+<!-- Toolbar row -->
+<div class="bg-surface-container-lowest p-related rounded-xl border border-outline-variant/20 shadow-sm flex items-center justify-between">
+<div class="flex items-center gap-related">
+<div class="relative">
+<span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+</span>
+<select class="pl-10 pr-8 py-2 bg-background border border-outline-variant rounded-lg text-caption focus:ring-1 focus:ring-primary appearance-none">
+<option>All Categories</option>
+<option>Dry Goods</option>
+<option>Refrigerated</option>
+<option>Beverages</option>
+</select>
+</div>
+<div class="relative">
+<span class="absolute inset-y-0 left-3 flex items-center text-slate-400">
+<span class="material-symbols-outlined text-sm">sort</span>
+</span>
+<select class="pl-10 pr-8 py-2 bg-background border border-outline-variant rounded-lg text-caption focus:ring-1 focus:ring-primary appearance-none">
+<option>Latest Updates</option>
+<option>Stock Level (Low-High)</option>
+<option>A-Z Alphabetical</option>
+</select>
+</div>
+</div>
+<div class="flex items-center gap-related">
+<button class="px-4 py-2 bg-background border border-outline-variant rounded-lg text-caption font-bold hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">download</span> Export CSV
+                            </button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-caption font-bold hover:bg-opacity-90 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> New Item
+                            </button>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30 overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/30">
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider">Item Name</th>
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider">Category</th>
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider text-right">In Stock</th>
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider">Status</th>
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider text-right">Unit Price</th>
+<th class="px-6 py-4 font-display text-caption text-secondary uppercase tracking-wider text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-background/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Ribeye Steak" class="w-full h-full object-cover" data-alt="A close-up, high-resolution shot of premium marbled ribeye steak on a clean white ceramic background. The lighting is professional studio-grade, emphasizing the rich texture and fresh quality of the meat. The aesthetic is clean and minimalist, following a high-end culinary inventory photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE9IcG767U1yGn1EWUfTWxyrTy5TMCUkd84nyyGuAZt-LP9Q_R88Z5ydnZbaXUd5MWdK-xo1kXQQErkxhU-K03zuCD1GlNb357reTobsPXFYrGYGB1K33rvamKr2S5tShiS_0xiPZniCSezjalb4yeXIdumgsBMNRLXYV5JU8540T5q8wcTuBJvup_ONi90YaJ4FOSo7iZz7sqjsDE2tyl5W-zrMbU6U2oVeUOMNZmfIAYzmCxTxwspmlcsd-tTs8RKE6xMHdeVlKG"/>
+</div>
+<div>
+<div class="font-display text-body font-bold text-on-surface">Angus Ribeye (12oz)</div>
+<div class="text-[10px] text-secondary">SKU: MEAT-0042</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body text-secondary">Premium Meats</td>
+<td class="px-6 py-4 text-right">
+<div class="font-display text-body font-bold text-on-surface">42 units</div>
+<div class="text-[10px] text-secondary">Par Level: 50</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-orange-600"></span> Low Stock
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right font-display text-body">$18.50</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors text-secondary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-background/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Whole Milk" class="w-full h-full object-cover" data-alt="A minimalist and crisp product shot of a premium glass milk bottle on a bright, well-lit surface. The background is a soft off-white, creating a clean, modern aesthetic. The lighting creates subtle reflections on the glass, emphasizing freshness and high-quality dairy stock." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUB3LVfUnGT45yBuPS5hQ63d0S9r2_zb-oSf3dYj2i9Hy-LOEQTNM_KywhAkRe327BlJ3q_lv4vfxAKf7Xk3VNOP5HxFL8L_ZaeDhYVV8HgtrS48q-Ysw7rAQ_RT-DsWv8QtbfyCLlASl3dCj0WkdGpPV8qEjg55qOA-sIbA0YgnkwnddkEsjNKEzPBu3dYW22ZyPrMdboajw9uU9hLW7-HVhGHBGAiPoJAztWR_OtkPvDfsqHTY3GV4cCAuxZxiBGKwEgKgEuPvOg"/>
+</div>
+<div>
+<div class="font-display text-body font-bold text-on-surface">Whole Milk (1 gal)</div>
+<div class="text-[10px] text-secondary">SKU: DY-1102</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body text-secondary">Dairy &amp; Eggs</td>
+<td class="px-6 py-4 text-right">
+<div class="font-display text-body font-bold text-on-surface">112 units</div>
+<div class="text-[10px] text-secondary">Par Level: 80</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-green-600"></span> Healthy
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right font-display text-body">$4.20</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors text-secondary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-background/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container overflow-hidden">
+<img alt="Avocados" class="w-full h-full object-cover" data-alt="A professional food photography shot of several ripe avocados on a clean, light-colored wooden surface. The lighting is natural and bright, showcasing the pebbly dark green skin and fresh appearance. The composition is focused and sharp, fitting a high-end kitchen management UI design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBq8ubEzfjJ1PNV9NgXew32jqOp_WqjjtXBQ53FnERp2oEtVnydL-diSt1DwvHABvwx58dsOPVBERMTxJu3S6Rxo4fT7KJYhfR9kp5djxA5mZ5ns6xgT_wq6VA4bakMYNhwvVYKk0F0tdxJXvAbOhs-F_dsZzx6l9hKwEYO8Awp8MqxNVrnx6ry0GBnl70DzWn966yl5jM86SvYTmPE_3tw92YW16riIqU1zdEK8fmEFKWWmcGYo4fcIOUzt6wbwY_yyQJONs_vzFA_"/>
+</div>
+<div>
+<div class="font-display text-body font-bold text-on-surface">Hass Avocados</div>
+<div class="text-[10px] text-secondary">SKU: PROD-882</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body text-secondary">Produce</td>
+<td class="px-6 py-4 text-right">
+<div class="font-display text-body font-bold text-on-surface">0 units</div>
+<div class="text-[10px] text-secondary">Par Level: 24</div>
+</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
+<span class="w-1.5 h-1.5 rounded-full bg-red-600"></span> Out of Stock
+                                        </span>
+</td>
+<td class="px-6 py-4 text-right font-display text-body">$1.15</td>
+<td class="px-6 py-4 text-right">
+<button class="p-2 hover:bg-surface-container-low rounded-lg transition-colors text-secondary">
+<span class="material-symbols-outlined text-sm">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 border-t border-outline-variant/30 bg-surface-container-low flex items-center justify-between">
+<span class="text-caption text-secondary">Showing 1-10 of 248 items</span>
+<div class="flex gap-2">
+<button class="p-1 border border-outline-variant rounded hover:bg-background transition-all disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="p-1 border border-outline-variant rounded hover:bg-background transition-all">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right-hand Sidebars (320px) -->
+<aside class="w-80 space-y-grid_gutter shrink-0">
+<!-- Quick Wastage Log -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-center justify-between mb-element">
+<h3 class="font-display text-h2 text-on-surface">Wastage Log</h3>
+<span class="material-symbols-outlined text-secondary text-[20px]">delete_sweep</span>
+</div>
+<div class="space-y-related mb-element">
+<div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<label class="block text-[10px] font-bold uppercase text-secondary mb-1">Select Item</label>
+<select class="w-full bg-transparent border-none text-body focus:ring-0 p-0 font-medium">
+<option>Organic Spinach (Bag)</option>
+<option>Fresh Salmon Fillet</option>
+<option>Artisan Sourdough</option>
+</select>
+</div>
+<div class="flex gap-related">
+<div class="flex-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<label class="block text-[10px] font-bold uppercase text-secondary mb-1">Quantity</label>
+<input class="w-full bg-transparent border-none text-body focus:ring-0 p-0 font-medium" type="number" value="1"/>
+</div>
+<div class="flex-1 p-3 bg-surface-container-low rounded-lg border border-outline-variant/10">
+<label class="block text-[10px] font-bold uppercase text-secondary mb-1">Reason</label>
+<select class="w-full bg-transparent border-none text-body focus:ring-0 p-0 font-medium">
+<option>Spoiled</option>
+<option>Dropped</option>
+<option>Customer Return</option>
+</select>
+</div>
+</div>
+</div>
+<button class="w-full py-2.5 bg-on-background text-white rounded-lg font-display text-caption font-bold hover:bg-slate-800 transition-all">Submit Entry</button>
+</div>
+<!-- Recent Purchase Orders -->
+<div class="bg-surface-container-lowest p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-center justify-between mb-element">
+<h3 class="font-display text-h2 text-on-surface">Active POs</h3>
+<a class="text-[10px] font-bold text-primary hover:underline" href="#">View All</a>
+</div>
+<div class="space-y-grid_gutter">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined text-[20px]">local_shipping</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<div class="flex justify-between items-start">
+<p class="text-body font-bold text-on-surface truncate">West Coast Farms</p>
+<span class="text-[10px] font-bold text-blue-600">IN TRANSIT</span>
+</div>
+<p class="text-caption text-secondary">PO #9842 • 14 Items</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<div class="flex justify-between items-start">
+<p class="text-body font-bold text-on-surface truncate">Ocean Catch Ltd.</p>
+<span class="text-[10px] font-bold text-green-600">DELIVERED</span>
+</div>
+<p class="text-caption text-secondary">PO #9831 • 6 Items</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[20px]">pending</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<div class="flex justify-between items-start">
+<p class="text-body font-bold text-on-surface truncate">Global Dry Goods</p>
+<span class="text-[10px] font-bold text-secondary">PENDING</span>
+</div>
+<p class="text-caption text-secondary">PO #9845 • 28 Items</p>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border-2 border-dashed border-outline-variant rounded-xl text-caption font-bold text-secondary hover:bg-background transition-all">
+                            + Create New Order
+                        </button>
+</div>
+<!-- Warehouse Image Placeholder for context -->
+<div class="rounded-xl overflow-hidden h-32 relative group shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<img alt="Warehouse Overview" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A cinematic, wide-angle photo of a pristine, high-tech industrial kitchen storage facility. The shelving is organized with stainless steel containers and fresh produce, bathed in soft, cool atmospheric lighting. The perspective creates a sense of immense scale and perfect order, aligning with a high-end professional inventory management system aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpT3-SdFkcGWvPNv4HdIAmvZNkSD-3qh63vkOxWL8dQCD0AmqiU3FASf0JhdXeI-hFu6IQkv8kCAMCBXtudepOYBypWH1VhMBmk-ydopDeu8fqSqHD3qcqlhDp0LLzjRqwN-fMHA3CPIrQnlG7ZiFNSQbNJ4YMZcHbxwcEWgFYpuUcpbSU65FAM8KJGqDMkOgdOMKvplmFsrzzWYAEx3zSc8NEl9f2b4KTC0T8e2oqsbFg_FD9xX9BNMgF3y_hp10DYINnIAULkQ4I"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-background/80 to-transparent flex items-end p-3">
+<span class="text-white font-bold text-[10px] uppercase tracking-widest">Zone A: Refrigerated</span>
+</div>
+</div>
+</aside>
+</div>
+</div>
+</main>
+<!-- Contextual FAB (Suppressed on Details/Settings, shown here for Home/Dashboard context) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-3xl">add_shopping_cart</span>
+</button>
+</body></html>

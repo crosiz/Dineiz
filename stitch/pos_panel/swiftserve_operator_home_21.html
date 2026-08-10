@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS | Operator Home</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#c7c6c4",
+                        "tertiary-fixed": "#6ffbbe",
+                        "inverse-on-surface": "#313030",
+                        "surface-container": "#201f1f",
+                        "inverse-primary": "#855300",
+                        "surface-container-highest": "#353534",
+                        "on-tertiary": "#003824",
+                        "surface-container-high": "#2a2a2a",
+                        "primary": "#ffc174",
+                        "surface": "#131313",
+                        "on-surface": "#e5e2e1",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-secondary-fixed-variant": "#464745",
+                        "on-tertiary-container": "#004e34",
+                        "secondary": "#c7c6c4",
+                        "on-primary-fixed-variant": "#653e00",
+                        "on-error": "#690005",
+                        "inverse-surface": "#e5e2e1",
+                        "error-container": "#93000a",
+                        "background": "#131313",
+                        "surface-bright": "#3a3939",
+                        "tertiary-container": "#30c88f",
+                        "surface-tint": "#ffb95f",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-dim": "#131313",
+                        "on-secondary-fixed": "#1a1c1a",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed": "#002113",
+                        "on-primary-container": "#613b00",
+                        "primary-container": "#f59e0b",
+                        "tertiary": "#56e5a9",
+                        "surface-container-low": "#1c1b1b",
+                        "surface-variant": "#353534",
+                        "on-secondary": "#2f312f",
+                        "primary-fixed": "#ffddb8",
+                        "primary-fixed-dim": "#ffb95f",
+                        "error": "#ffb4ab",
+                        "outline": "#a08e7a",
+                        "on-primary": "#472a00",
+                        "on-error-container": "#ffdad6",
+                        "on-secondary-container": "#b5b5b2",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary-fixed": "#e3e2e0",
+                        "on-background": "#e5e2e1",
+                        "outline-variant": "#534434",
+                        "secondary-container": "#464745",
+                        "on-primary-fixed": "#2a1700",
+                        "midnight": "#0D0D0D",
+                        "amber-action": "#F59E0B"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "base": "8px",
+                        "touch-min": "48px",
+                        "lg": "24px",
+                        "margin-edge": "24px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "xs": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "label-xl": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Space Grotesk"],
+                        "display-hero": ["Space Grotesk"],
+                        "display-price": ["Space Grotesk"],
+                        "body-md": ["Inter"],
+                        "mono-data": ["Inter"],
+                        "headline-md": ["Space Grotesk"]
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+        body {
+            background-color: #0D0D0D;
+            color: #F9F8F5;
+            -webkit-font-smoothing: antialiased;
+        }
+        .clash-display { font-family: 'Space Grotesk', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes pulse-red {
+            0% { border-color: transparent; }
+            50% { border-color: #ffb4ab; }
+            100% { border-color: transparent; }
+        }
+        .pulse-red { animation: pulse-red 2s infinite; }
+        
+        .active-order-chip {
+            transition: transform 0.15s ease-out;
+        }
+        .active-order-chip:active {
+            transform: scale(0.96);
+        }
+        .hero-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="font-body-md overflow-hidden flex flex-col h-screen">
+<!-- Top Navigation (Shared Component Integration) -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-outline-variant bg-midnight px-10 py-3 shrink-0">
+<div class="flex items-center gap-4 text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.8261 17.4264C16.7203 18.1174 20.2244 18.5217 24 18.5217C27.7756 18.5217 31.2797 18.1174 34.1739 17.4264C36.9144 16.7722 39.9967 15.2331 41.3563 14.1648L24.8486 40.6391C24.4571 41.267 23.5429 41.267 23.1514 40.6391L6.64374 14.1648C8.00331 15.2331 11.0856 16.7722 13.8261 17.4264Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M39.998 12.236C39.9944 12.2537 39.9875 12.2845 39.9748 12.3294C39.9436 12.4399 39.8949 12.5741 39.8346 12.7175C39.8168 12.7597 39.7989 12.8007 39.7813 12.8398C38.5103 13.7113 35.9788 14.9393 33.7095 15.4811C30.9875 16.131 27.6413 16.5217 24 16.5217C20.3587 16.5217 17.0125 16.131 14.2905 15.4811C12.0012 14.9346 9.44505 13.6897 8.18538 12.8168C8.17384 12.7925 8.16216 12.767 8.15052 12.7408C8.09919 12.6249 8.05721 12.5114 8.02977 12.411C8.00356 12.3152 8.00039 12.2667 8.00004 12.2612C8.00004 12.261 8 12.2607 8.00004 12.2612C8.00004 12.2359 8.0104 11.9233 8.68485 11.3686C9.34546 10.8254 10.4222 10.2469 11.9291 9.72276C14.9242 8.68098 19.1919 8 24 8C28.8081 8 33.0758 8.68098 36.0709 9.72276C37.5778 10.2469 38.6545 10.8254 39.3151 11.3686C39.9006 11.8501 39.9857 12.1489 39.998 12.236ZM4.95178 15.2312L21.4543 41.6973C22.6288 43.5809 25.3712 43.5809 26.5457 41.6973L43.0534 15.223C43.0709 15.1948 43.0878 15.1662 43.104 15.1371L41.3563 14.1648C43.104 15.1371 43.1038 15.1374 43.104 15.1371L43.1051 15.135L43.1065 15.1325L43.1101 15.1261L43.1199 15.1082C43.1276 15.094 43.1377 15.0754 43.1497 15.0527C43.1738 15.0075 43.2062 14.9455 43.244 14.8701C43.319 14.7208 43.4196 14.511 43.5217 14.2683C43.6901 13.8679 44 13.0689 44 12.2609C44 10.5573 43.003 9.22254 41.8558 8.2791C40.6947 7.32427 39.1354 6.55361 37.385 5.94477C33.8654 4.72057 29.133 4 24 4C18.867 4 14.1346 4.72057 10.615 5.94478C8.86463 6.55361 7.30529 7.32428 6.14419 8.27911C4.99695 9.22255 3.99999 10.5573 3.99999 12.2609C3.99999 13.1275 4.29264 13.9078 4.49321 14.3607C4.60375 14.6102 4.71348 14.8196 4.79687 14.9689C4.83898 15.0444 4.87547 15.1065 4.9035 15.1529C4.91754 15.1762 4.92954 15.1957 4.93916 15.2111L4.94662 15.223L4.95178 15.2312ZM35.9868 18.996L24 38.22L12.0131 18.996C12.4661 19.1391 12.9179 19.2658 13.3617 19.3718C16.4281 20.1039 20.0901 20.5217 24 20.5217C27.9099 20.5217 31.5719 20.1039 34.6383 19.3718C35.082 19.2658 35.5339 19.1391 35.9868 18.996Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="clash-display text-lg font-bold leading-tight tracking-[-0.015em]">SwiftServe POS</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<label class="flex flex-col min-w-40 h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded h-full bg-surface-container-high border border-outline-variant">
+<div class="text-on-surface-variant flex items-center justify-center pl-4 pr-2" data-icon="search">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="w-full min-w-0 bg-transparent border-none focus:ring-0 text-white placeholder:text-on-surface-variant text-base" placeholder="Search orders or items"/>
+</div>
+</label>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded h-10 w-10 bg-surface-container-high hover:bg-surface-variant transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-white" style="font-size: 20px;">history</span>
+</button>
+<button class="flex items-center justify-center rounded h-10 w-10 bg-surface-container-high hover:bg-surface-variant transition-colors border border-outline-variant">
+<span class="material-symbols-outlined text-white" style="font-size: 20px;">notifications</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border border-outline-variant" data-alt="Close-up professional headshot of a smiling restaurant manager in a minimalist black uniform. The background is a soft-focus, modern restaurant interior with warm lighting accents of amber and deep wood tones. High-end digital photography style." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuByf_Ks88bwJjbD0I4nicYf-E2kPGY1EcrqOD057V58NGzBi0VkQztYEfrnx3TZQR6ImVBNw5BuK1JSioa3CoYGLEIzs8e7jHGgXf3KcvR_chYiA9PK6tfkV1OZmB6RZ9OSYbXs0NdTV96SKuhP2gqqS7pH918G6J7vIos365hz9itnv0ftn1tbBVGCJzutmIsPKPa_Yntwiq322tgla7qfot_L35_sHFQnzZL0qweizchehUuzOC1CHB6gvPw6jOwDgxXMyPw5blqf");'></div>
+</div>
+</header>
+<main class="flex-1 overflow-hidden grid grid-cols-12">
+<!-- Left Column (60%) -->
+<div class="col-span-7 border-r border-outline-variant overflow-y-auto no-scrollbar bg-midnight p-margin-edge flex flex-col gap-xl">
+<!-- Quick Actions Hero Grid -->
+<section>
+<h3 class="clash-display text-headline-md mb-md text-white">Quick Actions</h3>
+<div class="grid grid-cols-2 gap-md">
+<div class="hero-card h-[180px] bg-amber-action rounded-lg flex flex-col justify-between p-lg cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.98]">
+<div class="w-12 h-12 bg-midnight/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-midnight text-3xl font-bold" data-weight="fill">bolt</span>
+</div>
+<span class="clash-display text-2xl font-bold text-midnight">New Order</span>
+</div>
+<div class="hero-card h-[180px] bg-surface-container-high border border-outline-variant rounded-lg flex flex-col justify-between p-lg cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.98]">
+<div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl">table_bar</span>
+</div>
+<span class="clash-display text-2xl font-bold text-on-surface">Open Tables</span>
+</div>
+<div class="hero-card h-[180px] bg-transparent border-2 border-on-surface rounded-lg flex flex-col justify-between p-lg cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.98]">
+<div class="w-12 h-12 bg-on-surface/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface text-3xl">shopping_bag</span>
+</div>
+<span class="clash-display text-2xl font-bold text-on-surface">Takeaway Order</span>
+</div>
+<div class="hero-card h-[180px] bg-transparent border-2 border-on-surface rounded-lg flex flex-col justify-between p-lg cursor-pointer transition-transform hover:scale-[1.01] active:scale-[0.98]">
+<div class="w-12 h-12 bg-on-surface/10 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface text-3xl">moped</span>
+</div>
+<span class="clash-display text-2xl font-bold text-on-surface">Walk-in Delivery</span>
+</div>
+</div>
+</section>
+<!-- Active Orders Strip -->
+<section>
+<div class="flex justify-between items-center mb-md">
+<h3 class="clash-display text-headline-md text-white">Active Orders</h3>
+<button class="text-primary font-medium text-sm flex items-center gap-1">
+                        View All <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+<div class="flex gap-md overflow-x-auto pb-4 no-scrollbar">
+<!-- Order Chip -->
+<div class="active-order-chip shrink-0 w-[160px] p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="flex justify-between items-start mb-xs">
+<span class="text-on-surface font-bold">#284</span>
+<span class="text-xs text-on-surface-variant font-mono">12m</span>
+</div>
+<div class="text-xs text-on-surface-variant mb-base truncate">Table 4 • 3 Items</div>
+<div class="text-on-surface font-bold clash-display">PKR 4,250</div>
+</div>
+<!-- Bill Requested Chip -->
+<div class="active-order-chip shrink-0 w-[160px] p-md bg-surface-container rounded-lg border-2 pulse-red cursor-pointer">
+<div class="flex justify-between items-start mb-xs">
+<span class="text-error font-bold">#281</span>
+<span class="material-symbols-outlined text-error text-sm" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div class="text-xs text-error/80 mb-base truncate">Table 12 • Bill Req</div>
+<div class="text-on-surface font-bold clash-display">PKR 8,900</div>
+</div>
+<!-- Order Chip -->
+<div class="active-order-chip shrink-0 w-[160px] p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="flex justify-between items-start mb-xs">
+<span class="text-on-surface font-bold">#288</span>
+<span class="text-xs text-on-surface-variant font-mono">5m</span>
+</div>
+<div class="text-xs text-on-surface-variant mb-base truncate">Takeaway • 1 Item</div>
+<div class="text-on-surface font-bold clash-display">PKR 1,120</div>
+</div>
+<!-- Order Chip -->
+<div class="active-order-chip shrink-0 w-[160px] p-md bg-surface-container rounded-lg border border-outline-variant">
+<div class="flex justify-between items-start mb-xs">
+<span class="text-on-surface font-bold">#289</span>
+<span class="text-xs text-on-surface-variant font-mono">2m</span>
+</div>
+<div class="text-xs text-on-surface-variant mb-base truncate">Table 7 • 5 Items</div>
+<div class="text-on-surface font-bold clash-display">PKR 12,400</div>
+</div>
+</div>
+</section>
+<!-- Notifications -->
+<section class="flex flex-col gap-sm">
+<h3 class="clash-display text-headline-md mb-xs text-white">Alerts</h3>
+<div class="p-md bg-tertiary-container/10 border border-tertiary rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">check_circle</span>
+<div>
+<p class="font-bold text-on-surface">Table 5 order is READY</p>
+<p class="text-xs text-on-surface-variant">Chef: Malik • 2 mins ago</p>
+</div>
+</div>
+<button class="bg-tertiary text-on-tertiary px-4 py-1.5 rounded font-bold text-sm">Clear</button>
+</div>
+<div class="p-md bg-primary-container/10 border border-primary rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary">battery_2_bar</span>
+<div>
+<p class="font-bold text-on-surface">Low battery</p>
+<p class="text-xs text-on-surface-variant">Terminal 4 • Connect charger soon</p>
+</div>
+</div>
+<span class="text-primary font-bold text-xs uppercase tracking-widest px-2">Critical</span>
+</div>
+</section>
+</div>
+<!-- Right Column (40%) -->
+<div class="col-span-5 bg-surface-container-low p-margin-edge overflow-y-auto no-scrollbar flex flex-col gap-xl">
+<!-- Shift Info Card -->
+<section class="bg-surface-container-high border border-outline-variant rounded-lg p-lg">
+<div class="flex justify-between items-start mb-lg">
+<div>
+<h4 class="text-on-surface-variant text-sm font-bold uppercase tracking-wider mb-xs">Your Shift</h4>
+<div class="flex items-center gap-2">
+<span class="clash-display text-2xl font-bold text-on-surface">Morning Crew</span>
+<span class="px-2 py-0.5 bg-primary text-midnight text-[10px] font-black uppercase rounded">Active</span>
+</div>
+</div>
+<button class="bg-transparent border border-outline-variant px-4 py-2 text-on-surface font-bold rounded-lg text-sm hover:bg-surface-variant transition-colors">Take Break</button>
+</div>
+<div class="flex items-center gap-base text-primary">
+<span class="material-symbols-outlined">schedule</span>
+<span class="clash-display text-xl font-medium tracking-wide">Elapsed: 3h 42m</span>
+</div>
+</section>
+<!-- Today at a Glance -->
+<section>
+<h4 class="clash-display text-headline-md mb-md text-white">Today's Performance</h4>
+<div class="flex flex-col gap-sm">
+<div class="bg-surface-container-high border border-outline-variant p-md flex justify-between items-center rounded-lg">
+<span class="text-on-surface-variant font-medium">Orders served</span>
+<span class="clash-display text-[36px] font-bold text-on-surface leading-none">42</span>
+</div>
+<div class="bg-surface-container-high border border-outline-variant p-md flex justify-between items-center rounded-lg">
+<span class="text-on-surface-variant font-medium">Total value</span>
+<div class="text-right">
+<span class="clash-display text-2xl font-bold text-on-surface">PKR 128,450</span>
+<div class="text-[10px] text-tertiary font-bold uppercase">+12% vs yest.</div>
+</div>
+</div>
+<div class="bg-surface-container-high border border-outline-variant p-md flex justify-between items-center rounded-lg">
+<span class="text-on-surface-variant font-medium">Average per order</span>
+<span class="clash-display text-2xl font-bold text-on-surface">PKR 3,058</span>
+</div>
+</div>
+</section>
+<!-- Table Status Mini Map -->
+<section class="flex-1 flex flex-col">
+<div class="flex justify-between items-center mb-md">
+<h4 class="clash-display text-headline-md text-white">Table Overview</h4>
+<a class="text-primary text-sm font-bold border-b border-primary" href="#">View Full Floor</a>
+</div>
+<div class="flex-1 bg-midnight border border-outline-variant rounded-lg p-lg flex flex-col items-center justify-center relative">
+<!-- Simple Mock Floor Map -->
+<div class="grid grid-cols-4 gap-xl">
+<!-- Table Dots -->
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-tertiary ring-4 ring-tertiary/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T1</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-tertiary ring-4 ring-tertiary/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T2</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-error ring-4 ring-error/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T3</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-amber-action ring-4 ring-amber-action/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T4</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-tertiary ring-4 ring-tertiary/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T5</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-error ring-4 ring-error/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T6</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-tertiary ring-4 ring-tertiary/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T7</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="size-6 rounded-full bg-tertiary ring-4 ring-tertiary/20"></div>
+<span class="text-[10px] text-on-surface-variant font-bold">T8</span>
+</div>
+</div>
+<div class="mt-lg flex gap-md">
+<div class="flex items-center gap-base">
+<div class="size-2 rounded-full bg-tertiary"></div>
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Available</span>
+</div>
+<div class="flex items-center gap-base">
+<div class="size-2 rounded-full bg-error"></div>
+<span class="text-[10px] uppercase font-bold text-on-surface-variant">Occupied</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation (Sticky) -->
+<nav class="shrink-0 bg-midnight border-t border-outline-variant h-20 flex items-center px-margin-edge z-50">
+<div class="flex-1 flex justify-around items-center">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Menu</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">receipt_long</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Tickets</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">inventory</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Stock</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Admin</span>
+</button>
+</div>
+<div class="w-1 px-10 h-10 border-l border-outline-variant mx-4"></div>
+<div class="flex items-center gap-md">
+<div class="text-right">
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">System Status</p>
+<p class="text-xs text-tertiary font-bold">ONLINE • V2.4</p>
+</div>
+<div class="size-10 bg-amber-action rounded flex items-center justify-center cursor-pointer hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-amber-action/10">
+<span class="material-symbols-outlined text-midnight font-bold">power_settings_new</span>
+</div>
+</div>
+</nav>
+<script>
+        // Micro-interactions and effects
+        document.querySelectorAll('.active-order-chip, .hero-card').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.96)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = '';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
+
+        // Atmospheric clock update logic could go here if needed
+        console.log("SwiftServe POS Interface Initialized.");
+    </script>
+</body></html>

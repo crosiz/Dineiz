@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#007caf",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "primary-fixed": "#ffdbd1",
+                        "on-background": "#271813",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "surface": "#fff8f6",
+                        "surface-bright": "#fff8f6",
+                        "outline-variant": "#e4beb4",
+                        "on-primary-fixed": "#3b0900",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#fadcd4",
+                        "inverse-surface": "#3e2c27",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-surface": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "secondary": "#565e74",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed": "#131b2e",
+                        "inverse-primary": "#ffb5a0",
+                        "on-primary-container": "#541200",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "primary-container": "#ff5722",
+                        "secondary-container": "#dae2fd",
+                        "inverse-on-surface": "#ffede8",
+                        "on-secondary-container": "#5c647a",
+                        "background": "#fff8f6",
+                        "outline": "#907067",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container": "#ffe9e4",
+                        "tertiary": "#00628c",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#fadcd4",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#dae2fd",
+                        "primary": "#b02f00",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#fcfcff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section": "24px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "h1": ["Inter"],
+                        "display": ["Inter"],
+                        "h2": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin-fast {
+            animation: spin 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background min-h-screen flex flex-col items-center justify-center">
+<div class="w-full max-w-[1200px] grid lg:grid-cols-2 bg-surface-container-lowest rounded-xl shadow-2xl overflow-hidden mx-page_margin min-h-[700px]">
+<!-- Left Side: Branding & Image (Decorative) -->
+<div class="relative hidden lg:flex flex-col justify-between p-12 bg-slate-900 overflow-hidden">
+<div class="relative z-10">
+<div class="flex items-center gap-related mb-element">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<span class="font-display text-white tracking-tight">SwiftServe</span>
+</div>
+<h2 class="font-display text-display text-white mt-12 max-w-sm leading-tight">
+                    Seamless operations for the modern kitchen.
+                </h2>
+<p class="text-slate-400 mt-element text-h2 font-normal max-w-sm">
+                    Manage orders, staff, and tables with the precision of a digital maître d'.
+                </p>
+</div>
+<div class="absolute inset-0 z-0">
+<img alt="Professional kitchen atmosphere" class="w-full h-full object-cover opacity-30 grayscale mix-blend-overlay" data-alt="A cinematic, high-contrast photograph of a sleek, modern commercial kitchen interior. The lighting is low-key and dramatic, casting soft shadows across brushed stainless steel surfaces and refined marble countertops. The color palette is dominated by deep charcoal, blacks, and subtle metallic glints, mirroring the premium Modern Corporate aesthetic. The atmosphere is professional, quiet, and precise, capturing the soul of a high-end hospitality environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCwqOxYLAHuTk_9GRla0OKRez31-eNE1nt0gqdNfqijwxupsOq1-pexXN-NVMTOMjiaaGpT4_bx56fACoJpqKD_FOIREc8zps1NgI_PdskJHNDZn9DSZxS9cQAaZrTt3YuLfqCaMDPwijllxjOsR0tqAap58ouwXNR-zZqOEdfMpaknLqRA8e8nwiKAR93YnyzLY1knO-UuzzooJMK9pe7oO-DKxAea0PMo3YI_veXSy7LS0jIZLnc6q2ZQeDqDF4KFI56I41KvLqVL"/>
+</div>
+<div class="relative z-10">
+<div class="flex gap-related items-center text-slate-500 text-caption font-caption">
+<span>v2.4.0 Professional Edition</span>
+<span class="w-1 h-1 bg-slate-700 rounded-full"></span>
+<span>© 2024 SwiftServe Systems</span>
+</div>
+</div>
+</div>
+<!-- Right Side: Login Form -->
+<div class="flex flex-col justify-center items-center p-section sm:p-12 bg-surface-container-lowest">
+<div class="w-full max-w-[400px]">
+<!-- Header -->
+<div class="mb-section text-center lg:text-left">
+<div class="lg:hidden flex items-center justify-center gap-related mb-section">
+<div class="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[20px]" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<span class="font-h1 text-on-surface">SwiftServe</span>
+</div>
+<h1 class="font-display text-display text-on-background mb-related">Welcome Back</h1>
+<p class="font-body text-on-surface-variant">Please enter your credentials to access the POS terminal.</p>
+</div>
+<!-- Form -->
+<div class="space-y-element">
+<!-- Email Input Group -->
+<div class="flex flex-col gap-related">
+<label class="font-caption text-caption text-on-surface-variant px-1" for="email">Email Address</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">mail</span>
+<input class="w-full h-[48px] pl-11 pr-4 bg-surface-container-low border-outline-variant rounded-lg text-body text-on-surface-variant opacity-50 cursor-not-allowed outline-none transition-all duration-200" disabled="" id="email" name="email" type="email" value="admin@swiftserve.pos"/>
+</div>
+</div>
+<!-- Password Input Group -->
+<div class="flex flex-col gap-related">
+<div class="flex justify-between items-center px-1">
+<label class="font-caption text-caption text-on-surface-variant" for="password">Password</label>
+<a class="text-caption font-caption text-primary hover:underline transition-all" href="#">Forgot?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">lock</span>
+<input class="w-full h-[48px] pl-11 pr-4 bg-surface-container-low border-outline-variant rounded-lg text-body text-on-surface-variant opacity-50 cursor-not-allowed outline-none transition-all duration-200" disabled="" id="password" name="password" type="password" value="••••••••"/>
+</div>
+</div>
+<!-- Stay Logged In -->
+<div class="flex items-center gap-related px-1 pt-related">
+<div class="w-5 h-5 border-2 border-outline-variant rounded flex items-center justify-center bg-surface-container-low cursor-not-allowed">
+<div class="w-2.5 h-2.5 bg-primary rounded-sm hidden"></div>
+</div>
+<span class="text-caption font-caption text-on-surface-variant">Keep me signed in for 12 hours</span>
+</div>
+<!-- Sign In Button (LOADING STATE) -->
+<div class="pt-related">
+<button class="w-full h-[48px] bg-primary text-on-primary rounded-lg font-h2 flex items-center justify-center gap-related shadow-lg shadow-primary/20 cursor-wait transition-all active:scale-[0.98]" disabled="">
+<span class="material-symbols-outlined animate-spin-fast text-[22px]">progress_activity</span>
+<span class="opacity-70">Sign In</span>
+</button>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="mt-section text-center">
+<p class="text-caption font-caption text-on-surface-variant mb-element">Need help or a new account?</p>
+<div class="flex justify-center gap-element">
+<button class="flex items-center gap-related px-4 py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+<span class="text-caption font-caption">Support</span>
+</button>
+<button class="flex items-center gap-related px-4 py-2 rounded-lg border border-outline-variant text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[18px]">key</span>
+<span class="text-caption font-caption">Device Token</span>
+</button>
+</div>
+</div>
+<!-- Kitchen Status Indicator -->
+<div class="mt-12 p-element bg-surface-container-low rounded-lg border border-outline-variant/30 flex items-center gap-element">
+<div class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+</div>
+<div class="flex flex-col">
+<span class="text-caption font-caption text-on-surface leading-none">System Status: Optimal</span>
+<span class="text-[10px] text-on-surface-variant font-medium mt-[2px] uppercase tracking-wider">All kitchen terminals connected</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>

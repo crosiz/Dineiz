@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Active Orders</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse-red {
+            animation: pulse-red 2s infinite;
+        }
+        @keyframes pulse-red {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        .pulse-green {
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        .pulse-amber {
+            animation: pulse-amber 2s infinite;
+        }
+        @keyframes pulse-amber {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-highest": "#3c3329",
+                      "surface-variant": "#3c3329",
+                      "surface-container-lowest": "#140d06",
+                      "primary-fixed": "#ffddb8",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "inverse-primary": "#855300",
+                      "on-primary-container": "#613b00",
+                      "on-surface": "#f0e0d1",
+                      "on-primary-fixed-variant": "#653e00",
+                      "error-container": "#93000a",
+                      "on-surface-variant": "#d8c3ad",
+                      "on-secondary-fixed-variant": "#474646",
+                      "tertiary-fixed": "#e3e2e0",
+                      "on-error-container": "#ffdad6",
+                      "surface-tint": "#ffb95f",
+                      "primary": "#ffc174",
+                      "background": "#0D0D0D",
+                      "inverse-surface": "#f0e0d1",
+                      "tertiary-container": "#b1b1ae",
+                      "secondary": "#c9c6c5",
+                      "on-primary": "#472a00",
+                      "on-error": "#690005",
+                      "surface-bright": "#41382e",
+                      "outline": "#a08e7a",
+                      "secondary-container": "#4a4949",
+                      "error": "#EF4444",
+                      "tertiary": "#cdccca",
+                      "surface-dim": "#19120a",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "outline-variant": "#534434",
+                      "primary-container": "#F59E0B",
+                      "surface-container": "#1A1A1A",
+                      "on-tertiary-container": "#434442",
+                      "on-tertiary": "#2f312f",
+                      "surface": "#121212",
+                      "on-primary-fixed": "#2a1700",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "on-secondary-container": "#bab8b7",
+                      "on-background": "#F9F8F5",
+                      "surface-container-low": "#221a12",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "secondary-fixed": "#e5e2e1",
+                      "inverse-on-surface": "#382f25",
+                      "surface-container-high": "#31281f",
+                      "on-secondary": "#313030",
+                      "primary-fixed-dim": "#ffb95f",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "success": "#10B981"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "base": "8px",
+                      "xs": "4px",
+                      "xl": "32px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "lg": "24px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-sm": ["Clash Display"],
+                      "currency-display": ["Clash Display"],
+                      "label-lg": ["Inter"],
+                      "display-lg": ["Clash Display"],
+                      "headline-lg": ["Clash Display"],
+                      "body-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-md": ["Clash Display"]
+              },
+              "fontSize": {
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="bg-surface sticky top-0 z-50 border-b border-outline-variant flex justify-between items-center h-[64px] px-margin-desktop w-full">
+<div class="flex items-center gap-4">
+<h1 class="font-headline-sm text-headline-sm tracking-tight text-on-background">Active Orders</h1>
+</div>
+<div class="flex items-center gap-6">
+<button class="p-2 hover:bg-surface-container-highest rounded-full transition-colors duration-150">
+<span class="material-symbols-outlined text-on-surface-variant">filter_list</span>
+</button>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<span class="material-symbols-outlined text-on-surface-variant">badge</span>
+<span class="material-symbols-outlined text-on-surface-variant">account_circle</span>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto pb-[100px]">
+<!-- Filter Tab Strip -->
+<div class="bg-surface border-b border-outline-variant overflow-x-auto hide-scrollbar">
+<div class="flex px-margin-desktop">
+<button class="flex-none px-6 py-4 border-b-2 border-primary-container text-primary font-label-lg flex items-center gap-2">
+                    All <span class="bg-primary-container text-on-primary-container text-[10px] px-2 py-0.5 rounded-full">23</span>
+</button>
+<button class="flex-none px-6 py-4 border-b-2 border-transparent text-on-surface-variant font-label-lg hover:text-on-background transition-colors flex items-center gap-2">
+                    Dine-in <span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-0.5 rounded-full">14</span>
+</button>
+<button class="flex-none px-6 py-4 border-b-2 border-transparent text-on-surface-variant font-label-lg hover:text-on-background transition-colors flex items-center gap-2">
+                    Takeaway <span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-0.5 rounded-full">5</span>
+</button>
+<button class="flex-none px-6 py-4 border-b-2 border-transparent text-on-surface-variant font-label-lg hover:text-on-background transition-colors flex items-center gap-2">
+                    Delivery <span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-0.5 rounded-full">4</span>
+</button>
+<button class="flex-none px-6 py-4 border-b-2 border-transparent text-on-surface-variant font-label-lg hover:text-on-background transition-colors flex items-center gap-2">
+                    On Hold <span class="bg-surface-container-highest text-on-surface-variant text-[10px] px-2 py-0.5 rounded-full">0</span>
+</button>
+</div>
+</div>
+<!-- Sort & Toggle Bar -->
+<div class="px-margin-desktop py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+<div class="relative group">
+<button class="bg-surface-container border border-outline-variant px-4 py-2 rounded-lg flex items-center gap-3 text-on-surface-variant font-label-lg hover:border-primary transition-colors">
+                    Oldest first
+                    <span class="material-symbols-outlined text-[20px]">expand_more</span>
+</button>
+</div>
+<div class="flex items-center gap-3">
+<span class="font-label-lg text-on-surface-variant">My Orders Only</span>
+<button class="w-12 h-6 bg-surface-container-highest rounded-full p-1 transition-colors duration-200" onclick="this.classList.toggle('bg-primary-container'); this.querySelector('div').classList.toggle('translate-x-6')">
+<div class="w-4 h-4 bg-on-background rounded-full transition-transform duration-200"></div>
+</button>
+</div>
+</div>
+<!-- Order Cards Grid -->
+<div class="px-margin-desktop grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Card 1: Bill Requested -->
+<div class="bg-surface-container border-l-4 border-error p-6 rounded-xl relative group hover:ring-2 hover:ring-error transition-all">
+<div class="absolute inset-0 bg-error/5 pointer-events-none rounded-xl"></div>
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-2">
+<span class="bg-background text-on-background px-3 py-1 rounded-md font-headline-sm text-label-lg uppercase tracking-wider">TABLE 07</span>
+<span class="text-on-surface-variant font-label-lg mt-1">ORD-2847</span>
+</div>
+<div class="flex items-center gap-1 text-error">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="font-label-lg">23 min</span>
+</div>
+</div>
+<div class="space-y-2 mb-6">
+<p class="text-on-surface flex justify-between font-body-md"><span>Chicken Tikka</span> <span>x1</span></p>
+<p class="text-on-surface flex justify-between font-body-md"><span>Biryani</span> <span>x2</span></p>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-outline-variant">
+<div>
+<p class="text-label-md text-on-surface-variant uppercase">Total</p>
+<p class="font-headline-sm text-on-background">PKR 2,840</p>
+</div>
+<div class="flex items-center gap-2 text-error pulse-red">
+<div class="w-2 h-2 bg-error rounded-full"></div>
+<span class="font-label-lg">Bill Requested</span>
+</div>
+</div>
+<button class="mt-6 w-full bg-primary-container text-on-primary-container font-headline-sm py-3 rounded-lg hover:brightness-110 transition-all active:scale-95">
+                    Charge
+                </button>
+</div>
+<!-- Card 2: Ready to Serve -->
+<div class="bg-surface-container border-l-4 border-success p-6 rounded-xl hover:ring-2 hover:ring-success transition-all">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-2">
+<span class="bg-primary-container text-on-primary-container px-3 py-1 rounded-md font-headline-sm text-label-lg uppercase tracking-wider">TK-041</span>
+<span class="text-on-surface-variant font-label-lg mt-1">ORD-2848</span>
+</div>
+<div class="flex items-center gap-1 text-success">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="font-label-lg">12 min</span>
+</div>
+</div>
+<div class="space-y-2 mb-6">
+<p class="text-on-surface flex justify-between font-body-md"><span>Beef Burger</span> <span>x1</span></p>
+<p class="text-on-surface flex justify-between font-body-md"><span>Fries</span> <span>x1</span></p>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-outline-variant">
+<div>
+<p class="text-label-md text-on-surface-variant uppercase">Total</p>
+<p class="font-headline-sm text-on-background">PKR 1,450</p>
+</div>
+<div class="flex items-center gap-2 text-success pulse-green">
+<div class="w-2 h-2 bg-success rounded-full"></div>
+<span class="font-label-lg">Ready to Serve</span>
+</div>
+</div>
+<button class="mt-6 w-full bg-primary-container text-on-primary-container font-headline-sm py-3 rounded-lg hover:brightness-110 transition-all active:scale-95">
+                    Serve
+                </button>
+</div>
+<!-- Card 3: In Progress -->
+<div class="bg-surface-container border-l-4 border-primary-container p-6 rounded-xl hover:ring-2 hover:ring-primary transition-all">
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-2">
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-md font-headline-sm text-label-lg uppercase tracking-wider">DEL-018</span>
+<span class="text-on-surface-variant font-label-lg mt-1">ORD-2849</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="font-label-lg">5 min</span>
+</div>
+</div>
+<div class="space-y-2 mb-6">
+<p class="text-on-surface flex justify-between font-body-md"><span>Margherita Pizza</span> <span>x1</span></p>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-outline-variant">
+<div>
+<p class="text-label-md text-on-surface-variant uppercase">Total</p>
+<p class="font-headline-sm text-on-background">PKR 1,850</p>
+</div>
+<div class="flex items-center gap-2 text-primary-container pulse-amber">
+<div class="w-2 h-2 bg-primary-container rounded-full"></div>
+<span class="font-label-lg">In Progress</span>
+</div>
+</div>
+<button class="mt-6 w-full bg-surface-container-highest text-on-background font-headline-sm py-3 rounded-lg hover:bg-surface-bright transition-all active:scale-95">
+                    Open
+                </button>
+</div>
+<!-- Card 4: On Hold -->
+<div class="bg-surface-container border-2 border-dashed border-primary-container/40 p-6 rounded-xl relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 opacity-[0.03] select-none pointer-events-none">
+<span class="font-display-lg text-[120px] font-bold">HOLD</span>
+</div>
+<div class="flex justify-between items-start mb-4">
+<div class="flex gap-2">
+<span class="bg-background text-on-background px-3 py-1 rounded-md font-headline-sm text-label-lg uppercase tracking-wider">TABLE 12</span>
+<span class="text-on-surface-variant font-label-lg mt-1">ORD-2846</span>
+</div>
+<div class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+<span class="font-label-lg">45 min</span>
+</div>
+</div>
+<div class="space-y-2 mb-6">
+<p class="text-on-surface-variant/60 italic font-body-md">Details hidden while on hold...</p>
+</div>
+<div class="flex justify-between items-center pt-4 border-t border-outline-variant/30">
+<div>
+<p class="text-label-md text-on-surface-variant uppercase">Total</p>
+<p class="font-headline-sm text-on-background">PKR 4,200</p>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">pause_circle</span>
+<span class="font-label-lg">On Hold</span>
+</div>
+</div>
+<button class="mt-6 w-full bg-surface-container-highest text-on-background/50 font-headline-sm py-3 rounded-lg cursor-not-allowed">
+                    Resume Order
+                </button>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-gutter pb-safe bg-surface-container border-t border-outline-variant h-[80px] z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-lg text-label-lg">Tables</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-6 py-2 Active: scale-95 transition-all duration-100" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-label-lg text-label-lg">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-lg text-label-lg">Menu</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-6 py-2 hover:text-primary transition-all" href="#">
+<span class="material-symbols-outlined">more_horiz</span>
+<span class="font-label-lg text-label-lg">More</span>
+</a>
+</nav>
+<!-- Contextual FAB -->
+<div class="fixed right-6 bottom-[100px] z-40">
+<button class="bg-primary-container text-on-primary-container h-16 w-16 rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+</div>
+</body></html>

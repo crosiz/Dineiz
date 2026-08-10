@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BISTRO PREMIER - Order Terminal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary": "#c4c7c9",
+                    "surface-container": "#13131F",
+                    "on-background": "#e4e2e4",
+                    "secondary-container": "#d73b00",
+                    "secondary-fixed": "#ffdbd1",
+                    "on-primary-container": "#798098",
+                    "surface-variant": "#1A1A2E",
+                    "on-secondary-fixed-variant": "#862200",
+                    "on-tertiary-fixed": "#191c1e",
+                    "surface-container-high": "#1A1A2E",
+                    "surface-container-lowest": "#0A0A0F",
+                    "on-error": "#690005",
+                    "primary-fixed-dim": "#bec6e0",
+                    "inverse-surface": "#e4e2e4",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "tertiary-fixed-dim": "#c4c7c9",
+                    "on-primary-fixed": "#131b2e",
+                    "tertiary-container": "#15181a",
+                    "primary": "#bec6e0",
+                    "on-secondary": "#5f1500",
+                    "surface": "#13131F",
+                    "surface-tint": "#bec6e0",
+                    "tertiary-fixed": "#e0e3e5",
+                    "error": "#ffb4ab",
+                    "primary-fixed": "#dae2fd",
+                    "on-secondary-fixed": "#3b0900",
+                    "primary-container": "#0f172a",
+                    "on-primary": "#283044",
+                    "inverse-on-surface": "#303032",
+                    "surface-dim": "#13131F",
+                    "inverse-primary": "#565e74",
+                    "on-tertiary-fixed-variant": "#444749",
+                    "secondary-fixed-dim": "#ffb5a0",
+                    "outline-variant": "#2D2D3F",
+                    "error-container": "#93000a",
+                    "surface-container-highest": "#1A1A2E",
+                    "on-secondary-container": "#fffbff",
+                    "on-surface": "#FFFFFF",
+                    "on-surface-variant": "#94A3B8",
+                    "secondary": "#ffb5a0",
+                    "surface-bright": "#1F1F35",
+                    "surface-container-low": "#13131F",
+                    "background": "#0A0A0F",
+                    "on-tertiary-container": "#7e8183",
+                    "on-tertiary": "#2d3133",
+                    "on-error-container": "#ffdad6",
+                    "outline": "#475569"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "touch-target-min": "48px",
+                    "sidebar-width": "380px",
+                    "unit": "8px",
+                    "gutter": "16px",
+                    "container-padding": "24px"
+            },
+            "fontFamily": {
+                    "title-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "numeric-mono": ["Inter"]
+            },
+            "fontSize": {
+                    "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "numeric-mono": ["20px", {"lineHeight": "24px", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .active-tab-indicator {
+            position: relative;
+        }
+        .active-tab-indicator::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background-color: #d73b00;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-lg overflow-hidden h-screen select-none">
+<!-- TopNavBar -->
+<header class="bg-surface border-b border-outline-variant flex justify-between items-center w-full px-gutter h-[52px] fixed top-0 z-50">
+<div class="flex items-center gap-4">
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">BISTRO PREMIER</h1>
+<div class="h-6 w-px bg-outline-variant"></div>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Clifton Branch</span>
+</div>
+<nav class="flex items-center gap-1 bg-surface-container-highest rounded-full p-1 border border-outline-variant">
+<button class="px-6 py-1.5 rounded-full font-title-sm text-title-sm bg-secondary-container text-white">Dine-In</button>
+<button class="px-6 py-1.5 rounded-full font-title-sm text-title-sm text-on-surface-variant hover:text-on-surface transition-colors">Takeaway</button>
+<button class="px-6 py-1.5 rounded-full font-title-sm text-title-sm text-on-surface-variant hover:text-on-surface transition-colors">Delivery</button>
+</nav>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-on-surface">#047</span>
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">Shift: 3h 24m</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-title-sm text-title-sm text-on-surface">Cashier Ali</span>
+<img alt="Cashier Ali" class="w-8 h-8 rounded-full border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6WqVi6RKxK_MTDm5GEdCt2O6ezk4xsQXiA92EFiBAJ0iF1JQG562yyRwVwOB7AokXRaCRCJOCn52Ty2G_NF4uehtd_LTyEa7w6h0dbFzyDoEnC_8-k49MpS8aC0nHw7NAEnqa5fZzN-KUXXmxJHgyQwn7CMykqRsV6YLIQW6cHKnklYTZ_uFwamDNB2CZMzrLRDgQ0TQ79_PPK4tVecIA6nqdIAMOpOJXfpnAGG-bhmuA51bxMJzdAYi2XJbVF6wsQPWOiuLSeX_K"/>
+</div>
+</div>
+<div class="flex items-center gap-3 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-on-surface transition-colors" data-icon="settings">settings</span>
+</div>
+</div>
+</header>
+<main class="flex h-[calc(100vh-76px)] pt-[52px]">
+<!-- Left Panel: Menu -->
+<section class="w-[58%] bg-surface flex flex-col h-full border-r border-outline-variant overflow-hidden">
+<!-- Search & Filter Area -->
+<div class="p-gutter flex flex-col gap-6 bg-surface">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-secondary-container transition-colors" data-icon="search">search</span>
+<input class="w-full bg-background border border-outline-variant rounded-xl py-3 pl-12 pr-4 text-on-surface focus:outline-none focus:border-secondary-container transition-all placeholder:text-on-surface-variant" placeholder="Search menu items..." type="text"/>
+</div>
+<div class="flex items-center overflow-x-auto hide-scrollbar gap-8 pb-2 border-b border-outline-variant/30">
+<button class="font-label-caps text-label-caps text-secondary-container whitespace-nowrap active-tab-indicator">ALL</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">KABABS &amp; BBQ</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">KARAHI</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">BIRYANI</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">BURGERS</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">PIZZA</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">SIDES</button>
+<button class="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap hover:text-on-surface transition-colors">DRINKS</button>
+</div>
+</div>
+<!-- Menu Grid -->
+<div class="flex-1 overflow-y-auto p-gutter grid grid-cols-3 gap-4 content-start bg-background">
+<!-- Food Item Card 1 -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant hover:border-secondary-container active:scale-[0.96] transition-all cursor-pointer group relative shadow-lg">
+<div class="h-32 w-full relative overflow-hidden">
+<img alt="Seekh Kabab" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbDIbresEIKCW_ke7YNmrVgs6Iwa7jfaYXu1giGSsdvbv7OUpcFtaQsbL_BK88fQINND4obHQpDl5jDK2Bnes4L-C2Rkua1UTaCDEo-buItbAMOw0QwIcOtIRhehpSGYe9PDbpmMH28JH9b9BwA5moWejmnVisnea-DQz6DXz6JP_a6LREIGROPKejoq-4gHVx-3dJLKI-6JbEIJZ9a92sgNm5rEuUz_Eq7wigCg440CF8DnxcwQBLDN3KdfdleZCIn8gftqYkQVQE"/>
+<div class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Beef Seekh Kabab</h3>
+<p class="font-numeric-mono text-numeric-mono text-secondary-container mt-1">PKR 850</p>
+</div>
+</div>
+<!-- Food Item Card 2 -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant hover:border-secondary-container active:scale-[0.96] transition-all cursor-pointer group relative shadow-lg">
+<div class="h-32 w-full relative overflow-hidden">
+<img alt="Biryani" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJvSxQqYlmINNykC4jxKI0ZgizcWafzjH5HEl5BVd5ssqGoIRFVlkznGEeBwUxRzjKhK8xOMtTJpackHUpRrvBhyfQAq_viO2eb_U-jnVz5JaKt12QZTraYCg1O_1ndYFkh5NNc8vPWetjjGo5irv7MDHXqsqCt12G92_vVHEoUbXKyk3xVuLaf51IK1hNpM2Scrz9yTLEGmhHyFZqBbLEI4fF_LLDE3ndBbKGjyjzgELMeGHTzEn9t7lOhQ5Ssuw_1hMfBGXW_Ouh"/>
+<div class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Mutton Biryani Special</h3>
+<p class="font-numeric-mono text-numeric-mono text-secondary-container mt-1">PKR 1250</p>
+</div>
+</div>
+<!-- Food Item Card 3 -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant hover:border-secondary-container active:scale-[0.96] transition-all cursor-pointer group relative shadow-lg">
+<div class="h-32 w-full relative overflow-hidden">
+<img alt="Karahi" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAYqnKXVc70gEjyNJ3ZAZbSxM9L_POlumP5FYAjjzRvQSrx5oC65oC47ehmQgV4-WziGd8Q86omaCVdhFCBYxU0cz9R_G4URezc2Og7m7ppzlKaWeDHnUaEg1admhT3qxKH2fu7eJmBiHQS7yVoO4R3-oIfXEltXHG28nJkYbQZmKR9OdbUb3fOnpspSDVhJ7PcZOowxFBtx7qk0OtKx0TedIluow7jyZnZE-P2BPiFmEd9dqadPThFSAFkhsm-ll7R5N4Tb_6Vflp1"/>
+<div class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Chicken Karahi (Half)</h3>
+<p class="font-numeric-mono text-numeric-mono text-secondary-container mt-1">PKR 1400</p>
+</div>
+</div>
+<!-- Food Item Card 4 (Sold Out) -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant transition-all cursor-not-allowed group relative opacity-60 shadow-lg">
+<div class="h-32 w-full relative overflow-hidden grayscale">
+<img alt="Zinger Burger" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVzXP3rdwT3SnxpirGKr4_qh7v4PqCJFB5LGW66WHmI9TGXU7sG1hTfWo9vTU0vcKQG9ihwMHeapWlfQ4shPb3oZKtbJMvfBuVv-CURUuZJTNQt-CjoXwwy24gnJHORm6Cg1k9P13Is3hXzNYh2igx0XpvKRtKdfXHTVuGYgTWjIC02ARSnFRIJsFE2UhH_0ZXL2vuyRpW9LXHpbK2x760dbr9KJcl8BX_Ko49svKKkmfqoz_b0Gc98vcF4e0wgQXz2Z6edkyPDHzA"/>
+<div class="absolute inset-0 bg-background/80 flex items-center justify-center">
+<span class="font-label-caps text-label-caps bg-error-container text-on-error-container px-3 py-1 rounded">SOLD OUT</span>
+</div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Zinger Burger</h3>
+<p class="font-numeric-mono text-numeric-mono text-on-surface-variant mt-1">PKR 650</p>
+</div>
+</div>
+<!-- Food Item Card 5 -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant hover:border-secondary-container active:scale-[0.96] transition-all cursor-pointer group relative shadow-lg">
+<div class="h-32 w-full relative overflow-hidden">
+<img alt="Pizza" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfPbfVY6eU6WBTbYxaNX5ozRLGzP-H_HAtjaM4wB4nLJGksM6Gr9niF3y60f5rKowxr5M91yKaRWpyRrrYDOTDrt5Ig0KLSa3NTiq9W97x1LZru-uIXF__YBY6VXtELmGLxExXzy57dnm_s7ahE2SPkaHjn7g5AuCe9tBnlzJ2b2GIPoBYYEciRdLGr-QhNPCK_q51hE7SxuoKqX8VUwwnSvI_wdfqXiKYwolvIeFvZEbAWGAl-3YPNu6U2D-Zk7uNjBqbb0MRdiTQ"/>
+<div class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Margherita Pizza</h3>
+<p class="font-numeric-mono text-numeric-mono text-secondary-container mt-1">PKR 1100</p>
+</div>
+</div>
+<!-- Food Item Card 6 -->
+<div class="bg-surface-variant rounded-xl overflow-hidden border border-outline-variant hover:border-secondary-container active:scale-[0.96] transition-all cursor-pointer group relative shadow-lg">
+<div class="h-32 w-full relative overflow-hidden">
+<img alt="Drink" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAu5YSjuaOvHg9SmamH7KMBFO7qFXnDFWFrlJ2ASnwXw6shmgaQmEQo7vBCewapFnfc3yAN7o9M5pqzB3amBuuEPC6kORP6YwDwckqtGt8AXtAlGqmnCAsm6LXSGD6arlgiPZ_fPBlX5k7UM9LWb3HX4n8kWfxTFZN5wR8JJSIm0IJQIbJ2rsgITACvaX07MZ86CHrJuoIbG_ZX3Z6Uf42oaRZZ5UFgn04Fcw7mkogrPKIEPKmVDqP2TjDs_YWzFIy4z4CuJoWDHPx9"/>
+<div class="absolute top-2 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="p-3">
+<h3 class="font-title-sm text-title-sm text-on-surface truncate">Fresh Mint Lemonade</h3>
+<p class="font-numeric-mono text-numeric-mono text-secondary-container mt-1">PKR 350</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Panel: Cart -->
+<aside class="flex-1 bg-surface-container flex flex-col h-full relative">
+<!-- Cart Header -->
+<div class="p-gutter flex justify-between items-center border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<h2 class="font-display-lg text-display-lg text-on-surface">Order</h2>
+<span class="bg-secondary-container text-white px-2.5 py-0.5 rounded-full font-label-caps text-label-caps">3 ITEMS</span>
+</div>
+<button class="text-on-surface-variant font-label-caps text-label-caps hover:text-white transition-colors">CLEAR ALL</button>
+</div>
+<!-- Cart Items List -->
+<div class="flex-1 overflow-y-auto">
+<!-- Cart Item 1 -->
+<div class="p-gutter border-b border-outline-variant group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-title-sm text-title-sm text-on-surface">Beef Seekh Kabab</h4>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Regular Serving</span>
+</div>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">PKR 850</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-2">
+<span class="bg-secondary-container/10 border border-secondary-container/30 text-[10px] font-bold text-secondary-container px-2 py-0.5 rounded-full">EXTRA MINT CHUTNEY</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">01</span>
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Cart Item 2 -->
+<div class="p-gutter border-b border-outline-variant group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-title-sm text-title-sm text-on-surface">Chicken Biryani</h4>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Full Portion</span>
+</div>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">PKR 1250</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-2">
+<span class="bg-secondary-container/10 border border-secondary-container/30 text-[10px] font-bold text-secondary-container px-2 py-0.5 rounded-full">DOUBLE RAITA</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">01</span>
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Cart Item 3 -->
+<div class="p-gutter border-b border-outline-variant group">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h4 class="font-title-sm text-title-sm text-on-surface">Fresh Lemonade</h4>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Glass</span>
+</div>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">PKR 350</span>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-2"></div>
+<div class="flex items-center gap-4">
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="remove">remove</span>
+</button>
+<span class="font-numeric-mono text-numeric-mono text-on-surface">01</span>
+<button class="w-7 h-7 rounded-full border border-outline flex items-center justify-center hover:bg-surface-variant active:scale-90 transition-all text-on-surface">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Totals & Actions Section -->
+<div class="bg-background p-gutter border-t border-outline-variant shadow-2xl">
+<div class="flex justify-between gap-2 mb-6">
+<button class="flex-1 py-2 rounded-lg border border-outline-variant font-label-caps text-label-caps text-on-surface hover:bg-surface-variant transition-all">APPLY DEAL</button>
+<button class="flex-1 py-2 rounded-lg border border-outline-variant font-label-caps text-label-caps text-on-surface hover:bg-surface-variant transition-all">% DISCOUNT</button>
+<button class="flex-1 py-2 rounded-lg border border-outline-variant font-label-caps text-label-caps text-on-surface hover:bg-surface-variant transition-all">SPLIT BILL</button>
+</div>
+<div class="space-y-1.5 mb-6 border-b border-outline-variant/30 pb-4">
+<div class="flex justify-between text-on-surface-variant font-body-sm">
+<span>Subtotal</span>
+<span class="font-numeric-mono">PKR 2,450.00</span>
+</div>
+<div class="flex justify-between text-on-surface-variant font-body-sm">
+<span>Discount</span>
+<span class="font-numeric-mono text-error">- PKR 0.00</span>
+</div>
+<div class="flex justify-between text-on-surface-variant font-body-sm">
+<span>GST (15%)</span>
+<span class="font-numeric-mono">PKR 367.50</span>
+</div>
+</div>
+<div class="flex justify-between items-end mb-6">
+<span class="font-display-lg text-display-lg text-on-surface tracking-tighter">TOTAL:</span>
+<span class="font-display-lg text-display-lg text-secondary-container">PKR 2,817.50</span>
+</div>
+<div class="flex flex-col gap-3">
+<button class="w-full h-touch-target-min bg-surface-variant text-on-surface rounded-xl font-title-sm text-title-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:bg-surface-bright border border-outline-variant">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+                        SEND TO KITCHEN
+                    </button>
+<button class="w-full h-touch-target-min bg-secondary-container text-white rounded-xl font-title-sm text-title-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:opacity-90">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                        COLLECT PAYMENT
+                    </button>
+</div>
+</div>
+</aside>
+</main>
+<!-- Persistent Bottom Status Bar -->
+<footer class="h-6 bg-background border-t border-outline-variant fixed bottom-0 w-full flex items-center px-gutter text-[11px] text-outline font-medium gap-4 z-50">
+<div class="flex items-center gap-1">
+<span class="text-[#22C55E]">●</span>
+<span>Online</span>
+</div>
+<div class="w-px h-3 bg-outline-variant"></div>
+<span>Menu synced 3 min ago</span>
+<div class="w-px h-3 bg-outline-variant"></div>
+<span>Shift: 3h 24m</span>
+<div class="w-px h-3 bg-outline-variant"></div>
+<span>Orders today: 12</span>
+</footer>
+<script>
+        // Micro-interactions for cards
+        document.querySelectorAll('.cursor-pointer').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.borderColor = '#d73b00';
+            });
+            card.addEventListener('mouseup', () => {
+                setTimeout(() => {
+                    card.style.borderColor = '';
+                }, 150);
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.borderColor = '';
+            });
+        });
+
+        // Search bar focus effect
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-secondary-container/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-secondary-container/20');
+        });
+    </script>
+</body></html>

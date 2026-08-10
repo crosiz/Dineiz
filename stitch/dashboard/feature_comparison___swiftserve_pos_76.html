@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Feature Comparison</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-on-surface": "#ffede8",
+                        "surface-tint": "#b02f00",
+                        "on-surface-variant": "#5b4039",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#fcfcff",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-primary-fixed-variant": "#862200",
+                        "outline": "#907067",
+                        "on-secondary-container": "#5c647a",
+                        "inverse-surface": "#3e2c27",
+                        "tertiary-container": "#007caf",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container": "#ffe9e4",
+                        "surface-bright": "#fff8f6",
+                        "tertiary-fixed": "#c8e6ff",
+                        "surface-variant": "#fadcd4",
+                        "surface": "#fff8f6",
+                        "on-secondary-fixed": "#131b2e",
+                        "surface-dim": "#f1d4cc",
+                        "on-surface": "#271813",
+                        "secondary": "#565e74",
+                        "primary-container": "#ff5722",
+                        "on-primary-fixed": "#3b0900",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#fff1ed",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary": "#ffffff",
+                        "on-primary-container": "#541200",
+                        "tertiary": "#00628c",
+                        "outline-variant": "#e4beb4",
+                        "on-background": "#271813",
+                        "primary": "#b02f00",
+                        "background": "#fff8f6",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "primary-fixed": "#ffdbd1",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "secondary-fixed": "#dae2fd",
+                        "surface-container-high": "#ffe2da",
+                        "secondary-container": "#dae2fd",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "section": "24px",
+                        "page_margin": "24px",
+                        "element": "16px",
+                        "grid_gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "display": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #fff8f6; }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1fr 1fr;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body class="text-on-background">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 border-b bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between px-6 h-20 max-w-7xl mx-auto">
+<div class="text-2xl font-black tracking-tighter text-slate-900 dark:text-white">SwiftServe</div>
+<nav class="hidden md:flex items-center gap-8 font-['Inter'] antialiased text-sm font-medium">
+<a class="text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200" href="#">Features</a>
+<a class="text-orange-600 dark:text-orange-500 border-b-2 border-orange-600 pb-1" href="#">Solutions</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200" href="#">Pricing</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors duration-200" href="#">Resources</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-slate-600 font-medium text-sm hover:text-orange-600">Login</button>
+<button class="bg-primary-container text-white px-6 py-2.5 rounded-lg font-bold text-sm active:scale-95 transform transition-all shadow-md">Get Started</button>
+</div>
+</div>
+</header>
+<main class="pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto bg-white min-h-screen shadow-sm">
+<!-- Header -->
+<div class="text-center mb-12">
+<h1 class="text-[36px] font-bold text-slate-900 leading-tight mb-4">Why SwiftServe beats the competition</h1>
+<p class="text-[18px] text-slate-500 font-medium">More features. Better design. Lower price.</p>
+</div>
+<!-- Comparison Table -->
+<div class="rounded-xl overflow-hidden border border-slate-200 shadow-xl">
+<!-- Table Header -->
+<div class="comparison-grid bg-slate-50 items-stretch border-b border-slate-200">
+<div class="p-6 flex items-end">
+<span class="text-caption font-bold text-slate-400 uppercase tracking-widest">Platform Features</span>
+</div>
+<div class="p-6 bg-primary-container/5 border-x border-slate-200 relative overflow-hidden text-center">
+<div class="absolute top-2 right-2 bg-primary-container text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Best</div>
+<div class="flex flex-col items-center gap-1">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-h1 text-on-surface">SwiftServe</span>
+</div>
+</div>
+<div class="p-6 text-center flex flex-col items-center justify-center gap-1 border-r border-slate-200">
+<span class="text-h1 text-slate-400">Blink POS</span>
+</div>
+<div class="p-6 text-center flex flex-col items-center justify-center gap-1">
+<span class="text-h1 text-slate-400">Toast POS</span>
+</div>
+</div>
+<!-- Category: CORE POS -->
+<div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200">
+<span class="text-caption font-black text-primary uppercase">Core POS Engine</span>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Order punching</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Offline mode</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">KOT printing</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-200 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Multiple order types</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<!-- Category: SPECIAL (EXCLUSIVES) -->
+<div class="bg-primary-container/5 px-6 py-3 border-b border-slate-200">
+<span class="text-caption font-black text-primary-container uppercase">Exclusive AI &amp; Design Tools</span>
+</div>
+<div class="comparison-grid border-b border-slate-100 bg-orange-50/20">
+<div class="p-4 pl-8 text-body font-bold text-slate-900">3D Floor Plan Designer</div>
+<div class="p-4 flex justify-center text-primary-container"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 bg-orange-50/20">
+<div class="p-4 pl-8 text-body font-bold text-slate-900">AI menu descriptions</div>
+<div class="p-4 flex justify-center text-primary-container"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 bg-orange-50/20">
+<div class="p-4 pl-8 text-body font-bold text-slate-900">AI demand forecasting</div>
+<div class="p-4 flex justify-center text-primary-container"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 bg-orange-50/20">
+<div class="p-4 pl-8 text-body font-bold text-slate-900">QR self-ordering</div>
+<div class="p-4 flex justify-center text-primary-container"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-200 bg-orange-50/20">
+<div class="p-4 pl-8 text-body font-bold text-slate-900">WhatsApp receipts</div>
+<div class="p-4 flex justify-center text-primary-container"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">bolt</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<!-- Category: ANALYTICS -->
+<div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200">
+<span class="text-caption font-black text-primary uppercase">Analytics &amp; Intelligence</span>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Real-time dashboard</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">PowerBI integration</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-200 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Custom reports</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<!-- Category: DELIVERY -->
+<div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200">
+<span class="text-caption font-black text-primary uppercase">Logistics &amp; Delivery</span>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Rider app</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">GPS tracking</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-200 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Auto-assignment</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<!-- Category: INTEGRATIONS -->
+<div class="bg-slate-50/50 px-6 py-3 border-b border-slate-200">
+<span class="text-caption font-black text-primary uppercase">Ecosystem &amp; Integrations</span>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Foodpanda / Careem</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-100 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">ERP sync</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+</div>
+<div class="comparison-grid border-b border-slate-200 hover:bg-slate-50 transition-colors">
+<div class="p-4 pl-8 text-body font-medium">Webhooks</div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-green-500"><span class="material-symbols-outlined">check_circle</span></div>
+<div class="p-4 flex justify-center text-red-500"><span class="material-symbols-outlined">cancel</span></div>
+</div>
+<!-- Pricing Row -->
+<div class="comparison-grid bg-slate-900 text-white font-bold items-center py-6">
+<div class="p-4 pl-8 text-h1">Pricing</div>
+<div class="p-4 text-center">
+<span class="text-primary-container text-[24px] block">$15/branch</span>
+<span class="text-caption text-slate-400 font-normal">All features included</span>
+</div>
+<div class="p-4 text-center">
+<span class="text-slate-300 text-h2 block">$25-35/branch</span>
+<span class="text-caption text-slate-500 font-normal">Tiered plans</span>
+</div>
+<div class="p-4 text-center">
+<span class="text-slate-300 text-h2 block">$69+/branch</span>
+<span class="text-caption text-slate-500 font-normal">Hidden fees apply</span>
+</div>
+</div>
+</div>
+<!-- Footer CTA -->
+<div class="mt-20 flex flex-col items-center gap-6">
+<h2 class="text-h1 text-slate-900">Ready to accelerate your culinary velocity?</h2>
+<button class="bg-primary-container hover:bg-primary transition-all text-white px-12 py-5 rounded-xl font-extrabold text-h1 shadow-2xl active:scale-95">
+                Start your free 14-day trial
+            </button>
+<p class="text-caption text-slate-500">No credit card required. Cancel anytime.</p>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-slate-900 w-full border-t mt-auto border-slate-200 dark:border-slate-800">
+<div class="flex flex-col md:flex-row justify-between items-center py-12 px-8 max-w-7xl mx-auto gap-6 font-['Inter'] text-xs uppercase tracking-widest">
+<div class="text-lg font-bold text-slate-900 dark:text-white">SwiftServe</div>
+<div class="text-slate-500 dark:text-slate-500 text-center md:text-left">
+                © 2024 SwiftServe Technologies. Precision tools for premium hospitality.
+            </div>
+<div class="flex gap-6">
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors opacity-80 hover:opacity-100" href="#">Privacy Policy</a>
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors opacity-80 hover:opacity-100" href="#">Terms of Service</a>
+<a class="text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors opacity-80 hover:opacity-100" href="#">Contact Sales</a>
+</div>
+</div>
+</footer>
+</body></html>

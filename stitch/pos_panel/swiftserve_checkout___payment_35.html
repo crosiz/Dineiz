@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS Checkout</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#ffb95f",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "surface-container-high": "#31281f",
+                      "on-secondary": "#313030",
+                      "surface-container-low": "#221a12",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "secondary-fixed": "#e5e2e1",
+                      "inverse-on-surface": "#382f25",
+                      "on-background": "#f0e0d1",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "on-secondary-container": "#bab8b7",
+                      "on-tertiary-container": "#434442",
+                      "on-tertiary": "#2f312f",
+                      "surface": "#19120a",
+                      "on-primary-fixed": "#2a1700",
+                      "primary-container": "#f59e0b",
+                      "surface-container": "#261e15",
+                      "outline-variant": "#534434",
+                      "surface-dim": "#19120a",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "tertiary": "#cdccca",
+                      "secondary-container": "#4a4949",
+                      "error": "#ffb4ab",
+                      "outline": "#a08e7a",
+                      "on-primary": "#472a00",
+                      "on-error": "#690005",
+                      "surface-bright": "#41382e",
+                      "secondary": "#c9c6c5",
+                      "inverse-surface": "#f0e0d1",
+                      "tertiary-container": "#b1b1ae",
+                      "surface-tint": "#ffb95f",
+                      "primary": "#ffc174",
+                      "background": "#19120a",
+                      "on-error-container": "#ffdad6",
+                      "tertiary-fixed": "#e3e2e0",
+                      "on-secondary-fixed-variant": "#474646",
+                      "on-surface-variant": "#d8c3ad",
+                      "on-surface": "#f0e0d1",
+                      "on-primary-fixed-variant": "#653e00",
+                      "error-container": "#93000a",
+                      "on-primary-container": "#613b00",
+                      "inverse-primary": "#855300",
+                      "surface-container-highest": "#3c3329",
+                      "surface-variant": "#3c3329",
+                      "surface-container-lowest": "#140d06",
+                      "primary-fixed": "#ffddb8",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "midnight": "#0D0D0D",
+                      "electric-amber": "#F59E0B",
+                      "sage-green": "#10B981",
+                      "sheet-white": "#F9F8F5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "3xl": "1.5rem",
+                      "full": "9999px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Clash Display", "sans-serif"],
+                      "headline-md": ["Clash Display", "sans-serif"],
+                      "headline-sm": ["Clash Display", "sans-serif"],
+                      "body-lg": ["Inter", "sans-serif"],
+                      "body-md": ["Inter", "sans-serif"],
+                      "body-sm": ["Inter", "sans-serif"],
+                      "label-lg": ["Inter", "sans-serif"],
+                      "label-md": ["Inter", "sans-serif"],
+                      "currency-display": ["Clash Display", "sans-serif"],
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .numpad-btn:active { transform: scale(0.95); transition: transform 0.1s ease; }
+        .tab-active { @apply border-2 border-electric-amber bg-electric-amber/10; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E5E2E1; border-radius: 10px; }
+        .animate-number { transition: all 180ms ease-out; }
+    </style>
+</head>
+<body class="bg-midnight overflow-hidden font-body-md text-midnight">
+<!-- Top Navigation Bar (Shared Component Context) -->
+<header class="flex justify-between items-center w-full h-16 px-gutter bg-surface dark:bg-surface border-b border-outline-variant fixed top-0 z-50">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-highest p-2 rounded-full transition-all active:scale-95">arrow_back</button>
+<span class="font-headline-md text-headline-md text-primary-container">Terminal POS</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="material-symbols-outlined text-on-surface-variant p-2 rounded-full hover:bg-surface-container-highest transition-all">help</button>
+<button class="material-symbols-outlined text-on-surface-variant p-2 rounded-full hover:bg-surface-container-highest transition-all">settings</button>
+</div>
+</header>
+<!-- Side Navigation (Shared Component Context) -->
+<aside class="flex flex-col h-full fixed left-0 top-0 z-40 bg-surface-container dark:bg-surface-container border-r border-outline-variant hidden md:flex w-[240px] pt-16">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-bold">A</div>
+<div>
+<div class="font-headline-sm text-headline-sm text-primary">Station 04</div>
+<div class="text-label-lg font-label-lg text-on-surface-variant">Active Shift</div>
+</div>
+</div>
+<nav class="space-y-2">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg border-l-4 border-primary bg-surface-container-highest text-primary font-bold transition-all" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Orders</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span>Menu</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">table_restaurant</span>
+<span>Tables</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span>Payments</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span>Reports</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-2">
+<button class="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">lock</span>
+<span>Lock</span>
+</button>
+<button class="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">sync</span>
+<span>Sync</span>
+</button>
+</div>
+</aside>
+<!-- MAIN CHECKOUT OVERLAY -->
+<div class="fixed inset-x-0 bottom-0 h-[942px] bg-sheet-white rounded-t-3xl shadow-2xl z-[100] transform transition-transform duration-500 ease-out flex flex-col" id="checkout-overlay">
+<!-- Drag Handle & Header -->
+<div class="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0">
+<div class="w-12 h-1.5 bg-outline-variant/30 rounded-full mb-4"></div>
+<div class="w-full flex justify-between items-start">
+<div class="flex flex-col">
+<h1 class="font-headline-md text-[22px] leading-tight text-midnight">Checkout</h1>
+<p class="text-body-sm text-outline font-medium">Table 07 · ORD-2847</p>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-outline-variant/10 hover:bg-outline-variant/20 transition-all" onclick="window.history.back()">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+<!-- Content Body -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Left Panel: Order Summary & Totals -->
+<div class="w-full md:w-[400px] flex flex-col border-r border-outline-variant/20 px-6 overflow-y-auto custom-scrollbar">
+<!-- Order Items -->
+<div class="mb-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline-sm text-sm tracking-widest uppercase opacity-50">Order Summary</h2>
+<span class="text-xs bg-midnight/5 px-2 py-1 rounded font-bold">4 Items</span>
+</div>
+<ul class="space-y-4">
+<li class="flex justify-between items-start">
+<div class="flex gap-3">
+<span class="font-bold text-electric-amber">1×</span>
+<div>
+<p class="font-bold">Classic Beef Burger</p>
+<p class="text-xs text-outline italic">Medium Rare, No Onions</p>
+</div>
+</div>
+<span class="font-bold">1,250.00</span>
+</li>
+<li class="flex justify-between items-start">
+<div class="flex gap-3">
+<span class="font-bold text-electric-amber">2×</span>
+<div>
+<p class="font-bold">Truffle Parmesan Fries</p>
+</div>
+</div>
+<span class="font-bold">900.00</span>
+</li>
+<li class="flex justify-between items-start">
+<div class="flex gap-3">
+<span class="font-bold text-electric-amber">1×</span>
+<div>
+<p class="font-bold">Mango Habanero Wings</p>
+</div>
+</div>
+<span class="font-bold">850.00</span>
+</li>
+</ul>
+</div>
+<!-- Totals Block -->
+<div class="mt-auto space-y-3 pt-6 border-t border-outline-variant/20">
+<div class="flex justify-between text-body-md">
+<span class="text-outline">Subtotal</span>
+<span>3,000.00</span>
+</div>
+<div class="flex justify-between text-body-md text-error">
+<span class="flex items-center gap-1">Discount <span class="material-symbols-outlined text-sm">edit</span></span>
+<span>-0.00</span>
+</div>
+<div class="flex justify-between text-body-md">
+<span class="text-outline">Sales Tax (16%)</span>
+<span>480.00</span>
+</div>
+<div class="flex justify-between items-center py-2">
+<span class="text-body-md text-outline">Service Charge (10%)</span>
+<button class="w-12 h-6 bg-sage-green rounded-full relative p-1 transition-all" id="service-toggle">
+<div class="w-4 h-4 bg-white rounded-full ml-auto shadow-sm"></div>
+</button>
+</div>
+<div class="flex justify-between items-end pt-4 border-t-2 border-midnight/5">
+<span class="font-headline-sm text-lg">Total Due</span>
+<span class="font-currency-display text-[32px] text-midnight leading-none">3,780.00</span>
+</div>
+</div>
+<!-- Tip Selector -->
+<div class="mt-8 pb-8">
+<h2 class="font-headline-sm text-sm tracking-widest uppercase opacity-50 mb-4">Add Tip</h2>
+<div class="grid grid-cols-4 gap-2">
+<button class="py-3 px-2 border-2 border-outline-variant/20 rounded-xl font-bold hover:border-electric-amber transition-all">10%</button>
+<button class="py-3 px-2 border-2 border-electric-amber bg-electric-amber/5 rounded-xl font-bold transition-all">15%</button>
+<button class="py-3 px-2 border-2 border-outline-variant/20 rounded-xl font-bold hover:border-electric-amber transition-all">20%</button>
+<button class="py-3 px-2 border-2 border-outline-variant/20 rounded-xl font-bold hover:border-electric-amber transition-all text-xs">Custom</button>
+</div>
+</div>
+</div>
+<!-- Right Panel: Payment Methods & Numpad -->
+<div class="flex-1 bg-white/50 flex flex-col p-6">
+<!-- Payment Method Grid -->
+<div class="grid grid-cols-4 gap-4 mb-8">
+<button class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-electric-amber bg-electric-amber/5 transition-all group">
+<span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">payments</span>
+<span class="font-bold text-sm">Cash</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-outline-variant/10 hover:border-electric-amber transition-all group">
+<span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">credit_card</span>
+<span class="font-bold text-sm">Card</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-outline-variant/10 hover:border-electric-amber transition-all group">
+<span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">qr_code_2</span>
+<span class="font-bold text-sm">JazzCash</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-outline-variant/10 hover:border-electric-amber transition-all group">
+<span class="material-symbols-outlined text-3xl group-hover:scale-110 transition-transform">call_split</span>
+<span class="font-bold text-sm">Split</span>
+</button>
+</div>
+<!-- Active Cash View -->
+<div class="flex-1 flex flex-col md:flex-row gap-8">
+<!-- Left Side: Received & Change Display -->
+<div class="flex-1 flex flex-col justify-center gap-8">
+<div class="space-y-2">
+<label class="font-headline-sm text-sm tracking-widest uppercase opacity-50">Cash Received</label>
+<div class="text-[56px] font-currency-display leading-tight border-b-2 border-midnight py-2 animate-number">
+<span class="text-outline-variant">Rs.</span> <span id="cash-input-display">5,000</span>
+</div>
+</div>
+<div class="space-y-2">
+<label class="font-headline-sm text-sm tracking-widest uppercase opacity-50">Change to Return</label>
+<div class="text-[48px] font-currency-display text-sage-green leading-tight animate-number">
+<span class="opacity-70 text-3xl">Rs.</span> 1,220.00
+                            </div>
+</div>
+<!-- Quick Amount Pills -->
+<div class="flex flex-wrap gap-3 mt-4">
+<button class="px-6 py-3 bg-midnight text-white font-bold rounded-full hover:bg-midnight/80 active:scale-95 transition-all">500</button>
+<button class="px-6 py-3 bg-midnight text-white font-bold rounded-full hover:bg-midnight/80 active:scale-95 transition-all">1000</button>
+<button class="px-6 py-3 bg-midnight text-white font-bold rounded-full hover:bg-midnight/80 active:scale-95 transition-all">2000</button>
+<button class="px-6 py-3 bg-midnight text-white font-bold rounded-full hover:bg-midnight/80 active:scale-95 transition-all">5000</button>
+</div>
+</div>
+<!-- Right Side: Numpad -->
+<div class="w-full md:w-[320px] grid grid-cols-3 gap-3 p-4 bg-midnight/5 rounded-[32px]">
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">1</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">2</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">3</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">4</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">5</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">6</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">7</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">8</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">9</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">.</button>
+<button class="numpad-btn h-16 bg-white rounded-2xl shadow-sm text-2xl font-bold text-midnight">0</button>
+<button class="numpad-btn h-16 bg-midnight text-white rounded-2xl shadow-sm flex items-center justify-center">
+<span class="material-symbols-outlined">backspace</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Bar -->
+<div class="px-6 py-6 border-t border-outline-variant/10 bg-sheet-white shrink-0 flex flex-col gap-4">
+<div class="flex gap-4">
+<button class="flex-1 h-[60px] bg-midnight text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg hover:bg-black transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined">check_circle</span>
+                    Confirm Payment
+                </button>
+<button class="w-[60px] h-[60px] flex items-center justify-center rounded-2xl border-2 border-outline-variant/20 hover:bg-midnight/5 transition-all">
+<span class="material-symbols-outlined">print</span>
+</button>
+</div>
+<button class="w-full h-[52px] rounded-2xl border-2 border-dashed border-outline-variant/40 text-outline font-bold flex items-center justify-center gap-2 hover:bg-midnight/5 transition-all">
+<span class="material-symbols-outlined">pause_circle</span>
+                Hold &amp; Print Bill
+            </button>
+</div>
+</div>
+<!-- Background Decorative Elements -->
+<div class="fixed inset-0 pointer-events-none opacity-20 z-0">
+<div class="absolute top-1/4 left-1/4 w-96 h-96 bg-electric-amber/30 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary-container/20 rounded-full blur-[120px]"></div>
+</div>
+<script>
+        // Micro-interactions and UI Logic
+        const cashDisplay = document.getElementById('cash-input-display');
+        const numpadBtns = document.querySelectorAll('.numpad-btn');
+        let currentInput = "5000";
+
+        numpadBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const value = btn.innerText;
+                if (value === 'backspace') {
+                    currentInput = currentInput.slice(0, -1) || "0";
+                } else if (btn.querySelector('span')) { // Backspace icon check
+                    currentInput = currentInput.slice(0, -1) || "0";
+                } else {
+                    if (currentInput === "0") currentInput = value;
+                    else currentInput += value;
+                }
+                
+                // Format with commas
+                const formatted = parseFloat(currentInput).toLocaleString('en-US');
+                cashDisplay.innerText = formatted;
+            });
+        });
+
+        // Quick amount buttons logic
+        document.querySelectorAll('.flex.flex-wrap.gap-3.mt-4 button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentInput = btn.innerText;
+                cashDisplay.innerText = parseFloat(currentInput).toLocaleString('en-US');
+            });
+        });
+
+        // Toggle Service Charge
+        const serviceBtn = document.getElementById('service-toggle');
+        let serviceOn = true;
+        serviceBtn.addEventListener('click', () => {
+            serviceOn = !serviceOn;
+            if (serviceOn) {
+                serviceBtn.classList.remove('bg-outline-variant/30');
+                serviceBtn.classList.add('bg-sage-green');
+                serviceBtn.querySelector('div').classList.remove('ml-0');
+                serviceBtn.querySelector('div').classList.add('ml-auto');
+            } else {
+                serviceBtn.classList.remove('bg-sage-green');
+                serviceBtn.classList.add('bg-outline-variant/30');
+                serviceBtn.querySelector('div').classList.remove('ml-auto');
+                serviceBtn.querySelector('div').classList.add('ml-0');
+            }
+        });
+    </script>
+</body></html>

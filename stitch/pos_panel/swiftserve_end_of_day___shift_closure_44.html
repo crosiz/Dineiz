@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Shift Closure</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error": "#ffb4ab",
+                        "secondary": "#c9c6c5",
+                        "on-primary": "#472a00",
+                        "surface-bright": "#41382e",
+                        "on-secondary-fixed-variant": "#474646",
+                        "on-secondary": "#313030",
+                        "primary-container": "#f59e0b",
+                        "on-primary-container": "#613b00",
+                        "surface": "#0D0D0D",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-primary-fixed": "#2a1700",
+                        "surface-variant": "#111111",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#b1b1ae",
+                        "outline-variant": "#1A1A1A",
+                        "secondary-container": "#4a4949",
+                        "tertiary": "#cdccca",
+                        "inverse-surface": "#f0e0d1",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "inverse-primary": "#855300",
+                        "on-primary-fixed-variant": "#653e00",
+                        "secondary-fixed": "#e5e2e1",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-error": "#690005",
+                        "on-secondary-container": "#bab8b7",
+                        "surface-dim": "#0D0D0D",
+                        "on-surface": "#f0e0d1",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-background": "#f0e0d1",
+                        "background": "#0D0D0D",
+                        "primary-fixed-dim": "#ffb95f",
+                        "surface-container-lowest": "#080808",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "outline": "#a08e7a",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-tertiary-container": "#434442",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-high": "#1A1A1A",
+                        "primary-fixed": "#ffddb8",
+                        "on-tertiary": "#2f312f",
+                        "surface-container-highest": "#3c3329",
+                        "on-error-container": "#ffdad6",
+                        "surface-container": "#111111",
+                        "primary": "#ffc174",
+                        "surface-tint": "#ffb95f",
+                        "surface-container-low": "#0F0F0F",
+                        "signal-red": "#EF4444",
+                        "success-green": "#10B981"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "xxl": "1rem"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Clash Display", "sans-serif"],
+                        "headline-lg": ["Clash Display", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "display-lg": ["Clash Display", "sans-serif"],
+                        "body-sm": ["Inter", "sans-serif"],
+                        "headline-md": ["Clash Display", "sans-serif"],
+                        "label-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "label-md": ["Inter", "sans-serif"],
+                        "currency-display": ["Clash Display", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hold-progress {
+            transition: width 2s linear;
+        }
+        .step-line {
+            height: 2px;
+            flex-grow: 1;
+            background: #1A1A1A;
+        }
+        .step-line.completed {
+            background: #10B981;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0D0D0D; }
+        ::-webkit-scrollbar-thumb { background: #3c3329; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden min-h-screen flex flex-col">
+<!-- Header Section (Modified Shared Component Base) -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-outline-variant px-10 py-3 bg-surface z-10">
+<div class="flex items-center gap-4 text-white">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl" data-weight="fill">bolt</span>
+<h2 class="font-headline-sm text-lg leading-tight tracking-tight">SwiftServe POS</h2>
+</div>
+</div>
+<div class="flex flex-1 justify-center">
+<p class="text-on-surface font-medium text-sm">End of Day — Friday, 29 May 2025</p>
+</div>
+<div class="flex items-center justify-end gap-4">
+<div class="bg-success-green/10 border border-success-green/20 px-3 py-1.5 rounded-lg flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-success-green animate-pulse"></div>
+<span class="text-success-green text-xs font-bold uppercase tracking-wider">Manager Ali · Authorized</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant bg-surface-container-high px-3 py-1.5 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-xs font-mono" id="live-clock">11:42 PM</span>
+</div>
+</div>
+</header>
+<!-- Progress Stepper -->
+<div class="w-full bg-surface-container-low border-b border-outline-variant py-6 px-10">
+<div class="max-w-5xl mx-auto flex items-center justify-between gap-2">
+<!-- Step 1 -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-success-green text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<span class="text-xs font-bold uppercase text-success-green">Review</span>
+</div>
+<div class="step-line completed"></div>
+<!-- Step 2 -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-success-green text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<span class="text-xs font-bold uppercase text-success-green">Cash Count</span>
+</div>
+<div class="step-line completed"></div>
+<!-- Step 3 -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-success-green text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<span class="text-xs font-bold uppercase text-success-green">Reports</span>
+</div>
+<div class="step-line completed"></div>
+<!-- Step 4 -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-success-green text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<span class="text-xs font-bold uppercase text-success-green">FBR Submit</span>
+</div>
+<div class="step-line"></div>
+<!-- Step 5 -->
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full border-2 border-primary-container bg-primary-container/20 text-primary-container flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">lock_open</span>
+</div>
+<span class="text-xs font-bold uppercase text-primary-container">Close Day</span>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 p-8 overflow-y-auto max-w-7xl mx-auto w-full grid grid-cols-1 gap-8">
+<!-- Top Row Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- 1. Revenue Card -->
+<div class="bg-surface-container rounded-xxl border border-outline-variant p-6 hover:border-surface-bright transition-colors">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-on-surface-variant text-sm font-bold uppercase tracking-widest">Revenue (PKR)</h3>
+<span class="text-success-green bg-success-green/10 px-2 py-0.5 rounded text-xs font-bold">+12.7%</span>
+</div>
+<p class="font-currency-display text-4xl text-on-surface mb-6">284,500</p>
+<div class="space-y-3">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span>Dine-in</span>
+<span class="text-on-surface font-semibold">184,500</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>Takeaway</span>
+<span class="text-on-surface font-semibold">64,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-outline"></span>Delivery</span>
+<span class="text-on-surface font-semibold">36,000</span>
+</div>
+</div>
+</div>
+<!-- 2. Orders Card -->
+<div class="bg-surface-container rounded-xxl border border-outline-variant p-6 hover:border-surface-bright transition-colors">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-on-surface-variant text-sm font-bold uppercase tracking-widest">Orders Summary</h3>
+<span class="material-symbols-outlined text-on-surface-variant">receipt_long</span>
+</div>
+<p class="font-currency-display text-4xl text-on-surface mb-6">147 <span class="text-lg font-body-md text-on-surface-variant">Total</span></p>
+<div class="grid grid-cols-2 gap-y-3 gap-x-6">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Dine-in</span>
+<span class="text-on-surface font-bold">89</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Takeaway</span>
+<span class="text-on-surface font-bold">38</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Delivery</span>
+<span class="text-on-surface font-bold">20</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-signal-red">Voids</span>
+<span class="text-signal-red font-bold">3</span>
+</div>
+<div class="flex justify-between text-sm col-span-2 border-t border-outline-variant pt-2">
+<span class="text-signal-red">Refunds</span>
+<span class="text-signal-red font-bold">1 (Rs. 1,240)</span>
+</div>
+</div>
+</div>
+<!-- 3. Payments Card -->
+<div class="bg-surface-container rounded-xxl border border-outline-variant p-6 hover:border-surface-bright transition-colors">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-on-surface-variant text-sm font-bold uppercase tracking-widest">Payment Methods</h3>
+<span class="material-symbols-outlined text-on-surface-variant">payments</span>
+</div>
+<div class="space-y-2 mb-4">
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Cash</span>
+<span class="text-on-surface font-semibold">124,500</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Bank Card</span>
+<span class="text-on-surface font-semibold">98,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">JazzCash</span>
+<span class="text-on-surface font-semibold">42,000</span>
+</div>
+<div class="flex justify-between text-sm">
+<span class="text-on-surface-variant">Easypaisa</span>
+<span class="text-on-surface font-semibold">20,000</span>
+</div>
+</div>
+<div class="border-t border-outline-variant pt-3">
+<div class="flex justify-between text-sm">
+<span class="text-primary font-bold">Tax Collected (GST 17%)</span>
+<span class="text-primary font-bold">41,335</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Middle Section -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Reports 2x2 Grid -->
+<div class="space-y-4">
+<h3 class="text-on-surface-variant text-sm font-bold uppercase tracking-widest px-1">End-of-Day Documents</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+<div class="p-2 rounded-lg bg-success-green/10 text-success-green">
+<span class="material-symbols-outlined">print</span>
+</div>
+<div>
+<p class="text-sm font-bold">Z-Report</p>
+<p class="text-[10px] text-success-green font-bold uppercase">Printed &amp; Logged</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4">
+<div class="p-2 rounded-lg bg-success-green/10 text-success-green">
+<span class="material-symbols-outlined">cloud_done</span>
+</div>
+<div>
+<p class="text-sm font-bold">FBR Summary</p>
+<p class="text-[10px] text-success-green font-bold uppercase">Submitted</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="p-2 rounded-lg bg-outline-variant text-on-surface-variant">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</div>
+<div>
+<p class="text-sm font-bold">Reconciliation</p>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Optional</p>
+</div>
+</div>
+<div class="bg-surface-container border border-outline-variant p-4 rounded-xl flex items-center gap-4 cursor-pointer hover:bg-surface-container-high transition-colors">
+<div class="p-2 rounded-lg bg-outline-variant text-on-surface-variant">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<div>
+<p class="text-sm font-bold">Staff Hours</p>
+<p class="text-[10px] text-on-surface-variant font-bold uppercase">Auto-calculated</p>
+</div>
+</div>
+</div>
+</div>
+<!-- FBR Status Card -->
+<div class="bg-success-green/5 border border-success-green/20 rounded-xxl p-8 flex flex-col items-center justify-center text-center">
+<div class="w-16 h-16 bg-success-green rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+<span class="material-symbols-outlined text-surface text-4xl" data-weight="fill">check_circle</span>
+</div>
+<h4 class="font-headline-md text-2xl mb-2 text-on-surface">FBR Synchronization Complete</h4>
+<p class="text-on-surface-variant max-w-xs text-sm leading-relaxed">
+                    All 147 invoices for 29 May 2025 have been successfully transmitted and verified by the Federal Board of Revenue system.
+                </p>
+<div class="mt-6 px-4 py-2 bg-success-green/10 rounded-lg text-success-green text-xs font-mono">
+                    ID: FBR-TXN-2025-0529-8842-X
+                </div>
+</div>
+</div>
+<!-- Closure & Action Section -->
+<div class="bg-surface-container-high border border-primary-container/20 rounded-xxl p-8">
+<div class="flex flex-col lg:flex-row gap-8 items-start">
+<div class="flex-1 w-full">
+<label class="block text-on-surface-variant text-xs font-bold uppercase tracking-widest mb-3">Shift Closure Notes</label>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-4 text-on-surface focus:border-primary focus:ring-0 transition-all resize-none h-32 placeholder:text-surface-bright" placeholder="Add any details about equipment issues, inventory shortages, or staff incidents...">Table 3 chair broken - needs replacement. Kitchen exhaust fan made some noise during peak hours. Cash drawer matched perfectly.</textarea>
+</div>
+<div class="w-full lg:w-96 flex flex-col gap-4">
+<div class="bg-surface-container border border-outline-variant p-4 rounded-xl">
+<div class="flex justify-between text-xs font-bold uppercase text-on-surface-variant mb-2">
+<span>System Status</span>
+<span class="text-success-green">Ready to Close</span>
+</div>
+<p class="text-sm leading-snug">Terminating session for <span class="text-primary">Terminal-04</span>. This action is irreversible and will lock all POS functions until the next shift start.</p>
+</div>
+<!-- Primary Action Button -->
+<div class="relative group">
+<button class="w-full bg-signal-red hover:bg-red-600 text-white font-headline-sm py-6 rounded-xl flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.98] overflow-hidden select-none" id="close-day-btn">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined">power_settings_new</span>
+                                CLOSE DAY &amp; LOCK TERMINAL
+                            </span>
+<span class="text-[10px] font-body-sm opacity-80 uppercase tracking-widest">Hold for 2 seconds to confirm</span>
+<!-- Hold Progress Bar -->
+<div class="absolute bottom-0 left-0 h-2 bg-white/30 w-0 transition-none" id="progress-bar"></div>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav -->
+<nav class="h-20 bg-surface border-t border-outline-variant flex items-center justify-center gap-20 px-10">
+<div class="flex flex-col items-center gap-1 text-on-surface-variant cursor-pointer hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-2xl">dashboard</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Dashboard</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant cursor-pointer hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-2xl">restaurant_menu</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Menu</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant cursor-pointer hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-2xl">receipt</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Orders</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-primary-container cursor-default">
+<span class="material-symbols-outlined text-2xl" data-weight="fill">admin_panel_settings</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Admin</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-on-surface-variant cursor-pointer hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-2xl">monitoring</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Insights</span>
+</div>
+</nav>
+<script>
+        // Clock functionality
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit' });
+            document.getElementById('live-clock').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Hold to Close functionality
+        const closeBtn = document.getElementById('close-day-btn');
+        const progressBar = document.getElementById('progress-bar');
+        let holdTimer;
+        let isHolding = false;
+
+        function startHold(e) {
+            e.preventDefault();
+            if (isHolding) return;
+            isHolding = true;
+            
+            progressBar.style.transition = 'width 2s linear';
+            progressBar.style.width = '100%';
+            
+            holdTimer = setTimeout(() => {
+                onCloseConfirm();
+            }, 2000);
+        }
+
+        function cancelHold() {
+            isHolding = false;
+            clearTimeout(holdTimer);
+            progressBar.style.transition = 'width 0.2s ease-out';
+            progressBar.style.width = '0%';
+        }
+
+        function onCloseConfirm() {
+            closeBtn.classList.remove('bg-signal-red');
+            closeBtn.classList.add('bg-success-green');
+            closeBtn.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <span class="material-symbols-outlined">check_circle</span>
+                    TERMINAL LOCKED
+                </span>
+                <span class="text-[10px] font-body-sm opacity-80 uppercase tracking-widest">Shift Successfully Closed</span>
+            `;
+            
+            // Add a simple localized confetti effect or vibration feedback
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            
+            setTimeout(() => {
+                alert('Shift closure successful. Redirecting to login screen...');
+                window.location.reload();
+            }, 1000);
+        }
+
+        // Mouse Events
+        closeBtn.addEventListener('mousedown', startHold);
+        window.addEventListener('mouseup', cancelHold);
+
+        // Touch Events
+        closeBtn.addEventListener('touchstart', startHold);
+        window.addEventListener('touchend', cancelHold);
+
+        // UI atmospheric micro-interaction for Revenue cards
+        document.querySelectorAll('.bg-surface-container').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickServe POS - Connect Printer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#43302b",
+                    "primary": "#ffb5a0",
+                    "surface-container-low": "#271813",
+                    "background": "#1e100c",
+                    "surface": "#1e100c",
+                    "outline": "#ab8980",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-high": "#372621",
+                    "on-secondary-container": "#a7b6cc",
+                    "inverse-surface": "#fadcd4",
+                    "inverse-primary": "#b02f00",
+                    "surface-tint": "#ffb5a0",
+                    "on-tertiary-fixed": "#002113",
+                    "error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "surface-bright": "#483530",
+                    "primary-container": "#ff5722",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "on-secondary": "#233143",
+                    "error": "#ffb4ab",
+                    "tertiary": "#4edea3",
+                    "on-surface": "#fadcd4",
+                    "on-primary-fixed-variant": "#862200",
+                    "surface-container-lowest": "#180b07",
+                    "surface-container": "#2c1c17",
+                    "secondary-container": "#39485a",
+                    "on-tertiary-container": "#00311f",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "secondary-fixed": "#d4e4fa",
+                    "on-primary-fixed": "#3b0900",
+                    "on-background": "#fadcd4",
+                    "tertiary-container": "#00a572",
+                    "on-error": "#690005",
+                    "on-surface-variant": "#e4beb4",
+                    "surface-dim": "#1e100c",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-tertiary": "#003824",
+                    "surface-container-highest": "#43302b",
+                    "outline-variant": "#5b4039",
+                    "inverse-on-surface": "#3e2c27",
+                    "primary-fixed": "#ffdbd1",
+                    "on-primary-container": "#541200",
+                    "on-primary": "#5f1500",
+                    "secondary": "#b9c8de",
+                    "tertiary-fixed": "#6ffbbe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-gap": "12px",
+                    "container-padding": "16px",
+                    "unit": "4px",
+                    "touch-target-min": "48px",
+                    "grid-gutter": "12px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Space Grotesk"],
+                    "label-xl": ["Space Grotesk"],
+                    "label-sm": ["Space Grotesk"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Space Grotesk"],
+                    "label-md": ["Space Grotesk"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "headline-md": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #1e100c;
+            color: #fadcd4;
+            max-width: 390px;
+            margin: 0 auto;
+            min-height: 844px;
+            position: relative;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.1); }
+        }
+        .dot-pulse {
+            display: inline-block;
+            animation: dots 1.5s infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            33% { content: '.'; }
+            66% { content: '..'; }
+            100% { content: '...'; }
+        }
+        .printer-glow {
+            filter: drop-shadow(0 0 8px rgba(255, 87, 34, 0.4));
+        }
+        .ios-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="flex flex-col antialiased ios-scrollbar overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 bg-surface-container flex items-center justify-between px-container-padding h-touch-target-min border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<button class="hover:bg-surface-variant/50 active:scale-95 transition-transform rounded-full p-2">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Connect Printer</h1>
+</div>
+<button class="hover:bg-surface-variant/50 active:scale-95 transition-transform rounded-full p-2">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+</button>
+</header>
+<main class="flex-1 px-container-padding py-stack-gap">
+<!-- Illustration -->
+<div class="flex flex-col items-center justify-center py-6">
+<div class="relative w-48 h-48 bg-surface-container-high rounded-full flex items-center justify-center printer-glow border border-primary-container/20">
+<img class="w-32 h-32 object-contain" data-alt="A clean isometric 3D illustration of a portable Bluetooth thermal receipt printer. The device is white with a sleek orange power button and an orange status latch. The background is a dark deep brown restaurant aesthetic with subtle glowing orange Bluetooth signal waves radiating from the machine. The lighting is cinematic and high-contrast, emphasizing the techno-functional design." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9Q9qxSa9ohjhcKkLISCPCy8qce7Ss_Wq6UannRVMGVSdf-mtpwPU2qz9-lEtWUrLzJgERzBMiAOLlvs2O_Wkh6zE1yatUe3U47c7Kf4IMrxpFyhKyv3nIpL-vpcB2DjpU_RymMvXZu7CGRpkD7lGhD14auvDtr-ZKAeMtiy2O-VJceBJE_J3VKdPitQM7K-blfb6eLjvaMPko7XpTfOX0BpPw-Pkhidh1PImKogQ0ZIhD8F55xTZcDQ"/>
+<div class="absolute top-4 right-4 pulse-animation">
+<span class="material-symbols-outlined text-primary-container text-4xl" style="font-variation-settings: 'FILL' 1;">bluetooth</span>
+</div>
+</div>
+</div>
+<!-- Instruction Card -->
+<section class="bg-[#1A1A2E] border border-white/10 rounded-[14px] p-4 mt-2">
+<div class="flex flex-col gap-3">
+<div class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/20 text-primary flex items-center justify-center text-label-sm font-bold">1</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Turn on your printer (hold power button 3 seconds)</p>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/20 text-primary flex items-center justify-center text-label-sm font-bold">2</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Make sure Bluetooth is on</p>
+</div>
+<div class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/20 text-primary flex items-center justify-center text-label-sm font-bold">3</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Tap Scan below</p>
+</div>
+</div>
+</section>
+<!-- Scan Section -->
+<div class="mt-8" id="scan-container">
+<button class="w-full h-[52px] bg-primary-container text-on-primary-container rounded-xl font-headline-md text-headline-md flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg shadow-primary-container/20" onclick="startScan()">
+<span class="material-symbols-outlined">search</span>
+                Scan for Printers
+            </button>
+</div>
+<!-- Scanning State (Hidden by default) -->
+<div class="hidden flex flex-col items-center justify-center py-10 gap-4" id="scanning-state">
+<div class="relative">
+<div class="absolute inset-0 bg-primary-container/10 rounded-full scale-150 animate-ping"></div>
+<span class="material-symbols-outlined text-primary-container text-5xl pulse-animation" style="font-variation-settings: 'FILL' 1;">bluetooth_searching</span>
+</div>
+<p class="font-label-md text-label-md text-primary tracking-widest uppercase">Searching for printers<span class="dot-pulse"></span></p>
+</div>
+<!-- Found Devices List -->
+<section class="mt-8 hidden" id="devices-list">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Found Devices</h2>
+<span class="text-[10px] text-tertiary px-2 py-0.5 bg-tertiary/10 rounded-full border border-tertiary/20">3 FOUND</span>
+</div>
+<div class="flex flex-col gap-2">
+<!-- Device Row 1 -->
+<div class="flex items-center justify-between p-4 bg-surface-container-high rounded-xl border border-outline-variant hover:border-primary/40 transition-colors">
+<div class="flex items-center gap-4">
+<div class="bg-surface-variant/30 p-2 rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant">print</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">RPP02N</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant/60">00:11:22:AA:BB:CC</p>
+</div>
+</div>
+<button class="px-4 py-1.5 border-1.5 border-outline-variant rounded-full text-label-md text-primary hover:bg-primary-container/10 active:scale-90 transition-all" onclick="connectDevice('RPP02N')">Connect</button>
+</div>
+<!-- Device Row 2 -->
+<div class="flex items-center justify-between p-4 bg-surface-container-high rounded-xl border border-outline-variant">
+<div class="flex items-center gap-4">
+<div class="bg-surface-variant/30 p-2 rounded-lg">
+<span class="material-symbols-outlined text-on-surface-variant">print</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">HP58 Printer</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant/60">DC:0D:30:4F:78:12</p>
+</div>
+</div>
+<button class="px-4 py-1.5 border-1.5 border-outline-variant rounded-full text-label-md text-primary hover:bg-primary-container/10 active:scale-90 transition-all" onclick="connectDevice('HP58 Printer')">Connect</button>
+</div>
+</div>
+</section>
+<!-- Connected State (Hidden by default) -->
+<section class="mt-8 hidden" id="connected-state">
+<div class="bg-tertiary/10 border border-tertiary/30 rounded-xl p-4 flex items-center gap-4 mb-4">
+<div class="w-10 h-10 bg-tertiary rounded-full flex items-center justify-center shadow-lg shadow-tertiary/20">
+<span class="material-symbols-outlined text-on-tertiary">check_circle</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-tertiary" id="connected-name">HP58 Printer Connected</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Status: Online</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 h-12 bg-surface-container-highest border border-outline-variant rounded-xl text-label-md text-on-surface flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-body-md">receipt_long</span>
+                    Print Test Page
+                </button>
+<button class="flex-1 h-12 bg-error-container/20 border border-error/30 rounded-xl text-label-md text-error flex items-center justify-center gap-2 active:scale-95 transition-transform" onclick="disconnectDevice()">
+<span class="material-symbols-outlined text-body-md">link_off</span>
+                    Disconnect
+                </button>
+</div>
+</section>
+</main>
+<!-- Footer Note -->
+<footer class="p-container-padding pb-24 text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant/50">
+            Works with most 58mm and 80mm Bluetooth thermal printers
+        </p>
+<a class="inline-block mt-2 font-label-md text-label-md text-primary-container hover:underline" href="#">
+            Buy on Daraz
+        </a>
+</footer>
+<!-- Bottom Navigation (Shared Component) -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-high flex justify-around items-center h-16 w-full px-2 border-t border-outline-variant shadow-lg">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">table_restaurant</span>
+<span class="font-label-sm text-label-sm">Tables</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-surface-variant px-4 py-1 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-sm text-label-sm">Menu</span>
+</div>
+<!-- Active Tab: Settings/History context, let's assume we came from a config path -->
+<div class="flex flex-col items-center justify-center text-primary dark:text-primary bg-primary-container/10 rounded-xl px-4 py-1 transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</div>
+</nav>
+<script>
+        function startScan() {
+            const scanBtnContainer = document.getElementById('scan-container');
+            const scanningState = document.getElementById('scanning-state');
+            const devicesList = document.getElementById('devices-list');
+            const connectedState = document.getElementById('connected-state');
+
+            scanBtnContainer.classList.add('hidden');
+            connectedState.classList.add('hidden');
+            scanningState.classList.remove('hidden');
+            devicesList.classList.add('hidden');
+
+            setTimeout(() => {
+                scanningState.classList.add('hidden');
+                devicesList.classList.remove('hidden');
+            }, 2500);
+        }
+
+        function connectDevice(name) {
+            const devicesList = document.getElementById('devices-list');
+            const connectedState = document.getElementById('connected-state');
+            const connectedName = document.getElementById('connected-name');
+            const scanBtnContainer = document.getElementById('scan-container');
+
+            connectedName.textContent = `✓ ${name} Connected`;
+            devicesList.classList.add('hidden');
+            connectedState.classList.remove('hidden');
+            scanBtnContainer.classList.remove('hidden');
+            scanBtnContainer.querySelector('button').innerHTML = `
+                <span class="material-symbols-outlined">refresh</span>
+                Scan for other Devices
+            `;
+        }
+
+        function disconnectDevice() {
+            const connectedState = document.getElementById('connected-state');
+            const scanBtnContainer = document.getElementById('scan-container');
+            
+            connectedState.classList.add('hidden');
+            scanBtnContainer.classList.remove('hidden');
+            scanBtnContainer.querySelector('button').innerHTML = `
+                <span class="material-symbols-outlined">search</span>
+                Scan for Printers
+            `;
+        }
+    </script>
+</body></html>

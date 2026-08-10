@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | End of Shift</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-highest": "#3c3329",
+                      "surface-bright": "#41382e",
+                      "surface-dim": "#19120a",
+                      "primary-fixed": "#ffddb8",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "background": "#19120a",
+                      "on-secondary-container": "#bab8b7",
+                      "surface-tint": "#ffb95f",
+                      "surface-container": "#261e15",
+                      "surface-container-high": "#31281f",
+                      "surface-container-low": "#221a12",
+                      "error": "#ffb4ab",
+                      "surface": "#19120a",
+                      "on-surface-variant": "#d8c3ad",
+                      "secondary": "#c9c6c5",
+                      "on-tertiary": "#2f312f",
+                      "surface-container-lowest": "#140d06",
+                      "outline": "#a08e7a",
+                      "on-primary": "#472a00",
+                      "secondary-container": "#4a4949",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "primary": "#ffc174",
+                      "outline-variant": "#534434",
+                      "inverse-primary": "#855300",
+                      "tertiary-fixed": "#e3e2e0",
+                      "tertiary": "#cdccca",
+                      "inverse-on-surface": "#382f25",
+                      "secondary-fixed": "#e5e2e1",
+                      "on-error-container": "#ffdad6",
+                      "error-container": "#93000a",
+                      "on-primary-fixed": "#2a1700",
+                      "inverse-surface": "#f0e0d1",
+                      "tertiary-container": "#b1b1ae",
+                      "on-tertiary-container": "#434442",
+                      "primary-container": "#f59e0b",
+                      "on-surface": "#f0e0d1",
+                      "on-secondary-fixed-variant": "#474646",
+                      "primary-fixed-dim": "#ffb95f",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "on-primary-container": "#613b00",
+                      "on-background": "#f0e0d1",
+                      "surface-variant": "#3c3329",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "on-primary-fixed-variant": "#653e00",
+                      "on-error": "#690005",
+                      "on-secondary": "#313030"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "lg": "24px",
+                      "base": "8px",
+                      "xl": "32px",
+                      "sm": "8px",
+                      "md": "16px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Clash Display"],
+                      "headline-sm": ["Clash Display"],
+                      "label-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "headline-lg": ["Clash Display"],
+                      "display-lg": ["Clash Display"],
+                      "currency-display": ["Clash Display"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: #0A0A0F;
+            font-family: 'Inter', sans-serif;
+        }
+        .clash {
+            font-family: 'Clash Display', sans-serif;
+        }
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .custom-shadow {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-md overflow-x-hidden">
+<!-- Shift Closing Card Container -->
+<main class="w-full max-w-[480px] bg-white rounded-[20px] custom-shadow overflow-hidden transform transition-all duration-300">
+<!-- CARD TOP: Gradient Header -->
+<header class="bg-gradient-to-br from-[#0F172A] to-[#1E293B] p-lg rounded-t-[20px]">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="text-white font-bold text-[20px] flex items-center gap-2">
+<span>🌙</span> End of Shift
+                    </h1>
+<p class="text-white/65 text-[13px] mt-1">Gulshan-e-Iqbal Branch</p>
+</div>
+<div class="bg-white/10 px-sm py-xs rounded-lg backdrop-blur-sm">
+<span class="material-symbols-outlined text-white text-[20px]">more_vert</span>
+</div>
+</div>
+<div class="text-center mt-6">
+<h2 class="text-white font-bold text-[32px] clash tracking-tight">11:58 PM</h2>
+<p class="text-slate-400 text-[13px]">Monday, June 29</p>
+</div>
+</header>
+<!-- CARD BODY -->
+<div class="p-lg bg-white">
+<!-- 1. SHIFT SUMMARY STRIP -->
+<section class="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[10px] p-[14px] flex justify-between items-center mb-5">
+<div class="flex-1 text-center">
+<p class="text-[11px] text-slate-500 uppercase font-semibold">Duration</p>
+<p class="text-[18px] font-bold text-slate-900">8h 12m</p>
+</div>
+<div class="w-[1px] h-8 bg-slate-200"></div>
+<div class="flex-1 text-center">
+<p class="text-[11px] text-slate-500 uppercase font-semibold">Orders</p>
+<p class="text-[18px] font-bold text-slate-900">47</p>
+</div>
+<div class="w-[1px] h-8 bg-slate-200"></div>
+<div class="flex-1 text-center">
+<p class="text-[11px] text-slate-500 uppercase font-semibold">Revenue</p>
+<p class="text-[18px] font-bold text-slate-900">PKR 52,400</p>
+</div>
+</section>
+<!-- 2. SALES BREAKDOWN -->
+<section class="mb-5">
+<h3 class="text-[12px] font-bold uppercase text-slate-700 mb-3 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">analytics</span>
+                    Sales Breakdown
+                </h3>
+<div class="space-y-1">
+<div class="flex justify-between items-center h-[32px] px-2 hover:bg-slate-50 rounded-md transition-colors">
+<span class="text-slate-600 text-body-sm">💵 Cash Orders</span>
+<span class="font-semibold text-slate-900">PKR 23,650</span>
+</div>
+<div class="flex justify-between items-center h-[32px] px-2 hover:bg-slate-50 rounded-md transition-colors">
+<span class="text-slate-600 text-body-sm">💳 Card Orders</span>
+<span class="font-semibold text-slate-900">PKR 18,400</span>
+</div>
+<div class="flex justify-between items-center h-[32px] px-2 hover:bg-slate-50 rounded-md transition-colors">
+<span class="text-slate-600 text-body-sm">📱 JazzCash</span>
+<span class="font-semibold text-slate-900">PKR 8,100</span>
+</div>
+<div class="flex justify-between items-center h-[32px] px-2 hover:bg-slate-50 rounded-md transition-colors">
+<span class="text-slate-600 text-body-sm">📱 EasyPaisa</span>
+<span class="font-semibold text-slate-900">PKR 2,250</span>
+</div>
+</div>
+</section>
+<!-- 3. CASH RECONCILIATION -->
+<section class="mb-5 space-y-4">
+<h3 class="text-[12px] font-bold uppercase text-slate-700 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">payments</span>
+                    Cash Count
+                </h3>
+<!-- Row A: Expected -->
+<div class="bg-[#F0FDF4] border border-[#D1FAE5] p-3 rounded-[10px]">
+<p class="text-[11px] text-emerald-700 uppercase font-bold tracking-wider">Expected in Drawer</p>
+<div class="flex justify-between items-end mt-1">
+<p class="text-[20px] font-bold text-emerald-900 leading-none">PKR 28,650</p>
+<p class="text-[11px] text-emerald-600 italic font-medium">(PKR 5,000 opening + PKR 23,650 cash)</p>
+</div>
+</div>
+<!-- Row B: Actual Cash Input -->
+<div>
+<label class="text-[11px] text-slate-500 uppercase font-bold tracking-wider mb-2 block" for="actual-cash">Actual Cash (Count Now)</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="text-slate-400 font-bold">PKR</span>
+</div>
+<input class="block w-full h-[58px] pl-14 pr-4 border-2 border-[#E2E8F0] rounded-[10px] text-[24px] font-bold text-slate-900 focus:border-primary-container focus:ring-0 transition-all placeholder:text-slate-200" id="actual-cash" placeholder="0.00" type="number"/>
+</div>
+</div>
+</section>
+<!-- 4. VARIANCE ROW (Static Demo) -->
+<section class="mb-5">
+<div class="bg-red-50 border border-red-100 rounded-[8px] p-3 text-center">
+<p class="text-[20px] font-bold text-red-600">-PKR 200 SHORT</p>
+<p class="text-[12px] text-red-500 font-medium">Report variance explanation to manager</p>
+</div>
+</section>
+<!-- 5. NOTES -->
+<section class="mt-4">
+<label class="text-[12px] text-slate-500 font-medium mb-2 block" for="notes">Notes (optional)</label>
+<textarea class="w-full border-[#E2E8F0] rounded-lg text-body-sm focus:border-slate-400 focus:ring-0 resize-none p-3" id="notes" placeholder="Any variance explanation..." rows="3"></textarea>
+</section>
+<!-- 6. FOOTER BUTTONS -->
+<footer class="flex gap-3 mt-6">
+<button class="flex-1 h-[48px] border-2 border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 active:scale-95 transition-all text-body-md flex items-center justify-center">
+                    Back
+                </button>
+<button class="flex-[2] h-[48px] bg-[#F59E0B] text-white rounded-xl font-bold shadow-lg shadow-amber-200/50 hover:bg-[#D97706] active:scale-95 transition-all text-body-md flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">lock_clock</span>
+                    Close Shift &amp; Submit
+                </button>
+</footer>
+</div>
+</main>
+<!-- Visual Atmosphere: Subtle Shaders/Background detail -->
+<div class="fixed inset-0 pointer-events-none -z-10 opacity-30">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-900/50 rounded-full blur-[120px]"></div>
+</div>
+<script>
+        // Simple micro-interaction for the cash input
+        const cashInput = document.getElementById('actual-cash');
+        const varianceBox = document.querySelector('.bg-red-50');
+        const expectedAmount = 28650;
+
+        cashInput.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value) || 0;
+            const variance = value - expectedAmount;
+            
+            if (variance < 0) {
+                varianceBox.classList.remove('hidden');
+                varianceBox.className = 'bg-red-50 border border-red-100 rounded-[8px] p-3 text-center transition-all animate-pulse';
+                varianceBox.innerHTML = `
+                    <p class="text-[20px] font-bold text-red-600">-PKR ${Math.abs(variance).toLocaleString()} SHORT</p>
+                    <p class="text-[12px] text-red-500 font-medium">Report variance explanation to manager</p>
+                `;
+            } else if (variance > 0) {
+                varianceBox.classList.remove('hidden');
+                varianceBox.className = 'bg-emerald-50 border border-emerald-100 rounded-[8px] p-3 text-center transition-all';
+                varianceBox.innerHTML = `
+                    <p class="text-[20px] font-bold text-emerald-600">+PKR ${variance.toLocaleString()} OVER</p>
+                    <p class="text-[12px] text-emerald-500 font-medium">Excess cash detected in drawer</p>
+                `;
+            } else {
+                varianceBox.classList.remove('hidden');
+                varianceBox.className = 'bg-slate-50 border border-slate-100 rounded-[8px] p-3 text-center transition-all';
+                varianceBox.innerHTML = `
+                    <p class="text-[20px] font-bold text-slate-600">PKR 0.00 VARIANCE</p>
+                    <p class="text-[12px] text-slate-500 font-medium">Cash drawer is balanced</p>
+                `;
+            }
+        });
+    </script>
+</body></html>

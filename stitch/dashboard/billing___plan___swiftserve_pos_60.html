@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Billing &amp; Plan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-background": "#191c1e",
+                    "tertiary-container": "#927eff",
+                    "on-secondary": "#ffffff",
+                    "outline-variant": "#e4beb4",
+                    "background": "#f7f9fb",
+                    "on-primary-container": "#541200",
+                    "on-tertiary": "#ffffff",
+                    "on-surface-variant": "#5b4039",
+                    "surface": "#f7f9fb",
+                    "secondary-container": "#dae2fd",
+                    "secondary-fixed": "#dae2fd",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "surface-container-low": "#f2f4f6",
+                    "outline": "#907067",
+                    "on-tertiary-container": "#29008a",
+                    "primary-container": "#ff5722",
+                    "tertiary": "#5f46ce",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-tertiary-fixed-variant": "#4629b6",
+                    "inverse-primary": "#ffb5a0",
+                    "on-primary-fixed-variant": "#862200",
+                    "primary-fixed": "#ffdbd1",
+                    "surface-dim": "#d8dadc",
+                    "tertiary-fixed-dim": "#c9beff",
+                    "text-muted": "#64748B",
+                    "primary": "#b02f00",
+                    "tertiary-fixed": "#e6deff",
+                    "secondary": "#565e74",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#b02f00",
+                    "on-secondary-fixed": "#131b2e",
+                    "on-secondary-container": "#5c647a",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-primary-fixed": "#3b0900",
+                    "text-main": "#0F172A",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "surface-variant": "#e0e3e5",
+                    "border-subtle": "#E2E8F0",
+                    "surface-container-high": "#e6e8ea",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed": "#1b0063",
+                    "surface-bright": "#f7f9fb",
+                    "on-surface": "#191c1e",
+                    "surface-default": "#F8FAFC",
+                    "inverse-surface": "#2d3133",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eceef0",
+                    "surface-card": "#FFFFFF",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "margin-desktop": "40px",
+                    "gutter-mobile": "16px",
+                    "max-width": "1200px",
+                    "margin-mobile": "16px",
+                    "gutter-desktop": "24px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-pill { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .sidebar-item-active { border-left: 3px solid #ff5722; background: rgba(255, 255, 255, 0.05); }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-full w-[280px] bg-on-secondary-fixed dark:bg-on-secondary-fixed w-[280px] h-screen fixed left-0 top-0 border-r border-border-subtle dark:border-outline-variant shadow-sm z-50">
+<div class="px-6 py-8">
+<h1 class="font-headline-md text-headline-md font-bold text-surface-container-lowest">Admin Console</h1>
+<p class="font-label-md text-label-md text-secondary-fixed-dim opacity-70">Management Suite</p>
+</div>
+<nav class="flex-1 mt-4">
+<a class="flex items-center gap-3 px-6 py-3 text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant hover:text-white transition-colors duration-200 font-label-md text-label-md scale-100 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant hover:text-white transition-colors duration-200 font-label-md text-label-md scale-100 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                Orders
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant hover:text-white transition-colors duration-200 font-label-md text-label-md scale-100 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+                Menu Management
+            </a>
+<a class="flex items-center gap-3 px-6 py-3 text-primary bg-on-secondary-fixed-variant border-l-[3px] border-primary font-label-md text-label-md scale-100 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="p-6 border-t border-on-secondary-fixed-variant">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden bg-primary-container">
+<img class="w-full h-full object-cover" data-alt="A professional circular profile photo of a modern restaurant owner in business casual attire. The background is a blurred, high-end cafe interior with warm ambient lighting. The style is clean, sharp, and corporate, emphasizing trust and authority in a tech-driven hospitality environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-64GwITX_Pv0eTIX0q6ZaxQraEy7E72IcTAI10InRAksAiltLHFndnSjE42eUOpOgMKJVRhpB6odYxz_-8LyO716Qw2BPZC8VHQ63bT5Sn6fg9QNaxC-CbbmKaRLNrecwUTvXhCbR63PVs9HZpIiDAr9Bb9hi8bYX07Yhfc-gC9z-ehXN0oF_s3MYM1Hkmn73LPSnpUv18I4mfeqkqb4PbDqyNvPv7oICzxxzFUi69FYBuszLnIVy8Qb8X-B7c1WgpK5kb0NKJLet"/>
+</div>
+<div>
+<p class="font-label-md text-label-md text-white">Store Logo</p>
+<p class="text-xs text-secondary-fixed-dim">SwiftServe Merchant</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-[280px] min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-280px)] h-16 bg-surface-container-lowest dark:bg-surface-container-lowest border-b border-border-subtle dark:border-outline-variant shadow-sm z-40 flex justify-between items-center px-margin-desktop max-w-max-width mx-auto w-full">
+<div class="flex items-center gap-4">
+<span class="font-headline-lg text-headline-lg font-black text-text-main">Merchant Dashboard</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative hidden lg:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-body-md focus:ring-2 focus:ring-primary-container w-64" placeholder="Search resources..." type="text"/>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-text-muted cursor-pointer active:opacity-80" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-text-muted cursor-pointer active:opacity-80" data-icon="help">help</span>
+<div class="h-8 w-8 rounded-full bg-secondary-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A high-resolution headshot of a professional executive for a user profile avatar. The background is a clean, neutral office setting with soft natural light. The lighting is flattering and professional, consistent with a high-end corporate dashboard aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbZky-ZUNat9hePpPM-8hCqqrN-ho0DkjwxbbIb6zfwYO7WPlYNsaXlGQK_74G9voYTtVVf7x4RbIiF6X7YG5q3gUcgD6-7wZP-1UUD1M7J93p4j7h_-hhPmVT0E5yXZzomIUSJg5TrMlqsrnaWlK1R_FtdssrVR75m7ys18D22w0Z0ntLV7RtlzzDh6-cFmIT2Y0-DSfyoKq04lbMNs5BVj5m6CEybYDM7F4G2H1S-viu5DGxj1tXFdAll_x7iN9-j7jBjuvel_1f"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="pt-24 px-8 pb-12 max-w-[1200px] mx-auto">
+<!-- Page Header -->
+<div class="mb-8">
+<h1 class="text-[26px] font-bold text-text-main leading-tight">Billing &amp; Plan</h1>
+<p class="text-[14px] text-text-muted mt-1">Manage your subscription and payment details</p>
+</div>
+<!-- Current Plan Card -->
+<section class="w-full bg-gradient-to-r from-[#0F172A] to-[#1E293B] rounded-[16px] p-8 mb-6 text-white flex flex-col md:flex-row justify-between items-center shadow-xl relative overflow-hidden group">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-container/10 blur-[100px] -mr-32 -mt-32"></div>
+<div class="relative z-10 w-full md:w-auto mb-8 md:mb-0">
+<span class="text-[11px] font-bold uppercase tracking-[0.1em] text-[#94A3B8]">Current Plan</span>
+<h2 class="text-[28px] font-bold mt-1">Pro Plan</h2>
+<div class="flex flex-wrap gap-2 mt-6">
+<span class="glass-pill px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> 10 Branches
+                        </span>
+<span class="glass-pill px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Unlimited Staff
+                        </span>
+<span class="glass-pill px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> KDS
+                        </span>
+<span class="glass-pill px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Analytics
+                        </span>
+<span class="glass-pill px-3 py-1.5 rounded-full text-[12px] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Integrations
+                        </span>
+</div>
+</div>
+<div class="relative z-10 text-center md:text-right w-full md:w-auto">
+<div class="mb-6">
+<span class="text-[36px] font-bold">PKR 11,999</span>
+<span class="text-[16px] text-[#94A3B8]">/month</span>
+</div>
+<div class="flex flex-col sm:flex-row gap-3 md:justify-end">
+<button class="bg-primary-container hover:bg-[#E64A19] text-white px-6 py-3 rounded-lg font-bold text-sm transition-all transform active:scale-95 shadow-lg shadow-primary-container/20">
+                            Upgrade to Enterprise
+                        </button>
+<button class="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-lg font-bold text-sm transition-all transform active:scale-95">
+                            Manage Plan
+                        </button>
+</div>
+</div>
+</section>
+<!-- Usage Metrics Row -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<!-- Card 1 -->
+<div class="bg-white border border-border-subtle p-5 rounded-xl shadow-sm">
+<p class="text-text-muted text-[13px] font-medium mb-3">Branches Used</p>
+<div class="flex justify-between items-end mb-2">
+<span class="text-xl font-bold text-text-main">3 of 10</span>
+<span class="text-xs text-text-muted">30%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[30%]"></div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-white border border-border-subtle p-5 rounded-xl shadow-sm">
+<p class="text-text-muted text-[13px] font-medium mb-3">Active Staff</p>
+<div class="flex justify-between items-end">
+<span class="text-xl font-bold text-text-main">18 of Unlimited</span>
+<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">No limit</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-white border border-border-subtle p-5 rounded-xl shadow-sm">
+<p class="text-text-muted text-[13px] font-medium mb-3">Orders This Month</p>
+<div class="flex justify-between items-end">
+<span class="text-xl font-bold text-text-main">1,247</span>
+<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">Unlimited</span>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-white border border-border-subtle p-5 rounded-xl shadow-sm">
+<p class="text-text-muted text-[13px] font-medium mb-3">Storage Used</p>
+<div class="flex justify-between items-end mb-2">
+<span class="text-xl font-bold text-text-main">2.4 GB of 50 GB</span>
+<span class="text-xs text-text-muted">5%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[5%]"></div>
+</div>
+</div>
+</section>
+<!-- Available Plans -->
+<h3 class="text-lg font-bold mb-6 text-text-main">Available Plans</h3>
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+<!-- STARTER -->
+<div class="bg-white border border-border-subtle p-8 rounded-xl shadow-sm flex flex-col">
+<div class="mb-6">
+<h4 class="text-sm font-bold text-text-muted uppercase tracking-widest mb-1">Starter</h4>
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-bold text-text-main">PKR 4,999</span>
+<span class="text-sm text-text-muted">/mo</span>
+</div>
+</div>
+<ul class="space-y-4 mb-8 flex-1">
+<li class="flex items-center gap-3 text-sm text-text-main">
+<span class="material-symbols-outlined text-primary-container" data-icon="check">check</span> 1 Branch
+                        </li>
+<li class="flex items-center gap-3 text-sm text-text-main">
+<span class="material-symbols-outlined text-primary-container" data-icon="check">check</span> 5 Staff
+                        </li>
+</ul>
+<button class="w-full border border-border-subtle text-text-main py-2.5 rounded-lg font-semibold hover:bg-surface-container-low transition-colors">
+                        Downgrade
+                    </button>
+</div>
+<!-- PRO (CURRENT) -->
+<div class="bg-white border-2 border-primary-container p-8 rounded-xl shadow-md relative transform scale-105 z-10 flex flex-col">
+<div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-container text-white text-[10px] font-bold uppercase px-4 py-1 rounded-full shadow-lg">
+                        Current Plan
+                    </div>
+<div class="mb-6">
+<h4 class="text-sm font-bold text-primary-container uppercase tracking-widest mb-1">Pro</h4>
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-bold text-primary-container">PKR 11,999</span>
+<span class="text-sm text-text-muted">/mo</span>
+</div>
+</div>
+<ul class="space-y-4 mb-8 flex-1">
+<li class="flex items-center gap-3 text-sm text-text-main">
+<span class="material-symbols-outlined text-emerald-500" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> 10 Branches
+                        </li>
+<li class="flex items-center gap-3 text-sm text-text-main">
+<span class="material-symbols-outlined text-emerald-500" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Unlimited Staff
+                        </li>
+<li class="flex items-center gap-3 text-sm text-text-main">
+<span class="material-symbols-outlined text-emerald-500" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> Advanced Analytics
+                        </li>
+</ul>
+<button class="w-full bg-surface-container-low text-text-muted py-2.5 rounded-lg font-semibold cursor-not-allowed" disabled="">
+                        Current Plan
+                    </button>
+</div>
+<!-- ENTERPRISE -->
+<div class="bg-[#0F172A] p-8 rounded-xl shadow-sm text-white flex flex-col">
+<div class="mb-6">
+<h4 class="text-sm font-bold text-blue-400 uppercase tracking-widest mb-1">Enterprise</h4>
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-bold">Custom Pricing</span>
+</div>
+</div>
+<ul class="space-y-4 mb-8 flex-1">
+<li class="flex items-center gap-3 text-sm text-white/80">
+<span class="material-symbols-outlined text-primary-container" data-icon="bolt">bolt</span> Unlimited Branches
+                        </li>
+<li class="flex items-center gap-3 text-sm text-white/80">
+<span class="material-symbols-outlined text-primary-container" data-icon="bolt">bolt</span> Custom Integrations
+                        </li>
+<li class="flex items-center gap-3 text-sm text-white/80">
+<span class="material-symbols-outlined text-primary-container" data-icon="bolt">bolt</span> 24/7 Priority Support
+                        </li>
+</ul>
+<button class="w-full bg-primary-container hover:bg-[#E64A19] text-white py-2.5 rounded-lg font-semibold transition-colors">
+                        Contact Sales
+                    </button>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Billing History -->
+<div class="lg:col-span-2 bg-white border border-border-subtle rounded-xl shadow-sm overflow-hidden">
+<div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center">
+<h3 class="font-bold text-text-main">Billing History</h3>
+<button class="text-primary-container text-xs font-bold hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-text-muted">
+<th class="px-6 py-3">Date</th>
+<th class="px-6 py-3">Description</th>
+<th class="px-6 py-3">Amount</th>
+<th class="px-6 py-3">Status</th>
+<th class="px-6 py-3 text-right">Invoice</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-sm text-text-main">Apr 23, 2026</td>
+<td class="px-6 py-4 text-sm text-text-main">Pro Plan - Monthly</td>
+<td class="px-6 py-4 text-sm text-text-main">PKR 11,999</td>
+<td class="px-6 py-4">
+<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold">PAID</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-text-muted hover:text-primary-container" data-icon="download">download</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-sm text-text-main">Mar 23, 2026</td>
+<td class="px-6 py-4 text-sm text-text-main">Pro Plan - Monthly</td>
+<td class="px-6 py-4 text-sm text-text-main">PKR 11,999</td>
+<td class="px-6 py-4">
+<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold">PAID</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-text-muted hover:text-primary-container" data-icon="download">download</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="px-6 py-4 text-sm text-text-main">Feb 23, 2026</td>
+<td class="px-6 py-4 text-sm text-text-main">Pro Plan - Monthly</td>
+<td class="px-6 py-4 text-sm text-text-main">PKR 11,999</td>
+<td class="px-6 py-4">
+<span class="bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold">PAID</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="material-symbols-outlined text-text-muted hover:text-primary-container" data-icon="download">download</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Payment Method -->
+<div class="bg-white border border-border-subtle rounded-xl shadow-sm p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-text-main">Payment Method</h3>
+<button class="text-primary-container text-xs font-bold hover:underline">+ Add Method</button>
+</div>
+<!-- Current Card -->
+<div class="border border-border-subtle rounded-lg p-4 mb-6 hover:border-primary-container transition-colors group cursor-pointer relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-blue-600 text-3xl" data-icon="credit_card">credit_card</span>
+<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Primary</span>
+</div>
+<p class="text-sm font-bold text-text-main tracking-widest mb-1">•••• •••• •••• 4242</p>
+<div class="flex justify-between items-center">
+<p class="text-xs text-text-muted">Expires 12/27</p>
+<span class="text-xs font-bold uppercase text-text-muted">Visa</span>
+</div>
+</div>
+<!-- Other Options -->
+<p class="text-[11px] font-bold uppercase tracking-wider text-text-muted mb-4">Also Accepted</p>
+<div class="flex gap-4">
+<div class="w-12 h-8 rounded border border-border-subtle flex items-center justify-center p-1 overflow-hidden grayscale hover:grayscale-0 transition-all cursor-pointer">
+<img class="h-full w-full object-contain" data-alt="A clean, minimalist representation of a payment provider logo, specifically JazzCash, in a high-contrast digital payment icon style. The lighting is bright and modern, fitting for a SaaS financial dashboard interface. The focus is on a sleek, recognizable commercial fintech branding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4cjqNS2Ta_mWHb5ZnGYEfo1V4olwUKwPXTL8SHbTA-8KIhGLRzeEzo0sIKhkrxQa5QjDEpybm7Kw5ZCj3M9uy15JIWC_vZ80BwxApRqexKrfGw8QahrJBzOoDwJPvSKwsAqfK0ZlTLVBn-DQ1y3utwyjUXr--zVHZJslNiti_-kjuwClimzY_ZzNuJF0XVR_SkZsWPt2h6BLJXLOcuTCaWYYpfL6oAjnJcdepDUjAoL33MunTV01FYA4l8hK9eQSl8JkoUyYCOkBd"/>
+</div>
+<div class="w-12 h-8 rounded border border-border-subtle flex items-center justify-center p-1 overflow-hidden grayscale hover:grayscale-0 transition-all cursor-pointer">
+<img class="h-full w-full object-contain" data-alt="A high-fidelity digital icon representing EasyPaisa mobile wallet for a dashboard interface. The design is sleek and professional, utilizing bold colors and clean typography. The atmosphere is oriented towards financial security and technological accessibility in a modern SaaS context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBryDs72qi2ZzOs7n1xCrM-HMZSxRT5BzjGmyADBb-fjKxLtgEusAKb4JLUbJ77fPSK-x7HECauD-lCrE5vFkRCmozSTNZTN8gYWQQpAPajU2_nrg9jP_i-j6PjxO6DyhG-YKGYqBEPINY5nhWAgpWV9_YePvE3pvCO-Wro05OFtASnVlM1qRCNLc--4MbwwmoEeldJx89EgxEXgm-C8ZAczOXVNWqosieKeiP4ir5WylM3rVztj3r0yc3N5n9opj2PvyqDiADfPa9J"/>
+</div>
+</div>
+<div class="mt-8 p-4 bg-surface-container-low rounded-lg border border-dashed border-border-subtle text-center">
+<p class="text-xs text-text-muted">Next billing date is <span class="font-bold text-text-main">May 23, 2026</span></p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interactions and subtle effects
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                if(!btn.disabled) btn.style.transform = 'translateY(-1px)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                if(!btn.disabled) btn.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Toggle active class logic for side nav would happen here normally
+    </script>
+</body></html>

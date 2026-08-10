@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Go - Welcome</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#6ffbbe",
+                    "on-secondary-container": "#a7b6cc",
+                    "surface": "#1e100c",
+                    "on-background": "#fadcd4",
+                    "surface-variant": "#43302b",
+                    "secondary-fixed": "#d4e4fa",
+                    "on-tertiary-container": "#00311f",
+                    "surface-container-highest": "#43302b",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "inverse-primary": "#b02f00",
+                    "primary": "#ffb5a0",
+                    "on-error": "#690005",
+                    "primary-fixed": "#ffdbd1",
+                    "surface-bright": "#483530",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "error-container": "#93000a",
+                    "surface-container-low": "#271813",
+                    "outline": "#ab8980",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-primary-container": "#541200",
+                    "on-secondary": "#233143",
+                    "on-tertiary": "#003824",
+                    "surface-container-lowest": "#180b07",
+                    "secondary-container": "#39485a",
+                    "outline-variant": "#5b4039",
+                    "on-error-container": "#ffdad6",
+                    "on-surface": "#fadcd4",
+                    "inverse-on-surface": "#3e2c27",
+                    "surface-container-high": "#372621",
+                    "tertiary": "#4edea3",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "on-tertiary-fixed": "#002113",
+                    "surface-tint": "#ffb5a0",
+                    "secondary": "#b9c8de",
+                    "on-primary-fixed-variant": "#862200",
+                    "surface-dim": "#1e100c",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "inverse-surface": "#fadcd4",
+                    "on-surface-variant": "#e4beb4",
+                    "error": "#ffb4ab",
+                    "surface-container": "#2c1c17",
+                    "tertiary-container": "#00a572",
+                    "primary-container": "#ff5722",
+                    "background": "#1e100c",
+                    "on-primary-fixed": "#3b0900",
+                    "on-primary": "#5f1500"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "container-padding": "16px",
+                    "touch-target-min": "48px",
+                    "grid-gutter": "12px",
+                    "stack-gap": "12px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "headline-lg-mobile": ["Space Grotesk"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-sm": ["Space Grotesk"],
+                    "label-xl": ["Space Grotesk"],
+                    "label-md": ["Space Grotesk"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Space Grotesk"],
+                    "headline-lg": ["Space Grotesk"]
+            },
+            "fontSize": {
+                    "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                    "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0F;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .orange-glow {
+            box-shadow: 0 0 40px rgba(255, 87, 34, 0.3);
+        }
+        .btn-glow {
+            box-shadow: 0 4px 14px 0 rgba(255, 87, 34, 0.39);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface select-none">
+<!-- Top Section: Fixed Branding -->
+<header class="flex-none pt-12 pb-6 px-container-padding flex flex-col items-center animate-fadeIn">
+<div class="w-[64px] h-[64px] bg-primary-container rounded-2xl flex items-center justify-center orange-glow transition-transform duration-500 hover:scale-105 active:scale-95 cursor-pointer">
+<span class="material-symbols-outlined text-white text-[32px] fill-icon">bolt</span>
+</div>
+<div class="mt-4 text-center">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-white tracking-tighter uppercase">SwiftServe Go</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant opacity-80 mt-0.5" dir="rtl">اپنا کاروبار بڑھائیں</p>
+</div>
+</header>
+<!-- Middle Section: Visual Content (Illustration) -->
+<main class="flex-grow flex flex-col items-center justify-center px-container-padding">
+<div class="relative w-full max-w-xs flex flex-col items-center">
+<img alt="SwiftServe Go Dhaba Illustration" class="w-full max-h-[240px] object-contain drop-shadow-2xl animate-float" src="https://lh3.googleusercontent.com/aida/AP1WRLtiVT4OugszZaJGh-gNi54_4zdG89m2MCs213ge1zprBkd9nhOGukBepHjOk2ReZkBVMvBiinnQA1hyxIZWLOBZ8WXBvNomQES1F7mwH8awiJe-idct-gVnarbPm8ELhkIee1e8QuurQolDBLqfSodulr7OLpdQLS7T_ERtkSsZwTFkzVRayz-cXk236psk6R1z4LzMoggra3S-y-ROVg8TjCAgyk3IKFpIQhY_u01gtXVxkGaI7AgaJ4Sm"/>
+<div class="mt-8 space-y-1 text-center animate-fadeIn" style="animation-delay: 0.2s">
+<p class="font-body-md text-body-md text-white font-medium">Smart billing for every restoran</p>
+<div class="flex items-center justify-center space-x-1.5 text-tertiary">
+<span class="material-symbols-outlined text-[16px] font-bold">check_circle</span>
+<span class="font-label-md text-label-md">Free for small businesses</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Section: Actions Stack (Weighted for Reach) -->
+<footer class="flex-none bg-surface-container-low rounded-t-[32px] pt-8 pb-10 px-container-padding animate-fadeIn" style="animation-delay: 0.4s">
+<div class="w-full max-w-sm mx-auto flex flex-col space-y-4">
+<!-- CTA 1: Get Started -->
+<button class="w-full h-[58px] bg-primary-container text-white font-label-xl text-[18px] rounded-2xl btn-glow flex items-center justify-center transition-all duration-200 active:scale-[0.98] active:opacity-90">
+                Get Started — It's Free
+            </button>
+<!-- CTA 2: Login -->
+<button class="w-full h-[58px] bg-transparent border-[1.5px] border-white/10 text-white font-label-md text-[16px] rounded-2xl flex items-center justify-center transition-all duration-200 hover:bg-white/5 active:scale-[0.98]">
+                I Already Have an Account
+            </button>
+<!-- Metadata/Features -->
+<div class="pt-6 flex flex-col items-center space-y-4">
+<p class="font-label-sm text-label-sm text-on-surface-variant/60 text-center tracking-wide">
+                    No hardware needed • Works offline • Bluetooth print
+                </p>
+<div class="flex items-center space-x-4 opacity-40">
+<span class="material-symbols-outlined text-white text-[20px]">shop</span>
+<span class="material-symbols-outlined text-white text-[20px]">apps</span>
+</div>
+</div>
+</div>
+</footer>
+<script>
+        // Simple haptic feedback simulation
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(10);
+                }
+            });
+        });
+    </script>
+</body></html>

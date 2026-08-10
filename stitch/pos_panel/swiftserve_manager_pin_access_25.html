@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Manager PIN Overlay</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-background": "#f0e0d1",
+                    "primary-fixed-dim": "#ffb95f",
+                    "inverse-on-surface": "#382f25",
+                    "surface-container-lowest": "#140d06",
+                    "surface-variant": "#3c3329",
+                    "surface-container-highest": "#3c3329",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "on-secondary-fixed-variant": "#474646",
+                    "on-error-container": "#ffdad6",
+                    "secondary": "#c9c6c5",
+                    "on-tertiary-container": "#434442",
+                    "on-primary-container": "#613b00",
+                    "on-secondary-container": "#bab8b7",
+                    "on-tertiary-fixed-variant": "#464745",
+                    "on-tertiary": "#2f312f",
+                    "surface-container-high": "#31281f",
+                    "inverse-surface": "#f0e0d1",
+                    "inverse-primary": "#855300",
+                    "surface-container": "#261e15",
+                    "surface-tint": "#ffb95f",
+                    "secondary-container": "#4a4949",
+                    "tertiary-container": "#b1b1ae",
+                    "surface-bright": "#41382e",
+                    "background": "#19120a",
+                    "on-surface": "#f0e0d1",
+                    "primary-container": "#f59e0b",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-surface-variant": "#d8c3ad",
+                    "tertiary-fixed": "#e3e2e0",
+                    "secondary-fixed-dim": "#c9c6c5",
+                    "outline": "#a08e7a",
+                    "surface-container-low": "#221a12",
+                    "on-tertiary-fixed": "#1a1c1a",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "on-primary-fixed": "#2a1700",
+                    "on-error": "#690005",
+                    "error-container": "#93000a",
+                    "tertiary": "#cdccca",
+                    "on-primary-fixed-variant": "#653e00",
+                    "error": "#ffb4ab",
+                    "surface-dim": "#19120a",
+                    "primary": "#ffc174",
+                    "on-secondary": "#313030",
+                    "on-primary": "#472a00",
+                    "outline-variant": "#534434",
+                    "surface": "#19120a",
+                    "primary-fixed": "#ffddb8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "margin-mobile": "16px",
+                    "base": "8px",
+                    "xs": "4px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "gutter": "16px",
+                    "margin-desktop": "32px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Clash Display"],
+                    "currency-display": ["Clash Display"],
+                    "headline-sm": ["Clash Display"],
+                    "body-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-md": ["Clash Display"],
+                    "headline-lg": ["Clash Display"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #0c0a09;
+        color: #f0e0d1;
+        margin: 0;
+        overflow: hidden;
+      }
+      .clash-font {
+        font-family: 'Clash Display', sans-serif;
+      }
+      .pin-glow {
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+      }
+      .key-active:active {
+        transform: scale(0.92);
+        background-color: #334155;
+      }
+      .key-active-primary:active {
+        transform: scale(0.92);
+        background-color: #d97706;
+      }
+      .overlay-backdrop {
+        background: rgba(0, 0, 0, 0.88);
+        backdrop-filter: blur(8px);
+      }
+      .numpad-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        justify-items: center;
+      }
+    </style>
+</head>
+<body class="h-screen w-full flex items-center justify-center">
+<!-- Background Content Simulator (Blurred POS) -->
+<div class="absolute inset-0 z-0 flex flex-col p-lg opacity-40 grayscale pointer-events-none">
+<header class="flex justify-between items-center mb-xl">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">SwiftServe</h1>
+<div class="flex space-x-md">
+<div class="w-10 h-10 rounded-full bg-surface-container"></div>
+<div class="w-10 h-10 rounded-full bg-surface-container"></div>
+</div>
+</header>
+<div class="grid grid-cols-4 gap-md">
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+<div class="h-48 bg-surface-container rounded-lg border border-outline-variant"></div>
+</div>
+</div>
+<!-- Manager Access Overlay -->
+<div class="fixed inset-0 z-50 overlay-backdrop flex items-center justify-center p-md">
+<!-- PIN Card -->
+<div class="w-[360px] bg-[#111827] border border-white/10 rounded-[20px] p-lg shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col items-center">
+<!-- Header Section -->
+<div class="text-center mb-lg">
+<div class="flex items-center justify-center gap-2 mb-xs">
+<span class="material-symbols-outlined text-[18px] text-white" style="font-variation-settings: 'FILL' 1;">lock</span>
+<h2 class="font-bold text-[18px] text-white clash-font tracking-tight">Manager Access</h2>
+</div>
+<p class="text-[13px] text-[#64748B] font-medium">Enter your 4-digit manager PIN to continue</p>
+</div>
+<!-- PIN Display Dots -->
+<div class="flex gap-4 mb-xl" id="pin-container">
+<!-- Filled State -->
+<div class="w-[20px] h-[20px] rounded-full bg-primary-container pin-glow transition-all duration-200"></div>
+<!-- Filled State -->
+<div class="w-[20px] h-[20px] rounded-full bg-primary-container pin-glow transition-all duration-200"></div>
+<!-- Empty State -->
+<div class="w-[20px] h-[20px] rounded-full border-2 border-[#374151] transition-all duration-200"></div>
+<!-- Empty State -->
+<div class="w-[20px] h-[20px] rounded-full border-2 border-[#374151] transition-all duration-200"></div>
+</div>
+<!-- Numpad Grid -->
+<div class="numpad-grid w-full">
+<!-- Row 1 -->
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">1</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">2</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">3</button>
+<!-- Row 2 -->
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">4</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">5</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">6</button>
+<!-- Row 3 -->
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">7</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">8</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">9</button>
+<!-- Row 4 -->
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white flex items-center justify-center key-active">
+<span class="material-symbols-outlined text-[24px]">backspace</span>
+</button>
+<button class="w-[64px] h-[64px] rounded-full bg-[#1E293B] border border-white/5 text-white text-[22px] font-bold clash-font flex items-center justify-center key-active">0</button>
+<button class="w-[64px] h-[64px] rounded-full bg-primary-container border border-white/10 text-on-primary-container flex items-center justify-center key-active-primary shadow-[0_4px_12px_rgba(245,158,11,0.3)]">
+<span class="material-symbols-outlined text-[28px] font-bold" style="font-variation-settings: 'wght' 700;">check</span>
+</button>
+</div>
+<!-- Cancel Button -->
+<button class="mt-lg text-[14px] text-on-surface-variant underline underline-offset-4 font-medium opacity-70 hover:opacity-100 transition-opacity">
+                Cancel
+            </button>
+</div>
+</div>
+<!-- Micro-interaction logic -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('.key-active, .key-active-primary');
+            const dots = document.querySelectorAll('#pin-container > div');
+            let pinCount = 2; // Initial visual state matching the prompt description
+
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const label = btn.textContent.trim();
+                    const icon = btn.querySelector('.material-symbols-outlined')?.textContent;
+
+                    if (icon === 'backspace') {
+                        if (pinCount > 0) {
+                            pinCount--;
+                            updateDots();
+                        }
+                    } else if (icon === 'check') {
+                        if (pinCount === 4) {
+                            // Simulate success feedback
+                            btn.classList.add('scale-95');
+                            setTimeout(() => btn.classList.remove('scale-95'), 100);
+                        }
+                    } else {
+                        if (pinCount < 4) {
+                            pinCount++;
+                            updateDots();
+                        }
+                    }
+                });
+            });
+
+            function updateDots() {
+                dots.forEach((dot, index) => {
+                    if (index < pinCount) {
+                        dot.className = 'w-[20px] h-[20px] rounded-full bg-primary-container pin-glow transition-all duration-200';
+                    } else {
+                        dot.className = 'w-[20px] h-[20px] rounded-full border-2 border-[#374151] transition-all duration-200';
+                    }
+                });
+            }
+        });
+    </script>
+</body></html>

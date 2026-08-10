@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Floor Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0D0D0D;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        .floor-grid {
+            background-image: radial-gradient(circle, #333 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .pulse-red {
+            animation: pulse-red-border 2s infinite;
+        }
+        @keyframes pulse-red-border {
+            0% { border-color: #EF4444; box-shadow: 0 0 0 0px rgba(239, 68, 68, 0.4); }
+            70% { border-color: #EF4444; box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { border-color: #EF4444; box-shadow: 0 0 0 0px rgba(239, 68, 68, 0); }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: #111111;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "tertiary-container": "#b1b1ae",
+                "outline": "#a08e7a",
+                "on-primary-container": "#613b00",
+                "on-background": "#f0e0d1",
+                "surface-container-low": "#221a12",
+                "on-surface-variant": "#d8c3ad",
+                "tertiary": "#cdccca",
+                "on-tertiary": "#2f312f",
+                "surface-bright": "#41382e",
+                "secondary-container": "#4a4949",
+                "surface-variant": "#3c3329",
+                "primary-fixed": "#ffddb8",
+                "background": "#19120a",
+                "secondary-fixed": "#e5e2e1",
+                "on-secondary": "#313030",
+                "on-primary-fixed-variant": "#653e00",
+                "on-surface": "#f0e0d1",
+                "primary-container": "#f59e0b",
+                "error-container": "#93000a",
+                "surface": "#19120a",
+                "outline-variant": "#534434",
+                "secondary-fixed-dim": "#c9c6c5",
+                "on-tertiary-container": "#434442",
+                "on-primary": "#472a00",
+                "on-primary-fixed": "#2a1700",
+                "primary": "#ffc174",
+                "on-tertiary-fixed": "#1a1c1a",
+                "surface-container-high": "#31281f",
+                "on-secondary-fixed-variant": "#474646",
+                "inverse-primary": "#855300",
+                "surface-container": "#261e15",
+                "on-secondary-fixed": "#1c1b1b",
+                "on-error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#c7c6c4",
+                "on-secondary-container": "#bab8b7",
+                "inverse-surface": "#f0e0d1",
+                "tertiary-fixed": "#e3e2e0",
+                "surface-container-lowest": "#140d06",
+                "secondary": "#c9c6c5",
+                "primary-fixed-dim": "#ffb95f",
+                "surface-dim": "#19120a",
+                "surface-tint": "#ffb95f",
+                "on-error": "#690005",
+                "error": "#ffb4ab",
+                "inverse-on-surface": "#382f25",
+                "surface-container-highest": "#3c3329",
+                "on-tertiary-fixed-variant": "#464745"
+              },
+              "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+              },
+              "spacing": {
+                "lg": "24px",
+                "base": "8px",
+                "xs": "4px",
+                "md": "16px",
+                "margin-mobile": "16px",
+                "margin-desktop": "32px",
+                "sm": "8px",
+                "gutter": "16px",
+                "xl": "32px"
+              },
+              "fontFamily": {
+                "body-md": ["Inter"],
+                "headline-md": ["Clash Display"],
+                "label-md": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-lg": ["Inter"],
+                "display-lg": ["Clash Display"],
+                "body-sm": ["Inter"],
+                "headline-lg": ["Clash Display"],
+                "currency-display": ["Clash Display"],
+                "headline-sm": ["Clash Display"]
+              },
+              "fontSize": {
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar -->
+<header class="h-[56px] bg-[#111111] border-b border-outline-variant flex items-center justify-between px-lg z-30">
+<div class="flex items-center gap-md">
+<button class="flex items-center gap-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined">arrow_back</span>
+<span class="font-body-md text-body-md">Home</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Tables</h1>
+</div>
+<div class="flex items-center gap-md">
+<!-- Section Filters -->
+<nav class="flex gap-xs bg-surface-container rounded-lg p-1">
+<button class="px-md py-1 text-primary border-b-2 border-primary font-label-lg text-label-lg">All</button>
+<button class="px-md py-1 text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg">Main Floor</button>
+<button class="px-md py-1 text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg">Patio</button>
+<button class="px-md py-1 text-on-surface-variant hover:text-primary transition-colors font-label-lg text-label-lg">Bar</button>
+</nav>
+<div class="h-6 w-[1px] bg-outline-variant mx-2"></div>
+<!-- Status Summary Pill -->
+<div class="flex gap-3 bg-surface-container-highest px-md py-1.5 rounded-full">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface">12</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface">08</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#EF4444]"></span>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface">02</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#3B82F6]"></span>
+<span class="text-[11px] font-bold uppercase tracking-wider text-on-surface">04</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Status Legend Bar -->
+<section class="h-[36px] bg-[#0A0A0A] border-b border-outline-variant flex items-center px-lg gap-lg overflow-x-auto whitespace-nowrap">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 border border-[#10B981] rounded-sm"></span>
+<span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Available</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 border border-[#F59E0B] rounded-sm"></span>
+<span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Occupied</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 border border-[#EF4444] rounded-sm"></span>
+<span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Bill Requested</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 border border-[#3B82F6] border-dashed rounded-sm"></span>
+<span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Reserved</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-outline-variant rounded-sm"></span>
+<span class="text-[10px] font-semibold text-on-surface-variant uppercase tracking-widest">Cleaning</span>
+</div>
+</section>
+<!-- Main Content Area -->
+<main class="flex flex-1 relative overflow-hidden bg-[#0D0D0D]">
+<!-- Floor Map Canvas -->
+<div class="flex-1 floor-grid bg-[#0F0F0F] relative p-12 overflow-auto scrollbar-hide">
+<!-- Section: Indoor Dining -->
+<div class="absolute top-10 left-10">
+<h2 class="font-headline-sm text-label-lg text-outline mb-10 tracking-[0.2em] uppercase">Indoor Dining</h2>
+<div class="grid grid-cols-4 gap-12">
+<!-- Table 01: Available -->
+<div class="w-24 h-24 border-2 border-[#10B981] bg-[#1A1A1A] rounded-full flex flex-col items-center justify-center cursor-pointer active:scale-95 transition-transform">
+<span class="font-headline-sm text-on-surface">01</span>
+<span class="text-[10px] text-on-surface-variant">4p</span>
+</div>
+<!-- Table 07: Occupied (Active Selection) -->
+<div class="w-24 h-24 border-2 border-primary bg-[#261e15] ring-2 ring-primary ring-offset-4 ring-offset-[#0F0F0F] rounded-full flex flex-col items-center justify-center cursor-pointer">
+<span class="font-headline-sm text-primary">07</span>
+<div class="flex flex-col items-center -mt-1">
+<span class="text-[9px] font-bold text-primary uppercase">Rashid</span>
+<span class="text-[9px] text-on-surface-variant">1h 23m</span>
+</div>
+<div class="absolute -top-2 -right-2 bg-primary text-on-primary w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold">AR</div>
+</div>
+<!-- Table 03: Reserved -->
+<div class="w-32 h-20 border-2 border-[#3B82F6] border-dashed bg-[#1A1A1A] rounded-lg flex flex-col items-center justify-center cursor-pointer">
+<span class="font-headline-sm text-[#3B82F6]">03</span>
+<span class="text-[9px] font-bold text-[#3B82F6] uppercase">Zayan • 20:30</span>
+</div>
+<!-- Table 04: Occupied -->
+<div class="w-24 h-24 border-2 border-[#F59E0B] bg-[#1A1A1A] rounded-full flex flex-col items-center justify-center cursor-pointer">
+<span class="font-headline-sm text-[#F59E0B]">04</span>
+<span class="text-[9px] text-on-surface-variant">45m • SM</span>
+</div>
+</div>
+</div>
+<!-- Section: Bar Counter -->
+<div class="absolute top-10 right-20">
+<h2 class="font-headline-sm text-label-lg text-outline mb-10 tracking-[0.2em] uppercase text-right">Bar Counter</h2>
+<div class="flex flex-col gap-6 items-end">
+<div class="flex gap-4">
+<div class="w-12 h-12 border-2 border-[#10B981] bg-[#1A1A1A] rounded-full flex items-center justify-center cursor-pointer">
+<span class="text-xs font-bold">B1</span>
+</div>
+<div class="w-12 h-12 border-2 border-[#F59E0B] bg-[#1A1A1A] rounded-full flex items-center justify-center cursor-pointer">
+<span class="text-xs font-bold">B2</span>
+</div>
+<div class="w-12 h-12 border-2 border-[#F59E0B] bg-[#1A1A1A] rounded-full flex items-center justify-center cursor-pointer">
+<span class="text-xs font-bold">B3</span>
+</div>
+</div>
+<div class="w-64 h-4 bg-[#1A1A1A] border border-outline-variant rounded-full"></div>
+</div>
+</div>
+<!-- Section: Outdoor Terrace -->
+<div class="absolute bottom-20 left-10">
+<h2 class="font-headline-sm text-label-lg text-outline mb-10 tracking-[0.2em] uppercase">Outdoor Terrace</h2>
+<div class="flex gap-12 items-end">
+<!-- Table 12: Bill Requested -->
+<div class="w-40 h-24 border-2 pulse-red bg-[#1A1A1A] rounded-lg flex flex-col items-center justify-center cursor-pointer relative">
+<span class="font-headline-sm text-[#EF4444]">12</span>
+<span class="text-xs font-bold text-[#EF4444] uppercase mb-1">Bill Requested</span>
+<span class="text-body-md font-bold text-on-surface">PKR 12,450</span>
+<div class="absolute -top-3 -right-3 bg-[#EF4444] text-white p-1 rounded-full">
+<span class="material-symbols-outlined text-sm">priority_high</span>
+</div>
+</div>
+<!-- Table 14: Cleaning -->
+<div class="w-24 h-24 bg-outline-variant opacity-40 rounded-full flex flex-col items-center justify-center">
+<span class="font-headline-sm text-on-surface">14</span>
+<span class="material-symbols-outlined text-lg">mop</span>
+</div>
+<!-- Table 15: Available -->
+<div class="w-24 h-24 border-2 border-[#10B981] bg-[#1A1A1A] rounded-full flex flex-col items-center justify-center cursor-pointer">
+<span class="font-headline-sm text-on-surface">15</span>
+<span class="text-[10px] text-on-surface-variant">2p</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Table Detail Panel (Right) -->
+<aside class="w-[380px] bg-[#111111] border-l border-outline-variant flex flex-col z-40 animate-in slide-in-from-right duration-300 shadow-2xl">
+<div class="p-lg flex-1 overflow-y-auto">
+<!-- Header -->
+<div class="flex justify-between items-start mb-6">
+<div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface mb-1">Table 07</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Main Floor • Window Side</p>
+</div>
+<button class="p-2 text-on-surface-variant hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Status Chip -->
+<div class="bg-[#261e15] border border-[#F59E0B]/30 rounded-lg p-3 flex items-center justify-between mb-lg">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse"></span>
+<span class="font-label-lg text-label-lg text-[#F59E0B] uppercase">Occupied</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">1h 23m elapsed</span>
+</div>
+<!-- Party Info -->
+<div class="space-y-4 mb-lg">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary">group</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Party Name</p>
+<p class="font-headline-sm text-headline-sm text-on-surface">Rashid Family</p>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 bg-surface-container rounded-full flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary">person</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Server</p>
+<p class="font-headline-sm text-headline-sm text-on-surface">Ahmed Raza (AR)</p>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-2">
+<div class="bg-surface-container p-3 rounded-lg border border-outline-variant">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold mb-1">Guests</p>
+<p class="text-xl font-bold">04</p>
+</div>
+<div class="bg-surface-container p-3 rounded-lg border border-outline-variant">
+<p class="text-[10px] text-on-surface-variant uppercase font-bold mb-1">Seated At</p>
+<p class="text-xl font-bold">19:12</p>
+</div>
+</div>
+</div>
+<!-- Order Summary -->
+<div class="mb-lg">
+<div class="flex justify-between items-center mb-4">
+<h4 class="font-label-lg text-label-lg text-outline uppercase tracking-widest">Active Order</h4>
+<span class="text-[10px] bg-outline-variant px-2 py-0.5 rounded text-on-surface">8 Items</span>
+</div>
+<div class="space-y-3 border-t border-outline-variant/30 pt-4">
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Mutton Karahi (Full)</span>
+<span class="text-on-surface-variant">PKR 3,850</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Garlic Naan x 4</span>
+<span class="text-on-surface-variant">PKR 480</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm">
+<span class="text-on-surface">Fresh Lime x 4</span>
+<span class="text-on-surface-variant">PKR 1,200</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm italic text-outline">
+<span>+ Other items</span>
+<span>PKR 1,607</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-lg bg-[#0A0A0A] border-t border-outline-variant">
+<div class="flex justify-between items-end mb-6">
+<p class="font-label-lg text-label-lg text-on-surface-variant">Total Amount</p>
+<p class="font-currency-display text-currency-display text-primary">PKR 7,137</p>
+</div>
+<div class="flex flex-col gap-3">
+<button class="w-full h-14 bg-primary text-on-primary font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">add_circle</span>
+<span>Open &amp; Add Items</span>
+</button>
+<div class="grid grid-cols-2 gap-3">
+<button class="h-12 border border-outline text-on-surface font-semibold rounded-xl active:scale-[0.98] transition-all">
+                            Transfer
+                        </button>
+<button class="h-12 border border-[#EF4444] text-[#EF4444] font-semibold rounded-xl active:scale-[0.98] transition-all">
+                            Print Bill
+                        </button>
+</div>
+</div>
+</div>
+</aside>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full h-20 bg-surface-container border-t border-outline-variant flex justify-around items-center px-md pb-safe z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 px-4 py-1 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 px-4 py-1 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-label-lg text-label-lg">Menu</span>
+</a>
+<!-- ACTIVE TAB: Tickets (Managing floor/tables) -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-4 py-1 transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-lg text-label-lg">Tickets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 px-4 py-1 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-lg text-label-lg">Stock</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 px-4 py-1 rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-lg text-label-lg">Admin</span>
+</a>
+</nav>
+<!-- Interactive script for table selection -->
+<script>
+        document.querySelectorAll('.cursor-pointer').forEach(table => {
+            table.addEventListener('click', function() {
+                // Simplified UI toggle - normally would load actual table data
+                console.log('Selected Table');
+            });
+        });
+    </script>
+</body></html>

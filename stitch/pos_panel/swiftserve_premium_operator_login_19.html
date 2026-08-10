@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Premium Operator Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        :root {
+            --midnight: #0D0D0D;
+            --electric-amber: #F59E0B;
+            --surface-dark: #161616;
+            --card-bg: #1E1E1E;
+            --card-border: #2A2A2A;
+            --panel-border: #1F1F1F;
+            --text-secondary: #6B7280;
+        }
+
+        .amber-dot-grid {
+            background-image: radial-gradient(circle, var(--electric-amber) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.03;
+        }
+
+        .role-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .role-card:hover .chevron {
+            transform: translateX(3px);
+        }
+
+        .role-card:active {
+            transform: scale(0.98);
+        }
+
+        .role-card.selected {
+            border-color: var(--electric-amber);
+        }
+
+        .role-card.selected::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--electric-amber);
+        }
+
+        .numpad-key {
+            transition: all 0.15s ease;
+        }
+
+        .numpad-key:active {
+            transform: scale(0.95);
+        }
+
+        .pin-dot {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+
+        .shake {
+            animation: shake 0.2s ease-in-out 0s 2;
+        }
+
+        @keyframes success-fill {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .success-dot {
+            background-color: #10B981 !important;
+            border-color: #10B981 !important;
+            animation: success-fill 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .slide-down {
+            animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .font-clash { font-family: 'Clash Display', sans-serif; }
+        .font-mono { font-family: 'Space Mono', monospace; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#F59E0B",
+                        background: "#0D0D0D",
+                        surface: "#161616",
+                        "on-surface": "#f0e0d1",
+                        "outline-variant": "#1F1F1F"
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-white selection:bg-primary selection:text-black overflow-hidden font-['Inter']">
+<main class="flex h-screen w-full">
+<!-- LEFT PANEL -->
+<section class="relative w-1/2 bg-[#0D0D0D] flex flex-col justify-between p-16 border-r border-[#1F1F1F]">
+<div class="absolute inset-0 amber-dot-grid pointer-events-none"></div>
+<!-- Top: Logo & Label -->
+<div class="relative z-10">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-black text-3xl">bolt</span>
+</div>
+<h1 class="font-clash text-[42px] leading-none text-white">SwiftServe</h1>
+</div>
+<p class="text-[14px] text-[#6B7280] font-semibold tracking-[0.2em] mt-3 uppercase">Operator Terminal</p>
+</div>
+<!-- Middle: Clock & Greet -->
+<div class="relative z-10">
+<div class="font-mono text-[64px] font-bold text-white tracking-tighter leading-none mb-4" id="clock">
+                00:00
+            </div>
+<p class="text-[20px] text-primary font-medium">Good morning, Chef</p>
+</div>
+<!-- Bottom: Status & Version -->
+<div class="relative z-10">
+<div class="flex items-end justify-between">
+<div>
+<h2 class="text-[20px] font-semibold text-white mb-3">The Grand Bistro</h2>
+<div class="inline-flex items-center gap-2 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-[12px] font-bold text-emerald-500 uppercase tracking-wider">Morning Shift Active</span>
+</div>
+</div>
+<div class="text-right text-[12px] text-[#6B7280] leading-relaxed">
+<p>v4.82.0</p>
+<p>Terminal ID: TB-04</p>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL -->
+<section class="w-1/2 bg-[#161616] flex items-center justify-center p-12 relative overflow-hidden">
+<!-- Step 1: Role Selection -->
+<div class="w-full max-w-[400px] space-y-8" id="role-step">
+<header class="text-center space-y-2 mb-10">
+<h3 class="font-clash text-2xl text-white">Select your role</h3>
+<p class="text-[#6B7280]">Identify yourself to begin the shift</p>
+</header>
+<div class="grid grid-cols-1 gap-3">
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Manager')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">manage_accounts</span>
+<span class="font-semibold text-white">Manager</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Head Cashier')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">account_balance_wallet</span>
+<span class="font-semibold text-white">Head Cashier</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Cashier')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">payments</span>
+<span class="font-semibold text-white">Cashier</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Waiter')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">restaurant</span>
+<span class="font-semibold text-white">Waiter</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Kitchen Staff')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">outdoor_grill</span>
+<span class="font-semibold text-white">Kitchen Staff</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-[56px] px-6 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl hover:bg-[#252525]" onclick="selectRole(this, 'Delivery')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#6B7280] group-hover:text-primary transition-colors">delivery_dining</span>
+<span class="font-semibold text-white">Delivery</span>
+</div>
+<span class="material-symbols-outlined text-[#6B7280] chevron transition-transform">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Step 2: PIN Entry -->
+<div class="hidden w-full max-w-[320px] space-y-10 slide-down" id="pin-step">
+<header class="text-center space-y-3">
+<button class="flex items-center gap-2 mx-auto text-[#6B7280] hover:text-primary transition-colors group" onclick="goBack()">
+<span class="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+<span class="text-[12px] font-bold uppercase tracking-wider">Change Role</span>
+</button>
+<div>
+<h3 class="font-clash text-2xl text-white" id="active-role-display">Manager Access</h3>
+<p class="text-[#6B7280]">Enter your security PIN</p>
+</div>
+</header>
+<!-- PIN Dots -->
+<div class="flex justify-center gap-5 h-4">
+<div class="pin-dot w-3 h-3 rounded-full border-2 border-[#374151] bg-transparent"></div>
+<div class="pin-dot w-3 h-3 rounded-full border-2 border-[#374151] bg-transparent"></div>
+<div class="pin-dot w-3 h-3 rounded-full border-2 border-[#374151] bg-transparent"></div>
+<div class="pin-dot w-3 h-3 rounded-full border-2 border-[#374151] bg-transparent"></div>
+</div>
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-3" id="numpad-container">
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('1')">
+<span class="text-xl font-bold text-white">1</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('2')">
+<span class="text-xl font-bold text-white">2</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('3')">
+<span class="text-xl font-bold text-white">3</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('4')">
+<span class="text-xl font-bold text-white">4</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('5')">
+<span class="text-xl font-bold text-white">5</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('6')">
+<span class="text-xl font-bold text-white">6</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('7')">
+<span class="text-xl font-bold text-white">7</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('8')">
+<span class="text-xl font-bold text-white">8</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('9')">
+<span class="text-xl font-bold text-white">9</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="clearPin()">
+<span class="material-symbols-outlined text-[#6B7280]">backspace</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] hover:bg-[#252525]" onclick="addPin('0')">
+<span class="text-xl font-bold text-white">0</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#1E1E1E] rounded-xl border border-[#2A2A2A] opacity-50 cursor-not-allowed transition-all duration-300" id="confirm-btn" onclick="validatePin()">
+<span class="material-symbols-outlined">login</span>
+</button>
+</div>
+</div>
+<!-- Decorative Icons -->
+<div class="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none">
+<span class="material-symbols-outlined text-4xl">wifi</span>
+<span class="material-symbols-outlined text-4xl">battery_charging_full</span>
+</div>
+</section>
+</main>
+<script>
+    let pin = "";
+    const maxPinLength = 4;
+    const roleStep = document.getElementById('role-step');
+    const pinStep = document.getElementById('pin-step');
+    const activeRoleDisplay = document.getElementById('active-role-display');
+    const dots = document.querySelectorAll('.pin-dot');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const numpadContainer = document.getElementById('numpad-container');
+
+    function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        document.getElementById('clock').textContent = `${hours}:${minutes}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function selectRole(element, roleName) {
+        // Clear previous selection
+        document.querySelectorAll('.role-card').forEach(card => card.classList.remove('selected'));
+        element.classList.add('selected');
+
+        // Transition to PIN
+        setTimeout(() => {
+            roleStep.classList.add('hidden');
+            pinStep.classList.remove('hidden');
+            activeRoleDisplay.textContent = `${roleName} Access`;
+            clearPin();
+        }, 150);
+    }
+
+    function goBack() {
+        pinStep.classList.add('hidden');
+        roleStep.classList.remove('hidden');
+        document.querySelectorAll('.role-card').forEach(card => card.classList.remove('selected'));
+        clearPin();
+    }
+
+    function addPin(num) {
+        if (pin.length < maxPinLength) {
+            pin += num;
+            updateDots();
+        }
+    }
+
+    function clearPin() {
+        pin = "";
+        updateDots();
+    }
+
+    function updateDots() {
+        dots.forEach((dot, index) => {
+            if (index < pin.length) {
+                dot.style.backgroundColor = 'var(--electric-amber)';
+                dot.style.borderColor = 'var(--electric-amber)';
+            } else {
+                dot.style.backgroundColor = 'transparent';
+                dot.style.borderColor = '#374151';
+            }
+        });
+
+        if (pin.length === maxPinLength) {
+            confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-[#1E1E1E]', 'text-white');
+            confirmBtn.classList.add('bg-primary', 'border-primary', 'text-black');
+            confirmBtn.style.backgroundColor = 'var(--electric-amber)';
+        } else {
+            confirmBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-[#1E1E1E]', 'text-white');
+            confirmBtn.classList.remove('bg-primary', 'border-primary', 'text-black');
+            confirmBtn.style.backgroundColor = '';
+        }
+    }
+
+    function validatePin() {
+        if (pin.length !== maxPinLength) return;
+
+        // Simulate Validation
+        if (pin === "0000") { // Let's say 0000 is error for demo
+            numpadContainer.classList.add('shake');
+            setTimeout(() => numpadContainer.classList.remove('shake'), 400);
+            clearPin();
+        } else {
+            // Success Animation
+            dots.forEach((dot, i) => {
+                setTimeout(() => {
+                    dot.classList.add('success-dot');
+                }, i * 50);
+            });
+
+            setTimeout(() => {
+                const main = document.querySelector('main');
+                main.style.transition = 'all 0.5s ease-in';
+                main.style.opacity = '0';
+                main.style.transform = 'scale(1.02)';
+                setTimeout(() => {
+                    alert('Authenticated Successfully');
+                    window.location.reload();
+                }, 500);
+            }, 600);
+        }
+    }
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        if (pinStep.classList.contains('hidden')) return;
+        if (e.key >= '0' && e.key <= '9') addPin(e.key);
+        if (e.key === 'Backspace') clearPin();
+        if (e.key === 'Enter') validatePin();
+        if (e.key === 'Escape') goBack();
+    });
+</script>
+</body></html>

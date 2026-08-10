@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Terminal | Stock Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #19120a; /* surface color from theme */
+            color: #f0e0d1; /* on-surface color from theme */
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #19120a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3c3329;
+            border-radius: 10px;
+        }
+        .stock-progress-bg {
+            background: #3c3329;
+        }
+        .electric-amber-glow {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-container": "#434442",
+                      "on-primary-container": "#613b00",
+                      "on-error": "#690005",
+                      "on-secondary-container": "#bab8b7",
+                      "primary-fixed": "#ffddb8",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "on-primary": "#472a00",
+                      "inverse-on-surface": "#382f25",
+                      "secondary-container": "#4a4949",
+                      "on-secondary": "#313030",
+                      "on-error-container": "#ffdad6",
+                      "outline": "#a08e7a",
+                      "secondary-fixed": "#e5e2e1",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "primary-container": "#f59e0b",
+                      "surface-tint": "#ffb95f",
+                      "surface-bright": "#41382e",
+                      "surface-container-lowest": "#140d06",
+                      "surface-dim": "#19120a",
+                      "surface-variant": "#3c3329",
+                      "on-surface": "#f0e0d1",
+                      "on-primary-fixed-variant": "#653e00",
+                      "on-secondary-fixed-variant": "#474646",
+                      "secondary": "#c9c6c5",
+                      "error": "#ffb4ab",
+                      "surface-container-highest": "#3c3329",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "tertiary-fixed": "#e3e2e0",
+                      "surface": "#19120a",
+                      "inverse-primary": "#855300",
+                      "error-container": "#93000a",
+                      "on-tertiary": "#2f312f",
+                      "background": "#19120a",
+                      "outline-variant": "#534434",
+                      "primary": "#ffc174",
+                      "tertiary-container": "#b1b1ae",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "on-surface-variant": "#d8c3ad",
+                      "surface-container": "#261e15",
+                      "primary-fixed-dim": "#ffb95f",
+                      "tertiary": "#cdccca",
+                      "on-primary-fixed": "#2a1700",
+                      "inverse-surface": "#f0e0d1",
+                      "surface-container-high": "#31281f",
+                      "surface-container-low": "#221a12",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "on-background": "#f0e0d1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-desktop": "32px",
+                      "margin-mobile": "16px",
+                      "md": "16px",
+                      "gutter": "16px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "base": "8px",
+                      "xl": "32px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Clash Display"],
+                      "currency-display": ["Clash Display"],
+                      "headline-sm": ["Clash Display"],
+                      "label-lg": ["Inter"],
+                      "headline-lg": ["Clash Display"],
+                      "headline-md": ["Clash Display"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="flex flex-col h-screen overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Top Navigation Bar -->
+<header class="w-full h-16 bg-surface flex justify-between items-center px-lg border-b border-outline-variant z-40">
+<div class="flex items-center gap-xl">
+<span class="font-headline-md text-headline-md font-bold text-primary">SwiftServe</span>
+<nav class="hidden md:flex gap-lg items-center">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-150 cursor-pointer active:scale-95" href="#">Main Floor</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-150 cursor-pointer active:scale-95" href="#">Patio</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-150 cursor-pointer active:scale-95" href="#">Bar</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors duration-150 cursor-pointer active:scale-95" href="#">Private Dining</a>
+</nav>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined">sync</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+</div>
+</header>
+<main class="flex-1 flex flex-col md:flex-row overflow-hidden pb-20 md:pb-0">
+<!-- Left Menu / Stock Area (Fluid) -->
+<div class="flex-1 flex flex-col overflow-hidden">
+<!-- Sticky Header Info -->
+<div class="px-md py-sm bg-surface-container-low flex flex-col gap-sm">
+<div class="flex justify-between items-center">
+<h1 class="font-headline-sm text-headline-sm text-on-surface">Stock Management</h1>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">location_on</span>
+<span class="font-label-md text-label-md">Guadalajara: Main Kitchen</span>
+</div>
+</div>
+<!-- Alert Strip -->
+<div class="bg-error-container/20 border border-error/30 rounded-lg px-md py-base flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="font-body-sm text-body-sm text-on-surface">3 items critically low on stock</span>
+</div>
+<button class="text-primary font-label-lg text-label-lg uppercase tracking-wider">View Tickets</button>
+</div>
+<!-- Search & Filters -->
+<div class="flex gap-sm items-center">
+<div class="flex-1 relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-10 py-3 text-on-surface focus:border-primary-container outline-none transition-all" placeholder="Search menu items..." type="text"/>
+</div>
+<button class="h-12 w-12 bg-surface-container-highest border border-outline-variant rounded-lg flex items-center justify-center active:scale-95">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+<!-- Category Tabs -->
+<div class="flex gap-sm overflow-x-auto no-scrollbar pb-xs">
+<button class="px-lg py-2 bg-primary-container text-on-primary-container font-label-lg text-label-lg rounded-lg whitespace-nowrap active:scale-95">All Items</button>
+<button class="px-lg py-2 bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg rounded-lg whitespace-nowrap active:scale-95">Main Proteins</button>
+<button class="px-lg py-2 bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg rounded-lg whitespace-nowrap active:scale-95">Vegetables</button>
+<button class="px-lg py-2 bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg rounded-lg whitespace-nowrap active:scale-95">Bar Supplies</button>
+<button class="px-lg py-2 bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg rounded-lg whitespace-nowrap active:scale-95">Bakery</button>
+</div>
+</div>
+<!-- Stock List Table-ish View -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-md py-md space-y-base">
+<!-- Stock Item Card 1: Critical -->
+<div class="bg-surface-container-high border border-outline-variant p-md flex items-center gap-md rounded-xl transition-all hover:bg-surface-container-highest group">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest shrink-0 border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="High-contrast close-up shot of raw chicken breast fillets on a sterile industrial steel tray, kitchen studio lighting, cinematic shadow play" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD3H5RPBr8IPQwDojpOEWur3jEJgcoknf6nBXVfGV4DZzyxGsF0NQvBO0ThH5wUz6lcezcA2xIMUDjl8y7EhzPG_BSaEPEXk-L2XUXbTcItdA1YGCyO0IOgZ8Vi-0AJPQhWXNIedJ7vrOD9n6Up4WwPOgGz-b3DwJlVV95JOsEsIEH0IPs-SByYH0mlyeaUmWv7wWNA0m_IZZHyC5KM2ARw63lOPqdMNxW-xy3W1w8GzerHuWUOrBfCoe0j40KB7oD1tgJrD52a_Tuv"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Chicken Breast Fillet</h3>
+<span class="bg-error/10 text-error px-2 py-0.5 rounded font-label-md text-label-md uppercase">Critical</span>
+</div>
+<div class="flex items-center gap-xl mb-2">
+<div>
+<p class="text-on-surface-variant font-label-md text-label-md">Current Stock</p>
+<p class="font-headline-sm text-headline-sm text-error">4.2 KG</p>
+</div>
+<div class="hidden sm:block">
+<p class="text-on-surface-variant font-label-md text-label-md">Min Threshold</p>
+<p class="font-body-md text-body-md">15.0 KG</p>
+</div>
+</div>
+<div class="w-full h-2 stock-progress-bg rounded-full overflow-hidden">
+<div class="bg-error h-full" style="width: 28%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-sm shrink-0">
+<button class="w-10 h-10 flex items-center justify-center bg-primary text-background rounded-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center border border-outline-variant text-on-surface-variant rounded-lg active:scale-90">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- Stock Item Card 2: Warning -->
+<div class="bg-surface-container-high border border-outline-variant p-md flex items-center gap-md rounded-xl transition-all hover:bg-surface-container-highest group">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest shrink-0 border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Close up shot of fresh organic tomatoes with water droplets, vibrant red colors, professional food photography, dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9IOx3tdsp6AlRdTqHM70c-UJOsIbSpQoJMLQHL72D_eeRmIskmGodyHmg-HAbCT1zYfa3uHWvnRm_3myzsk9tUh8gGkNwzRYKhHETq--J8qoOhWLxGGpkVzyZLoqeSg9fN3cQGBZVDQImFKXIAi_2Ww2QGn-GYEl24ZF9VLEzwYqoSYrrf4yooHC1yhxwWxneWdAdyKFRxta6edRE50XbazzUnTrw60KuMHhoTAYgiSu_oA2E13cHGuMPH9dILhmLmU-kkeEI7YJi"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Roma Tomatoes</h3>
+<span class="bg-primary/10 text-primary px-2 py-0.5 rounded font-label-md text-label-md uppercase">Warning</span>
+</div>
+<div class="flex items-center gap-xl mb-2">
+<div>
+<p class="text-on-surface-variant font-label-md text-label-md">Current Stock</p>
+<p class="font-headline-sm text-headline-sm text-primary">12 Units</p>
+</div>
+<div class="hidden sm:block">
+<p class="text-on-surface-variant font-label-md text-label-md">Min Threshold</p>
+<p class="font-body-md text-body-md">20 Units</p>
+</div>
+</div>
+<div class="w-full h-2 stock-progress-bg rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 60%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-sm shrink-0">
+<button class="w-10 h-10 flex items-center justify-center bg-primary text-background rounded-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center border border-outline-variant text-on-surface-variant rounded-lg active:scale-90">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- Stock Item Card 3: Healthy -->
+<div class="bg-surface-container-high border border-outline-variant p-md flex items-center gap-md rounded-xl transition-all hover:bg-surface-container-highest group">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest shrink-0 border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Large bottle of aged balsamic vinegar with a cork stopper, golden reflection, dark moody atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrjM5Po6j4rz0UayHng4Xrksd3zqs4Rf0cMvhmxkuYQ1Glef3975914WaMDrRacAi9cno6jU99iu61y1jy_L1yY0WEWBoilHH3UT_8WU3Hj2FjEDvLginnxLyYR1kSFK1FRgDcRTtBRyw91ON7IsK9antaSH1lKPeSwAvqs6j-KMNGaKBwK6OTpohEU_4iRXA15AxmFQKetpcCTUtCmLARtXAiLcI0Sykq7hn9OAJIWYs6pkPjiqxS0Td-oA6OJ4Rsrbof3y6mdDmO"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Balsamic Glaze (Case)</h3>
+<span class="bg-outline-variant/30 text-on-surface-variant px-2 py-0.5 rounded font-label-md text-label-md uppercase">Stable</span>
+</div>
+<div class="flex items-center gap-xl mb-2">
+<div>
+<p class="text-on-surface-variant font-label-md text-label-md">Current Stock</p>
+<p class="font-headline-sm text-headline-sm text-on-surface">45 Units</p>
+</div>
+<div class="hidden sm:block">
+<p class="text-on-surface-variant font-label-md text-label-md">Min Threshold</p>
+<p class="font-body-md text-body-md">10 Units</p>
+</div>
+</div>
+<div class="w-full h-2 stock-progress-bg rounded-full overflow-hidden">
+<div class="bg-[#4ade80] h-full" style="width: 90%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-sm shrink-0">
+<button class="w-10 h-10 flex items-center justify-center bg-primary text-background rounded-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center border border-outline-variant text-on-surface-variant rounded-lg active:scale-90">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+<!-- Stock Item Card 4: Out of Stock -->
+<div class="bg-surface-container-high border border-outline-variant p-md flex items-center gap-md rounded-xl transition-all opacity-80">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container-lowest shrink-0 border border-outline-variant grayscale">
+<img class="w-full h-full object-cover" data-alt="Fresh avocado halved with pit, neutral background, restaurant ingredient photography" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH0GTbUQzFL2PZLiXDaGH7H1HN3ixkXX2ggFZM1at0UksFEYBS9MG6N3ZiAnHX4eDk0u3IqXw6VwxBH3AbnSCrKyqIzwoBhHCQeprnPMswqvhLftRlOhQnvVZfI7nihcUuxIYfa8MJqa32AAo2sssMJQavDejjqS_7oWFFGlXtZvs8lL9cMWPSdmudcZye1R2sVrRYoiOGnnZHPvwpDjMyki6xObfBRcgY-voBMl8dilOFhlrsLxqACRsNa_t9jJhsCmjoAQbo01r3"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-start mb-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface truncate">Fresh Avocados</h3>
+<span class="bg-error text-on-error px-2 py-0.5 rounded font-label-md text-label-md uppercase">Out of Stock</span>
+</div>
+<p class="font-body-sm text-body-sm text-error mb-2">Automatic Void: 4 menu items affected</p>
+<div class="w-full h-2 stock-progress-bg rounded-full overflow-hidden">
+<div class="bg-error h-full" style="width: 0%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-sm shrink-0">
+<button class="w-10 h-10 flex items-center justify-center bg-primary text-background rounded-lg active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center border border-outline-variant text-on-surface-variant rounded-lg active:scale-90">
+<span class="material-symbols-outlined">edit</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Order Tray (Fixed Desktop) -->
+<aside class="hidden md:flex flex-col w-[360px] bg-surface-container border-l border-outline-variant overflow-hidden">
+<div class="p-lg border-b border-outline-variant">
+<h2 class="font-headline-sm text-headline-sm text-on-surface mb-2">Replenishment List</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Active purchase order drafts</p>
+</div>
+<div class="flex-1 overflow-y-auto p-md space-y-md custom-scrollbar">
+<div class="bg-surface-container-high p-md rounded-xl border border-outline-variant">
+<div class="flex justify-between mb-2">
+<span class="font-label-lg text-label-lg text-on-surface">PO-2024-081</span>
+<span class="text-primary font-label-md text-label-md">DRAFT</span>
+</div>
+<div class="space-y-sm">
+<div class="flex justify-between items-center text-body-sm text-on-surface-variant">
+<span>Chicken Breast</span>
+<span>20 KG</span>
+</div>
+<div class="flex justify-between items-center text-body-sm text-on-surface-variant">
+<span>Roma Tomatoes</span>
+<span>10 Units</span>
+</div>
+<div class="flex justify-between items-center text-body-sm text-on-surface-variant">
+<span>Avocados (Cases)</span>
+<span>2 Cases</span>
+</div>
+</div>
+<div class="mt-md pt-md border-t border-outline-variant flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Estimated Total</span>
+<span class="font-headline-sm text-headline-sm text-primary">$412.50</span>
+</div>
+</div>
+<div class="bg-surface-container-low border border-dashed border-outline-variant p-lg rounded-xl flex flex-col items-center justify-center text-center opacity-60">
+<span class="material-symbols-outlined text-[48px] mb-base">add_circle</span>
+<p class="font-label-lg text-label-lg text-on-surface">Start New Order</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Combine low-stock items into a supplier PO</p>
+</div>
+</div>
+<div class="p-lg bg-surface border-t border-outline-variant space-y-md">
+<div class="flex justify-between items-center">
+<span class="font-body-md text-body-md text-on-surface-variant">Vendor Status</span>
+<div class="flex items-center gap-xs">
+<div class="w-2 h-2 bg-success rounded-full bg-[#4ade80]"></div>
+<span class="font-label-md text-label-md text-on-surface">3 Active</span>
+</div>
+</div>
+<button class="w-full py-4 bg-primary text-on-primary font-headline-sm text-headline-sm rounded-xl active:scale-95 transition-transform electric-amber-glow">
+                    Review and Send PO
+                </button>
+</div>
+</aside>
+</main>
+<!-- Bottom Navigation Bar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center px-md pb-safe h-20 bg-surface-container border-t border-outline-variant z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-lg text-label-lg">Menu</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-lg text-label-lg">Tickets</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-lg px-4 py-1 transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-lg text-label-lg">Stock</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-secondary-container transition-all duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-lg text-label-lg">Admin</span>
+</a>
+</nav>
+<!-- Floating Action Button - Only for High Level Actions -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex md:hidden items-center justify-center active:rotate-90 transition-transform duration-300 z-50">
+<span class="material-symbols-outlined">add</span>
+</button>
+<script>
+        // Micro-interactions
+        document.querySelectorAll('button, a').forEach(elem => {
+            elem.addEventListener('click', () => {
+                // Subtle haptic feedback feel
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(10);
+                }
+            });
+        });
+
+        // Swipe-to-delete mock (UI only)
+        let touchstartX = 0;
+        let touchendX = 0;
+        
+        document.querySelectorAll('.bg-surface-container-high').forEach(card => {
+            card.addEventListener('touchstart', e => {
+                touchstartX = e.changedTouches[0].screenX;
+            }, false);
+
+            card.addEventListener('touchend', e => {
+                touchendX = e.changedTouches[0].screenX;
+                handleGesture(card);
+            }, false);
+        });
+
+        function handleGesture(element) {
+            if (touchendX < touchstartX - 100) {
+                // Swipe Left
+                element.style.transform = 'translateX(-100px)';
+                element.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                setTimeout(() => {
+                    element.style.transform = 'translateX(0px)';
+                    element.style.backgroundColor = '';
+                }, 1000);
+            }
+        }
+    </script>
+</body></html>

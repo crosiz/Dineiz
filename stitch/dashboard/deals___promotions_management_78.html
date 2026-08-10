@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Deals &amp; Promotions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#ffdbd1",
+                        "error-container": "#ffdad6",
+                        "on-primary-container": "#541200",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-background": "#271813",
+                        "tertiary-fixed": "#c8e6ff",
+                        "secondary-fixed": "#dae2fd",
+                        "surface-dim": "#f1d4cc",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "tertiary": "#00628c",
+                        "surface-container": "#ffe9e4",
+                        "on-primary-fixed": "#3b0900",
+                        "secondary-container": "#dae2fd",
+                        "primary-container": "#ff5722",
+                        "surface": "#fff8f6",
+                        "on-surface-variant": "#5b4039",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-primary-fixed-variant": "#862200",
+                        "background": "#fff8f6",
+                        "surface-variant": "#fadcd4",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed": "#131b2e",
+                        "inverse-surface": "#3e2c27",
+                        "on-tertiary-container": "#fcfcff",
+                        "inverse-on-surface": "#ffede8",
+                        "outline": "#907067",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "surface-bright": "#fff8f6",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-secondary-container": "#5c647a",
+                        "surface-container-low": "#fff1ed",
+                        "on-surface": "#271813",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "surface-container-highest": "#fadcd4",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "outline-variant": "#e4beb4",
+                        "on-tertiary-fixed": "#001e2e",
+                        "surface-tint": "#b02f00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "section": "24px",
+                        "page_margin": "24px"
+                    },
+                    "fontFamily": {
+                        "display": ["Inter"],
+                        "caption": ["Inter"],
+                        "h2": ["Inter"],
+                        "h1": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab-glow {
+            box-shadow: 0 0 15px rgba(255, 87, 34, 0.2);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-slate-950 dark:bg-black border-r border-slate-800 flex flex-col py-6">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<h1 class="text-lg font-black text-white leading-tight">SwiftServe POS</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Premium Management</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-inter text-sm font-medium">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span class="font-inter text-sm font-medium">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 bg-slate-900 text-orange-500 border-r-4 border-orange-600" href="#">
+<span class="material-symbols-outlined" data-icon="business_center">business_center</span>
+<span class="font-inter text-sm font-medium">Business</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-inter text-sm font-medium">Growth</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-inter text-sm font-medium">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="extension">extension</span>
+<span class="font-inter text-sm font-medium">Integrations</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-inter text-sm font-medium">Settings</span>
+</a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full py-3 bg-primary text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20 active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                New Order
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-64 min-h-screen relative">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-40 bg-white border-b border-slate-200 h-16 flex items-center justify-between px-page_margin shadow-sm">
+<div class="flex items-center gap-section">
+<h2 class="text-xl font-bold tracking-tighter text-slate-900">Deals &amp; Promotions</h2>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary-container" placeholder="Search deals..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-semibold text-sm hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add_circle">add_circle</span>
+                    Create Deal
+                </button>
+<div class="h-8 w-[1px] bg-slate-200"></div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-500 cursor-pointer" data-icon="notifications">notifications</span>
+<span class="material-symbols-outlined text-slate-500 cursor-pointer" data-icon="apps">apps</span>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-slate-200">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="A professional close-up of a modern hospitality manager in a clean white shirt, looking focused and friendly in a well-lit, minimalist workspace. The lighting is soft and high-key, emphasizing a clean light-mode aesthetic with warm skin tones and sharp details. The overall mood is authoritative yet helpful, aligning with the digital maître d' brand personality." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-page_margin">
+<!-- Filter Pills -->
+<div class="flex items-center gap-related mb-section">
+<button class="px-4 py-2 rounded-full bg-primary-container text-white font-semibold text-sm active-tab-glow">All (12)</button>
+<button class="px-4 py-2 rounded-full bg-white text-secondary font-medium text-sm hover:bg-slate-100 border border-slate-200">Active (5)</button>
+<button class="px-4 py-2 rounded-full bg-white text-secondary font-medium text-sm hover:bg-slate-100 border border-slate-200">Scheduled (2)</button>
+<button class="px-4 py-2 rounded-full bg-white text-secondary font-medium text-sm hover:bg-slate-100 border border-slate-200">Expired (5)</button>
+</div>
+<!-- Deals Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-grid_gutter">
+<!-- Card 1: Active Deal -->
+<div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col md:flex-row group hover:shadow-md transition-shadow">
+<div class="w-full md:w-48 bg-gradient-to-br from-orange-500 to-red-600 flex flex-col items-center justify-center p-element text-white shrink-0">
+<div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-related backdrop-blur-sm">
+<span class="material-symbols-outlined text-3xl" data-icon="fastfood">fastfood</span>
+</div>
+<span class="text-caption font-bold uppercase tracking-wider opacity-90">Meal Bundle</span>
+<div class="mt-element flex flex-col items-center">
+<span class="text-[10px] line-through opacity-70">PKR 950</span>
+<span class="text-h1 font-black">PKR 750</span>
+<span class="text-[10px] bg-white text-red-600 px-2 py-0.5 rounded-full font-bold mt-1">Save 21%</span>
+</div>
+</div>
+<div class="flex-1 p-element flex flex-col">
+<div class="flex justify-between items-start mb-related">
+<div>
+<h3 class="font-h1 text-slate-900 leading-tight">Zinger Supreme Bundle</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>
+                                        ACTIVE
+                                    </span>
+<span class="flex items-center gap-1 text-caption text-slate-500">
+<span class="material-symbols-outlined text-[14px]" data-icon="calendar_today">calendar_today</span>
+                                        All day • Mon-Sun
+                                    </span>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<p class="text-body text-slate-600 line-clamp-2 flex-1">Premium Zinger + Large Fries + 500ml Cola. Perfect for a quick, filling lunch.</p>
+<div class="mt-element pt-element border-t border-slate-100 flex items-center justify-between">
+<div class="flex gap-section">
+<div>
+<p class="text-caption text-slate-400 uppercase">Usage</p>
+<p class="text-h2 text-slate-900">234 <span class="text-green-500 text-[10px] ml-1">↑ 12%</span></p>
+</div>
+<div>
+<p class="text-caption text-slate-400 uppercase">Revenue</p>
+<p class="text-h2 text-slate-900">PKR 175,500</p>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="h-8 w-16 flex items-end gap-[2px]">
+<div class="bg-primary/20 h-[30%] w-full rounded-t-sm"></div>
+<div class="bg-primary/20 h-[50%] w-full rounded-t-sm"></div>
+<div class="bg-primary/40 h-[40%] w-full rounded-t-sm"></div>
+<div class="bg-primary/60 h-[70%] w-full rounded-t-sm"></div>
+<div class="bg-primary h-[90%] w-full rounded-t-sm"></div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Scheduled Deal -->
+<div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col md:flex-row group hover:shadow-md transition-shadow">
+<div class="w-full md:w-48 bg-gradient-to-br from-indigo-500 to-purple-600 flex flex-col items-center justify-center p-element text-white shrink-0">
+<div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-related backdrop-blur-sm">
+<span class="material-symbols-outlined text-3xl" data-icon="nightlight">nightlight</span>
+</div>
+<span class="text-caption font-bold uppercase tracking-wider opacity-90">Late Night</span>
+<div class="mt-element flex flex-col items-center">
+<span class="text-[10px] opacity-70">FLAT DISCOUNT</span>
+<span class="text-h1 font-black">15% OFF</span>
+<span class="text-[10px] bg-white text-indigo-600 px-2 py-0.5 rounded-full font-bold mt-1">Min PKR 2000</span>
+</div>
+</div>
+<div class="flex-1 p-element flex flex-col">
+<div class="flex justify-between items-start mb-related">
+<div>
+<h3 class="font-h1 text-slate-900 leading-tight">Midnight Munchies</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1"></span>
+                                        SCHEDULED
+                                    </span>
+<span class="flex items-center gap-1 text-caption text-slate-500">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+                                        11 PM - 3 AM • Fri-Sat
+                                    </span>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<p class="text-body text-slate-600 line-clamp-2 flex-1">Boost late-night traffic with a site-wide discount for dine-in and takeaway orders.</p>
+<div class="mt-element pt-element border-t border-slate-100 flex items-center justify-between">
+<div class="flex gap-section">
+<div>
+<p class="text-caption text-slate-400 uppercase">Est. Reach</p>
+<p class="text-h2 text-slate-900">1,200</p>
+</div>
+<div>
+<p class="text-caption text-slate-400 uppercase">Target</p>
+<p class="text-h2 text-slate-900">Late Birds</p>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="h-8 w-16 flex items-end gap-[2px]">
+<div class="bg-indigo-400/20 h-[20%] w-full rounded-t-sm"></div>
+<div class="bg-indigo-400/20 h-[30%] w-full rounded-t-sm"></div>
+<div class="bg-indigo-400/20 h-[25%] w-full rounded-t-sm"></div>
+<div class="bg-indigo-400/20 h-[40%] w-full rounded-t-sm"></div>
+<div class="bg-indigo-400/20 h-[35%] w-full rounded-t-sm"></div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-500"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3: Expired Deal -->
+<div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col md:flex-row group hover:shadow-md transition-shadow opacity-75 grayscale hover:grayscale-0 transition-all">
+<div class="w-full md:w-48 bg-gradient-to-br from-slate-400 to-slate-600 flex flex-col items-center justify-center p-element text-white shrink-0">
+<div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-related backdrop-blur-sm">
+<span class="material-symbols-outlined text-3xl" data-icon="coffee">coffee</span>
+</div>
+<span class="text-caption font-bold uppercase tracking-wider opacity-90">Morning Promo</span>
+<div class="mt-element flex flex-col items-center">
+<span class="text-[10px] line-through opacity-70">PKR 450</span>
+<span class="text-h1 font-black">PKR 299</span>
+<span class="text-[10px] bg-white text-slate-600 px-2 py-0.5 rounded-full font-bold mt-1">EXPIRED</span>
+</div>
+</div>
+<div class="flex-1 p-element flex flex-col">
+<div class="flex justify-between items-start mb-related">
+<div>
+<h3 class="font-h1 text-slate-900 leading-tight">Early Bird Breakfast</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400 mr-1"></span>
+                                        EXPIRED
+                                    </span>
+<span class="flex items-center gap-1 text-caption text-slate-500">
+<span class="material-symbols-outlined text-[14px]" data-icon="history">history</span>
+                                        Ended 2 days ago
+                                    </span>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="refresh">refresh</span>
+</button>
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-error transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<p class="text-body text-slate-600 line-clamp-2 flex-1">Any hot beverage + muffin or croissant. Only available before 11 AM.</p>
+<div class="mt-element pt-element border-t border-slate-100 flex items-center justify-between">
+<div class="flex gap-section">
+<div>
+<p class="text-caption text-slate-400 uppercase">Final Usage</p>
+<p class="text-h2 text-slate-900">856</p>
+</div>
+<div>
+<p class="text-caption text-slate-400 uppercase">Net ROI</p>
+<p class="text-h2 text-slate-900">42%</p>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="h-8 w-16 flex items-end gap-[2px]">
+<div class="bg-slate-300 h-[80%] w-full rounded-t-sm"></div>
+<div class="bg-slate-300 h-[60%] w-full rounded-t-sm"></div>
+<div class="bg-slate-300 h-[40%] w-full rounded-t-sm"></div>
+<div class="bg-slate-300 h-[20%] w-full rounded-t-sm"></div>
+<div class="bg-slate-300 h-[10%] w-full rounded-t-sm"></div>
+</div>
+<span class="text-caption text-slate-400 font-bold">INACTIVE</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 4: High Growth Active Deal -->
+<div class="bg-white rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden flex flex-col md:flex-row group hover:shadow-md transition-shadow">
+<div class="w-full md:w-48 bg-gradient-to-br from-emerald-500 to-teal-600 flex flex-col items-center justify-center p-element text-white shrink-0">
+<div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-related backdrop-blur-sm">
+<span class="material-symbols-outlined text-3xl" data-icon="family_restroom">family_restroom</span>
+</div>
+<span class="text-caption font-bold uppercase tracking-wider opacity-90">Family Pack</span>
+<div class="mt-element flex flex-col items-center">
+<span class="text-[10px] line-through opacity-70">PKR 3,200</span>
+<span class="text-h1 font-black">PKR 2,499</span>
+<span class="text-[10px] bg-white text-emerald-600 px-2 py-0.5 rounded-full font-bold mt-1">Save 22%</span>
+</div>
+</div>
+<div class="flex-1 p-element flex flex-col">
+<div class="flex justify-between items-start mb-related">
+<div>
+<h3 class="font-h1 text-slate-900 leading-tight">Weekend Feast</h3>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>
+                                        ACTIVE
+                                    </span>
+<span class="flex items-center gap-1 text-caption text-slate-500">
+<span class="material-symbols-outlined text-[14px]" data-icon="event">event</span>
+                                        Weekends Only
+                                    </span>
+</div>
+</div>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="edit">edit</span>
+</button>
+<button class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-xl" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+<p class="text-body text-slate-600 line-clamp-2 flex-1">Two Medium Pizzas + 6pc Wings + 1.5L Beverage. The ultimate family treat.</p>
+<div class="mt-element pt-element border-t border-slate-100 flex items-center justify-between">
+<div class="flex gap-section">
+<div>
+<p class="text-caption text-slate-400 uppercase">Usage</p>
+<p class="text-h2 text-slate-900">112 <span class="text-green-500 text-[10px] ml-1">↑ 24%</span></p>
+</div>
+<div>
+<p class="text-caption text-slate-400 uppercase">Revenue</p>
+<p class="text-h2 text-slate-900">PKR 279,888</p>
+</div>
+</div>
+<div class="flex items-center gap-element">
+<div class="h-8 w-16 flex items-end gap-[2px]">
+<div class="bg-emerald-500/20 h-[10%] w-full rounded-t-sm"></div>
+<div class="bg-emerald-500/40 h-[30%] w-full rounded-t-sm"></div>
+<div class="bg-emerald-500/60 h-[50%] w-full rounded-t-sm"></div>
+<div class="bg-emerald-500/80 h-[80%] w-full rounded-t-sm"></div>
+<div class="bg-emerald-500 h-[100%] w-full rounded-t-sm"></div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Promotion Performance Summary (Asymmetric Bento Block) -->
+<div class="mt-section grid grid-cols-1 md:grid-cols-3 gap-grid_gutter">
+<div class="md:col-span-2 bg-slate-900 rounded-xl p-section text-white relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="font-h1 mb-related">Campaign Insights</h4>
+<p class="text-slate-400 text-body mb-section max-w-md">Promotional items are driving 18% more footfall this month compared to the previous quarter. The "Weekend Feast" bundle is currently your highest performing asset.</p>
+<div class="flex gap-section">
+<div>
+<p class="text-4xl font-black text-orange-500">PKR 1.2M</p>
+<p class="text-caption text-slate-500 uppercase tracking-widest mt-1">Total Promo Revenue</p>
+</div>
+<div class="w-[1px] bg-slate-800"></div>
+<div>
+<p class="text-4xl font-black text-white">4,231</p>
+<p class="text-caption text-slate-500 uppercase tracking-widest mt-1">Coupons Redeemed</p>
+</div>
+</div>
+</div>
+<!-- Abstract Background Element -->
+<div class="absolute right-0 bottom-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-20 -mb-20"></div>
+</div>
+<div class="bg-primary text-white rounded-xl p-section flex flex-col justify-between">
+<div>
+<h4 class="font-h1 mb-related">AI Suggestion</h4>
+<p class="text-white/80 text-body">Based on order patterns, a "Tuesday Taco Combo" could increase mid-week sales by approximately 15%.</p>
+</div>
+<button class="mt-element w-full py-2 bg-white text-primary font-bold rounded-lg text-sm hover:bg-orange-50 transition-colors">
+                        Draft Campaign
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB (Suppressed on Details, but shown here as it is a Management Hub) -->
+<button class="fixed bottom-page_margin right-page_margin w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined text-2xl" data-icon="insights">insights</span>
+</button>
+</body></html>

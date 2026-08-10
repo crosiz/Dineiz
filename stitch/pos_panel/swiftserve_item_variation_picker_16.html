@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Item Variation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .backdrop-blur-custom {
+            backdrop-filter: blur(4px);
+            background-color: rgba(0, 0, 0, 0.75);
+        }
+        .bottom-sheet-shadow {
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+        }
+        /* Custom Checkbox */
+        .custom-checkbox:checked {
+            background-color: #F59E0B;
+            border-color: #F59E0B;
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed": "#ffddb8",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "tertiary": "#cdccca",
+                        "on-primary": "#472a00",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-primary-fixed-variant": "#653e00",
+                        "background": "#19120a",
+                        "inverse-primary": "#855300",
+                        "surface-container-lowest": "#140d06",
+                        "on-surface": "#f0e0d1",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "on-error-container": "#ffdad6",
+                        "secondary-container": "#4a4949",
+                        "on-tertiary-container": "#434442",
+                        "tertiary-container": "#b1b1ae",
+                        "on-secondary-fixed-variant": "#474646",
+                        "surface-tint": "#ffb95f",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "surface": "#19120a",
+                        "surface-container": "#261e15",
+                        "surface-container-low": "#221a12",
+                        "primary": "#ffc174",
+                        "on-primary-container": "#613b00",
+                        "on-error": "#690005",
+                        "inverse-surface": "#f0e0d1",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "on-primary-fixed": "#2a1700",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-secondary-container": "#bab8b7",
+                        "on-background": "#f0e0d1",
+                        "surface-dim": "#19120a",
+                        "surface-bright": "#41382e",
+                        "on-tertiary": "#2f312f",
+                        "on-surface-variant": "#d8c3ad",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-high": "#31281f",
+                        "error-container": "#93000a",
+                        "primary-container": "#f59e0b",
+                        "secondary": "#c9c6c5",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline-variant": "#534434",
+                        "surface-variant": "#3c3329",
+                        "primary-fixed-dim": "#ffb95f",
+                        "outline": "#a08e7a",
+                        "surface-container-highest": "#3c3329",
+                        "on-secondary": "#313030"
+                    },
+                    "spacing": {
+                        "xs": "4px", "lg": "24px", "xl": "32px", "md": "16px", "sm": "8px", "base": "8px", "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Clash Display"], "headline-lg": ["Clash Display"], "body-md": ["Inter"], "label-lg": ["Inter"], "label-md": ["Inter"], "currency-display": ["Clash Display"], "headline-md": ["Clash Display"], "body-sm": ["Inter"], "body-lg": ["Inter"], "display-lg": ["Clash Display"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface overflow-hidden">
+<!-- Mock Background: Order Screen -->
+<div class="fixed inset-0 flex">
+<!-- Sidebar Shell (Shared Component Blueprint) -->
+<aside class="hidden md:flex flex-col items-center py-md space-y-lg border-r border-outline-variant bg-surface-container-lowest w-[80px] h-full">
+<div class="p-xs bg-primary-container rounded-lg">
+<span class="material-symbols-outlined text-on-primary-fixed">restaurant</span>
+</div>
+<nav class="flex flex-col items-center space-y-md w-full">
+<div class="text-primary border-r-4 border-primary bg-surface-container-high w-full flex justify-center py-sm transition-transform active:scale-95">
+<span class="material-symbols-outlined">restaurant_menu</span>
+</div>
+<div class="text-on-surface-variant hover:bg-surface-variant w-full flex justify-center py-sm cursor-pointer">
+<span class="material-symbols-outlined">table_restaurant</span>
+</div>
+<div class="text-on-surface-variant hover:bg-surface-variant w-full flex justify-center py-sm cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+</div>
+</nav>
+</aside>
+<!-- Main Content (Menu Mockup) -->
+<main class="flex-1 flex flex-col">
+<header class="h-[52px] px-lg flex justify-between items-center bg-surface-dim border-b border-outline-variant">
+<h1 class="font-display-lg text-headline-sm text-primary">SwiftServe POS</h1>
+<div class="flex items-center space-x-md">
+<span class="font-label-lg text-label-lg text-primary">Staff: Alex</span>
+</div>
+</header>
+<div class="p-lg grid grid-cols-4 gap-md opacity-40">
+<!-- Mock Menu Items -->
+<div class="aspect-square bg-surface-container rounded-xl border border-outline-variant p-md"></div>
+<div class="aspect-square bg-surface-container rounded-xl border border-outline-variant p-md"></div>
+<div class="aspect-square bg-surface-container rounded-xl border border-outline-variant p-md"></div>
+<div class="aspect-square bg-surface-container rounded-xl border border-outline-variant p-md"></div>
+</div>
+</main>
+<!-- Order Tray Mockup -->
+<aside class="w-[360px] border-l border-outline-variant bg-surface-container-low hidden lg:flex flex-col p-md">
+<h2 class="font-headline-sm text-headline-sm mb-md">Current Order</h2>
+<div class="flex-1 space-y-sm">
+<div class="p-sm bg-surface-variant rounded-lg border border-outline-variant flex justify-between">
+<div>
+<div class="font-label-lg text-label-lg">Butter Chicken</div>
+<div class="text-xs text-on-surface-variant">Regular Size</div>
+</div>
+<div class="font-bold">1,150</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- Backdrop Overlay -->
+<div class="fixed inset-0 backdrop-blur-custom z-40 transition-opacity duration-300" id="modal-backdrop"></div>
+<!-- Bottom Sheet Container -->
+<div class="fixed inset-0 z-50 pointer-events-none flex items-end justify-center px-4 md:px-0">
+<div class="pointer-events-auto w-full max-w-[520px] bg-[#111827] rounded-t-[24px] bottom-sheet-shadow flex flex-col max-h-[870px] animate-in slide-in-from-bottom duration-300 ease-out" id="bottom-sheet">
+<!-- Drag Handle -->
+<div class="flex justify-center py-3">
+<div class="w-[36px] h-[4px] bg-white/15 rounded-full"></div>
+</div>
+<!-- Item Header -->
+<div class="px-lg pb-md border-b border-white/[0.06] flex items-center">
+<div class="w-[52px] h-[52px] rounded-[10px] overflow-hidden flex-shrink-0 bg-surface-variant">
+<img class="w-full h-full object-cover" data-alt="A professional high-angle culinary shot of a rich, aromatic Chicken Karahi garnished with fresh ginger slivers and green chilies, served in a traditional black iron wok. The lighting is dramatic and focused, highlighting the glossy texture of the spicy tomato-based gravy. Deep shadows and rich amber tones create a high-contrast, industrial restaurant aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJfEhhZj3Ju-GUAN8Ol8NjjC38OV6P6pGYwb1QTMT1DjzFw4cJTc1gCH5bEWJSeimdX2Irl4VefMCtQlGI1YVKppqOQwUoa0BUtYp9jN1AaM2masSOlGI2zzxR-55rR4K1NxTwkXu7J3JWbTPjV5Gcn6fGflgeCX5pLDNe_g9F44f-sceEKNlNFiGu5ZL0UHFBeK-ESqxjns7l_7X1gxtppifTQisnOlITFYSJA_orgDKPx0Bg8avJ4e2xfZCI0Gz9tvEelzVxn-2M"/>
+</div>
+<div class="ml-md flex-1">
+<h3 class="font-headline-sm text-headline-sm text-white leading-tight">Chicken Karahi</h3>
+<p class="text-[13px] font-medium text-[#64748B]">PKR 1,200</p>
+</div>
+<button class="w-[32px] h-[32px] rounded-full bg-[#1E293B] flex items-center justify-center text-[#94A3B8] hover:bg-surface-variant transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-lg space-y-8">
+<!-- SIZE SECTION (Required) -->
+<section>
+<div class="flex justify-between items-center mb-md">
+<label class="text-[11px] font-bold tracking-wider text-[#64748B] uppercase">CHOOSE SIZE *</label>
+<span class="text-[11px] font-bold text-[#F59E0B] px-2 py-0.5 rounded bg-[#F59E0B]/10">REQUIRED</span>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<!-- Unselected -->
+<div class="cursor-pointer bg-[#1E293B] border-[1.5px] border-white/5 rounded-[10px] p-md flex flex-col hover:border-white/20 transition-all active:scale-[0.98]">
+<span class="text-white font-semibold text-body-md">Regular</span>
+<span class="text-[#64748B] text-sm">PKR 1,200</span>
+</div>
+<!-- Selected -->
+<div class="cursor-pointer bg-[#F59E0B]/10 border-2 border-[#F59E0B] rounded-[10px] p-md flex flex-col relative transition-all active:scale-[0.98]">
+<span class="text-[#F59E0B] font-bold text-body-md">Full</span>
+<span class="text-[#F59E0B]/80 text-sm font-medium">PKR 2,100</span>
+<div class="absolute top-2 right-2">
+<span class="material-symbols-outlined text-[#F59E0B] text-[18px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+</div>
+</section>
+<!-- EXTRAS SECTION (Optional) -->
+<section>
+<div class="mb-md">
+<label class="text-[11px] font-bold tracking-wider text-[#64748B] uppercase">ADD EXTRAS</label>
+<p class="text-[11px] text-[#64748B] mt-0.5">Optional • Select up to 3</p>
+</div>
+<div class="space-y-sm">
+<!-- Extra Raita -->
+<label class="flex items-center justify-between p-md bg-[#1E293B]/40 rounded-xl cursor-pointer group hover:bg-[#1E293B] transition-colors">
+<span class="text-on-surface-variant font-medium">Extra Raita <span class="text-[#64748B] font-normal ml-1">(+PKR 80)</span></span>
+<input class="custom-checkbox w-5 h-5 rounded-full border-white/20 bg-transparent focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" type="checkbox"/>
+</label>
+<!-- Fresh Salad -->
+<label class="flex items-center justify-between p-md bg-[#1E293B]/40 rounded-xl cursor-pointer group hover:bg-[#1E293B] transition-colors">
+<span class="text-on-surface-variant font-medium">Fresh Salad <span class="text-[#64748B] font-normal ml-1">(+PKR 120)</span></span>
+<input checked="" class="custom-checkbox w-5 h-5 rounded-full border-white/20 bg-transparent focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" type="checkbox"/>
+</label>
+<!-- Extra Naan -->
+<label class="flex items-center justify-between p-md bg-[#1E293B]/40 rounded-xl cursor-pointer group hover:bg-[#1E293B] transition-colors">
+<span class="text-on-surface-variant font-medium">Extra Naan <span class="text-[#64748B] font-normal ml-1">(+PKR 40)</span></span>
+<input class="custom-checkbox w-5 h-5 rounded-full border-white/20 bg-transparent focus:ring-0 focus:ring-offset-0 transition-all cursor-pointer" type="checkbox"/>
+</label>
+</div>
+</section>
+<!-- SPECIAL NOTE SECTION -->
+<section>
+<label class="block text-[11px] font-bold tracking-wider text-[#64748B] uppercase mb-md">SPECIAL NOTE</label>
+<div class="relative">
+<input class="w-full h-11 px-4 bg-[#1E293B] border-none rounded-lg text-white placeholder-[#64748B] focus:ring-2 focus:ring-[#F59E0B] focus:outline-none transition-all" placeholder="No onions, extra spicy..." type="text"/>
+</div>
+</section>
+<!-- QUANTITY SELECTOR -->
+<section class="flex items-center justify-between py-xs border-t border-white/[0.06]">
+<span class="font-bold text-white">Quantity</span>
+<div class="flex items-center space-x-6">
+<button class="w-[40px] h-[40px] rounded-full bg-[#1E293B] flex items-center justify-center text-white active:scale-90 transition-transform">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<span class="text-[22px] font-bold text-white w-6 text-center">1</span>
+<button class="w-[40px] h-[40px] rounded-full bg-[#1E293B] flex items-center justify-center text-white active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Sticky Footer -->
+<div class="p-lg bg-[#111827] border-t border-white/[0.06]">
+<button class="w-full h-[54px] bg-[#F59E0B] hover:bg-[#D97706] rounded-xl flex items-center justify-between px-lg text-on-primary active:scale-95 transition-all duration-150">
+<span class="font-bold text-body-lg">Add to Order</span>
+<span class="font-currency-display text-[20px]">PKR 1,280</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+        // Simple scale effect for interactive tiles and list items
+        document.querySelectorAll('.active-scale').forEach(item => {
+            item.addEventListener('mousedown', () => {
+                item.style.transform = 'scale(0.98)';
+            });
+            item.addEventListener('mouseup', () => {
+                item.style.transform = 'scale(1)';
+            });
+            item.addEventListener('mouseleave', () => {
+                item.style.transform = 'scale(1)';
+            });
+        });
+
+        // Close logic mock
+        document.querySelector('button .material-symbols-outlined[innerText="close"]')?.parentElement.addEventListener('click', () => {
+            document.getElementById('bottom-sheet').classList.add('translate-y-full', 'opacity-0');
+            document.getElementById('modal-backdrop').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('bottom-sheet').parentElement.style.display = 'none';
+                document.getElementById('modal-backdrop').style.display = 'none';
+            }, 300);
+        });
+    </script>
+</body></html>

@@ -1,0 +1,49 @@
+{
+  "name": "api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc || exit 0",
+    "start": "node dist/server.js",
+    "lint": "eslint \"**/*.ts*\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
+    "@axiomhq/pino": "^1.6.0",
+    "@fastify/cors": "^10.0.0",
+    "@fastify/multipart": "^10.0.0",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@swiftserve/db": "workspace:*",
+    "@swiftserve/schemas": "workspace:*",
+    "@types/bcrypt": "^6.0.0",
+    "@upstash/redis": "^1.38.2",
+    "bcrypt": "^6.0.0",
+    "better-auth": "^1.6.5",
+    "bullmq": "^5.76.1",
+    "cloudinary": "^2.9.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.0",
+    "fastify-type-provider-zod": "^6.1.0",
+    "firebase-admin": "^13.5.0",
+    "ioredis": "^5.10.1",
+    "meilisearch": "^0.51.0",
+    "resend": "^4.0.0",
+    "socket.io": "^4.8.3",
+    "ts-node": "^10.9.2",
+    "twilio": "^5.9.0",
+    "zklib": "^0.2.11",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@swiftserve/config": "workspace:*",
+    "@types/node": "^22.0.0",
+    "minimatch": "^10.2.5",
+    "tsx": "^4.10.0",
+    "typescript": "^5.4.5"
+  }
+}

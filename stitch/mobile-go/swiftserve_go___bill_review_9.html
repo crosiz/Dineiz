@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuickServe POS - Bill Review</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=Space+Grotesk:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        body {
+            background-color: #0A0A0F;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar for items list */
+        .items-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .items-scroll::-webkit-scrollbar-track {
+            background: #1e100c;
+        }
+        .items-scroll::-webkit-scrollbar-thumb {
+            background: #2D2D39;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary-container": "#00311f",
+                      "on-secondary": "#233143",
+                      "inverse-surface": "#fadcd4",
+                      "on-tertiary-fixed": "#002113",
+                      "tertiary": "#4edea3",
+                      "on-secondary-container": "#a7b6cc",
+                      "error": "#ffb4ab",
+                      "surface-container-lowest": "#180b07",
+                      "surface-variant": "#43302b",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "outline-variant": "#5b4039",
+                      "on-primary": "#5f1500",
+                      "surface-container-highest": "#43302b",
+                      "surface-container-high": "#372621",
+                      "secondary-fixed-dim": "#b9c8de",
+                      "surface-tint": "#ffb5a0",
+                      "secondary": "#b9c8de",
+                      "primary-container": "#ff5722",
+                      "surface-container-low": "#271813",
+                      "on-background": "#fadcd4",
+                      "surface-dim": "#1e100c",
+                      "surface-bright": "#483530",
+                      "primary": "#ffb5a0",
+                      "on-primary-fixed": "#3b0900",
+                      "tertiary-fixed": "#6ffbbe",
+                      "background": "#1e100c",
+                      "surface-container": "#2c1c17",
+                      "on-tertiary": "#003824",
+                      "on-error": "#690005",
+                      "on-secondary-fixed": "#0d1c2d",
+                      "on-primary-fixed-variant": "#862200",
+                      "on-surface-variant": "#e4beb4",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "tertiary-container": "#00a572",
+                      "outline": "#ab8980",
+                      "on-surface": "#fadcd4",
+                      "inverse-primary": "#b02f00",
+                      "inverse-on-surface": "#3e2c27",
+                      "secondary-container": "#39485a",
+                      "on-primary-container": "#541200",
+                      "surface": "#1e100c",
+                      "primary-fixed": "#ffdbd1",
+                      "secondary-fixed": "#d4e4fa",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#39485a",
+                      "error-container": "#93000a",
+                      "primary-fixed-dim": "#ffb5a0"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-gap": "12px",
+                      "touch-target-min": "48px",
+                      "grid-gutter": "12px",
+                      "container-padding": "16px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "label-xl": ["Space Grotesk"],
+                      "label-sm": ["Space Grotesk"],
+                      "label-md": ["Space Grotesk"],
+                      "headline-lg-mobile": ["Space Grotesk"],
+                      "headline-lg": ["Space Grotesk"],
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Space Grotesk"],
+                      "body-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface font-body-md overflow-hidden flex flex-col h-screen">
+<!-- Top App Bar -->
+<header class="w-full top-0 sticky bg-surface-container-low border-b border-outline-variant flex items-center justify-between px-container-padding h-touch-target-min z-50">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-primary hover:bg-surface-variant/50 rounded-full p-2 transition-transform active:scale-95">arrow_back</button>
+<div class="flex flex-col justify-center">
+<h1 class="font-headline-md text-headline-md font-bold text-primary leading-tight">Bill #034</h1>
+<p class="font-label-sm text-label-sm text-[#64748B]">Table 3 • Dine-In</p>
+</div>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-variant/50 rounded-full p-2 transition-transform active:scale-95">more_vert</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto pb-44 px-container-padding space-y-4 pt-4">
+<!-- Order Context Strip -->
+<section class="bg-[#1A1A2E] border border-[#2D2D39] rounded-xl p-3 flex justify-between items-center shadow-md">
+<div class="flex items-center gap-3">
+<div class="bg-secondary-container p-2 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container text-xl">table_restaurant</span>
+</div>
+<div>
+<h2 class="font-label-md text-on-surface">Table 3 • 2 guests</h2>
+<p class="font-label-sm text-[#64748B]">Server: Ahmad Khan</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-label-sm text-[#64748B]">Started 8 min ago</p>
+<span class="inline-block w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+</div>
+</section>
+<!-- Items List Section -->
+<section class="space-y-4">
+<h3 class="font-label-md text-on-surface-variant uppercase tracking-wider text-[11px]">Current Order</h3>
+<div class="space-y-3">
+<!-- Item 1 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 flex items-center justify-between group transition-colors hover:bg-[#1A1A24]">
+<div class="flex flex-col max-w-[50%]">
+<span class="font-label-md text-on-surface">Mutton Karahi Half</span>
+<span class="font-label-sm text-[#64748B]">Regular</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-[#1E293B] border border-white/10 rounded-full p-1 gap-3 h-8">
+<button class="w-6 h-6 flex items-center justify-center text-primary material-symbols-outlined text-sm active:scale-90">remove</button>
+<span class="font-label-md text-on-surface">2</span>
+<button class="w-6 h-6 flex items-center justify-center text-primary material-symbols-outlined text-sm active:scale-90">add</button>
+</div>
+<span class="font-label-md text-on-surface whitespace-nowrap">PKR 1,400</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 flex items-center justify-between group transition-colors hover:bg-[#1A1A24]">
+<div class="flex flex-col max-w-[50%]">
+<span class="font-label-md text-on-surface">Garlic Naan</span>
+<span class="font-label-sm text-[#64748B]">Butter Glazed</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center bg-[#1E293B] border border-white/10 rounded-full p-1 gap-3 h-8">
+<button class="w-6 h-6 flex items-center justify-center text-primary material-symbols-outlined text-sm active:scale-90">remove</button>
+<span class="font-label-md text-on-surface">3</span>
+<button class="w-6 h-6 flex items-center justify-center text-primary material-symbols-outlined text-sm active:scale-90">add</button>
+</div>
+<span class="font-label-md text-on-surface whitespace-nowrap">PKR 210</span>
+</div>
+</div>
+</div>
+<button class="flex items-center gap-2 text-primary-container font-label-md active:scale-95 transition-transform px-1 mt-2">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+                Add More Items
+            </button>
+</section>
+<!-- Bill Summary Section -->
+<section class="bg-[#1A1A2E] border border-[#2D2D39] rounded-2xl p-4 space-y-3 mt-6">
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-[#64748B]">Subtotal</span>
+<span class="font-label-md text-on-surface">PKR 1,610</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-[#64748B]">Tax (GST 13%)</span>
+<span class="font-label-md text-on-surface">PKR 210</span>
+</div>
+<div class="flex justify-between items-center group cursor-pointer">
+<div class="flex items-center gap-1">
+<span class="font-label-sm text-[#64748B]">Discount</span>
+<span class="text-primary-container font-label-sm bg-primary-container/10 px-2 py-0.5 rounded flex items-center gap-0.5">
+                        Apply <span class="material-symbols-outlined text-xs">arrow_drop_down</span>
+</span>
+</div>
+<span class="font-label-md text-primary-container">- PKR 0.00</span>
+</div>
+<hr class="border-[#2D2D39] my-1"/>
+<div class="flex justify-between items-center py-1">
+<span class="font-label-md text-[#64748B] uppercase tracking-tighter">TOTAL</span>
+<span class="font-label-xl text-label-xl text-on-surface">PKR 1,820</span>
+</div>
+</section>
+<!-- Order Note Field -->
+<section class="mt-4">
+<div class="relative">
+<textarea class="w-full bg-[#1E293B] border border-[#2D2D39] rounded-xl p-3 text-body-sm text-on-surface placeholder:text-[#64748B] focus:ring-1 focus:ring-primary-container focus:border-primary-container min-h-[80px] resize-none outline-none" placeholder="Add special instructions or notes..."></textarea>
+<span class="absolute bottom-3 right-3 material-symbols-outlined text-[#64748B] text-lg">edit_note</span>
+</div>
+</section>
+</main>
+<!-- Bottom Actions (Fixed) -->
+<footer class="fixed bottom-0 left-0 right-0 p-container-padding bg-surface/95 backdrop-blur-md border-t border-outline-variant/30 flex flex-col gap-3 pb-8 z-[100]">
+<!-- Send to Kitchen Button -->
+<button class="h-touch-target-min w-full bg-[#1E293B] border border-primary-container/30 rounded-xl text-primary-container font-label-md flex items-center justify-center gap-2 active:scale-95 transition-all">
+<span class="material-symbols-outlined">restaurant_menu</span>
+            SEND TO KITCHEN
+        </button>
+<!-- Separator -->
+<div class="flex items-center gap-3">
+<div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+<span class="font-label-sm text-[#64748B]">or</span>
+<div class="h-[1px] flex-1 bg-outline-variant/30"></div>
+</div>
+<!-- Collect Payment Button -->
+<button class="h-[52px] w-full bg-primary-container text-white font-label-md flex items-center justify-center gap-2 rounded-xl shadow-[0_0_20px_rgba(255,87,34,0.3)] active:scale-95 transition-all">
+            COLLECT PAYMENT
+            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</footer>
+<!-- Bottom Navigation (Hidden on this focused screen, but skeleton included as per mandate for shell visibility logic) -->
+<!-- Note: Suppression logic applied for task-focused screen (Cart/Bill Review) -->
+<script>
+        // Micro-interactions for quantity controls
+        document.querySelectorAll('button.material-symbols-outlined').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const isAdd = this.innerText === 'add';
+                const label = this.parentElement.querySelector('span');
+                let count = parseInt(label.innerText);
+                
+                if (isAdd) {
+                    count++;
+                } else if (count > 0) {
+                    count--;
+                }
+                
+                label.innerText = count;
+                
+                // Active state feedback
+                this.classList.add('scale-90');
+                setTimeout(() => this.classList.remove('scale-90'), 100);
+            });
+        });
+
+        // Atmospheric touch feedback
+        document.addEventListener('touchstart', function() {}, {passive: true});
+    </script>
+</body></html>

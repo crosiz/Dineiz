@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#862200",
+                        "error": "#ba1a1a",
+                        "tertiary": "#00628c",
+                        "primary-container": "#ff5722",
+                        "secondary": "#565e74",
+                        "inverse-surface": "#3e2c27",
+                        "tertiary-container": "#007caf",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "tertiary-fixed": "#c8e6ff",
+                        "surface-dim": "#f1d4cc",
+                        "surface-bright": "#fff8f6",
+                        "surface": "#fff8f6",
+                        "background": "#fff8f6",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#541200",
+                        "on-background": "#271813",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "surface-variant": "#fadcd4",
+                        "outline-variant": "#e4beb4",
+                        "on-secondary-fixed": "#131b2e",
+                        "outline": "#907067",
+                        "surface-tint": "#b02f00",
+                        "on-tertiary-container": "#fcfcff",
+                        "inverse-on-surface": "#ffede8",
+                        "secondary-fixed": "#dae2fd",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-low": "#fff1ed",
+                        "on-error-container": "#93000a",
+                        "secondary-container": "#dae2fd",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-primary-fixed": "#3b0900",
+                        "surface-container-highest": "#fadcd4",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#ffe2da",
+                        "on-secondary-container": "#5c647a",
+                        "on-surface-variant": "#5b4039",
+                        "surface-container": "#ffe9e4",
+                        "primary-fixed": "#ffdbd1",
+                        "primary": "#b02f00",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-primary": "#ffffff",
+                        "on-surface": "#271813"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "related": "8px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "grid_gutter": "16px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "display": ["Inter"],
+                        "body": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "h1": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .stock-row:hover { background-color: #fff1ed; }
+    </style>
+</head>
+<body class="bg-background font-body text-on-background antialiased">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 bg-slate-900 border-r border-slate-800 shadow-2xl">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<h1 class="text-xl font-black text-white tracking-tight">SwiftServe</h1>
+<p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">POS Intelligence</p>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-medium text-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 bg-orange-600 text-white rounded-lg px-4 py-2.5 mx-2 my-1" href="#">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+<span class="font-medium text-sm">Operations</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="font-medium text-sm">Business</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="trending_up">trending_up</span>
+<span class="font-medium text-sm">Growth</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="font-medium text-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="mt-auto px-6 pt-6 border-t border-slate-800">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a restaurant manager in a modern, well-lit office setting. The person is wearing a crisp white shirt and a dark blazer, looking confident and approachable. The background features blurred architectural lines of a contemporary dining establishment, maintaining a sophisticated and authoritative atmosphere consistent with a premium POS system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbRdtlyA9vkCQv08DIdVuez6M5STI3pWLvWOYb5ERNr0x-lI6RGTxiTLunFBFR4jEZsS02aINNAvu6aCENv7wfwROtmkmWCuqXW9EY4sKHx6bCCUNR9-L-Dm0o-5O1nU_lEi210qH1LQl2cRKB5UgsblYLHk1RhTX0HfAi1pmIzQJXv14cf5Peppl-Sq4KCArle-JjnrKIR7UYdZ5kxmkjl3_B3ectvXl-ISp85opY4lhp2fyEr85P1r-Q-jnrAe1FaxXD6mp7KXny"/>
+<div class="overflow-hidden">
+<p class="text-white text-sm font-bold truncate">Marcus Chen</p>
+<p class="text-slate-400 text-xs truncate">Head of Ops</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-[#F8FAFC] border-b border-slate-200 z-40">
+<div class="flex justify-between items-center px-8 w-full h-full backdrop-blur-sm bg-opacity-90">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold text-slate-900">Main Branch</h2>
+<div class="h-4 w-px bg-slate-300"></div>
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="search">search</span>
+</span>
+<input class="block w-64 pl-10 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-primary focus:border-primary transition-all" placeholder="Search orders, stock, or logs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="relative hover:bg-slate-100 rounded-full p-2 transition-all group">
+<span class="material-symbols-outlined text-slate-600 group-hover:text-primary" data-icon="notifications">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="hover:bg-slate-100 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-600" data-icon="apps">apps</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen">
+<div class="p-page_margin">
+<!-- Page Header & Tabs -->
+<div class="mb-section">
+<div class="flex justify-between items-end mb-6">
+<div>
+<nav aria-label="Breadcrumb" class="flex mb-2">
+<ol class="flex items-center space-x-2 text-caption text-secondary">
+<li>Operations</li>
+<li class="material-symbols-outlined text-[12px]" data-icon="chevron_right">chevron_right</li>
+<li class="text-primary font-bold">Inventory</li>
+</ol>
+</nav>
+<h1 class="text-display font-display text-on-surface">Inventory Management</h1>
+</div>
+<button class="bg-primary text-white px-6 py-2.5 rounded-lg font-h2 flex items-center gap-2 hover:bg-on-primary-fixed-variant transition-all shadow-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                        Add Ingredient
+                    </button>
+</div>
+<div class="flex border-b border-outline-variant">
+<button class="px-6 py-3 text-h2 text-primary border-b-2 border-primary font-bold transition-all">Stock Levels</button>
+<button class="px-6 py-3 text-h2 text-secondary hover:text-on-surface transition-all">Ingredients</button>
+<button class="px-6 py-3 text-h2 text-secondary hover:text-on-surface transition-all">Purchase Orders</button>
+<button class="px-6 py-3 text-h2 text-secondary hover:text-on-surface transition-all">Wastage Log</button>
+</div>
+</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-grid_gutter mb-section">
+<div class="bg-white p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border-l-4 border-slate-400">
+<p class="text-caption text-secondary mb-1">Total Ingredients</p>
+<h3 class="text-display text-on-surface">42</h3>
+<p class="text-[10px] text-secondary mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="inventory_2">inventory_2</span>
+                        Tracked across all categories
+                    </p>
+</div>
+<div class="bg-white p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border-l-4 border-yellow-500">
+<p class="text-caption text-yellow-700 mb-1">Low Stock</p>
+<h3 class="text-display text-on-surface">5</h3>
+<p class="text-[10px] text-yellow-600 mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="warning">warning</span>
+                        Approaching threshold
+                    </p>
+</div>
+<div class="bg-white p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border-l-4 border-error">
+<p class="text-caption text-error mb-1">Out of Stock</p>
+<h3 class="text-display text-on-surface">2</h3>
+<p class="text-[10px] text-error mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="error">error</span>
+                        Requires immediate order
+                    </p>
+</div>
+<div class="bg-white p-element rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border-l-4 border-green-500">
+<p class="text-caption text-green-700 mb-1">Healthy</p>
+<h3 class="text-display text-on-surface">35</h3>
+<p class="text-[10px] text-green-600 mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="check_circle">check_circle</span>
+                        Inventory levels optimal
+                    </p>
+</div>
+</div>
+<!-- Alert Banner -->
+<div class="bg-[#FFF4E5] border border-orange-200 p-4 rounded-xl flex items-center justify-between mb-section">
+<div class="flex items-center gap-4">
+<div class="bg-orange-500 p-2 rounded-lg">
+<span class="material-symbols-outlined text-white" data-icon="notifications_active">notifications_active</span>
+</div>
+<div>
+<h4 class="font-h2 text-on-primary-container">Critical Alert: Stock Depletion</h4>
+<p class="text-body text-on-primary-container opacity-80">2 essential ingredients are currently out of stock. This may impact your active menu items.</p>
+</div>
+</div>
+<button class="bg-white text-primary border border-primary px-4 py-2 rounded-lg text-h2 font-bold hover:bg-primary hover:text-white transition-all">View Items</button>
+</div>
+<!-- Table Controls -->
+<div class="bg-white p-4 rounded-t-xl border border-outline-variant flex flex-wrap items-center gap-4">
+<div class="relative flex-1 min-w-[240px]">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400 text-sm" data-icon="filter_list">filter_list</span>
+</span>
+<input class="block w-full pl-10 pr-3 py-2 border border-outline rounded-lg text-sm focus:ring-primary focus:border-primary" placeholder="Search by name or category..." type="text"/>
+</div>
+<select class="border border-outline rounded-lg py-2 pl-3 pr-8 text-sm focus:ring-primary focus:border-primary">
+<option>All Branches</option>
+<option>Main Kitchen</option>
+<option>West Wing Bar</option>
+</select>
+<select class="border border-outline rounded-lg py-2 pl-3 pr-8 text-sm focus:ring-primary focus:border-primary">
+<option>Status: All</option>
+<option>Healthy</option>
+<option>Low Stock</option>
+<option>Out of Stock</option>
+</select>
+<select class="border border-outline rounded-lg py-2 pl-3 pr-8 text-sm focus:ring-primary focus:border-primary">
+<option>Sort: A-Z</option>
+<option>Stock: Low to High</option>
+<option>Stock: High to Low</option>
+</select>
+<button class="p-2 border border-outline rounded-lg text-secondary hover:bg-slate-50">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+</button>
+</div>
+<!-- Stock Table -->
+<div class="bg-white border-x border-b border-outline-variant rounded-b-xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-slate-50 text-caption text-secondary uppercase tracking-wider">
+<tr>
+<th class="px-6 py-4 font-bold">Ingredient</th>
+<th class="px-6 py-4 font-bold">Unit</th>
+<th class="px-6 py-4 font-bold">In Stock</th>
+<th class="px-6 py-4 font-bold">Min Threshold</th>
+<th class="px-6 py-4 font-bold">Status</th>
+<th class="px-6 py-4 font-bold">Branches</th>
+<th class="px-6 py-4 font-bold text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="stock-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="Close-up artistic photograph of fresh, organic cherry tomatoes in a minimalist white ceramic bowl. The lighting is soft and natural, emphasizing the vibrant reds and glossy textures against a clean, neutral background, reflecting a professional high-quality kitchen inventory visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwfi76Vgn7QAZtAJ6SzzDGl9fC1vGq8Vu3PKcX4Qnqp5Fi_D5ZwA6BQC7arpSWzoPk5edlQLKDzYsvBW5jcQEmaBE-JbIXxbF3Hsg-P5IKqfIEFvioowJUuov77Soyu_XVuUWIIP70zrM08AqmQVHQZrflv9p72KicqNiP7W0ZDW8apD72SWjHoFPzsdJzBfJXghekHxOWNRLOpRl_7qND9fh43iQWOU_c_UHxFbCdZ_mzFr4OO-A07W_vMZBXlpGV_Y-PPtsfdyrs"/>
+</div>
+<div>
+<p class="font-h2 text-on-surface">Fresh Vine Tomatoes</p>
+<span class="px-2 py-0.5 bg-slate-100 text-[10px] text-secondary rounded font-bold uppercase">Produce</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body">kg</td>
+<td class="px-6 py-4 font-bold text-on-surface">12.5</td>
+<td class="px-6 py-4 text-body">5.0</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 bg-green-100 text-green-700 text-[11px] font-bold rounded-full border border-green-200">HEALTHY</span>
+</td>
+<td class="px-6 py-4 text-caption text-secondary">Main Kitchen, Bar</td>
+<td class="px-6 py-4 text-right space-x-2">
+<button class="text-primary hover:bg-primary-fixed p-2 rounded-lg transition-all" title="Adjust">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+</button>
+<button class="text-secondary hover:bg-slate-100 p-2 rounded-lg transition-all" title="Order">
+<span class="material-symbols-outlined text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+</button>
+</td>
+</tr>
+<tr class="stock-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="High-detail macro shot of professional-grade sea salt flakes in a dark stone mortar. The lighting is dramatic and focused, highlighting the crystalline structure and pure white color against deep grey textures, capturing a premium culinary aesthetic for high-end supply management." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCG_m6V6TlaGd7PEdXHivpjggm9kjJpqoROOG17wc_6Ml_WnXMoYz46tWbaT5X1KLcMpojN93MVngvGBAHEHKxT0sIyKzg3ywSCIFBlJq91ud1kalAaVdn6XNSEDpqk-yquOT-cgu3Vh7_o-ZSV8TRpFLc1-_ecnUoLdyfieqynp8qa3dTZyBa51rcEhgGFohYHc986q7J2gyTofk3nABuuPrMW0-PNZb0CEBUd9vsF3jFx836ZUgOfGJ5-rpWUFs1lM7IREx7qqg5Q"/>
+</div>
+<div>
+<p class="font-h2 text-on-surface">Maldon Sea Salt</p>
+<span class="px-2 py-0.5 bg-slate-100 text-[10px] text-secondary rounded font-bold uppercase">Pantry</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body">kg</td>
+<td class="px-6 py-4 font-bold text-yellow-600">1.2</td>
+<td class="px-6 py-4 text-body">1.5</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-[11px] font-bold rounded-full border border-yellow-200">LOW STOCK</span>
+</td>
+<td class="px-6 py-4 text-caption text-secondary">Main Kitchen</td>
+<td class="px-6 py-4 text-right space-x-2">
+<button class="text-primary hover:bg-primary-fixed p-2 rounded-lg transition-all">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+</button>
+<button class="text-secondary hover:bg-slate-100 p-2 rounded-lg transition-all">
+<span class="material-symbols-outlined text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+</button>
+</td>
+</tr>
+<tr class="stock-row transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+<img class="w-full h-full object-cover" data-alt="A clean, product-photography style image of a premium glass bottle of whole milk. The lighting is bright and high-key, creating a fresh and clinical feeling that represents fresh dairy inventory. Soft shadows and a white marble surface contribute to the modern minimalism of the SwiftServe design system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbfWoThiCO5o_AV8KQ4f-vl7gy5QCka9XsM_5-f_DBZZYckUQsO-b547vG0cDcsgNfSCQUyQHUo2inLVdqIwQR0gn0NCj1Ws4R3cosbZAXlktKANrsHSzbGN08-lXGeYw-zaDAslwNIVG-RexnnFZTzRfdX723eaA_SNPAaWn1kG1Q_WHEtI2zRirXJJJY2Pon_AZMLHIGuOCXfraWG0VzbOfAoLGQN-k2lEuZK-Zz1aWUc7y9PI6mt1NTYhTpOs1mZ1o_fCDdi0yO"/>
+</div>
+<div>
+<p class="font-h2 text-on-surface">Whole Milk (Organic)</p>
+<span class="px-2 py-0.5 bg-slate-100 text-[10px] text-secondary rounded font-bold uppercase">Dairy</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-body">L</td>
+<td class="px-6 py-4 font-bold text-error">0.0</td>
+<td class="px-6 py-4 text-body">10.0</td>
+<td class="px-6 py-4">
+<span class="px-2.5 py-1 bg-red-100 text-error text-[11px] font-bold rounded-full border border-red-200">OUT OF STOCK</span>
+</td>
+<td class="px-6 py-4 text-caption text-secondary">Bar, Main Kitchen</td>
+<td class="px-6 py-4 text-right space-x-2">
+<button class="text-primary hover:bg-primary-fixed p-2 rounded-lg transition-all">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+</button>
+<button class="bg-primary text-white p-2 rounded-lg transition-all shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="shopping_cart">shopping_cart</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="px-6 py-4 bg-slate-50 flex items-center justify-between">
+<p class="text-caption text-secondary">Showing 1-10 of 42 items</p>
+<div class="flex gap-2">
+<button class="p-1 border border-outline rounded hover:bg-white disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-1 border border-outline rounded hover:bg-white">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bento Layout for Secondary Insights -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-grid_gutter mt-section">
+<!-- Recent Purchase Orders -->
+<div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<div class="p-4 border-b border-outline-variant flex items-center justify-between">
+<h3 class="font-h2 text-on-surface">Recent Purchase Orders</h3>
+<button class="text-primary font-bold text-caption hover:underline">View All POs</button>
+</div>
+<div class="divide-y divide-outline-variant">
+<div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-blue-50 text-blue-600 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+</div>
+<div>
+<p class="font-h2 text-on-surface">PO #8842</p>
+<p class="text-caption text-secondary">Sysco Food Services • 12 Items</p>
+</div>
+</div>
+<div class="text-right">
+<span class="px-2.5 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-full">SENT</span>
+<p class="text-caption text-on-surface font-bold mt-1">$1,240.00</p>
+</div>
+</div>
+<div class="p-4 flex items-center justify-between hover:bg-slate-50 transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-green-50 text-green-600 p-2 rounded-lg">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+</div>
+<div>
+<p class="font-h2 text-on-surface">PO #8839</p>
+<p class="text-caption text-secondary">Artisan Bakery • 4 Items</p>
+</div>
+</div>
+<div class="text-right">
+<span class="px-2.5 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">RECEIVED</span>
+<p class="text-caption text-on-surface font-bold mt-1">$450.00</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Wastage Brief -->
+<div class="bg-white rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<div class="p-4 border-b border-outline-variant flex items-center justify-between">
+<h3 class="font-h2 text-on-surface">Quick Wastage Log</h3>
+</div>
+<div class="p-4">
+<div class="space-y-4 mb-4">
+<div class="flex justify-between items-center text-body">
+<span class="text-secondary">This Week Total</span>
+<span class="font-bold text-error">$342.10</span>
+</div>
+<div class="w-full bg-slate-100 rounded-full h-1.5">
+<div class="bg-error h-1.5 rounded-full" style="width: 65%"></div>
+</div>
+<p class="text-caption text-secondary leading-tight italic">"Main cause: Spoilage in Prep Kitchen (72% of total)"</p>
+</div>
+<button class="w-full py-2 bg-slate-900 text-white rounded-lg font-h2 hover:bg-black transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+                            Log New Wastage
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Contextual FAB for high-level mobile/touch actions -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all md:hidden">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</body></html>

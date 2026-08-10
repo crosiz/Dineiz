@@ -1,0 +1,80 @@
+[
+  {
+    "decor": [],
+    "floor": 1,
+    "walls": [
+      {
+        "id": "wall_1780171909345",
+        "endX": -696,
+        "endY": 576,
+        "type": "exterior",
+        "floor": 1,
+        "startX": -696,
+        "startY": -288,
+        "thickness": 12
+      },
+      {
+        "id": "wall_1780171914245",
+        "endX": 72,
+        "endY": 576,
+        "type": "exterior",
+        "floor": 1,
+        "startX": -696,
+        "startY": 576,
+        "thickness": 12
+      },
+      {
+        "id": "wall_1780171916916",
+        "endX": 72,
+        "endY": -288,
+        "type": "exterior",
+        "floor": 1,
+        "startX": 72,
+        "startY": 576,
+        "thickness": 12
+      },
+      {
+        "id": "wall_1780171919113",
+        "endX": -696,
+        "endY": -288,
+        "type": "exterior",
+        "floor": 1,
+        "startX": 72,
+        "startY": -288,
+        "thickness": 12
+      },
+      {
+        "id": "wall_1780171931303",
+        "endX": -264,
+        "endY": -288,
+        "type": "partition",
+        "floor": 1,
+        "startX": -264,
+        "startY": 0,
+        "thickness": 12
+      },
+      {
+        "id": "wall_1780171935711",
+        "endX": 72,
+        "endY": 0,
+        "type": "partition",
+        "floor": 1,
+        "startX": -264,
+        "startY": 0,
+        "thickness": 12
+      }
+    ],
+    "zones": [
+      {
+        "id": "zone_1780171997904",
+        "endX": 24,
+        "endY": 432,
+        "name": "outside",
+        "color": "rgba(59, 130, 246, 0.15)",
+        "floor": 1,
+        "startX": -360,
+        "startY": 240
+      }
+    ]
+  }
+]

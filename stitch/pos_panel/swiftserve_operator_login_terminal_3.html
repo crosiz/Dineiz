@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Roboto+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0D0D0D;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .font-mono-system { font-family: 'Roboto Mono', monospace; }
+        
+        .pin-dot {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #534434;
+            border-radius: 50%;
+            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .pin-dot.filled {
+            background-color: #f59e0b;
+            border-color: #f59e0b;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            transform: scale(1.2);
+        }
+        .pin-dot.success {
+            background-color: #22c55e !important;
+            border-color: #22c55e !important;
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.4) !important;
+        }
+        .pin-dot.error {
+            background-color: #ef4444 !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.4) !important;
+        }
+
+        .numpad-btn {
+            transition: all 150ms ease;
+        }
+        .numpad-btn:active {
+            background-color: #3c3329;
+            transform: scale(0.95);
+            transition: all 60ms ease;
+        }
+        
+        .role-card {
+            transition: all 150ms ease;
+        }
+        .role-card:active {
+            border-color: #f59e0b;
+            background-color: #261e15;
+            transform: scale(0.98);
+            transition: all 60ms ease;
+        }
+
+        .hidden-state {
+            display: none !important;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake {
+            animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes pulse-amber {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+        }
+        .pulse-active {
+            animation: pulse-amber 2s infinite;
+        }
+
+        .slide-transition {
+            transition: opacity 240ms ease, transform 240ms ease;
+        }
+
+        .white-flash {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .flash-active {
+            opacity: 1;
+            transition: opacity 16ms ease-out;
+        }
+
+        .terminal-exit {
+            transform: translateY(-100%);
+            opacity: 0;
+            transition: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed": "#ffddb8",
+                      "on-error-container": "#ffdad6",
+                      "surface-variant": "#3c3329",
+                      "background": "#0D0D0D",
+                      "primary": "#ffc174",
+                      "surface-tint": "#ffb95f",
+                      "on-tertiary-fixed-variant": "#464745",
+                      "on-secondary-container": "#bab8b7",
+                      "on-error": "#690005",
+                      "surface-container": "#261e15",
+                      "primary-fixed-dim": "#ffb95f",
+                      "surface-container-highest": "#3c3329",
+                      "surface-bright": "#41382e",
+                      "on-tertiary-fixed": "#1a1c1a",
+                      "secondary-fixed-dim": "#c9c6c5",
+                      "on-tertiary": "#2f312f",
+                      "inverse-primary": "#855300",
+                      "inverse-on-surface": "#382f25",
+                      "on-tertiary-container": "#434442",
+                      "on-secondary-fixed-variant": "#474646",
+                      "surface-container-low": "#221a12",
+                      "secondary": "#c9c6c5",
+                      "surface": "#19120a",
+                      "tertiary-fixed": "#e3e2e0",
+                      "inverse-surface": "#f0e0d1",
+                      "tertiary": "#cdccca",
+                      "on-surface-variant": "#d8c3ad",
+                      "secondary-container": "#4a4949",
+                      "outline": "#a08e7a",
+                      "on-primary-fixed-variant": "#653e00",
+                      "error": "#ffb4ab",
+                      "surface-dim": "#19120a",
+                      "on-primary-container": "#613b00",
+                      "on-surface": "#f0e0d1",
+                      "primary-container": "#f59e0b",
+                      "on-primary": "#472a00",
+                      "surface-container-lowest": "#140d06",
+                      "on-secondary-fixed": "#1c1b1b",
+                      "tertiary-container": "#b1b1ae",
+                      "secondary-fixed": "#e5e2e1",
+                      "error-container": "#93000a",
+                      "surface-container-high": "#31281f",
+                      "outline-variant": "#534434",
+                      "on-background": "#f0e0d1",
+                      "on-secondary": "#313030",
+                      "on-primary-fixed": "#2a1700",
+                      "tertiary-fixed-dim": "#c7c6c4"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sm": "8px",
+                      "lg": "24px",
+                      "base": "8px",
+                      "margin-desktop": "32px",
+                      "gutter": "16px",
+                      "xl": "32px",
+                      "md": "16px",
+                      "margin-mobile": "16px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "label-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "display-lg": ["Clash Display"],
+                      "currency-display": ["Clash Display"],
+                      "headline-md": ["Clash Display"],
+                      "headline-lg": ["Clash Display"],
+                      "label-md": ["Inter"],
+                      "headline-sm": ["Clash Display"],
+                      "body-lg": ["Inter"],
+                      "body-sm": ["Inter"]
+              },
+              "fontSize": {
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface flex flex-col h-screen select-none overflow-hidden" id="app-body">
+<div class="white-flash" id="flash-overlay"></div>
+<!-- Zone 1: Top Bar (60px) -->
+<header class="h-[60px] flex items-center justify-between px-lg border-b border-outline-variant bg-surface-dim shrink-0 relative z-10">
+<div class="flex items-center gap-md">
+<span class="font-display-lg text-headline-sm text-primary tracking-tight">SwiftServe POS</span>
+<div class="w-[1px] h-6 bg-outline-variant mx-sm"></div>
+<span class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-widest">Operator Terminal</span>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs px-md py-xs bg-surface-container-high rounded-full border border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<span class="font-label-md text-label-md text-on-surface">System Online</span>
+</div>
+<div class="font-mono-system text-body-lg font-medium text-primary" id="top-clock">00:00:00</div>
+</div>
+</header>
+<!-- Zone 2: Main Content Area -->
+<main class="flex-grow flex overflow-hidden">
+<!-- Left Column: Branding & Status (45%) -->
+<section class="w-[45%] flex flex-col items-center justify-center border-r border-outline-variant bg-background p-xl">
+<div class="flex flex-col items-center text-center">
+<!-- Branding Circle -->
+<div class="w-32 h-32 rounded-full border-2 border-primary flex items-center justify-center mb-lg bg-surface-container">
+<span class="font-display-lg text-[48px] text-primary">GB</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg mb-sm tracking-tight">The Grand Bistro</h1>
+<p class="font-label-lg text-label-lg text-on-surface-variant uppercase tracking-[0.2em] mb-xl">Main Branch · Terminal 01</p>
+<div class="my-xl flex flex-col items-center">
+<span class="font-label-lg text-label-lg text-primary-fixed mb-xs uppercase tracking-widest" id="greeting-text">Good Morning</span>
+<div class="font-mono-system text-[72px] font-bold text-on-surface leading-none mb-md" id="hero-clock">00:00:00</div>
+</div>
+<!-- Shift Status Block -->
+<div class="w-full max-w-sm bg-surface-container-low border border-outline-variant p-md rounded-lg flex flex-col gap-sm">
+<div class="flex justify-between items-center border-b border-outline-variant pb-sm">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Current Shift</span>
+<span class="font-label-md text-label-md text-primary-fixed">Active</span>
+</div>
+<div class="grid grid-cols-2 gap-md pt-sm">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant">Elapsed</p>
+<p class="font-mono-system text-body-md">04h 12m</p>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface-variant">Staff Active</p>
+<p class="font-mono-system text-body-md">12 Members</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Column: Interactive State (55%) -->
+<section class="w-[55%] bg-[#111111] overflow-y-auto relative" id="interaction-panel">
+<!-- State 1: Role Selection -->
+<div class="h-full p-xl flex flex-col justify-center slide-transition opacity-100 transform translate-y-0" id="role-selection-state">
+<div class="max-w-2xl mx-auto w-full">
+<header class="mb-xl">
+<h2 class="font-headline-md text-headline-md text-on-surface">Select your role</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Tap a profile to begin authentication</p>
+</header>
+<div class="grid grid-cols-2 gap-md">
+<!-- Manager -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Manager', 'admin_panel_settings')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">admin_panel_settings</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Manager</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Terminal Admin</p>
+</div>
+</button>
+<!-- Head Cashier -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Head Cashier', 'point_of_sale')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">point_of_sale</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Head Cashier</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Drawer Oversight</p>
+</div>
+</button>
+<!-- Cashier -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Cashier', 'payments')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">payments</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Cashier</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Order Processing</p>
+</div>
+</button>
+<!-- Waiter -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Waiter', 'restaurant')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">restaurant</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Waiter</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Table Service</p>
+</div>
+</button>
+<!-- Kitchen Staff -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Kitchen Staff', 'skillet')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">skillet</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Kitchen Staff</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Order Prep</p>
+</div>
+</button>
+<!-- Delivery -->
+<button class="role-card h-[110px] bg-surface-container border border-outline-variant rounded-xl flex items-center px-lg gap-md transition-all group" onclick="showPinEntry('Delivery', 'delivery_dining')">
+<div class="role-icon-box w-[52px] h-[52px] bg-surface-container-highest rounded-lg flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[32px]">delivery_dining</span>
+</div>
+<div class="text-left">
+<p class="font-headline-sm text-headline-sm leading-tight">Delivery</p>
+<p class="font-label-md text-label-md text-on-surface-variant">Last Mile</p>
+</div>
+</button>
+</div>
+</div>
+</div>
+<!-- State 2: PIN Entry -->
+<div class="hidden-state h-full p-xl flex flex-col justify-center items-center slide-transition opacity-0 transform translate-y-8" id="pin-entry-state">
+<div class="w-full max-w-sm" id="pin-container">
+<button class="mb-xl flex items-center gap-sm text-on-surface-variant hover:text-primary transition-colors" onclick="resetToRoles()">
+<span class="material-symbols-outlined">arrow_back</span>
+<span class="font-label-lg text-label-lg uppercase tracking-widest">Back to Roles</span>
+</button>
+<!-- Selected Role Chip -->
+<div class="flex items-center gap-md bg-surface-container-high border border-outline-variant p-md rounded-xl mb-xl">
+<div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]" id="chip-icon">admin_panel_settings</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Login as</p>
+<p class="font-headline-sm text-headline-sm text-on-surface" id="active-role">Manager</p>
+</div>
+</div>
+<!-- PIN Dots Display -->
+<div class="flex justify-center gap-lg mb-xl">
+<div class="pin-dot" id="dot-0"></div>
+<div class="pin-dot" id="dot-1"></div>
+<div class="pin-dot" id="dot-2"></div>
+<div class="pin-dot" id="dot-3"></div>
+</div>
+<!-- Numpad Grid -->
+<div class="grid grid-cols-3 gap-md">
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('1')">1</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('2')">2</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('3')">3</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('4')">4</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('5')">5</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('6')">6</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('7')">7</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('8')">8</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('9')">9</button>
+<button class="numpad-btn h-[72px] text-error font-label-lg uppercase tracking-widest flex items-center justify-center hover:bg-error/5 rounded-xl" onclick="clearPin()">Clear</button>
+<button class="numpad-btn h-[72px] bg-surface-container border border-outline-variant rounded-xl font-headline-md text-headline-md flex items-center justify-center" onclick="appendPin('0')">0</button>
+<button class="numpad-btn h-[72px] text-primary flex items-center justify-center hover:bg-primary/5 rounded-xl" onclick="backspacePin()">
+<span class="material-symbols-outlined text-[32px]">backspace</span>
+</button>
+</div>
+<button class="w-full mt-lg h-16 bg-surface-container-highest border border-outline-variant rounded-xl font-label-lg uppercase tracking-[0.2em] text-on-surface-variant flex items-center justify-center gap-md cursor-not-allowed opacity-50 transition-all duration-300" id="confirm-btn" onclick="validatePin()">
+<span id="confirm-text">Enter PIN</span>
+<span class="material-symbols-outlined">login</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Zone 3: Bottom Bar (48px) -->
+<footer class="h-[48px] bg-surface-container-lowest flex items-center justify-between px-lg border-t border-outline-variant shrink-0 relative z-10">
+<div class="flex items-center gap-lg">
+<div class="flex items-center gap-sm">
+<span class="px-2 py-0.5 bg-surface-variant rounded text-[10px] font-bold text-on-surface">ESC</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Cancel Shift</span>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-2 py-0.5 bg-surface-variant rounded text-[10px] font-bold text-on-surface">F1</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Help</span>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-2 py-0.5 bg-surface-variant rounded text-[10px] font-bold text-on-surface">F12</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Diagnostics</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">contact_support</span>
+<span class="font-label-md text-label-md text-on-surface-variant">support@swiftserve.pos</span>
+</div>
+</footer>
+<script>
+    // 1. CLOCK LOGIC
+    function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeString = `${hours}:${minutes}:${seconds}`;
+        
+        const topClock = document.getElementById('top-clock');
+        const heroClock = document.getElementById('hero-clock');
+        if (topClock) topClock.textContent = timeString;
+        if (heroClock) heroClock.textContent = timeString;
+
+        // Time-aware greeting
+        const greeting = document.getElementById('greeting-text');
+        if (greeting) {
+            const hr = now.getHours();
+            if (hr >= 5 && hr < 12) greeting.textContent = "Good Morning";
+            else if (hr >= 12 && hr < 17) greeting.textContent = "Good Afternoon";
+            else if (hr >= 17 && hr < 22) greeting.textContent = "Good Evening";
+            else greeting.textContent = "Working Late?";
+        }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 2. INTERACTION LOGIC
+    let currentPin = "";
+    let isTransitioning = false;
+    const roleSelection = document.getElementById('role-selection-state');
+    const pinEntry = document.getElementById('pin-entry-state');
+    const activeRoleLabel = document.getElementById('active-role');
+    const chipIcon = document.getElementById('chip-icon');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const pinContainer = document.getElementById('pin-container');
+
+    function showPinEntry(role, icon) {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        
+        activeRoleLabel.textContent = role;
+        chipIcon.textContent = icon;
+        clearPin();
+
+        // Animation Sequence
+        roleSelection.style.opacity = '0';
+        roleSelection.style.transform = 'translateY(-16px)';
+        
+        setTimeout(() => {
+            roleSelection.classList.add('hidden-state');
+            pinEntry.classList.remove('hidden-state');
+            
+            // Trigger entry animation
+            requestAnimationFrame(() => {
+                pinEntry.style.opacity = '1';
+                pinEntry.style.transform = 'translateY(0)';
+                isTransitioning = false;
+            });
+        }, 240);
+    }
+
+    function resetToRoles() {
+        if (isTransitioning) return;
+        isTransitioning = true;
+
+        pinEntry.style.opacity = '0';
+        pinEntry.style.transform = 'translateY(16px)';
+        
+        setTimeout(() => {
+            pinEntry.classList.add('hidden-state');
+            roleSelection.classList.remove('hidden-state');
+            
+            requestAnimationFrame(() => {
+                roleSelection.style.opacity = '1';
+                roleSelection.style.transform = 'translateY(0)';
+                isTransitioning = false;
+            });
+        }, 240);
+    }
+
+    // 3. PIN PAD LOGIC
+    function appendPin(digit) {
+        if (currentPin.length < 4) {
+            currentPin += digit;
+            updatePinDots();
+            checkReadyState();
+        }
+    }
+
+    function backspacePin() {
+        currentPin = currentPin.slice(0, -1);
+        updatePinDots();
+        checkReadyState();
+    }
+
+    function clearPin() {
+        currentPin = "";
+        updatePinDots();
+        checkReadyState();
+        const dots = document.querySelectorAll('.pin-dot');
+        dots.forEach(d => {
+            d.classList.remove('success', 'error');
+        });
+    }
+
+    function updatePinDots() {
+        for (let i = 0; i < 4; i++) {
+            const dot = document.getElementById(`dot-${i}`);
+            if (i < currentPin.length) {
+                dot.classList.add('filled');
+            } else {
+                dot.classList.remove('filled');
+            }
+        }
+    }
+
+    function checkReadyState() {
+        if (currentPin.length === 4) {
+            confirmBtn.classList.remove('cursor-not-allowed', 'opacity-50', 'bg-surface-container-highest', 'text-on-surface-variant');
+            confirmBtn.classList.add('bg-primary-container', 'text-on-primary-container', 'pulse-active', 'border-primary');
+            document.getElementById('confirm-text').textContent = 'Confirm Access';
+        } else {
+            confirmBtn.classList.add('cursor-not-allowed', 'opacity-50', 'bg-surface-container-highest', 'text-on-surface-variant');
+            confirmBtn.classList.remove('bg-primary-container', 'text-on-primary-container', 'pulse-active', 'border-primary');
+            document.getElementById('confirm-text').textContent = 'Enter PIN';
+        }
+    }
+
+    async function validatePin() {
+        if (currentPin.length !== 4) return;
+
+        // Correct PIN is 1234 for demo
+        if (currentPin === "1234") {
+            triggerSuccess();
+        } else {
+            triggerError();
+        }
+    }
+
+    function triggerSuccess() {
+        const dots = document.querySelectorAll('.pin-dot');
+        confirmBtn.classList.remove('pulse-active');
+        confirmBtn.classList.replace('bg-primary-container', 'bg-green-600');
+        confirmBtn.classList.replace('text-on-primary-container', 'text-white');
+        document.getElementById('confirm-text').textContent = 'Access Granted';
+
+        dots.forEach((dot, index) => {
+            setTimeout(() => {
+                dot.classList.add('success');
+            }, index * 80);
+        });
+
+        setTimeout(simulateExit, 800);
+    }
+
+    function triggerError() {
+        pinContainer.classList.add('shake');
+        const dots = document.querySelectorAll('.pin-dot');
+        dots.forEach(dot => dot.classList.add('error'));
+
+        setTimeout(() => {
+            pinContainer.classList.remove('shake');
+            clearPin();
+        }, 400);
+    }
+
+    // 6. SCREEN EXIT
+    function simulateExit() {
+        const flash = document.getElementById('flash-overlay');
+        const appBody = document.getElementById('app-body');
+        
+        flash.classList.add('flash-active');
+        
+        setTimeout(() => {
+            appBody.classList.add('terminal-exit');
+            flash.classList.remove('flash-active');
+            flash.style.opacity = '0';
+            flash.style.transition = 'opacity 500ms ease';
+        }, 16);
+
+        setTimeout(() => {
+            // In a real app, route to dashboard
+            alert("Terminal logged in successfully.");
+            location.reload();
+        }, 1000);
+    }
+
+    // 4. KEYBOARD MAPPING
+    window.addEventListener('keydown', (e) => {
+        if (pinEntry.classList.contains('hidden-state')) return;
+
+        if (e.key >= '0' && e.key <= '9') {
+            appendPin(e.key);
+        } else if (e.key === 'Backspace') {
+            backspacePin();
+        } else if (e.key === 'Enter') {
+            validatePin();
+        } else if (e.key === 'Escape') {
+            resetToRoles();
+        }
+    });
+</script>
+</body></html>

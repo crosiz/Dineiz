@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=390, height=844, initial-scale=1.0, user-scalable=no" name="viewport"/>
+<title>SwiftServe Go - Menu Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Inter:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0A0A0F;
+            color: #fadcd4;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            width: 390px;
+            height: 844px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: #16161E;
+            border: 1px solid #2D2D39;
+        }
+        .custom-toggle {
+            width: 36px;
+            height: 20px;
+            background: #2D2D39;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .custom-toggle::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+        .custom-toggle.active {
+            background: #FF5722;
+        }
+        .custom-toggle.active::after {
+            transform: translateX(16px);
+        }
+        .unavailable-item {
+            opacity: 0.5;
+            filter: grayscale(0.5);
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        .bottom-sheet-up {
+            transform: translateY(0);
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .bottom-sheet-down {
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-primary": "#b02f00",
+                      "on-error-container": "#ffdad6",
+                      "on-secondary-fixed-variant": "#39485a",
+                      "surface-dim": "#1e100c",
+                      "on-primary-fixed-variant": "#862200",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "surface": "#1e100c",
+                      "on-secondary-container": "#a7b6cc",
+                      "on-primary": "#5f1500",
+                      "on-tertiary": "#003824",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "inverse-on-surface": "#3e2c27",
+                      "secondary-fixed-dim": "#b9c8de",
+                      "primary-container": "#ff5722",
+                      "on-secondary": "#233143",
+                      "on-error": "#690005",
+                      "surface-variant": "#43302b",
+                      "on-tertiary-fixed": "#002113",
+                      "primary-fixed": "#ffdbd1",
+                      "surface-container": "#2c1c17",
+                      "outline": "#ab8980",
+                      "inverse-surface": "#fadcd4",
+                      "secondary-fixed": "#d4e4fa",
+                      "on-background": "#fadcd4",
+                      "primary": "#ffb5a0",
+                      "on-tertiary-container": "#00311f",
+                      "outline-variant": "#5b4039",
+                      "secondary-container": "#39485a",
+                      "tertiary-fixed": "#6ffbbe",
+                      "surface-container-highest": "#43302b",
+                      "tertiary-container": "#00a572",
+                      "on-primary-container": "#541200",
+                      "error-container": "#93000a",
+                      "surface-tint": "#ffb5a0",
+                      "on-secondary-fixed": "#0d1c2d",
+                      "secondary": "#b9c8de",
+                      "primary-fixed-dim": "#ffb5a0",
+                      "on-surface-variant": "#e4beb4",
+                      "background": "#1e100c",
+                      "tertiary": "#4edea3",
+                      "surface-container-low": "#271813",
+                      "on-surface": "#fadcd4",
+                      "error": "#ffb4ab",
+                      "surface-container-high": "#372621",
+                      "on-primary-fixed": "#3b0900",
+                      "surface-container-lowest": "#180b07",
+                      "surface-bright": "#483530"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "touch-target-min": "48px",
+                      "stack-gap": "12px",
+                      "grid-gutter": "12px",
+                      "container-padding": "16px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "label-sm": ["Space Grotesk"],
+                      "label-md": ["Space Grotesk"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Space Grotesk"],
+                      "headline-lg-mobile": ["Space Grotesk"],
+                      "label-xl": ["Space Grotesk"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Space Grotesk"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background select-none">
+<!-- Top Bar Component -->
+<header class="sticky top-0 z-40 bg-surface-container flex items-center justify-between px-container-padding h-touch-target-min border-b border-outline-variant">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">My Menu</h1>
+<button class="bg-primary-container text-on-primary-container px-4 py-1.5 rounded-full font-label-md flex items-center gap-1 active:scale-95 transition-transform" onclick="toggleBottomSheet(true)">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            Add Item
+        </button>
+</header>
+<!-- Summary Strip -->
+<div class="mx-container-padding mt-4 bg-[#1A1A2E] rounded-xl p-3 flex justify-between border border-outline-variant/30">
+<div class="flex flex-col items-start">
+<span class="text-[#64748B] text-[12px] font-medium">12 items</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[#64748B] text-[12px] font-medium">3 categories</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="text-[#64748B] text-[12px] font-medium">2 unavailable</span>
+</div>
+</div>
+<!-- Category Filter Tabs -->
+<div class="mt-4 mx-container-padding overflow-x-auto whitespace-nowrap flex gap-2 no-scrollbar">
+<button class="bg-primary-container text-on-primary-container px-4 py-2 rounded-full font-label-md">All 12</button>
+<button class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-4 py-2 rounded-full font-label-md">Biryani 4</button>
+<button class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-4 py-2 rounded-full font-label-md">Drinks 3</button>
+<button class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-4 py-2 rounded-full font-label-md">Extras 5</button>
+<button class="border border-primary-container text-primary-container px-4 py-2 rounded-full font-label-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span>
+            Category
+        </button>
+</div>
+<!-- Items List -->
+<main class="h-[calc(844px-260px)] overflow-y-auto px-container-padding py-4 flex flex-col gap-3">
+<!-- Item Card: Active -->
+<div class="bg-[#1A1A2E] border border-white/5 rounded-xl p-3.5 flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-semibold text-white text-[15px] font-headline-md">Beef Biryani</span>
+<span class="text-[#64748B] text-[11px]">Biryani</span>
+<span class="text-primary-container font-bold text-[14px] mt-1 font-label-md">PKR 350</span>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_vert</span>
+<div class="custom-toggle active"></div>
+</div>
+</div>
+<!-- Item Card: Unavailable -->
+<div class="bg-[#1A1A2E] border border-white/5 rounded-xl p-3.5 flex justify-between items-center unavailable-item">
+<div class="flex flex-col">
+<span class="font-semibold text-white text-[15px] font-headline-md">Special Raita</span>
+<span class="text-[#64748B] text-[11px]">Extras</span>
+<div class="flex flex-col">
+<span class="text-primary-container font-bold text-[14px] mt-1 font-label-md">PKR 50</span>
+<span class="text-[#FF5252] text-[10px] font-bold">Unavailable</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_vert</span>
+<div class="custom-toggle"></div>
+</div>
+</div>
+<!-- Item Card: Active -->
+<div class="bg-[#1A1A2E] border border-white/5 rounded-xl p-3.5 flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-semibold text-white text-[15px] font-headline-md">Cold Drink (Large)</span>
+<span class="text-[#64748B] text-[11px]">Drinks</span>
+<span class="text-primary-container font-bold text-[14px] mt-1 font-label-md">PKR 120</span>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_vert</span>
+<div class="custom-toggle active"></div>
+</div>
+</div>
+<!-- Item Card: Active -->
+<div class="bg-[#1A1A2E] border border-white/5 rounded-xl p-3.5 flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-semibold text-white text-[15px] font-headline-md">Chicken Tikka</span>
+<span class="text-[#64748B] text-[11px]">BBQ</span>
+<span class="text-primary-container font-bold text-[14px] mt-1 font-label-md">PKR 450</span>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_vert</span>
+<div class="custom-toggle active"></div>
+</div>
+</div>
+<!-- Item Card: Active -->
+<div class="bg-[#1A1A2E] border border-white/5 rounded-xl p-3.5 flex justify-between items-center">
+<div class="flex flex-col">
+<span class="font-semibold text-white text-[15px] font-headline-md">Garlic Naan</span>
+<span class="text-[#64748B] text-[11px]">Bread</span>
+<span class="text-primary-container font-bold text-[14px] mt-1 font-label-md">PKR 60</span>
+</div>
+<div class="flex flex-col items-end gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">more_vert</span>
+<div class="custom-toggle active"></div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar Component -->
+<nav class="fixed bottom-0 w-full z-30 bg-surface-container-high flex justify-around items-center h-16 px-2 border-t border-outline-variant shadow-lg">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1">
+<span class="material-symbols-outlined">table_restaurant</span>
+<span class="font-label-sm text-label-sm">Tables</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary bg-primary-container/10 rounded-xl px-4 py-1">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-sm text-label-sm">Menu</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</div>
+</nav>
+<!-- Overlay / Bottom Sheet Backdrop -->
+<div class="fixed inset-0 bg-black/60 z-50 hidden" id="backdrop" onclick="toggleBottomSheet(false)"></div>
+<!-- Add Item Bottom Sheet -->
+<div class="fixed bottom-0 left-0 right-0 z-[60] bg-[#16161E] rounded-t-[24px] px-container-padding pb-10 bottom-sheet-down max-h-[90%] overflow-y-auto" id="bottomSheet">
+<div class="w-12 h-1.5 bg-outline-variant rounded-full mx-auto my-4"></div>
+<header class="flex justify-between items-center mb-6">
+<h2 class="font-headline-md text-[17px] font-bold text-white">Add Menu Item</h2>
+<button class="text-on-surface-variant" onclick="toggleBottomSheet(false)">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<form class="flex flex-col gap-6">
+<!-- Name Input -->
+<div class="flex flex-col gap-2">
+<label class="text-on-surface-variant font-label-md">Item Name</label>
+<input class="bg-[#1A1A24] border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 text-white rounded-t-lg h-12 px-4 transition-colors" placeholder="e.g. Mutton Karahi" type="text"/>
+</div>
+<!-- Category Chips -->
+<div class="flex flex-col gap-2">
+<label class="text-on-surface-variant font-label-md">Select Category</label>
+<div class="flex flex-wrap gap-2">
+<span class="bg-primary-container text-on-primary-container px-3 py-1.5 rounded-full text-[12px] font-medium">Biryani</span>
+<span class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-full text-[12px]">BBQ</span>
+<span class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-full text-[12px]">Drinks</span>
+<span class="bg-[#1A1A2E] text-on-surface-variant border border-outline-variant px-3 py-1.5 rounded-full text-[12px]">Dessert</span>
+<span class="border border-primary-container/50 text-primary-container px-3 py-1.5 rounded-full text-[12px]">+ New</span>
+</div>
+</div>
+<!-- Price & Unit -->
+<div class="grid grid-cols-2 gap-4">
+<div class="flex flex-col gap-2">
+<label class="text-on-surface-variant font-label-md">Price</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant font-medium text-[13px]">PKR</span>
+<input class="w-full bg-[#1A1A24] border-0 border-b-2 border-outline-variant focus:border-primary-container focus:ring-0 text-white rounded-t-lg h-12 pl-12 pr-4" placeholder="00" type="number"/>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-on-surface-variant font-label-md">Unit Type</label>
+<div class="flex bg-[#1A1A24] rounded-lg h-12 items-center p-1 border border-outline-variant/30">
+<button class="flex-1 text-[11px] font-bold bg-primary-container text-white h-full rounded" type="button">Plate</button>
+<button class="flex-1 text-[11px] font-medium text-on-surface-variant h-full rounded" type="button">KG</button>
+<button class="flex-1 text-[11px] font-medium text-on-surface-variant h-full rounded" type="button">Piece</button>
+</div>
+</div>
+</div>
+<!-- Photo Upload -->
+<div class="flex flex-col gap-2">
+<label class="text-on-surface-variant font-label-md">Item Photo</label>
+<div class="w-32 h-32 bg-[#1A1A24] border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center gap-2 group active:border-primary-container cursor-pointer">
+<span class="material-symbols-outlined text-on-surface-variant group-active:text-primary-container">add_a_photo</span>
+<span class="text-[10px] text-on-surface-variant uppercase tracking-wider">Upload</span>
+</div>
+</div>
+<!-- Toggle -->
+<div class="flex items-center justify-between py-2 border-y border-outline-variant/20">
+<div class="flex flex-col">
+<span class="text-white font-medium text-[14px]">Selling this item?</span>
+<span class="text-[#64748B] text-[11px]">Make it available for orders immediately</span>
+</div>
+<div class="custom-toggle active"></div>
+</div>
+<!-- Save Button -->
+<button class="w-full bg-primary-container text-on-primary-container h-touch-target-min rounded-xl font-bold text-lg shadow-lg active:scale-95 transition-all mb-4" onclick="toggleBottomSheet(false)" type="button">
+                Save Item
+            </button>
+</form>
+</div>
+<script>
+        function toggleBottomSheet(show) {
+            const sheet = document.getElementById('bottomSheet');
+            const backdrop = document.getElementById('backdrop');
+            
+            if (show) {
+                backdrop.classList.remove('hidden');
+                sheet.classList.remove('bottom-sheet-down');
+                sheet.classList.add('bottom-sheet-up');
+            } else {
+                backdrop.classList.add('hidden');
+                sheet.classList.remove('bottom-sheet-up');
+                sheet.classList.add('bottom-sheet-down');
+            }
+        }
+
+        // Simple Toggle Interaction
+        document.querySelectorAll('.custom-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const card = this.closest('.bg-[#1A1A2E]');
+                if (card) {
+                    if (!this.classList.contains('active')) {
+                        card.classList.add('unavailable-item');
+                    } else {
+                        card.classList.remove('unavailable-item');
+                    }
+                }
+            });
+        });
+    </script>
+</body></html>

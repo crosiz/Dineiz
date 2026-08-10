@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Forecasting Intelligence | Lumiere Dining</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline": "#907067",
+                        "on-primary": "#ffffff",
+                        "primary": "#b02f00",
+                        "primary-fixed": "#ffdbd1",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-dim": "#f1d4cc",
+                        "surface-container-highest": "#fadcd4",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-background": "#271813",
+                        "tertiary": "#00628c",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "on-primary-container": "#541200",
+                        "inverse-primary": "#ffb5a0",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#5c647a",
+                        "surface-container-low": "#fff1ed",
+                        "on-surface": "#271813",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-secondary-fixed": "#131b2e",
+                        "surface-container-high": "#ffe2da",
+                        "secondary-fixed": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-container": "#dae2fd",
+                        "surface-variant": "#fadcd4",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#b02f00",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#5b4039",
+                        "secondary": "#565e74",
+                        "inverse-surface": "#3e2c27",
+                        "surface-bright": "#fff8f6",
+                        "surface-container": "#ffe9e4",
+                        "primary-container": "#ff5722",
+                        "error-container": "#ffdad6",
+                        "on-primary-fixed": "#3b0900",
+                        "outline-variant": "#e4beb4",
+                        "inverse-on-surface": "#ffede8",
+                        "surface": "#fff8f6",
+                        "background": "#fff8f6",
+                        "tertiary-container": "#007caf",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-primary-fixed-variant": "#862200",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-tertiary-fixed-variant": "#004c6d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section": "24px",
+                        "related": "8px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "display": ["Inter"],
+                        "caption": ["Inter"],
+                        "h2": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .heatmap-cell {
+            aspect-ratio: 1 / 1;
+            border-radius: 2px;
+        }
+        .chart-dashed-line {
+            stroke-dasharray: 4 4;
+        }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-on-surface font-body min-h-screen">
+<!-- Side Navigation Shell -->
+<aside class="h-screen w-64 fixed left-0 top-0 bg-inverse-surface dark:bg-surface-container-lowest flex flex-col py-section px-element shadow-md z-50">
+<div class="mb-10 px-2">
+<h1 class="font-display text-display text-primary-fixed dark:text-primary tracking-tight">Lumiere Dining</h1>
+<p class="text-secondary-fixed-dim text-caption mt-1">AI-Driven Insights</p>
+</div>
+<nav class="flex-1 space-y-related">
+<div class="flex items-center gap-3 p-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body text-body">Dashboard</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-body text-body">Analytics</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg text-primary-fixed-dim dark:text-primary font-h2 border-r-4 border-primary-fixed-dim bg-on-secondary-fixed-variant/10 cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-body text-body">Forecasting</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-body text-body">Inventory</span>
+</div>
+<div class="flex items-center gap-3 p-3 rounded-lg text-secondary-fixed-dim dark:text-on-surface-variant hover:text-surface-bright hover:bg-on-secondary-fixed-variant/5 transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body text-body">Settings</span>
+</div>
+</nav>
+<button class="mt-auto bg-primary-container text-white py-3 px-4 rounded-xl font-h2 flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+            Generate Report
+        </button>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="w-full h-16 sticky top-0 z-40 flex justify-between items-center px-page_margin ml-64 bg-surface dark:bg-surface-dim shadow-sm border-b border-outline-variant/10">
+<div class="flex items-center gap-4">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 w-64 focus:ring-2 focus:ring-primary text-body" placeholder="Search insights..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">cloud_done</span>
+<div class="flex items-center gap-2 border-l border-outline-variant pl-4">
+<span class="material-symbols-outlined text-[32px]">account_circle</span>
+<div class="text-left">
+<p class="text-caption font-bold text-on-surface leading-none">Alex Chef</p>
+<p class="text-[10px] text-on-surface-variant">Executive Manager</p>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 p-page_margin max-w-[1600px]">
+<!-- Page Header -->
+<div class="flex justify-between items-end mb-section">
+<div>
+<div class="flex items-center gap-4 mb-2">
+<div class="w-12 h-12 rounded-full bg-gradient-to-tr from-[#FF5722] to-[#7C4DFF] flex items-center justify-center text-white shadow-lg">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div>
+<h2 class="text-[26px] font-extrabold text-[#0F172A] leading-tight">Sales Forecast</h2>
+<p class="text-on-surface-variant font-body">AI-powered predictions based on your historical sales data</p>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="bg-surface-container-highest px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/30">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-caption font-bold text-on-surface-variant uppercase tracking-wider">Model trained on 847 days of data</span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline text-primary font-h2 hover:bg-primary/5 transition-colors">
+<span class="material-symbols-outlined">tune</span>
+                    Forecast Settings
+                </button>
+</div>
+</div>
+<!-- Period Selector & Branch -->
+<div class="bg-white p-element rounded-xl shadow-sm mb-section flex justify-between items-center border border-outline-variant/10">
+<div class="flex bg-surface-container-low p-1 rounded-full">
+<button class="px-6 py-1.5 rounded-full bg-primary text-white font-h2 text-caption shadow-sm">Next 7 Days</button>
+<button class="px-6 py-1.5 rounded-full text-on-surface-variant font-body text-caption hover:bg-surface-variant/30">Next 30 Days</button>
+<button class="px-6 py-1.5 rounded-full text-on-surface-variant font-body text-caption hover:bg-surface-variant/30">Next Quarter</button>
+<button class="px-6 py-1.5 rounded-full text-on-surface-variant font-body text-caption hover:bg-surface-variant/30">Custom</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-lg border border-green-200">
+<span class="text-[10px] font-bold text-green-700 uppercase">Confidence</span>
+<span class="text-h2 text-green-700 font-bold">87%</span>
+</div>
+<select class="border-outline-variant rounded-lg text-body py-2 px-4 bg-surface focus:ring-primary min-w-[200px]">
+<option>Main Branch (Down-town)</option>
+<option>West Side Mall</option>
+<option>Airport Terminal 1</option>
+</select>
+</div>
+</div>
+<!-- Headline Metrics Bento -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-grid_gutter mb-section">
+<div class="bg-white p-element rounded-xl border-l-4 border-[#FF5722] shadow-sm">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-widest mb-1">Predicted Revenue</p>
+<h3 class="text-display text-primary-container mb-2">PKR 3.2M</h3>
+<div class="flex items-center gap-2">
+<span class="text-green-600 font-bold text-body flex items-center"><span class="material-symbols-outlined text-[18px]">trending_up</span> +12%</span>
+<span class="text-caption text-on-surface-variant">vs. prev 7d</span>
+</div>
+<div class="mt-4 w-full bg-surface-container-low h-1 rounded-full overflow-hidden">
+<div class="bg-[#FF5722] h-full w-[87%]"></div>
+</div>
+</div>
+<div class="bg-white p-element rounded-xl border-l-4 border-tertiary-container shadow-sm">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-widest mb-1">Predicted Orders</p>
+<h3 class="text-display text-tertiary-container mb-2">4,150</h3>
+<div class="flex items-center gap-2">
+<span class="text-green-600 font-bold text-body flex items-center"><span class="material-symbols-outlined text-[18px]">trending_up</span> +8%</span>
+<span class="text-caption text-on-surface-variant">expected volume</span>
+</div>
+</div>
+<div class="bg-white p-element rounded-xl border-l-4 border-primary shadow-sm">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-widest mb-1">Busiest Day</p>
+<h3 class="text-h1 text-on-surface mb-1">Saturday, May 10</h3>
+<p class="text-body text-primary font-bold">PKR 485k <span class="text-caption font-normal text-on-surface-variant">est. revenue</span></p>
+<div class="flex gap-1 mt-3">
+<span class="w-full h-8 bg-surface-container-low rounded-sm"></span>
+<span class="w-full h-12 bg-surface-container-low rounded-sm"></span>
+<span class="w-full h-16 bg-surface-container-low rounded-sm"></span>
+<span class="w-full h-24 bg-primary-container rounded-sm"></span>
+<span class="w-full h-14 bg-surface-container-low rounded-sm"></span>
+</div>
+</div>
+<div class="bg-white p-element rounded-xl border-l-4 border-green-500 shadow-sm">
+<p class="text-caption font-bold text-on-surface-variant uppercase tracking-widest mb-1">Stock Recommendation</p>
+<div class="space-y-2 mt-2">
+<div class="flex justify-between items-center">
+<span class="text-body font-medium">Chicken</span>
+<span class="text-green-600 font-bold">+18%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body font-medium">Buns</span>
+<span class="text-green-600 font-bold">+12%</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-body font-medium">Fries</span>
+<span class="text-green-600 font-bold">+22%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-grid_gutter mb-section">
+<!-- Main Forecast Chart Area -->
+<div class="lg:col-span-2 bg-white p-section rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex justify-between items-start mb-section">
+<div>
+<h3 class="text-h1 text-on-surface">Revenue Forecast — Next 7 Days</h3>
+<p class="text-caption text-on-surface-variant">Historical trends integrated with upcoming local events and weather patterns</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-primary-container"></span>
+<span class="text-caption">Actual</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-0.5 border-t-2 border-dashed border-primary-container"></span>
+<span class="text-caption">Predicted</span>
+</div>
+</div>
+</div>
+<div class="relative h-[300px] w-full mt-8">
+<!-- SVG Chart Mock -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 300">
+<!-- Confidence Band -->
+<path d="M 500 150 L 600 130 L 700 180 L 800 140 L 900 160 L 1000 110 L 1000 210 L 900 240 L 800 220 L 700 260 L 600 200 L 500 210 Z" fill="#ff5722" fill-opacity="0.1"></path>
+<!-- Historical Line -->
+<path d="M 0 250 L 100 230 L 200 245 L 300 210 L 400 190 L 500 180" fill="none" stroke="#b02f00" stroke-linecap="round" stroke-width="3"></path>
+<!-- Prediction Line -->
+<path class="chart-dashed-line" d="M 500 180 L 600 165 L 700 220 L 800 180 L 900 200 L 1000 160" fill="none" stroke="#ff5722" stroke-linecap="round" stroke-width="3"></path>
+<!-- Today Line -->
+<line stroke="#0F172A" stroke-dasharray="8 4" stroke-width="1" x1="500" x2="500" y1="0" y2="300"></line>
+<text fill="#0F172A" font-size="12" font-weight="bold" x="510" y="20">TODAY</text>
+<!-- Grid Lines -->
+<line stroke="#F1F5F9" stroke-width="1" x1="0" x2="1000" y1="50" y2="50"></line>
+<line stroke="#F1F5F9" stroke-width="1" x1="0" x2="1000" y1="150" y2="150"></line>
+<line stroke="#F1F5F9" stroke-width="1" x1="0" x2="1000" y1="250" y2="250"></line>
+</svg>
+<!-- X Axis -->
+<div class="flex justify-between mt-4 px-2 text-caption text-on-surface-variant font-bold">
+<span>May 04</span>
+<span>May 05</span>
+<span>May 06</span>
+<span>May 07</span>
+<span>May 08</span>
+<span>May 09</span>
+<span>May 10</span>
+<span>May 11</span>
+</div>
+</div>
+</div>
+<!-- Busy Hours Heatmap -->
+<div class="bg-white p-section rounded-xl shadow-sm border border-outline-variant/10">
+<div class="mb-element">
+<h3 class="text-h1 text-on-surface">Peak Hour Velocity</h3>
+<p class="text-caption text-on-surface-variant">Estimated guest density per hour</p>
+</div>
+<div class="grid grid-cols-8 gap-1">
+<div class="col-span-1"></div>
+<div class="text-[10px] font-bold text-center">M</div>
+<div class="text-[10px] font-bold text-center">T</div>
+<div class="text-[10px] font-bold text-center">W</div>
+<div class="text-[10px] font-bold text-center">T</div>
+<div class="text-[10px] font-bold text-center">F</div>
+<div class="text-[10px] font-bold text-center text-primary">S</div>
+<div class="text-[10px] font-bold text-center text-primary">S</div>
+<!-- Rows -->
+<div class="text-[10px] font-bold self-center">10AM</div>
+<div class="heatmap-cell bg-orange-50"></div><div class="heatmap-cell bg-orange-50"></div><div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-50"></div><div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-200"></div><div class="heatmap-cell bg-orange-200"></div>
+<div class="text-[10px] font-bold self-center">1PM</div>
+<div class="heatmap-cell bg-orange-400"></div><div class="heatmap-cell bg-orange-300"></div><div class="heatmap-cell bg-orange-400"></div><div class="heatmap-cell bg-orange-400"></div><div class="heatmap-cell bg-orange-600"></div><div class="heatmap-cell bg-orange-800"></div><div class="heatmap-cell bg-orange-700"></div>
+<div class="text-[10px] font-bold self-center">4PM</div>
+<div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-200"></div><div class="heatmap-cell bg-orange-200"></div><div class="heatmap-cell bg-orange-300"></div><div class="heatmap-cell bg-orange-400"></div><div class="heatmap-cell bg-orange-400"></div>
+<div class="text-[10px] font-bold self-center">8PM</div>
+<div class="heatmap-cell bg-orange-500"></div><div class="heatmap-cell bg-orange-500"></div><div class="heatmap-cell bg-orange-600"></div><div class="heatmap-cell bg-orange-700"></div><div class="heatmap-cell bg-orange-900"></div><div class="heatmap-cell bg-[#FF5722]"></div><div class="heatmap-cell bg-[#FF5722]"></div>
+<div class="text-[10px] font-bold self-center">11PM</div>
+<div class="heatmap-cell bg-orange-200"></div><div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-100"></div><div class="heatmap-cell bg-orange-200"></div><div class="heatmap-cell bg-orange-400"></div><div class="heatmap-cell bg-orange-500"></div><div class="heatmap-cell bg-orange-400"></div>
+</div>
+<div class="mt-element flex items-center justify-between">
+<span class="text-[10px] text-on-surface-variant">Low Traffic</span>
+<div class="flex flex-1 mx-2 h-2 bg-gradient-to-r from-orange-50 to-[#FF5722] rounded-full"></div>
+<span class="text-[10px] text-on-surface-variant">Peak Rush</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-grid_gutter">
+<!-- Daily Forecast Table -->
+<div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+<div class="p-element border-b border-outline-variant/10 bg-surface-bright flex justify-between items-center">
+<h3 class="text-h2 text-on-surface">Breakdown by Date</h3>
+<button class="text-caption text-primary font-bold">Export CSV</button>
+</div>
+<table class="w-full text-left">
+<thead class="bg-surface-container-low text-caption font-bold text-on-surface-variant uppercase tracking-wider">
+<tr>
+<th class="px-element py-3">Date / Day</th>
+<th class="px-element py-3">Pred. Orders</th>
+<th class="px-element py-3">Pred. Revenue</th>
+<th class="px-element py-3">Confidence</th>
+<th class="px-element py-3">vs. Last Week</th>
+<th class="px-element py-3 text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-element py-4 font-h2 text-on-surface">May 08 <span class="font-normal text-on-surface-variant ml-1 text-caption">Thursday</span></td>
+<td class="px-element py-4">
+<div class="flex items-center gap-2">
+                                    542
+                                    <div class="w-12 h-4 flex gap-0.5">
+<div class="w-1 h-2 mt-2 bg-surface-variant"></div>
+<div class="w-1 h-3 mt-1 bg-surface-variant"></div>
+<div class="w-1 h-4 bg-primary-container"></div>
+<div class="w-1 h-3 mt-1 bg-surface-variant"></div>
+</div>
+</div>
+</td>
+<td class="px-element py-4 font-bold text-primary-container">PKR 412k</td>
+<td class="px-element py-4">
+<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH (92%)</span>
+</td>
+<td class="px-element py-4 text-green-600 font-bold">+4.2%</td>
+<td class="px-element py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100">chevron_right</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-element py-4 font-h2 text-on-surface">May 09 <span class="font-normal text-on-surface-variant ml-1 text-caption">Friday</span></td>
+<td class="px-element py-4">
+<div class="flex items-center gap-2">
+                                    610
+                                    <div class="w-12 h-4 flex gap-0.5">
+<div class="w-1 h-1 mt-3 bg-surface-variant"></div>
+<div class="w-1 h-2 mt-2 bg-surface-variant"></div>
+<div class="w-1 h-3 mt-1 bg-surface-variant"></div>
+<div class="w-1 h-4 bg-primary-container"></div>
+</div>
+</div>
+</td>
+<td class="px-element py-4 font-bold text-primary-container">PKR 458k</td>
+<td class="px-element py-4">
+<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded text-[10px] font-bold">MED (84%)</span>
+</td>
+<td class="px-element py-4 text-green-600 font-bold">+8.1%</td>
+<td class="px-element py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100">chevron_right</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="px-element py-4 font-h2 text-on-surface">May 10 <span class="font-normal text-on-surface-variant ml-1 text-caption text-primary">Saturday</span></td>
+<td class="px-element py-4">
+<div class="flex items-center gap-2">
+                                    780
+                                    <div class="w-12 h-4 flex gap-0.5">
+<div class="w-1 h-4 bg-primary-container"></div>
+<div class="w-1 h-4 bg-primary-container"></div>
+<div class="w-1 h-4 bg-primary-container"></div>
+<div class="w-1 h-4 bg-primary-container"></div>
+</div>
+</div>
+</td>
+<td class="px-element py-4 font-bold text-primary-container">PKR 485k</td>
+<td class="px-element py-4">
+<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH (89%)</span>
+</td>
+<td class="px-element py-4 text-green-600 font-bold">+12.4%</td>
+<td class="px-element py-4 text-right">
+<button class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100">chevron_right</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Forecast Accuracy & Inventory Column -->
+<div class="flex flex-col gap-grid_gutter">
+<div class="bg-white p-element rounded-xl shadow-sm border border-outline-variant/10">
+<h3 class="text-h2 text-on-surface mb-related">Inventory Outlook</h3>
+<div class="space-y-3">
+<div class="flex flex-col p-2 bg-error-container/10 rounded-lg border border-error-container/20">
+<div class="flex justify-between items-center mb-1">
+<span class="font-h2 text-on-surface">Chicken Breast</span>
+<span class="bg-error text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">Order Now</span>
+</div>
+<div class="flex justify-between text-caption">
+<span>Stock: 45kg</span>
+<span class="text-error font-bold">Needs: +120kg</span>
+</div>
+</div>
+<div class="flex flex-col p-2 bg-surface-container rounded-lg border border-outline-variant/20">
+<div class="flex justify-between items-center mb-1">
+<span class="font-h2 text-on-surface">Burger Buns</span>
+<span class="bg-primary text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">This Week</span>
+</div>
+<div class="flex justify-between text-caption">
+<span>Stock: 2,400</span>
+<span class="text-on-surface-variant">Needs: +800</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-inverse-surface p-element rounded-xl shadow-md text-white">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary-fixed-dim">verified</span>
+<h3 class="text-h2">Model Accuracy</h3>
+</div>
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div>
+<p class="text-[10px] text-secondary-fixed-dim uppercase tracking-wider font-bold">MAPE</p>
+<p class="text-display text-primary-fixed-dim leading-none">8.3%</p>
+</div>
+<div>
+<p class="text-[10px] text-secondary-fixed-dim uppercase tracking-wider font-bold">Reliability</p>
+<p class="text-display text-white leading-none">91.7%</p>
+</div>
+</div>
+<div class="pt-4 border-t border-on-secondary-fixed-variant/50">
+<p class="text-caption text-secondary-fixed-dim mb-2">Historical Accuracy Trend</p>
+<div class="flex items-end gap-1 h-12">
+<div class="w-full bg-green-500/40 h-[80%] rounded-t-sm"></div>
+<div class="w-full bg-green-500/60 h-[85%] rounded-t-sm"></div>
+<div class="w-full bg-green-500/50 h-[82%] rounded-t-sm"></div>
+<div class="w-full bg-green-500/80 h-[92%] rounded-t-sm"></div>
+<div class="w-full bg-green-500/70 h-[88%] rounded-t-sm"></div>
+<div class="w-full bg-green-500/90 h-[95%] rounded-t-sm"></div>
+<div class="w-full bg-primary-fixed-dim h-[91%] rounded-t-sm"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Inventory Forecast Section -->
+<div class="mt-section bg-white rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+<div class="p-element border-b border-outline-variant/10 bg-surface-bright">
+<h3 class="text-h1 text-on-surface">Supply Chain Predictions</h3>
+</div>
+<div class="p-element overflow-x-auto">
+<div class="grid grid-cols-5 gap-4 min-w-[800px]">
+<div class="col-span-1 p-4 rounded-xl bg-surface-container-low">
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">Ingredient</p>
+<div class="space-y-4">
+<p class="font-h2 py-1">Potato (Russet)</p>
+<p class="font-h2 py-1">Cooking Oil</p>
+<p class="font-h2 py-1">Fresh Lettuce</p>
+</div>
+</div>
+<div class="col-span-1 p-4">
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">Predicted Need</p>
+<div class="space-y-4">
+<p class="font-body py-1">450 kg</p>
+<p class="font-body py-1">120 L</p>
+<p class="font-body py-1">85 kg</p>
+</div>
+</div>
+<div class="col-span-1 p-4">
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">Current Gap</p>
+<div class="space-y-4">
+<p class="font-body py-1 text-primary font-bold">-180 kg</p>
+<p class="font-body py-1 text-green-600 font-bold">+15 L</p>
+<p class="font-body py-1 text-primary font-bold">-40 kg</p>
+</div>
+</div>
+<div class="col-span-1 p-4">
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">Recommended</p>
+<div class="space-y-4">
+<p class="font-body py-1">Order 200 kg</p>
+<p class="font-body py-1">Monitor</p>
+<p class="font-body py-1">Order 50 kg</p>
+</div>
+</div>
+<div class="col-span-1 p-4">
+<p class="text-caption font-bold text-on-surface-variant uppercase mb-2">Urgency</p>
+<div class="space-y-4">
+<span class="inline-block bg-primary-container/10 text-primary-container px-3 py-1 rounded-full text-caption font-bold">CRITICAL</span>
+<span class="block bg-green-100 text-green-700 px-3 py-1 rounded-full text-caption font-bold w-fit">SUFFICIENT</span>
+<span class="block bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-caption font-bold w-fit">MONITOR</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

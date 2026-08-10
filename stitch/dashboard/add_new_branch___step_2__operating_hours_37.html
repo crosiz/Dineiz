@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#f1d4cc",
+                        "primary-container": "#ff5722",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#e4beb4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27",
+                        "background": "#fff8f6",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fff8f6",
+                        "surface-bright": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-variant": "#fadcd4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "outline": "#907067",
+                        "on-surface": "#271813",
+                        "surface-container": "#ffe9e4",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#00628c",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary-container": "#5c647a",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed": "#dae2fd",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary-container": "#541200",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-on-surface": "#ffede8",
+                        "primary-fixed": "#ffdbd1",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased">
+<!-- Dashboard Background (Dimmed) -->
+<div class="fixed inset-0 bg-slate-900 overflow-hidden">
+<!-- SideNav (Shared Component Simulation) -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 bg-slate-900 border-r border-slate-800 shadow-2xl font-['Inter'] antialiased text-sm font-medium">
+<div class="flex flex-col h-full py-6">
+<div class="px-6 mb-8">
+<span class="text-xl font-black text-white tracking-tight">SwiftServe</span>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest mt-1">POS Intelligence</p>
+</div>
+<nav class="flex-1">
+<div class="flex items-center gap-3 text-slate-400 px-4 py-2.5 mx-2 my-1"><span class="material-symbols-outlined">dashboard</span>Overview</div>
+<div class="flex items-center gap-3 bg-orange-600 text-white rounded-lg px-4 py-2.5 mx-2 my-1"><span class="material-symbols-outlined">restaurant</span>Operations</div>
+<div class="flex items-center gap-3 text-slate-400 px-4 py-2.5 mx-2 my-1"><span class="material-symbols-outlined">storefront</span>Business</div>
+<div class="flex items-center gap-3 text-slate-400 px-4 py-2.5 mx-2 my-1"><span class="material-symbols-outlined">trending_up</span>Growth</div>
+<div class="flex items-center gap-3 text-slate-400 px-4 py-2.5 mx-2 my-1"><span class="material-symbols-outlined">bar_chart</span>Analytics</div>
+</nav>
+</div>
+</aside>
+<!-- Main Content Area (Blurred/Dimmed) -->
+<main class="ml-64 p-page_margin opacity-20 blur-sm pointer-events-none">
+<div class="mb-section flex justify-between items-end">
+<div>
+<h1 class="font-display text-display text-white">Branch Management</h1>
+<p class="font-body text-body text-slate-400">Manage your restaurant network and operations.</p>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-grid_gutter">
+<div class="h-64 bg-slate-800 rounded-xl border border-slate-700"></div>
+<div class="h-64 bg-slate-800 rounded-xl border border-slate-700"></div>
+<div class="h-64 bg-slate-800 rounded-xl border border-slate-700"></div>
+</div>
+</main>
+<!-- Backdrop Overlay -->
+<div class="fixed inset-0 bg-black/40 z-50 backdrop-blur-[2px]"></div>
+<!-- Right Side Panel -->
+<section class="fixed right-0 top-0 h-full w-[560px] bg-surface shadow-2xl z-[60] flex flex-col border-l border-outline-variant">
+<!-- Panel Header -->
+<header class="p-page_margin border-b border-surface-container-high flex justify-between items-center bg-surface-bright">
+<div>
+<h2 class="font-h1 text-h1 text-on-surface">Add New Branch</h2>
+<p class="font-caption text-caption text-on-surface-variant">Step 2 of 4: Operating Hours</p>
+</div>
+<button class="p-related hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<!-- Stepper Indicator -->
+<div class="px-page_margin py-section bg-surface-container-low flex items-center gap-related">
+<div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+<div class="flex-1 h-1 rounded-full bg-primary-container"></div>
+<div class="flex-1 h-1 rounded-full bg-surface-container-highest"></div>
+<div class="flex-1 h-1 rounded-full bg-surface-container-highest"></div>
+</div>
+<!-- Panel Content -->
+<div class="flex-1 overflow-y-auto p-page_margin space-y-section">
+<!-- Day Toggle Selection -->
+<div class="space-y-related">
+<label class="font-h2 text-h2 text-on-surface">Select Operating Days</label>
+<div class="flex gap-related">
+<!-- Monday (Selected) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-primary text-on-primary shadow-lg ring-2 ring-primary ring-offset-2">M</button>
+<!-- Tuesday (Selected) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-primary text-on-primary shadow-lg ring-2 ring-primary ring-offset-2">T</button>
+<!-- Wednesday (Selected) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-primary text-on-primary shadow-lg ring-2 ring-primary ring-offset-2">W</button>
+<!-- Thursday (Selected) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-primary text-on-primary shadow-lg ring-2 ring-primary ring-offset-2">T</button>
+<!-- Friday (Selected) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold bg-primary text-on-primary shadow-lg ring-2 ring-primary ring-offset-2">F</button>
+<!-- Saturday (Inactive) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container-high transition-all">S</button>
+<!-- Sunday (Inactive) -->
+<button class="w-12 h-12 rounded-xl flex items-center justify-center font-bold border-2 border-outline-variant text-on-surface-variant bg-surface hover:bg-surface-container-high transition-all">S</button>
+</div>
+</div>
+<!-- Schedule Table -->
+<div class="space-y-element">
+<div class="flex justify-between items-center">
+<label class="font-h2 text-h2 text-on-surface">Set Schedule</label>
+<button class="font-caption text-caption text-primary-container font-bold hover:underline">Apply same hours to all days</button>
+</div>
+<div class="bg-surface-container-lowest rounded-xl border border-surface-container-high overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container text-on-surface-variant font-caption text-caption border-b border-surface-container-high">
+<th class="px-4 py-3 font-semibold uppercase tracking-wider w-24">Day</th>
+<th class="px-4 py-3 font-semibold uppercase tracking-wider">Open From</th>
+<th class="px-4 py-3 font-semibold uppercase tracking-wider">Close At</th>
+<th class="px-4 py-3 font-semibold uppercase tracking-wider">Last Order</th>
+</tr>
+</thead>
+<tbody class="font-body text-body">
+<!-- Monday -->
+<tr class="border-b border-surface-container-low hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-3 font-semibold text-on-surface">Mon</td>
+<td class="px-4 py-3">
+<div class="relative">
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="09:00"/>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="relative">
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="22:00"/>
+</div>
+</td>
+<td class="px-4 py-3">
+<div class="relative">
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="21:30"/>
+</div>
+</td>
+</tr>
+<!-- Tuesday -->
+<tr class="border-b border-surface-container-low hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-3 font-semibold text-on-surface">Tue</td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="09:00"/></td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="22:00"/></td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="21:30"/></td>
+</tr>
+<!-- Wednesday -->
+<tr class="border-b border-surface-container-low hover:bg-surface-container-low transition-colors">
+<td class="px-4 py-3 font-semibold text-on-surface">Wed</td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="09:00"/></td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="22:00"/></td>
+<td class="px-4 py-3"><input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="time" value="21:30"/></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Guidance Info -->
+<div class="p-related bg-tertiary-container/10 border border-tertiary-container/20 rounded-xl flex gap-related">
+<span class="material-symbols-outlined text-tertiary">info</span>
+<p class="font-caption text-caption text-on-tertiary-fixed-variant leading-relaxed">
+                        Last order times are used for online ordering and kitchen pacing. Customers won't be able to place new orders after this time.
+                    </p>
+</div>
+</div>
+<!-- Navigation Footer -->
+<footer class="p-page_margin border-t border-surface-container-high bg-surface-bright flex justify-between items-center">
+<button class="px-6 py-2.5 rounded-lg border border-outline-variant text-on-surface font-semibold flex items-center gap-2 hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+                    Back
+                </button>
+<button class="px-8 py-2.5 rounded-lg bg-primary text-on-primary font-bold shadow-lg shadow-primary/20 flex items-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all">
+                    Next Step
+                    <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</footer>
+</section>
+</div>
+</body></html>

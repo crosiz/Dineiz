@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Table Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .floor-grid {
+            background-color: #1E1E30;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .perspective-25d {
+            transform: perspective(1000px) rotateX(10deg);
+            transform-style: preserve-3d;
+        }
+        .table-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+        @keyframes pulse-orange {
+            0% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 87, 34, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0); }
+        }
+        .pulse-dot {
+            animation: pulse-orange 2s infinite;
+        }
+        .status-glow-emerald { filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4)); }
+        .status-glow-red { filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4)); }
+        .status-glow-blue { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4)); }
+        .status-glow-purple { filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.4)); }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#b02f00",
+                        "primary-container": "#ff5722",
+                        "on-primary": "#ffffff",
+                        "surface-card": "#1A1A2E",
+                        "background": "#0A0A0F",
+                        "text-main": "#FFFFFF",
+                        "text-muted": "#94A3B8",
+                        "border-subtle": "rgba(255,255,255,0.06)"
+                    },
+                    fontFamily: {
+                        "headline-md": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background font-body-md text-text-main overflow-hidden w-[1280px] h-[800px] mx-auto relative shadow-2xl">
+<!-- TOP BAR (Shared Component Context: PosTopBar) -->
+<header class="fixed top-0 left-0 right-0 h-[52px] bg-[#13131F] border-b border-white/[0.06] z-50 flex items-center px-6 justify-between">
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-white">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-white text-lg">Select Table</h1>
+<div class="flex items-center gap-2 text-text-muted text-sm ml-4">
+<span>12 tables</span>
+<span class="text-white/20">•</span>
+<span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>6 free</span>
+<span class="text-white/20">•</span>
+<span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>4 occupied</span>
+<span class="text-white/20">•</span>
+<span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-purple-500"></div>2 reserved</span>
+</div>
+</div>
+<div class="flex bg-white/5 p-1 rounded-full border border-white/5">
+<button class="px-6 py-1.5 rounded-full bg-primary-container text-white font-label-md text-sm shadow-sm">Ground Floor</button>
+<button class="px-6 py-1.5 rounded-full text-text-muted font-label-md text-sm hover:text-white transition-colors">First Floor</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+<span class="material-symbols-outlined text-sm text-text-muted">person</span>
+<span class="text-xs font-medium text-white">Cashier: Ali</span>
+</div>
+</div>
+</header>
+<!-- LEGEND STRIP -->
+<div class="fixed top-[52px] left-0 right-0 h-[32px] bg-[#13131F] border-b border-white/[0.03] z-40 flex items-center px-8 gap-8 justify-center">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-sm bg-emerald-500"></div>
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Free</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-sm bg-red-500"></div>
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Occupied</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-sm bg-blue-500"></div>
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Ready to Pay</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-sm bg-purple-500"></div>
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Reserved</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-sm bg-slate-600"></div>
+<span class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Inactive</span>
+</div>
+</div>
+<!-- MAIN CANVAS -->
+<main class="w-full h-full floor-grid pt-[84px] relative overflow-hidden">
+<!-- Architectural Elements (Floor boundary) -->
+<div class="absolute inset-0">
+<!-- Perimeter Walls represented as a floor polygon base -->
+<div class="absolute top-[110px] left-[50px] w-[1120px] h-[520px] bg-[#252545] border-4 border-white/10 rounded-2xl"></div>
+<!-- Window Element -->
+<div class="absolute top-[110px] left-[400px] w-[300px] h-[6px] bg-blue-400/20 border-x-4 border-white/20 flex items-center justify-center">
+<div class="w-full h-[1px] bg-blue-400/40"></div>
+</div>
+<!-- Plants -->
+<div class="absolute top-[150px] left-[80px] w-12 h-12 bg-emerald-900 rounded-full flex items-center justify-center shadow-lg border-2 border-emerald-500/30">
+<span class="material-symbols-outlined text-emerald-400 text-sm">potted_plant</span>
+</div>
+<div class="absolute bottom-[130px] right-[100px] w-16 h-16 bg-emerald-900 rounded-full flex items-center justify-center shadow-lg border-2 border-emerald-500/30">
+<span class="material-symbols-outlined text-emerald-400 text-lg">potted_plant</span>
+</div>
+</div>
+<!-- Tables Container -->
+<div class="relative w-full h-full perspective-25d">
+<!-- Table T1 (Free) -->
+<div class="absolute top-[200px] left-[200px] group cursor-pointer">
+<!-- Chairs -->
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-b-2 border-black/40"></div>
+<div class="absolute -bottom-6 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-t-2 border-black/40"></div>
+<!-- Table Surface -->
+<div class="w-20 h-20 bg-[#5C4F3D] rounded-xl table-shadow border-4 border-[#10B981] ring-8 ring-emerald-500/10 status-glow-emerald relative flex flex-col items-center justify-center">
+<span class="text-xs font-bold text-white">T1</span>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[10px] text-white/60" data-weight="fill">person</span>
+<span class="text-[10px] font-bold text-white/60">2</span>
+</div>
+</div>
+</div>
+<!-- Table T5 (Occupied) -->
+<div class="absolute top-[200px] left-[500px] group cursor-pointer">
+<!-- Chairs -->
+<div class="absolute -top-6 left-4 w-8 h-8 bg-[#4A3E30] rounded-md border-b-2 border-black/40"></div>
+<div class="absolute -top-6 right-4 w-8 h-8 bg-[#4A3E30] rounded-md border-b-2 border-black/40"></div>
+<div class="absolute -bottom-6 left-4 w-8 h-8 bg-[#4A3E30] rounded-md border-t-2 border-black/40"></div>
+<div class="absolute -bottom-6 right-4 w-8 h-8 bg-[#4A3E30] rounded-md border-t-2 border-black/40"></div>
+<!-- Table Surface -->
+<div class="w-32 h-20 bg-[#5C4F3D] rounded-xl table-shadow border-4 border-[#EF4444] ring-8 ring-red-500/10 status-glow-red relative flex flex-col items-center justify-center">
+<div class="absolute top-2 right-2 w-2 h-2 bg-primary-container rounded-full pulse-dot"></div>
+<span class="text-sm font-bold text-white">T5</span>
+<span class="text-[10px] font-medium text-white bg-red-900/50 px-1.5 rounded-full mt-1 border border-red-500/30">23 min</span>
+</div>
+</div>
+<!-- Table T8 (Ready to Pay) -->
+<div class="absolute top-[450px] left-[200px] group cursor-pointer">
+<!-- Chairs -->
+<div class="absolute -left-6 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-r-2 border-black/40"></div>
+<div class="absolute -right-6 top-1/2 -translate-y-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-l-2 border-black/40"></div>
+<!-- Table Surface -->
+<div class="w-24 h-24 bg-[#5C4F3D] rounded-full table-shadow border-4 border-[#3B82F6] ring-8 ring-blue-500/10 status-glow-blue relative flex flex-col items-center justify-center">
+<span class="text-xs font-bold text-white">T8</span>
+<span class="material-symbols-outlined text-blue-400 mt-1">credit_card</span>
+</div>
+</div>
+<!-- Table T12 (Reserved) -->
+<div class="absolute top-[450px] left-[500px] group cursor-pointer">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-b-2 border-black/40"></div>
+<div class="absolute -bottom-6 left-1/2 -translate-x-1/2 w-8 h-8 bg-[#4A3E30] rounded-md border-t-2 border-black/40"></div>
+<div class="w-20 h-20 bg-[#5C4F3D] rounded-xl table-shadow border-4 border-purple-500 ring-8 ring-purple-500/10 status-glow-purple relative flex flex-col items-center justify-center">
+<span class="text-xs font-bold text-white">T12</span>
+<span class="material-symbols-outlined text-purple-400 text-xs mt-1">event_seat</span>
+</div>
+</div>
+<!-- Booth Tables -->
+<div class="absolute top-[200px] left-[850px] flex flex-col gap-12">
+<div class="w-40 h-16 bg-[#5C4F3D] rounded-l-2xl border-l-8 border-[#13131F] table-shadow flex items-center px-4">
+<span class="text-xs font-bold text-white/80">Booth B1</span>
+</div>
+<div class="w-40 h-16 bg-[#5C4F3D] rounded-l-2xl border-l-8 border-[#13131F] table-shadow flex items-center px-4">
+<span class="text-xs font-bold text-white/80">Booth B2</span>
+</div>
+</div>
+</div>
+<!-- T5 POPUP (Active State) -->
+<div class="absolute top-[180px] left-[650px] w-[280px] bg-[#1A1A2E] rounded-xl shadow-2xl border border-white/10 overflow-hidden z-[60] animate-in fade-in zoom-in duration-200">
+<div class="p-4 border-b border-white/5 flex justify-between items-start">
+<div>
+<h3 class="font-bold text-white text-sm">Order #047 <span class="text-text-muted font-normal ml-1">Table T5</span></h3>
+<div class="flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-xs text-text-muted">schedule</span>
+<span class="text-[10px] text-text-muted">Started 23 min ago</span>
+</div>
+</div>
+<button class="text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex justify-between items-center text-xs">
+<span class="text-text-muted">1x Seekh Kabab</span>
+<span class="font-medium text-white">PKR 1,200</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-text-muted">2x Butter Naan</span>
+<span class="font-medium text-white">PKR 400</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="text-text-muted">3x Fresh Lime Soda</span>
+<span class="font-medium text-white">PKR 850</span>
+</div>
+<div class="pt-3 border-t border-dashed border-white/10 flex justify-between items-center">
+<span class="text-xs font-bold text-text-muted uppercase tracking-wider">Total</span>
+<span class="font-black text-primary-container text-base">PKR 2,450</span>
+</div>
+</div>
+<div class="p-4 bg-white/5 grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-1 bg-white/10 border border-white/5 py-2 rounded-lg text-[10px] font-bold text-white hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-xs">add</span> Add Items
+                </button>
+<button class="flex items-center justify-center gap-1 bg-white/10 border border-white/5 py-2 rounded-lg text-[10px] font-bold text-white hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-xs">print</span> Print Bill
+                </button>
+<button class="col-span-2 flex items-center justify-center gap-2 bg-primary-container text-white py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all">
+                    Collect Payment
+                </button>
+</div>
+</div>
+</main>
+<!-- ZOOM CONTROLS -->
+<div class="fixed bottom-8 left-8 flex flex-col gap-2 z-50">
+<div class="flex flex-col bg-[#13131F] rounded-xl shadow-lg border border-white/10 overflow-hidden">
+<button class="w-12 h-12 flex items-center justify-center hover:bg-white/5 transition-colors text-white border-b border-white/5">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center hover:bg-white/5 transition-colors text-white">
+<span class="material-symbols-outlined">remove</span>
+</button>
+</div>
+<button class="bg-[#13131F] px-4 h-12 rounded-xl shadow-lg border border-white/10 font-label-md text-xs text-white flex items-center gap-2 hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-sm">fullscreen</span> Fit All
+        </button>
+</div>
+<!-- SIDE ACTION -->
+<div class="fixed bottom-8 right-8 flex gap-4 z-50">
+<button class="bg-white text-[#0A0A0F] px-6 h-14 rounded-full shadow-2xl flex items-center gap-3 font-bold text-sm hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-weight="fill">add_circle</span>
+            Quick Order
+        </button>
+</div>
+<script>
+        // Simple interactivity for the demo
+        document.querySelectorAll('.group').forEach(table => {
+            table.addEventListener('click', () => {
+                table.style.transform = 'scale(1.05) perspective(1000px) rotateX(10deg)';
+                setTimeout(() => {
+                    table.style.transform = 'scale(1) perspective(1000px) rotateX(10deg)';
+                }, 200);
+            });
+        });
+    </script>
+</body></html>

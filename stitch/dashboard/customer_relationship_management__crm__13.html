@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Customer Relationship Management | SwiftServe POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed": "#ffdbd1",
+                    "error-container": "#ffdad6",
+                    "on-primary-container": "#541200",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-background": "#271813",
+                    "tertiary-fixed": "#c8e6ff",
+                    "secondary-fixed": "#dae2fd",
+                    "surface-dim": "#f1d4cc",
+                    "tertiary-fixed-dim": "#86cfff",
+                    "tertiary": "#00628c",
+                    "surface-container": "#ffe9e4",
+                    "on-primary-fixed": "#3b0900",
+                    "secondary-container": "#dae2fd",
+                    "primary-container": "#ff5722",
+                    "surface": "#fff8f6",
+                    "on-surface-variant": "#5b4039",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#565e74",
+                    "on-error": "#ffffff",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "on-primary-fixed-variant": "#862200",
+                    "background": "#fff8f6",
+                    "surface-variant": "#fadcd4",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#131b2e",
+                    "inverse-surface": "#3e2c27",
+                    "on-tertiary-container": "#fcfcff",
+                    "inverse-on-surface": "#ffede8",
+                    "outline": "#907067",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "inverse-primary": "#ffb5a0",
+                    "surface-container-high": "#ffe2da",
+                    "surface-bright": "#fff8f6",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed-variant": "#004c6d",
+                    "on-secondary-container": "#5c647a",
+                    "surface-container-low": "#fff1ed",
+                    "on-surface": "#271813",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "surface-container-highest": "#fadcd4",
+                    "primary": "#b02f00",
+                    "tertiary-container": "#007caf",
+                    "outline-variant": "#e4beb4",
+                    "on-tertiary-fixed": "#001e2e",
+                    "surface-tint": "#b02f00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "related": "8px",
+                    "grid_gutter": "16px",
+                    "element": "16px",
+                    "section": "24px",
+                    "page_margin": "24px"
+            },
+            "fontFamily": {
+                    "display": ["Inter"],
+                    "caption": ["Inter"],
+                    "h2": ["Inter"],
+                    "h1": ["Inter"],
+                    "body": ["Inter"]
+            },
+            "fontSize": {
+                    "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-on-background min-h-screen">
+<!-- SideNavBar Shell -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-[#0F172A] border-r border-slate-800 flex flex-col py-6">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-[#FF5722] rounded-lg flex items-center justify-center text-white font-black text-xl">S</div>
+<div>
+<h1 class="text-lg font-black text-white leading-none">SwiftServe POS</h1>
+<p class="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Premium Management</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">restaurant</span>
+<span class="font-medium text-sm">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 bg-slate-900 text-[#FF5722] border-r-4 border-[#FF5722]" href="#">
+<span class="material-symbols-outlined">business_center</span>
+<span class="font-medium text-sm">Business</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-medium text-sm">Growth</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-medium text-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">extension</span>
+<span class="font-medium text-sm">Integrations</span>
+</a>
+<a class="flex items-center gap-3 px-6 py-3 text-slate-400 hover:text-slate-200 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium text-sm">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-[#FF5722] text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-lg shadow-orange-900/20">
+<span class="material-symbols-outlined">add</span>
+                New Order
+            </button>
+</div>
+</aside>
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 right-0 left-64 h-16 bg-white border-b border-slate-200 flex items-center justify-between px-page_margin z-40">
+<div class="flex items-center gap-grid_gutter flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full bg-slate-50 border-none rounded-lg pl-10 text-sm focus:ring-2 focus:ring-primary-container h-10" placeholder="Search orders, customers, or menu..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary-container rounded-full border-2 border-white"></span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+<span class="material-symbols-outlined">apps</span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-xs font-bold text-slate-900">John Maître</p>
+<p class="text-[10px] text-slate-500 font-medium">Store Manager</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover" data-alt="Professional headshot of a hospitality store manager in a crisp white shirt against a neutral high-end studio background. The lighting is soft and cinematic, following a luxury modern aesthetic. The focus is sharp on the subject's friendly and authoritative expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOONPSHc9nt2-Wvnec_fvPofr4y3qRGCiVFCFHN448JAYy8sxIGI6WmGQjqtyRbe9qfwAZSEeGPCc7xb0voTPPkQYoGKcjIs_LYHPmL61Cv4C3zND_7EbiTuDuOnYXUz2Hcqqf_VoVFuT-vkTe53HsMoCIpiNxd25tDrofF8KL-grQNG4FZdOYpA6DxK35J2gxAr7JLtr4iq7gecwniV1gCxKEmCnALwi7KlrWIKByfUQEBCtjinlWIumyCqyhYhK-Cg1deMxhDixU"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 mt-16 p-page_margin">
+<!-- Page Header Section -->
+<section class="flex flex-col md:flex-row md:items-end justify-between gap-section mb-section">
+<div>
+<div class="flex items-center gap-3 mb-1">
+<h2 class="font-display text-display text-slate-900">Customers</h2>
+<span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-caption font-semibold">1,247 total customers</span>
+</div>
+<p class="text-slate-500 font-body text-body">Manage your guest relationships and loyalty performance.</p>
+</div>
+<div class="flex items-center gap-related">
+<button class="px-4 h-10 border border-slate-300 text-slate-700 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-lg">download</span>
+                    Export CSV
+                </button>
+<button class="px-4 h-10 bg-primary-container text-white rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-orange-600 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-lg">mail</span>
+                    Send Campaign
+                </button>
+</div>
+</section>
+<!-- Segment Filter Pills -->
+<section class="flex items-center gap-3 mb-section overflow-x-auto pb-2 scrollbar-hide">
+<button class="px-5 py-2.5 bg-primary-container text-white rounded-full text-sm font-bold whitespace-nowrap shadow-md shadow-orange-100">All Customers 1247</button>
+<button class="px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:border-primary-container hover:text-primary-container transition-all whitespace-nowrap">VIP 🏆 45</button>
+<button class="px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:border-primary-container hover:text-primary-container transition-all whitespace-nowrap">Regular ⭐ 892</button>
+<button class="px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:border-primary-container hover:text-primary-container transition-all whitespace-nowrap">New 🌟 156</button>
+<button class="px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:border-primary-container hover:text-primary-container transition-all whitespace-nowrap">At Risk ⚠ 89</button>
+<button class="px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-full text-sm font-semibold hover:border-primary-container hover:text-primary-container transition-all whitespace-nowrap">Birthday 🎂 23</button>
+</section>
+<!-- Stats Row -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-grid_gutter mb-section">
+<div class="bg-white p-6 rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)] relative overflow-hidden">
+<div class="relative z-10">
+<p class="text-caption text-slate-500 mb-1">Total Revenue</p>
+<h3 class="text-h1 text-slate-900 font-bold">PKR 2.4M</h3>
+<p class="text-[10px] text-green-600 font-bold flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]">trending_up</span> +12% from last month
+                    </p>
+</div>
+<div class="absolute right-[-10px] bottom-[-10px] opacity-5">
+<span class="material-symbols-outlined text-6xl">payments</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<p class="text-caption text-slate-500 mb-1">Avg Orders / Customer</p>
+<h3 class="text-h1 text-slate-900 font-bold">47</h3>
+<p class="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-2">
+                    Stable since Q1
+                </p>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<p class="text-caption text-slate-500 mb-1">Avg Basket Size</p>
+<h3 class="text-h1 text-slate-900 font-bold">PKR 499</h3>
+<p class="text-[10px] text-orange-600 font-bold flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]">trending_down</span> -2% this week
+                </p>
+</div>
+<div class="bg-white p-6 rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<p class="text-caption text-slate-500 mb-1">Returning Rate</p>
+<div class="flex items-center gap-2">
+<h3 class="text-h1 text-slate-900 font-bold">68%</h3>
+<span class="px-1.5 py-0.5 bg-green-50 text-green-700 text-[10px] font-bold rounded">HIGH</span>
+</div>
+<p class="text-[10px] text-green-600 font-bold flex items-center gap-1 mt-2">
+<span class="material-symbols-outlined text-[12px]">keyboard_double_arrow_up</span> Top decile
+                </p>
+</div>
+</section>
+<!-- Search + Table Card -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-[0_1px_3px_rgba(0,0,0,0.08)] overflow-hidden">
+<!-- Table Controls -->
+<div class="p-4 border-b border-slate-100 flex flex-col lg:flex-row items-center gap-4 bg-slate-50/50">
+<div class="relative flex-1 w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="w-full bg-white border border-slate-300 rounded-lg pl-10 py-2.5 text-sm focus:ring-primary-container focus:border-primary-container" placeholder="Filter by name, phone or email..." type="text"/>
+</div>
+<div class="flex items-center gap-3 w-full lg:w-auto">
+<select class="bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 focus:ring-primary-container">
+<option>Date Joined: Newest</option>
+<option>Date Joined: Oldest</option>
+</select>
+<select class="bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 focus:ring-primary-container">
+<option>All Tiers</option>
+<option>Platinum</option>
+<option>Gold</option>
+</select>
+<button class="p-2.5 bg-white border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+</button>
+</div>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-white text-[11px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+<th class="px-6 py-4">Customer</th>
+<th class="px-4 py-4 text-center">Orders</th>
+<th class="px-4 py-4">Total Spent</th>
+<th class="px-4 py-4">Last Order</th>
+<th class="px-4 py-4">Tier</th>
+<th class="px-4 py-4">Points</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50">
+<!-- Row 1 -->
+<tr class="group hover:bg-orange-50/30 transition-colors h-14">
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-primary-container font-bold text-sm">FA</div>
+<div>
+<p class="text-sm font-bold text-slate-900 leading-tight">Fatima Ahmed</p>
+<p class="text-[11px] text-slate-500">+92 300 1234567</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 text-center text-sm font-semibold text-slate-700">142</td>
+<td class="px-4 py-3 text-sm font-bold text-slate-900">PKR 84,200</td>
+<td class="px-4 py-3 text-sm text-slate-500">2h ago</td>
+<td class="px-4 py-3">
+<span class="px-2 py-1 bg-slate-900 text-white text-[10px] font-black rounded uppercase">Platinum</span>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1 text-primary-container font-bold text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span> 4,500
+                                </div>
+</td>
+<td class="px-6 py-3 text-right">
+<div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<a class="text-xs font-bold text-primary-container hover:underline" href="#">View Profile</a>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-orange-50/30 transition-colors h-14">
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A close-up portrait of a middle-aged businessman with a warm, professional smile. He is wearing a dark navy suit and standing against a soft, bright background that suggests an upscale restaurant interior. The lighting is sophisticated and bright, creating a high-end service vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQ5tCkmGlHdi_2X1zQ0lQatO40yv7Qd35__8APLhDMlOP1C3Inh3E_RGl_QMOmANvmvIZa4brLWx8GvMAQ6gzQc5VySbFI0QSW4iovtbpfo-ohIMOguFmPBgriTLwInFHRPy1ew6HmhSa6vCehswomwloKsi9GTYArHd2dZtp1fBz9Nsx4MUdSHTJbxayKSJW73rrT7mUWFILzxKTGiQzrLZE632QMPMMN3y_v-g9F6qGyWplmAA4_KZPlYT4oPHmPndzCB4GKM8dd"/>
+<div>
+<p class="text-sm font-bold text-slate-900 leading-tight">Bilal Hassan</p>
+<p class="text-[11px] text-slate-500">+92 321 9876543</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 text-center text-sm font-semibold text-slate-700">89</td>
+<td class="px-4 py-3 text-sm font-bold text-slate-900">PKR 52,150</td>
+<td class="px-4 py-3 text-sm text-slate-500">Yesterday</td>
+<td class="px-4 py-3">
+<span class="px-2 py-1 bg-amber-100 text-amber-800 text-[10px] font-black rounded uppercase">Gold</span>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1 text-primary-container font-bold text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span> 2,120
+                                </div>
+</td>
+<td class="px-6 py-3 text-right">
+<div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<a class="text-xs font-bold text-primary-container hover:underline" href="#">View Profile</a>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-orange-50/30 transition-colors h-14">
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm">ZK</div>
+<div>
+<p class="text-sm font-bold text-slate-900 leading-tight">Zoya Khan</p>
+<p class="text-[11px] text-slate-500">+92 333 4445556</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 text-center text-sm font-semibold text-slate-700">12</td>
+<td class="px-4 py-3 text-sm font-bold text-slate-900">PKR 8,900</td>
+<td class="px-4 py-3 text-sm text-slate-500">3 days ago</td>
+<td class="px-4 py-3">
+<span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-black rounded uppercase">Silver</span>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1 text-primary-container font-bold text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span> 450
+                                </div>
+</td>
+<td class="px-6 py-3 text-right">
+<div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<a class="text-xs font-bold text-primary-container hover:underline" href="#">View Profile</a>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-orange-50/30 transition-colors h-14">
+<td class="px-6 py-3">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-primary-container font-bold text-sm">OM</div>
+<div>
+<p class="text-sm font-bold text-slate-900 leading-tight">Omar Malik</p>
+<p class="text-[11px] text-slate-500">+92 315 2223334</p>
+</div>
+</div>
+</td>
+<td class="px-4 py-3 text-center text-sm font-semibold text-slate-700">4</td>
+<td class="px-4 py-3 text-sm font-bold text-slate-900">PKR 2,400</td>
+<td class="px-4 py-3 text-sm text-slate-500">1 week ago</td>
+<td class="px-4 py-3">
+<span class="px-2 py-1 bg-orange-50 text-orange-800 text-[10px] font-black rounded uppercase">Bronze</span>
+</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-1 text-primary-container font-bold text-sm">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">bolt</span> 120
+                                </div>
+</td>
+<td class="px-6 py-3 text-right">
+<div class="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+<a class="text-xs font-bold text-primary-container hover:underline" href="#">View Profile</a>
+<button class="text-slate-400 hover:text-slate-600"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+<p class="text-xs text-slate-500 font-medium">Showing 1-10 of 1,247 customers</p>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:bg-white transition-colors"><span class="material-symbols-outlined text-lg">chevron_left</span></button>
+<button class="w-8 h-8 rounded-md bg-primary-container text-white text-xs font-bold shadow-sm shadow-orange-100">1</button>
+<button class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">2</button>
+<button class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">3</button>
+<span class="text-slate-400">...</span>
+<button class="w-8 h-8 rounded-md bg-white border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">125</button>
+<button class="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:bg-white transition-colors"><span class="material-symbols-outlined text-lg">chevron_right</span></button>
+</div>
+</div>
+</section>
+<!-- Customer Insights Bento -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-grid_gutter mt-section">
+<div class="lg:col-span-2 bg-white rounded-xl border border-slate-200 p-6 flex items-center gap-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+<div class="w-48 h-full shrink-0 relative rounded-lg overflow-hidden group">
+<img class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" data-alt="A modern, high-contrast digital marketing graphic showcasing loyalty rewards. Bright oranges and deep blues dominate the scene, featuring icons of gifts, points, and stars. The visual style is minimal and corporate, with clean typography and a sense of premium value, perfect for a CRM loyalty promotion banner." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-4 left-4">
+<span class="px-2 py-1 bg-primary-container text-white text-[10px] font-black rounded uppercase">Active Promo</span>
+</div>
+</div>
+<div>
+<h4 class="text-h2 text-slate-900 mb-2">Loyalty Growth Campaign</h4>
+<p class="text-body text-slate-500 mb-4">Your "Silver to Gold" transition campaign has increased retention by 14% this month. Keep it active to reach your quarterly goal of 70% returning rate.</p>
+<div class="flex items-center gap-4">
+<button class="text-primary-container font-bold text-sm hover:underline">View Analytics</button>
+<button class="text-slate-400 font-bold text-sm hover:text-slate-600">Dismiss</button>
+</div>
+</div>
+</div>
+<div class="bg-slate-900 text-white rounded-xl p-6 shadow-xl shadow-slate-200 relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="text-h2 font-bold mb-1">Weekly Top Guest</h4>
+<div class="flex items-center gap-3 mt-4">
+<img class="w-12 h-12 rounded-full border-2 border-[#FF5722] object-cover" data-alt="Portrait of a sophisticated young professional woman with a bright and welcoming smile. She is wearing a modern black blazer. The lighting is crisp and airy, following a minimalist corporate aesthetic with high-key illumination." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt9X1V65KJIxHMyDpsKfGITig1z1oCuHLkFLzRH5w0FkqRNKEn5riv_RJvEvb6hQ8z2F_MAW9VlTAlN7WXarhe4oWCAZ4NG6dn7QGnvgXEeiMdlgTei4bGjlS-qZbDaHD09cR23p9RgDDXI4D-ICGcZ6sbCcM1GHO5ujiADaetZ4PpBqWagvoNUPvpGzQTPwmJoMl-haNRx25_uZ3F1HCZSlydC6OXW8sf3ATj6Z1JITd56VUeW8T9eBEfTOPHxUgJvPtacfRN-nMP"/>
+<div>
+<p class="text-sm font-bold">Sara Junaid</p>
+<p class="text-[10px] text-slate-400">Spent PKR 12.5k this week</p>
+</div>
+</div>
+<button class="w-full mt-6 py-2 bg-[#FF5722] text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors">Gift Loyalty Points</button>
+</div>
+<span class="material-symbols-outlined absolute right-[-20px] top-[-20px] text-9xl text-white/5 rotate-12">auto_awesome</span>
+</div>
+</section>
+</main>
+</body></html>

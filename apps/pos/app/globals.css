@@ -1,0 +1,337 @@
+@import "tailwindcss";
+@import "material-symbols/outlined.css";
+@import "../styles/pos-tokens.css";
+
+@theme {
+  --color-primary: var(--pos-primary, #F59E0B);
+  --color-electric-amber: var(--pos-primary, #F59E0B);
+  --color-midnight: #FFFFFF;
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-on-surface: #0F172A;
+  --color-sheet-white: #FFFFFF;
+  --color-sage-green: #10B981;
+  --color-outline-variant: #E2E8F0;
+  --color-card-bg: #FFFFFF;
+  --color-card-border: #E2E8F0;
+  --color-panel-border: #E2E8F0;
+  --color-text-secondary: #475569;
+
+  /* Additional pos tokens from operator home */
+  --color-secondary-fixed-dim: #c7c6c4;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-inverse-on-surface: #313030;
+  --color-surface-container: #F1F5F9;
+  --color-inverse-primary: #855300;
+  --color-surface-container-highest: #E2E8F0;
+  --color-on-tertiary: #003824;
+  --color-surface-container-high: #F8FAFC;
+  --color-on-surface-variant: #475569;
+  --color-on-secondary-fixed-variant: #464745;
+  --color-on-tertiary-container: #004e34;
+  --color-secondary: #c7c6c4;
+  --color-on-primary-fixed-variant: #653e00;
+  --color-on-error: #FFFFFF;
+  --color-inverse-surface: #1E293B;
+  --color-error-container: #FEE2E2;
+  --color-surface-bright: #FFFFFF;
+  --color-tertiary-container: #30c88f;
+  --color-surface-tint: #F59E0B;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-dim: #F1F5F9;
+  --color-on-secondary-fixed: #1a1c1a;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-on-tertiary-fixed: #002113;
+  --color-on-primary-container: #613b00;
+  --color-primary-container: var(--pos-primary, #F59E0B);
+  --color-tertiary: #56e5a9;
+  --color-surface-container-low: #F8FAFC;
+  --color-surface-variant: #F1F5F9;
+  --color-on-secondary: #2f312f;
+  --color-primary-fixed: #ffddb8;
+  --color-primary-fixed-dim: #ffb95f;
+  --color-error: #EF4444;
+  --color-outline: #CBD5E1;
+  --color-on-primary: #FFFFFF;
+  --color-on-error-container: #991B1B;
+  --color-on-secondary-container: #b5b5b2;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-secondary-fixed: #e3e2e0;
+  --color-on-background: #0F172A;
+  --color-secondary-container: #E2E8F0;
+  --color-on-primary-fixed: #2a1700;
+  --color-amber-action: var(--pos-primary, #F59E0B);
+
+  --spacing-gutter: 16px;
+  --spacing-base: 8px;
+  --spacing-touch-min: 48px;
+  --spacing-lg: 24px;
+  --spacing-margin-edge: 24px;
+  --spacing-md: 16px;
+  --spacing-xl: 32px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+
+  --font-label-md: Inter, sans-serif;
+  --font-label-xl: Inter, sans-serif;
+  --font-body-lg: Inter, sans-serif;
+  --font-headline-lg: "Space Grotesk", sans-serif;
+  --font-display-hero: "Space Grotesk", sans-serif;
+  --font-display-price: "Space Grotesk", sans-serif;
+  --font-body-md: Inter, sans-serif;
+  --font-mono-data: Inter, sans-serif;
+  --font-headline-md: "Space Grotesk", sans-serif;
+  --font-clash: "Clash Display", sans-serif;
+  --font-mono: "Space Mono", monospace;
+}
+
+@layer base {
+  :root {
+    --pos-primary: #F59E0B;
+    --pos-primary-dim: rgba(245, 158, 11, 0.12);
+    --pos-primary-glow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+    --pos-primary-rgb: 245, 158, 11;
+
+    /* Backgrounds — Premium Light Mode */
+    --pos-bg-base: #F8FAFC;        /* page background */
+    --pos-bg-raised: #FFFFFF;       /* top bars, cards */
+    --pos-bg-card: #FFFFFF;         /* inner cards */
+    --pos-bg-elevated: #F1F5F9;     /* inputs, buttons */
+    --pos-bg-hover: #E2E8F0;        /* hover state */
+
+    /* Text */
+    --pos-text-primary: #0F172A;
+    --pos-text-secondary: #475569;
+    --pos-text-muted: #94A3B8;
+
+    /* Borders */
+    --pos-border: #E2E8F0;
+    --pos-border-strong: #CBD5E1;
+
+    /* Status */
+    --pos-green: #10B981;
+    --pos-red: #EF4444;
+    --pos-blue: #3B82F6;
+    --pos-yellow: #F59E0B;
+    --pos-purple: #8B5CF6;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  /* ── Kill browser default blue focus ring — MUST override Tailwind ─ */
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+
+  /* ── Custom amber focus ring for inputs & textareas ─────────────── */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B) !important;
+  }
+
+  /* ── Kill the blue browser autofill background ───────────────────── */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #19120a inset !important;
+    -webkit-text-fill-color: #f0e0d1 !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* ── Buttons: subtle amber ring for keyboard nav only ────────────── */
+  button:focus-visible {
+    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B) !important;
+  }
+
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--pos-bg-base);
+    color: var(--pos-text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+  /* Touch feedback */
+  button:active { opacity: 0.85; }
+
+  /* Input base style */
+  input, textarea, select {
+    background-color: var(--pos-bg-elevated) !important;
+    color: var(--pos-text-primary) !important;
+    border: 1px solid var(--pos-border-strong) !important;
+    border-radius: 10px !important;
+  }
+  input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    border-color: var(--pos-primary) !important;
+    box-shadow: var(--pos-primary-glow) !important;
+  }
+
+  /* Placeholder */
+  ::placeholder { color: var(--pos-text-muted) !important; }
+
+  /* Prevent layout issues */
+  #__next, [data-nextjs-scroll-focus-boundary] {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+@layer utilities {
+  .amber-dot-grid {
+    background-image: radial-gradient(circle, var(--color-electric-amber) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.03;
+  }
+
+  .role-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .role-card:hover .chevron {
+    transform: translateX(3px);
+  }
+
+  .role-card:active {
+    transform: scale(0.98);
+  }
+
+  .role-card.selected {
+    border-color: var(--color-electric-amber);
+  }
+
+  .role-card.selected::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--color-electric-amber);
+  }
+
+  .numpad-key {
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .numpad-key:active {
+    transform: scale(0.95);
+  }
+
+  .pin-dot {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  .shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+  }
+
+  @keyframes success-fill {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .success-dot {
+    background-color: #10B981 !important;
+    border-color: #10B981 !important;
+    animation: success-fill 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .slide-down {
+    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-up {
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+
+  .material-symbols-outlined { 
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24 !important; 
+    font-family: 'Material Symbols Outlined' !important;
+  }
+
+  .font-clash { font-family: 'Clash Display', sans-serif; }
+  .clash-display { font-family: 'Space Grotesk', sans-serif; }
+  .font-mono { font-family: 'Space Mono', monospace; }
+  
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  @keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  }
+  .pulse-red { animation: pulse-red 1.8s ease-in-out infinite; }
+  
+  @keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  }
+  .pulse-green { animation: pulse-green 2s ease-in-out infinite; }
+  
+  @keyframes pulse-amber {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 116, 0.35); }
+    50% { box-shadow: 0 0 0 5px rgba(255, 193, 116, 0); }
+  }
+  .pulse-amber { animation: pulse-amber 2.5s ease-in-out infinite; }
+
+  .active-order-chip {
+    transition: transform 0.15s ease-out;
+  }
+  .active-order-chip:active {
+    transform: scale(0.96);
+  }
+  .hero-card:active {
+    transform: scale(0.98);
+  }
+  
+  /* Entrance animations for shift open / login */
+  @keyframes entrance-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes entrance-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-entrance-fade { animation: entrance-fade 0.4s ease forwards; }
+  .animate-entrance-up { animation: entrance-up 0.5s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+}

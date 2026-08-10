@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS | Operator Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .amber-dot-grid {
+            background-image: radial-gradient(circle, #ffc174 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.03;
+        }
+        .pin-dot {
+            transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .role-card.active {
+            border-color: #ffc174;
+            background-color: #3c3329;
+        }
+        .numpad-key:active {
+            transform: scale(0.95);
+        }
+        .fade-in {
+            animation: fadeIn 300ms ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#3c3329",
+                    "on-tertiary-fixed": "#1a1c1a",
+                    "primary-fixed-dim": "#ffb95f",
+                    "surface-bright": "#41382e",
+                    "on-primary-fixed": "#2a1700",
+                    "on-primary": "#472a00",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "surface": "#19120a",
+                    "background": "#19120a",
+                    "on-tertiary-container": "#434442",
+                    "secondary-container": "#4a4949",
+                    "tertiary-container": "#b1b1ae",
+                    "surface-container-low": "#221a12",
+                    "primary": "#ffc174",
+                    "on-tertiary": "#2f312f",
+                    "surface-tint": "#ffb95f",
+                    "primary-fixed": "#ffddb8",
+                    "surface-container-lowest": "#140d06",
+                    "secondary": "#c9c6c5",
+                    "on-secondary-container": "#bab8b7",
+                    "on-secondary": "#313030",
+                    "inverse-primary": "#855300",
+                    "surface-dim": "#19120a",
+                    "secondary-fixed-dim": "#c9c6c5",
+                    "on-surface": "#f0e0d1",
+                    "on-surface-variant": "#d8c3ad",
+                    "on-error-container": "#ffdad6",
+                    "on-error": "#690005",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-primary-container": "#613b00",
+                    "on-secondary-fixed-variant": "#474646",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "outline": "#a08e7a",
+                    "on-background": "#f0e0d1",
+                    "surface-container": "#261e15",
+                    "primary-container": "#f59e0b",
+                    "outline-variant": "#534434",
+                    "surface-container-highest": "#3c3329",
+                    "inverse-surface": "#f0e0d1",
+                    "on-primary-fixed-variant": "#653e00",
+                    "error-container": "#93000a",
+                    "surface-container-high": "#31281f",
+                    "tertiary": "#cdccca",
+                    "inverse-on-surface": "#382f25",
+                    "on-tertiary-fixed-variant": "#464745",
+                    "tertiary-fixed": "#e3e2e0",
+                    "error": "#ffb4ab"
+            },
+            "borderRadius": {
+                    "DEFAULT": "4px",
+                    "lg": "8px",
+                    "xl": "12px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "margin-mobile": "16px",
+                    "xl": "32px",
+                    "base": "8px",
+                    "gutter": "16px",
+                    "md": "16px",
+                    "margin-desktop": "32px",
+                    "xs": "4px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "currency-display": ["Clash Display"],
+                    "headline-md": ["Clash Display"],
+                    "headline-sm": ["Clash Display"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg": ["Clash Display"],
+                    "display-lg": ["Clash Display"],
+                    "mono": ["Space Mono"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "400px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary selection:text-on-primary-container overflow-hidden">
+<main class="flex h-screen w-full overflow-hidden">
+<!-- LEFT PANEL: Brand & Status -->
+<section class="relative w-1/2 bg-[#0D0D0D] flex flex-col justify-between p-12 border-r border-outline-variant/30">
+<div class="absolute inset-0 amber-dot-grid pointer-events-none"></div>
+<!-- Logo Section -->
+<div class="relative z-10 flex items-center gap-4">
+<div class="w-12 h-12 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<h1 class="font-headline-md text-display-lg text-white leading-none">SwiftServe</h1>
+</div>
+<!-- Time & Greeting -->
+<div class="relative z-10">
+<div class="font-mono text-[80px] font-bold text-white tracking-tighter leading-none mb-4" id="clock">
+                    02:15
+                </div>
+<div class="space-y-1">
+<p class="font-label-lg text-primary uppercase tracking-widest">Friday, 29 May 2025</p>
+<p class="font-headline-sm text-primary">Good morning, Chef</p>
+</div>
+</div>
+<!-- Context Info -->
+<div class="relative z-10 flex items-end justify-between">
+<div>
+<h2 class="font-headline-sm text-white mb-1">The Grand Bistro</h2>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="font-label-md text-emerald-500 uppercase tracking-wider">Morning Shift Active</span>
+</div>
+</div>
+<div class="text-right opacity-40">
+<p class="font-label-md text-white">v4.82.0</p>
+<p class="font-label-md text-white">Terminal ID: TB-04</p>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL: Login -->
+<section class="w-1/2 bg-[#161616] flex items-center justify-center p-12 relative overflow-hidden">
+<!-- Step 1: Role Selection -->
+<div class="w-full max-w-md space-y-8 fade-in" id="role-step">
+<header class="text-center space-y-2">
+<h3 class="font-headline-md text-on-surface">Select your role</h3>
+<p class="font-body-md text-on-surface-variant">Identify yourself to begin the shift</p>
+</header>
+<div class="grid grid-cols-1 gap-3">
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Manager', 'manage_accounts')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">manage_accounts</span>
+<span class="font-body-md font-semibold text-white">Manager</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Head Cashier', 'account_balance_wallet')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">account_balance_wallet</span>
+<span class="font-body-md font-semibold text-white">Head Cashier</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Cashier', 'payments')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">payments</span>
+<span class="font-body-md font-semibold text-white">Cashier</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Waiter', 'restaurant')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">restaurant</span>
+<span class="font-body-md font-semibold text-white">Waiter</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Kitchen Staff', 'outdoor_grill')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">outdoor_grill</span>
+<span class="font-body-md font-semibold text-white">Kitchen Staff</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+<button class="role-card group flex items-center justify-between h-14 px-6 bg-[#1E1E1E] border border-outline-variant rounded-xl transition-all duration-150 hover:bg-surface-container-highest active:scale-[0.98]" onclick="selectRole('Delivery', 'delivery_dining')">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors">delivery_dining</span>
+<span class="font-body-md font-semibold text-white">Delivery</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Step 2: PIN Entry (Hidden) -->
+<div class="hidden w-full max-w-sm space-y-12 fade-in" id="pin-step">
+<header class="text-center space-y-4">
+<button class="flex items-center gap-2 mx-auto text-on-surface-variant hover:text-primary transition-colors" onclick="goBack()">
+<span class="material-symbols-outlined text-sm">arrow_back</span>
+<span class="font-label-lg uppercase tracking-wider">Change Role</span>
+</button>
+<div class="space-y-1">
+<h3 class="font-headline-md text-white" id="active-role-title">Manager Access</h3>
+<p class="font-body-md text-on-surface-variant">Enter your security PIN</p>
+</div>
+</header>
+<!-- PIN Dots -->
+<div class="flex justify-center gap-6">
+<div class="pin-dot w-4 h-4 rounded-full border-2 border-outline-variant bg-transparent"></div>
+<div class="pin-dot w-4 h-4 rounded-full border-2 border-outline-variant bg-transparent"></div>
+<div class="pin-dot w-4 h-4 rounded-full border-2 border-outline-variant bg-transparent"></div>
+<div class="pin-dot w-4 h-4 rounded-full border-2 border-outline-variant bg-transparent"></div>
+</div>
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-3">
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('1')">
+<span class="text-xl font-bold text-white leading-none">1</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('2')">
+<span class="text-xl font-bold text-white leading-none">2</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">abc</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('3')">
+<span class="text-xl font-bold text-white leading-none">3</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">def</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('4')">
+<span class="text-xl font-bold text-white leading-none">4</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">ghi</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('5')">
+<span class="text-xl font-bold text-white leading-none">5</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">jkl</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('6')">
+<span class="text-xl font-bold text-white leading-none">6</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">mno</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('7')">
+<span class="text-xl font-bold text-white leading-none">7</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">pqrs</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('8')">
+<span class="text-xl font-bold text-white leading-none">8</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">tuv</span>
+</button>
+<button class="numpad-key flex flex-col items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('9')">
+<span class="text-xl font-bold text-white leading-none">9</span>
+<span class="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest mt-1">wxyz</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-red-900/20 hover:border-red-500/50 transition-all duration-150" onclick="clearPin()">
+<span class="material-symbols-outlined text-red-500">backspace</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 hover:bg-surface-container-highest transition-all duration-150" onclick="addPin('0')">
+<span class="text-xl font-bold text-white leading-none">0</span>
+</button>
+<button class="numpad-key flex items-center justify-center h-16 bg-[#1E1E1E] rounded-xl border border-outline-variant/30 opacity-50 cursor-not-allowed transition-all duration-150" id="confirm-btn" onclick="validatePin()">
+<span class="material-symbols-outlined text-primary">login</span>
+</button>
+</div>
+</div>
+<!-- Decorative Accents -->
+<div class="absolute bottom-12 right-12 flex gap-4 opacity-20 pointer-events-none">
+<span class="material-symbols-outlined text-4xl">wifi</span>
+<span class="material-symbols-outlined text-4xl">battery_charging_full</span>
+</div>
+</section>
+</main>
+<script>
+        let pin = "";
+        const maxPinLength = 4;
+        const roleStep = document.getElementById('role-step');
+        const pinStep = document.getElementById('pin-step');
+        const roleTitle = document.getElementById('active-role-title');
+        const dots = document.querySelectorAll('.pin-dot');
+        const confirmBtn = document.getElementById('confirm-btn');
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clock').textContent = `${hours}:${minutes}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function selectRole(role, icon) {
+            roleStep.classList.add('hidden');
+            pinStep.classList.remove('hidden');
+            roleTitle.textContent = `${role} Access`;
+            clearPin();
+        }
+
+        function goBack() {
+            pinStep.classList.add('hidden');
+            roleStep.classList.remove('hidden');
+            clearPin();
+        }
+
+        function addPin(num) {
+            if (pin.length < maxPinLength) {
+                pin += num;
+                updateDots();
+            }
+        }
+
+        function clearPin() {
+            pin = "";
+            updateDots();
+        }
+
+        function updateDots() {
+            dots.forEach((dot, index) => {
+                if (index < pin.length) {
+                    dot.classList.add('bg-primary', 'border-primary');
+                    dot.classList.remove('border-outline-variant');
+                } else {
+                    dot.classList.remove('bg-primary', 'border-primary');
+                    dot.classList.add('border-outline-variant');
+                }
+            });
+
+            if (pin.length === maxPinLength) {
+                confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-[#1E1E1E]');
+                confirmBtn.classList.add('bg-primary/10', 'border-primary', 'hover:bg-primary/20');
+            } else {
+                confirmBtn.classList.add('opacity-50', 'cursor-not-allowed', 'bg-[#1E1E1E]');
+                confirmBtn.classList.remove('bg-primary/10', 'border-primary', 'hover:bg-primary/20');
+            }
+        }
+
+        function validatePin() {
+            if (pin.length === maxPinLength) {
+                // Success feedback
+                const container = document.body;
+                container.style.transition = 'opacity 500ms ease-out';
+                container.style.opacity = '0';
+                setTimeout(() => {
+                    alert('Authenticated. Loading Workspace...');
+                    window.location.reload();
+                }, 500);
+            }
+        }
+
+        // Add keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (pinStep.classList.contains('hidden')) return;
+            
+            if (e.key >= '0' && e.key <= '9') {
+                addPin(e.key);
+            } else if (e.key === 'Backspace') {
+                clearPin();
+            } else if (e.key === 'Enter') {
+                validatePin();
+            } else if (e.key === 'Escape') {
+                goBack();
+            }
+        });
+    </script>
+</body></html>

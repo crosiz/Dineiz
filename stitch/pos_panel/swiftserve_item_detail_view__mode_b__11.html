@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Item Detail</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-high": "#31281f",
+                        "surface-container-lowest": "#140d06",
+                        "primary-container": "#f59e0b",
+                        "inverse-on-surface": "#382f25",
+                        "surface-container-low": "#221a12",
+                        "secondary-container": "#4a4949",
+                        "on-error": "#690005",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-secondary-container": "#bab8b7",
+                        "tertiary-container": "#b1b1ae",
+                        "on-surface": "#f0e0d1",
+                        "on-secondary": "#313030",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "surface-tint": "#ffb95f",
+                        "surface-container": "#261e15",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-primary": "#472a00",
+                        "on-primary-fixed-variant": "#653e00",
+                        "inverse-primary": "#855300",
+                        "surface-bright": "#41382e",
+                        "primary-fixed": "#ffddb8",
+                        "on-tertiary": "#2f312f",
+                        "on-error-container": "#ffdad6",
+                        "surface-dim": "#19120a",
+                        "on-tertiary-container": "#434442",
+                        "outline-variant": "#534434",
+                        "secondary": "#c9c6c5",
+                        "background": "#19120a",
+                        "error": "#ffb4ab",
+                        "surface-variant": "#3c3329",
+                        "primary": "#ffc174",
+                        "on-primary-container": "#613b00",
+                        "inverse-surface": "#f0e0d1",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "error-container": "#93000a",
+                        "surface": "#19120a",
+                        "secondary-fixed": "#e5e2e1",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-highest": "#3c3329",
+                        "primary-fixed-dim": "#ffb95f",
+                        "outline": "#a08e7a",
+                        "on-secondary-fixed-variant": "#474646",
+                        "on-primary-fixed": "#2a1700",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "tertiary": "#cdccca",
+                        "on-background": "#f0e0d1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "gutter": "16px",
+                        "margin-desktop": "32px",
+                        "base": "8px",
+                        "sm": "8px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Clash Display"],
+                        "label-md": ["Inter"],
+                        "currency-display": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Clash Display"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "body-md": ["Inter"],
+                        "label-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #0D0D0D;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bottom-sheet {
+            height: 88vh;
+            border-top-left-radius: 2rem;
+            border-top-right-radius: 2rem;
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.8);
+            transform: translateY(0);
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+        .dimmer-overlay {
+            background-color: rgba(13, 13, 13, 0.75);
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+        }
+        .drag-handle {
+            width: 48px;
+            height: 4px;
+            background: #534434;
+            border-radius: 2px;
+        }
+        .industrial-border {
+            border: 1px solid #534434;
+        }
+        .electric-amber-btn {
+            background-color: #f59e0b;
+            color: #472a00;
+            transition: all 0.2s ease;
+        }
+        .electric-amber-btn:active {
+            transform: scale(0.98);
+            filter: brightness(1.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #19120a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #534434;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen w-screen overflow-hidden">
+<!-- Background Order Entry Screen (Dimmed) -->
+<div class="absolute inset-0 z-0">
+<img alt="Background POS System" class="w-full h-full object-cover grayscale-[0.2]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBb5d7Jb2pfDLaKTGg0Xcf3ek70ACCI-BlCeflSqElD8HFJcH2AHeNwt1TL-38KlypEnKw1jtdd_S0bSu3gVUHFLMN3TUjsUHcZKrvZvEs27pcxdElfLAJFwMhxUyV4UlDGgZZw2KPiwTZs1IrXjYMWhoksIElmwoSr4IdxdywLOWcwY90L84Zt6H7zbLTm0cHXIbJb4X3EGYjqxBldD1DOZhSG_S4S7ShadcdNJ8MWLrgxoNPBjf3FJTa8TWEHkB41MeGoHv-qX0MJ"/>
+<div class="dimmer-overlay"></div>
+</div>
+<!-- Bottom Sheet -->
+<div class="bottom-sheet fixed bottom-0 left-0 right-0 z-50 bg-surface flex flex-col industrial-border border-b-0">
+<!-- Drag Handle and Close -->
+<div class="flex items-center justify-center relative py-4 shrink-0">
+<div class="drag-handle"></div>
+<button class="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-variant transition-colors" onclick="window.history.back()">
+<span class="material-symbols-outlined text-on-surface" data-icon="close">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto custom-scrollbar px-margin-desktop pb-xl">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row gap-lg items-start mb-lg">
+<div class="w-full md:w-1/3 aspect-[4/3] rounded-xl overflow-hidden industrial-border bg-surface-container">
+<img alt="Braised Beef Short Ribs" class="w-full h-full object-cover" data-alt="A high-end restaurant photography of braised beef short ribs glazed in a rich, dark BBQ reduction. The meat is tender and glistening under professional warm spotlighting. It is served on a heavy industrial-style ceramic plate with vibrant roasted root vegetables and a swirl of creamy garlic mashed potatoes. The atmosphere is sophisticated with deep amber and midnight tones, emphasizing a premium dining experience." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQtnqmk3bPXubBAv2wTqMoCo-QrOKsqnOB73HmJoytc8QZlkQyM5rSlLJ3k6tmPfNXTBHs5IiS_O7OSBj_xiabPA-a3L6UsX94rlf4SHIbMGrhWab_0iwleSyWFKPhoZ2LIGOw3eS_aj9R9BX_LV3onNo3JqrVdt9qysYXPqAIq7lAQJTwgWSQUayAqXOs1jrl4IrrfRqhtHEHqT9lbZwvriex1kCW72HJXLLz6NNMUp4wiKzZMkC695SNy1pqgtLQUtZhAaoL7Cpk"/>
+</div>
+<div class="flex-1 pt-4">
+<div class="flex flex-wrap gap-sm mb-sm">
+<span class="px-3 py-1 bg-surface-container-high text-primary font-label-lg text-label-lg rounded-full uppercase tracking-wider">Grills</span>
+<div class="flex gap-xs">
+<span class="px-2 py-1 industrial-border text-on-surface-variant font-label-md text-label-md rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="eco">eco</span> GF
+                            </span>
+<span class="px-2 py-1 industrial-border text-error font-label-md text-label-md rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="electric_bolt">electric_bolt</span> 🌶
+                            </span>
+</div>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface mb-2 uppercase">Braised Beef Short Ribs</h1>
+<p class="font-currency-display text-currency-display text-primary-container">PKR 2,900</p>
+</div>
+</div>
+<!-- Detail Description -->
+<div class="mb-lg max-w-4xl">
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase mb-base tracking-widest">Description</h3>
+<p class="font-body-lg text-body-lg text-on-surface leading-relaxed">
+                    Slow-cooked beef short ribs glazed in a smoky BBQ reduction, served with roasted root vegetables and garlic mash. Each rib is braised for 12 hours in a signature bone broth to ensure melt-in-your-mouth tenderness.
+                </p>
+</div>
+<!-- Info Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-gutter mb-lg">
+<div class="bg-surface-container p-lg rounded-xl industrial-border flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-primary-container mb-2" data-icon="schedule">schedule</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Prep Time</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">35 min</span>
+</div>
+<div class="bg-surface-container p-lg rounded-xl industrial-border flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-primary-container mb-2" data-icon="nutrition">nutrition</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Calories</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">920 kcal</span>
+</div>
+<div class="bg-surface-container p-lg rounded-xl industrial-border flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-primary-container mb-2" data-icon="groups">groups</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Serves</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">1-2 people</span>
+</div>
+<div class="bg-surface-container p-lg rounded-xl industrial-border flex flex-col items-center justify-center text-center">
+<span class="material-symbols-outlined text-primary-container mb-2" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Rating</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">4.9 ★</span>
+</div>
+</div>
+<!-- Allergen Warning -->
+<div class="bg-surface-container-high border-l-4 border-primary-container p-md flex items-center gap-md mb-lg">
+<span class="material-symbols-outlined text-primary-container" data-icon="warning">warning</span>
+<p class="font-label-lg text-label-lg text-on-surface font-semibold uppercase tracking-wide">Contains allergens: Soy, Garlic</p>
+</div>
+<!-- Controls Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-xl">
+<!-- Quantity Stepper -->
+<div>
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase mb-md tracking-widest">Quantity</h3>
+<div class="flex items-center industrial-border rounded-xl bg-surface-container-low h-20 overflow-hidden w-full max-w-[300px]">
+<button class="flex-1 h-full flex items-center justify-center hover:bg-surface-container-high active:bg-surface-container-highest transition-colors" onclick="decrement()">
+<span class="material-symbols-outlined text-on-surface text-3xl" data-icon="remove">remove</span>
+</button>
+<div class="w-20 h-full flex items-center justify-center border-x border-outline-variant">
+<span class="font-headline-lg text-headline-lg text-primary-container" id="qty-val">1</span>
+</div>
+<button class="flex-1 h-full flex items-center justify-center hover:bg-surface-container-high active:bg-surface-container-highest transition-colors" onclick="increment()">
+<span class="material-symbols-outlined text-on-surface text-3xl" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Special Instructions -->
+<div>
+<h3 class="font-label-lg text-label-lg text-on-surface-variant uppercase mb-md tracking-widest">Special Instructions</h3>
+<textarea class="w-full bg-surface-container-low industrial-border rounded-xl p-md text-on-surface font-body-md focus:ring-2 focus:ring-primary-container focus:outline-none transition-all placeholder:text-on-surface-variant/40" placeholder="Add notes (e.g. Extra reduction sauce, no garlic mash substitute with...)" rows="3"></textarea>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<div class="px-margin-desktop py-lg bg-surface border-t border-outline-variant shrink-0">
+<button class="w-full h-20 electric-amber-btn rounded-xl flex items-center justify-center gap-md shadow-lg group">
+<span class="material-symbols-outlined text-3xl group-active:scale-110 transition-transform" data-icon="shopping_basket">shopping_basket</span>
+<span class="font-headline-md text-headline-md uppercase">Add to Order · PKR 2,900</span>
+</button>
+</div>
+</div>
+<script>
+        let qty = 1;
+        const qtyDisplay = document.getElementById('qty-val');
+        
+        function increment() {
+            qty++;
+            qtyDisplay.textContent = qty;
+        }
+        
+        function decrement() {
+            if (qty > 1) {
+                qty--;
+                qtyDisplay.textContent = qty;
+            }
+        }
+
+        // Micro-interaction for drag handle simulation or close logic
+        document.querySelector('.drag-handle').addEventListener('mousedown', (e) => {
+            // Simplified visual feedback for drag
+            document.querySelector('.bottom-sheet').style.transform = 'translateY(10px)';
+        });
+        document.addEventListener('mouseup', () => {
+            document.querySelector('.bottom-sheet').style.transform = 'translateY(0)';
+        });
+    </script>
+</body></html>

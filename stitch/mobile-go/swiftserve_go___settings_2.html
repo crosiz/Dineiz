@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Inter', sans-serif;
+            background-color: #1e100c;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(39, 24, 19, 0.8);
+            backdrop-filter: blur(8px);
+        }
+        /* Custom scrollbar suppression for clean mobile feel */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-variant": "#43302b",
+                    "primary": "#ffb5a0",
+                    "surface-container-low": "#271813",
+                    "background": "#1e100c",
+                    "on-error-container": "#ffdad6",
+                    "outline": "#ab8980",
+                    "surface": "#1e100c",
+                    "inverse-primary": "#b02f00",
+                    "surface-container-high": "#372621",
+                    "on-secondary-container": "#a7b6cc",
+                    "inverse-surface": "#fadcd4",
+                    "on-tertiary-fixed": "#002113",
+                    "surface-tint": "#ffb5a0",
+                    "primary-container": "#ff5722",
+                    "on-secondary-fixed": "#0d1c2d",
+                    "surface-bright": "#483530",
+                    "on-secondary-fixed-variant": "#39485a",
+                    "error-container": "#93000a",
+                    "tertiary": "#4edea3",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "on-secondary": "#233143",
+                    "error": "#ffb4ab",
+                    "on-primary-fixed-variant": "#862200",
+                    "on-surface": "#fadcd4",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "on-tertiary-container": "#00311f",
+                    "surface-container": "#2c1c17",
+                    "secondary-container": "#39485a",
+                    "surface-container-lowest": "#180b07",
+                    "tertiary-container": "#00a572",
+                    "on-error": "#690005",
+                    "on-primary-fixed": "#3b0900",
+                    "on-background": "#fadcd4",
+                    "secondary-fixed": "#d4e4fa",
+                    "surface-dim": "#1e100c",
+                    "secondary-fixed-dim": "#b9c8de",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "on-surface-variant": "#e4beb4",
+                    "primary-fixed": "#ffdbd1",
+                    "surface-container-highest": "#43302b",
+                    "outline-variant": "#5b4039",
+                    "inverse-on-surface": "#3e2c27",
+                    "on-tertiary": "#003824",
+                    "secondary": "#b9c8de",
+                    "on-primary-container": "#541200",
+                    "on-primary": "#5f1500",
+                    "tertiary-fixed": "#6ffbbe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "touch-target-min": "48px",
+                    "grid-gutter": "12px",
+                    "unit": "4px",
+                    "container-padding": "16px",
+                    "stack-gap": "12px"
+            },
+            "fontFamily": {
+                    "label-md": ["Space Grotesk"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Space Grotesk"],
+                    "headline-md": ["Space Grotesk"],
+                    "body-sm": ["Inter"],
+                    "label-xl": ["Space Grotesk"],
+                    "label-sm": ["Space Grotesk"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="bg-background border-b border-outline-variant flex justify-between items-center w-full px-container-padding h-touch-target-min sticky top-0 z-50">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant active:scale-95 duration-100" data-icon="arrow_back">arrow_back</span>
+<h1 class="text-[18px] font-bold text-on-surface">Settings</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container-highest p-2 rounded-full transition-colors active:scale-95" data-icon="search">search</span>
+</div>
+</header>
+<main class="flex flex-col gap-6 pt-2 overflow-x-hidden">
+<!-- Profile Section -->
+<section class="mx-container-padding bg-surface-container-low rounded-[14px] p-4 mt-2 flex items-center justify-between border border-outline-variant shadow-sm active:bg-surface-container transition-colors duration-150">
+<div class="flex items-center gap-4">
+<div class="w-[52px] h-[52px] rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-[28px]" data-icon="restaurant" data-weight="fill">restaurant</span>
+</div>
+<div class="flex flex-col">
+<h2 class="text-body-md font-bold text-on-surface">Ahmed Biryani House</h2>
+<span class="text-label-sm text-[#64748B]">Free Plan</span>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container-high active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="edit">edit</span>
+</button>
+</section>
+<!-- Settings Groups -->
+<div class="flex flex-col gap-8 px-container-padding">
+<!-- Billing & Payments -->
+<div>
+<h3 class="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2 ml-1">Billing &amp; Payments</h3>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="payments">payments</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Tax Settings</span>
+<span class="text-[12px] text-on-surface-variant">GST rate, FBR NTN</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="account_balance">account_balance</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Payment Methods</span>
+<span class="text-[12px] text-on-surface-variant">Cash, JazzCash, EasyPaisa...</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="receipt">receipt</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Receipt Footer</span>
+<span class="text-[12px] text-on-surface-variant">Customize message</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</div>
+<!-- Printer -->
+<div>
+<h3 class="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2 ml-1">Printer</h3>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="print">print</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Bluetooth Printer</span>
+<span class="text-[12px] text-tertiary">HP58 connected</span>
+</div>
+</div>
+<div class="w-10 h-6 bg-primary-container rounded-full relative p-1 flex items-center justify-end">
+<div class="w-4 h-4 bg-white rounded-full"></div>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="description">description</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Paper Size</span>
+<span class="text-[12px] text-on-surface-variant">58mm / 80mm</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="expand_more">expand_more</span>
+</div>
+<div class="p-4">
+<button class="w-full h-11 flex items-center justify-center gap-2 border border-primary-container text-primary-container rounded-lg font-label-md active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="print">print</span>
+                            Print Test
+                        </button>
+</div>
+</div>
+</div>
+<!-- Appearance -->
+<div>
+<h3 class="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2 ml-1">Appearance</h3>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="palette">palette</span>
+<span class="text-body-md text-on-surface">Brand Color</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary-container border-2 border-outline-variant"></div>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="dark_mode">dark_mode</span>
+<span class="text-body-md text-on-surface">Theme</span>
+</div>
+<span class="text-label-sm text-on-surface-variant">Dark Default</span>
+</div>
+</div>
+</div>
+<!-- Data -->
+<div>
+<h3 class="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2 ml-1">Data</h3>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="cloud_sync">cloud_sync</span>
+<div class="flex flex-col">
+<span class="text-body-md text-on-surface">Sync Status</span>
+<span class="text-[12px] text-tertiary">Last synced 2 min ago</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-tertiary" data-icon="check_circle">check_circle</span>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="file_upload">file_upload</span>
+<span class="text-body-md text-on-surface">Export Data (Excel)</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="download">download</span>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error" data-icon="delete_sweep">delete_sweep</span>
+<span class="text-body-md text-error">Clear Offline Data</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Account -->
+<div>
+<h3 class="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-2 ml-1">Account</h3>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl overflow-hidden divide-y divide-outline-variant/30">
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="person">person</span>
+<span class="text-body-md text-on-surface">Account Details</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Upgrade to Pro -->
+<div class="flex items-center justify-between p-4 bg-primary-container/10 border-l-4 border-primary-container active:bg-primary-container/20 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary-container" data-icon="rocket_launch">rocket_launch</span>
+<div class="flex flex-col">
+<span class="text-body-md font-bold text-primary-container">Upgrade to Pro</span>
+<span class="text-[12px] text-on-surface-variant">Unlock unlimited orders</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary-container animate-pulse" data-icon="arrow_forward">arrow_forward</span>
+</div>
+<div class="flex items-center justify-between p-4 active:bg-surface-container transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error" data-icon="logout">logout</span>
+<span class="text-body-md text-error font-medium">Sign Out</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Text -->
+<div class="flex flex-col items-center gap-1 opacity-40 mt-4 pb-8">
+<span class="text-label-sm">SwiftServe Go v2.4.0</span>
+<span class="text-[10px]">Built for high-velocity hospitality</span>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center bg-surface-container px-2 pb-safe z-50 h-16 shadow-lg border-t border-outline-variant">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant px-4 py-1 rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="table_restaurant">table_restaurant</span>
+<span class="font-label-sm text-label-sm">Tables</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant px-4 py-1 rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant px-4 py-1 rounded-full transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-label-sm text-label-sm">Menu</span>
+</button>
+<!-- ACTIVE: History -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 transition-all active:scale-90">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</button>
+</nav>
+<!-- Micro-interaction script -->
+<script>
+        document.querySelectorAll('button, .active\\:bg-surface-container').forEach(el => {
+            el.addEventListener('touchstart', function() {
+                this.style.opacity = '0.7';
+            });
+            el.addEventListener('touchend', function() {
+                this.style.opacity = '1';
+            });
+        });
+
+        // Simple mock behavior for printer toggle
+        const printerToggle = document.querySelector('.bg-primary-container.rounded-full.relative');
+        if(printerToggle) {
+            printerToggle.addEventListener('click', function() {
+                const inner = this.querySelector('div');
+                const isOff = this.classList.contains('bg-outline-variant');
+                if(isOff) {
+                    this.classList.remove('bg-outline-variant');
+                    this.classList.add('bg-primary-container');
+                    this.classList.replace('justify-start', 'justify-end');
+                } else {
+                    this.classList.add('bg-outline-variant');
+                    this.classList.remove('bg-primary-container');
+                    this.classList.replace('justify-end', 'justify-start');
+                }
+            });
+        }
+    </script>
+</body></html>

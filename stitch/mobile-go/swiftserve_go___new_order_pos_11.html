@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            background-color: #0A0A0F;
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .font-space { font-family: 'Space Grotesk', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Custom subtle glow for Swift Orange */
+        .glow-primary {
+            box-shadow: 0 0 15px rgba(255, 87, 34, 0.15);
+        }
+        .active-pill {
+            background-color: #ff5722;
+            color: white;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#1e100c",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "inverse-surface": "#fadcd4",
+                        "on-surface-variant": "#e4beb4",
+                        "error": "#ffb4ab",
+                        "surface-container": "#2c1c17",
+                        "tertiary-container": "#00a572",
+                        "primary-container": "#ff5722",
+                        "background": "#0A0A0F",
+                        "on-primary-fixed": "#3b0900",
+                        "on-primary": "#ffffff",
+                        "outline-variant": "#5b4039",
+                        "on-error-container": "#ffdad6",
+                        "on-surface": "#fadcd4",
+                        "inverse-on-surface": "#3e2c27",
+                        "tertiary": "#4edea3",
+                        "surface-container-high": "#372621",
+                        "secondary-fixed-dim": "#b9c8de",
+                        "on-secondary-fixed-variant": "#39485a",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-tint": "#ffb5a0",
+                        "secondary": "#b9c8de",
+                        "on-primary-fixed-variant": "#862200",
+                        "surface-bright": "#483530",
+                        "primary-fixed": "#ffdbd1",
+                        "on-secondary-fixed": "#0d1c2d",
+                        "error-container": "#93000a",
+                        "surface-container-low": "#271813",
+                        "outline": "#ab8980",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-primary-container": "#541200",
+                        "on-secondary": "#233143",
+                        "surface-container-lowest": "#180b07",
+                        "secondary-container": "#39485a",
+                        "on-tertiary": "#003824",
+                        "tertiary-fixed": "#6ffbbe",
+                        "surface": "#1e100c",
+                        "on-secondary-container": "#a7b6cc",
+                        "on-background": "#fadcd4",
+                        "surface-variant": "#43302b",
+                        "surface-container-highest": "#43302b",
+                        "secondary-fixed": "#d4e4fa",
+                        "on-tertiary-container": "#00311f",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "inverse-primary": "#b02f00",
+                        "primary": "#FF5722",
+                        "on-error": "#690005"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "4px",
+                        "lg": "8px",
+                        "xl": "12px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Space Grotesk"],
+                        "label-sm": ["Space Grotesk"],
+                        "label-md": ["Space Grotesk"],
+                        "headline-md": ["Space Grotesk"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface select-none">
+<!-- Top Bar Component -->
+<header class="h-[56px] bg-[#111827] sticky top-0 z-50 flex items-center justify-between px-container-padding">
+<div class="flex items-center justify-center w-9 h-9 rounded-full bg-[#1E293B] active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">close</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-white font-space">New Order</h1>
+<div class="relative active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-primary text-[28px]">shopping_cart</span>
+<div class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-[#111827]">3</div>
+</div>
+</header>
+<main class="pb-32">
+<!-- Order Type Selector -->
+<section class="px-container-padding py-stack-gap">
+<div class="flex gap-2 p-1 bg-surface-container rounded-xl">
+<button class="flex-1 py-2 rounded-lg font-label-md text-label-md active-pill transition-colors flex items-center justify-center gap-2">
+                    Dine-In
+                    <div class="bg-white/20 px-2 py-0.5 rounded flex items-center gap-1 text-[11px]">
+                        Table 1 <span class="material-symbols-outlined text-[14px]">expand_more</span>
+</div>
+</button>
+<button class="flex-1 py-2 rounded-lg font-label-md text-label-md text-on-surface-variant hover:bg-surface-variant/30 transition-colors">
+                    Takeaway
+                </button>
+</div>
+</section>
+<!-- Category Tabs -->
+<section class="mb-stack-gap">
+<div class="flex overflow-x-auto no-scrollbar px-container-padding gap-6 border-b border-outline-variant/30">
+<button class="pb-3 border-b-2 border-primary text-primary font-label-md text-label-md whitespace-nowrap">All</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Biryani</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Drinks</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Extras</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant font-label-md text-label-md whitespace-nowrap">Desserts</button>
+</div>
+</section>
+<!-- Search Bar -->
+<section class="px-container-padding mb-stack-gap">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full h-11 bg-[#1A1A24] border-none border-b border-outline/30 focus:border-primary focus:ring-0 text-body-md rounded-lg pl-10 text-on-surface placeholder:text-on-surface-variant/50 transition-all" placeholder="Search items..." type="text"/>
+</div>
+</section>
+<!-- Items Grid -->
+<section class="px-container-padding grid grid-cols-2 gap-3">
+<!-- Item 1 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden">
+<div class="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full z-10">2</div>
+<div class="h-24 w-full bg-gradient-to-br from-primary/20 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🍛
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Beef Biryani</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 450</p>
+</div>
+<!-- Item 2 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden">
+<div class="h-24 w-full bg-gradient-to-br from-tertiary/20 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🍗
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Chicken Biryani</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 350</p>
+</div>
+<!-- Item 3 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden">
+<div class="h-24 w-full bg-gradient-to-br from-blue-500/20 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🥤
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Cold Drink</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 80</p>
+</div>
+<!-- Item 4 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden">
+<div class="h-24 w-full bg-gradient-to-br from-green-500/20 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🥣
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Raita</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 40</p>
+</div>
+<!-- Item 5 -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden">
+<div class="h-24 w-full bg-gradient-to-br from-yellow-500/20 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🍮
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Special Kheer</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 120</p>
+</div>
+<!-- Item 6 Placeholder -->
+<div class="bg-[#16161E] border border-[#2D2D39] rounded-xl p-4 relative active:scale-95 transition-transform overflow-hidden opacity-80">
+<div class="h-24 w-full bg-gradient-to-br from-red-500/10 to-surface-variant rounded-lg mb-3 flex items-center justify-center text-4xl">
+                    🥗
+                </div>
+<h3 class="font-space font-semibold text-on-surface text-body-md truncate">Fresh Salad</h3>
+<p class="text-primary font-bold mt-1 font-space">PKR 50</p>
+</div>
+</section>
+</main>
+<!-- Cart Footer Component -->
+<footer class="fixed bottom-16 left-0 right-0 z-50 px-container-padding pb-4 pointer-events-none">
+<div class="bg-[#111827] h-[64px] rounded-2xl flex items-center justify-between px-4 shadow-2xl border border-outline-variant/20 pointer-events-auto">
+<div class="flex flex-col">
+<span class="text-on-surface-variant text-[12px] font-medium">3 items</span>
+<span class="text-white font-space font-bold text-[16px]">PKR 1,050</span>
+</div>
+<button class="bg-primary text-white font-space font-bold px-6 py-2.5 rounded-full flex items-center gap-2 glow-primary active:scale-95 transition-all">
+                VIEW CART
+                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</footer>
+<!-- Bottom Navigation Component -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-high border-t border-outline-variant shadow-lg flex justify-around items-center h-16 px-2">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all cursor-pointer">
+<span class="material-symbols-outlined">table_restaurant</span>
+<span class="font-label-sm text-label-sm">Tables</span>
+</div>
+<div class="flex flex-col items-center justify-center text-primary dark:text-primary bg-primary-container/10 rounded-xl px-4 py-1 active:scale-90 transition-all cursor-pointer">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all cursor-pointer">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-label-sm text-label-sm">Menu</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</div>
+</nav>
+<script>
+        // Micro-interaction for item cards
+        document.querySelectorAll('section.grid > div').forEach(card => {
+            card.addEventListener('click', function() {
+                // Subtle visual feedback
+                this.classList.add('ring-2', 'ring-primary/50');
+                setTimeout(() => {
+                    this.classList.remove('ring-2', 'ring-primary/50');
+                }, 200);
+            });
+        });
+
+        // Toggle logic for order type
+        const typeButtons = document.querySelectorAll('.bg-surface-container button');
+        typeButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                typeButtons.forEach(b => {
+                    b.classList.remove('active-pill');
+                    b.classList.add('text-on-surface-variant');
+                });
+                this.classList.add('active-pill');
+                this.classList.remove('text-on-surface-variant');
+            });
+        });
+    </script>
+</body></html>

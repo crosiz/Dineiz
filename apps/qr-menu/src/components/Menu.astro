@@ -1,0 +1,97 @@
+---
+import CartIsland from "./CartIsland";
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8080";
+const tenantId = Astro.url.searchParams.get("tenantId");
+const branchId = Astro.url.searchParams.get("branchId");
+
+let categories: any[] = [];
+if (tenantId) {
+  // For now we reuse /api/menu (auth-based). In a real QR menu we’d expose a public endpoint.
+  // This is a scaffold for tasks 78–79.
+  try {
+    const res = await fetch(`${API_URL}/api/menu`, { credentials: "include" as any });
+    categories = await res.json();
+  } catch {
+    categories = [];
+  }
+}
+---
+
+<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap">
+  <div style="flex: 1; min-width: 320px">
+    <h1 style="margin: 8px 0 4px; font-size: 24px;">QR Menu</h1>
+    <p style="margin: 0 0 12px; color:#94a3b8; font-size: 13px;">
+      Mobile menu + island cart scaffold.
+    </p>
+
+    {!tenantId && (
+      <div style="padding:12px; border:1px solid #334155; border-radius:12px; background:#0f172a;">
+        Add <code>?tenantId=...</code> to URL to load menu.
+      </div>
+    )}
+
+    {categories?.map((cat) => (
+      <div style="margin-top: 14px;">
+        <h2 style="margin: 0 0 8px; font-size: 16px; color:#f1f5f9;">{cat.name}</h2>
+        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">
+          {cat.items?.map((item: any) => (
+            <button
+              class="item"
+              data-id={item.id}
+              data-name={item.name}
+              data-price={item.basePrice}
+              style="text-align:left; padding:12px; border-radius:14px; background:#0f172a; border:1px solid #334155; cursor:pointer; color:#f1f5f9;"
+            >
+              <div style="font-weight:700; font-size:14px;">{item.name}</div>
+              <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Rs. {Math.round(item.basePrice)}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div style="width: 340px; min-width: 320px;">
+    <CartIsland client:load />
+  </div>
+</div>
+
+<script>
+  // Click-to-add bridge to island
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest("button.item") as HTMLButtonElement | null;
+    if (!btn) return;
+    const item = {
+      id: btn.dataset.id,
+      name: btn.dataset.name,
+      price: Number(btn.dataset.price || 0),
+    };
+    window.dispatchEvent(new CustomEvent("qr:add-to-cart", { detail: item }));
+  });
+</script>
+
+<script>
+  // Waiter call (Task 80) — emits to Socket.IO /qr namespace
+  const API_URL = (import.meta.env.PUBLIC_API_URL || "http://localhost:8080");
+  const branchId = new URL(location.href).searchParams.get("branchId");
+  const table = new URL(location.href).searchParams.get("table") || "T1";
+
+  const btn = document.createElement("button");
+  btn.textContent = "Call Waiter";
+  btn.style.cssText = "position:fixed; bottom:16px; left:16px; padding:12px 14px; border-radius:14px; border:1px solid #334155; background:#f97316; font-weight:900; cursor:pointer;";
+  document.body.appendChild(btn);
+
+  btn.addEventListener("click", async () => {
+    try {
+      const { io } = await import("https://cdn.socket.io/4.8.1/socket.io.esm.min.js");
+      const socket = io(`${API_URL}/qr`, { transports: ["websocket"] });
+      if (branchId) socket.emit("join_branch", branchId);
+      socket.emit("waiter:call", { branchId, table });
+      alert("Waiter called.");
+      socket.disconnect();
+    } catch {
+      alert("Could not call waiter (socket import failed).");
+    }
+  });
+</script>
+

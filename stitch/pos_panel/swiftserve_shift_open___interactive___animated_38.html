@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "on-tertiary": "#2f312f",
+                        "inverse-surface": "#f0e0d1",
+                        "secondary-fixed": "#e5e2e1",
+                        "error": "#ffb4ab",
+                        "on-background": "#f0e0d1",
+                        "on-secondary": "#313030",
+                        "secondary": "#c9c6c5",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-tertiary-container": "#434442",
+                        "tertiary-container": "#b1b1ae",
+                        "surface-tint": "#ffb95f",
+                        "outline": "#a08e7a",
+                        "surface": "#19120a",
+                        "on-primary-fixed": "#2a1700",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed": "#ffddb8",
+                        "outline-variant": "#534434",
+                        "on-secondary-container": "#bab8b7",
+                        "primary-container": "#f59e0b",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "on-surface-variant": "#d8c3ad",
+                        "on-surface": "#f0e0d1",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#3c3329",
+                        "surface-dim": "#19120a",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-primary": "#472a00",
+                        "background": "#19120a",
+                        "on-primary-fixed-variant": "#653e00",
+                        "on-secondary-fixed-variant": "#474646",
+                        "error-container": "#93000a",
+                        "inverse-on-surface": "#382f25",
+                        "on-primary-container": "#613b00",
+                        "surface-container-low": "#221a12",
+                        "surface-bright": "#41382e",
+                        "surface-container": "#261e15",
+                        "inverse-primary": "#855300",
+                        "secondary-container": "#4a4949",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "surface-container-lowest": "#140d06",
+                        "primary": "#ffc174",
+                        "surface-container-high": "#31281f",
+                        "tertiary": "#cdccca",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "surface-variant": "#3c3329"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "gutter": "16px",
+                        "sm": "8px",
+                        "margin-mobile": "16px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "margin-desktop": "32px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "label-lg": ["Inter"],
+                        "headline-md": ["Clash Display"],
+                        "headline-sm": ["Clash Display"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Clash Display"],
+                        "body-sm": ["Inter"],
+                        "display-lg": ["Clash Display"],
+                        "currency-display": ["Clash Display"]
+                    }
+                }
+            }
+        };
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .numeric-morph { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .number-change-animation { animation: slideUpFade 0.3s ease-out; }
+        @keyframes slideUpFade {
+            0% { transform: translateY(4px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .hold-confirm-progress { transition: width 2s linear; }
+        .success-checkmark {
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: dash 0.5s ease-out forwards 0.2s;
+        }
+        @keyframes dash { to { stroke-dashoffset: 0; } }
+        @keyframes spinner {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spinner { animation: spinner 0.8s linear infinite; }
+        .comparison-card { opacity: 0; transform: translateY(-10px); }
+        .comparison-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background selection:bg-primary selection:text-on-primary">
+<div class="relative flex min-h-screen w-full flex-col bg-surface overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Main Layout with Shared Navigation Logic (Included as it's a "Destination" entry for the shift process) -->
+<div class="flex flex-1 justify-center">
+<div class="layout-content-container flex flex-col max-w-[1280px] w-full flex-1">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-outline-variant px-margin-desktop py-4">
+<div class="flex items-center gap-4 text-on-surface">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M24 0.757355L47.2426 24L24 47.2426L0.757355 24L24 0.757355ZM21 35.7574V12.2426L9.24264 24L21 35.7574Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="font-headline-sm text-on-surface">Shift Open</h2>
+</div>
+<div class="flex gap-4">
+<button class="flex items-center justify-center rounded-xl h-12 w-12 bg-surface-container-high text-on-surface hover:brightness-125 transition-all">
+<span class="material-symbols-outlined">history</span>
+</button>
+<button class="flex items-center justify-center rounded-xl h-12 w-12 bg-surface-container-high text-on-surface hover:brightness-125 transition-all">
+<span class="material-symbols-outlined">person</span>
+</button>
+</div>
+</header>
+<main class="flex flex-1 flex-col lg:flex-row p-gutter gap-gutter">
+<!-- Left Section: Denominations -->
+<section class="flex-1 flex flex-col gap-md">
+<div class="flex flex-col gap-xs mb-lg">
+<h1 class="font-headline-lg text-on-surface">Open Your Shift</h1>
+<p class="font-body-md text-on-surface-variant">Verify and count starting cash for drawer ID: #4420</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md" id="denomination-grid">
+<!-- Denomination Cards -->
+<template id="denom-template">
+<div class="denom-card flex items-center gap-md bg-surface-container p-md rounded-xl border border-outline-variant hover:border-outline transition-colors">
+<div class="w-16 h-16 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="" src=""/>
+</div>
+<div class="flex-1">
+<p class="font-label-lg text-on-surface denomination-label"></p>
+<p class="font-body-sm text-primary subtotal-label">PKR 0</p>
+</div>
+<div class="flex items-center gap-sm bg-surface-container-low p-xs rounded-full border border-outline-variant">
+<button class="stepper-btn minus flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-on-surface transition-all hover:brightness-150 active:scale-95 disabled:opacity-30">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<span class="font-headline-sm w-10 text-center count-val">0</span>
+<button class="stepper-btn plus flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-on-surface transition-all hover:brightness-150 active:scale-95">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</template>
+</div>
+</section>
+<!-- Right Section: Summary & Actions -->
+<aside class="w-full lg:w-[400px] flex flex-col gap-lg">
+<div class="sticky top-gutter flex flex-col gap-md">
+<div class="bg-surface-container-highest p-lg rounded-xl flex flex-col gap-md border border-primary/20">
+<p class="font-label-md uppercase tracking-widest text-on-surface-variant">Total Starting Cash</p>
+<div class="flex items-baseline gap-sm">
+<span class="font-label-lg text-on-surface">PKR</span>
+<span class="font-currency-display text-primary transition-all" id="grand-total">0</span>
+</div>
+</div>
+<!-- Comparison Indicators -->
+<div class="flex flex-col gap-sm" id="comparison-section">
+<div class="comparison-card bg-emerald-950/30 border border-emerald-500/30 p-md rounded-lg flex items-center gap-sm" id="match-card">
+<span class="material-symbols-outlined text-emerald-400">check_circle</span>
+<p class="font-body-md text-emerald-100">Drawer is Balanced</p>
+</div>
+<div class="hidden comparison-card bg-error-container/30 border border-error/30 p-md rounded-lg flex items-center justify-between gap-sm" id="diff-card">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-error">warning</span>
+<p class="font-body-md text-on-error-container">Variance Detected</p>
+</div>
+<span class="font-label-lg text-error" id="variance-val">PKR 0</span>
+</div>
+</div>
+<div class="bg-surface-container p-lg rounded-xl border border-outline-variant">
+<h3 class="font-headline-sm mb-md">Shift Details</h3>
+<div class="flex flex-col gap-sm">
+<div class="flex justify-between border-b border-outline-variant pb-sm">
+<span class="font-body-sm text-on-surface-variant">Expected Amount</span>
+<span class="font-label-lg">PKR 25,000</span>
+</div>
+<div class="flex justify-between py-xs">
+<span class="font-body-sm text-on-surface-variant">Shift Lead</span>
+<span class="font-label-lg">S. Ahmed</span>
+</div>
+<div class="flex justify-between py-xs">
+<span class="font-body-sm text-on-surface-variant">Station</span>
+<span class="font-label-lg">Front Counter A</span>
+</div>
+</div>
+</div>
+<!-- Confirm Button Section -->
+<div class="relative group">
+<button class="relative w-full h-[64px] bg-primary text-on-primary font-headline-sm rounded-xl overflow-hidden transition-all hover:brightness-110 active:scale-[0.98] cursor-pointer" id="hold-confirm-btn">
+<!-- Progress Layer -->
+<div class="absolute inset-y-0 left-0 w-0 bg-primary-container z-0 opacity-40 hold-confirm-progress" id="confirm-progress"></div>
+<!-- Content Layer -->
+<div class="relative z-10 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" id="btn-icon">lock_open</span>
+<span id="btn-text">Hold to Confirm Shift</span>
+</div>
+</button>
+<p class="text-center font-body-sm text-on-surface-variant mt-sm italic">Press and hold for 2 seconds to authorize</p>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</div>
+</div>
+</div>
+<!-- Success Toast -->
+<div class="fixed top-0 left-1/2 -translate-x-1/2 mt-8 z-50 transform -translate-y-full opacity-0 transition-all duration-500 pointer-events-none" id="success-toast">
+<div class="bg-emerald-500 text-white px-xl py-md rounded-full shadow-2xl flex items-center gap-md">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-label-lg">Shift Successfully Opened</span>
+</div>
+</div>
+<script>
+    const denominations = [
+        { val: 5000, label: "PKR 5,000", prompt: "A close up photo of a crisp high-value currency note with industrial safety holograms and security fibers, illuminated by a warm clinical amber light in a high-speed banking environment." },
+        { val: 1000, label: "PKR 1,000", prompt: "Macro photography of a stack of fresh currency bills showing intricate geometric patterns and deep colors, styled in a modern minimalist industrial tech aesthetic with sharp focus." },
+        { val: 500, label: "PKR 500", prompt: "A sleek currency note detail highlighting metallic ink and high-contrast typography in a professional dark-themed financial setting with soft atmospheric lighting." },
+        { val: 100, label: "PKR 100", prompt: "Top down view of financial instruments and crisp paper notes arranged in a precise grid on a dark textured slate surface with elegant warm highlights." },
+        { val: 50, label: "PKR 50", prompt: "Cinematic close-up of currency security features on a clean dark background, emphasizing reliability and professional precision with electric amber accents." },
+        { val: 20, label: "PKR 20", prompt: "Abstract visual of currency textures and banking details, rendered in high contrast with a focus on tactile materiality and industrial-grade security motifs." }
+    ];
+
+    const EXPECTED_TOTAL = 25000;
+    let counts = denominations.map(() => 0);
+    const grid = document.getElementById('denomination-grid');
+    const template = document.getElementById('denom-template');
+    const grandTotalEl = document.getElementById('grand-total');
+
+    // Initialize UI
+    denominations.forEach((denom, idx) => {
+        const clone = template.content.cloneNode(true);
+        const img = clone.querySelector('img');
+        img.src = `https://images.unsplash.com/photo-1593672715438-d88a75639fac?auto=format&fit=crop&w=300&q=80`; // Placeholder base
+        img.setAttribute('data-alt', denom.prompt);
+        clone.querySelector('.denomination-label').innerText = denom.label;
+        const subtotal = clone.querySelector('.subtotal-label');
+        const countVal = clone.querySelector('.count-val');
+        const minus = clone.querySelector('.minus');
+        const plus = clone.querySelector('.plus');
+
+        minus.onclick = () => updateCount(idx, -1, countVal, subtotal);
+        plus.onclick = () => updateCount(idx, 1, countVal, subtotal);
+        
+        grid.appendChild(clone);
+    });
+
+    function updateCount(idx, delta, countEl, subtotalEl) {
+        counts[idx] = Math.max(0, counts[idx] + delta);
+        
+        // Trigger numeric morph animation
+        countEl.innerText = counts[idx];
+        countEl.classList.remove('number-change-animation');
+        void countEl.offsetWidth; // Reflow
+        countEl.classList.add('number-change-animation');
+
+        const subVal = counts[idx] * denominations[idx].val;
+        subtotalEl.innerText = `PKR ${subVal.toLocaleString()}`;
+        subtotalEl.classList.remove('number-change-animation');
+        void subtotalEl.offsetWidth;
+        subtotalEl.classList.add('number-change-animation');
+
+        updateGrandTotal();
+    }
+
+    let currentGrandTotal = 0;
+    function updateGrandTotal() {
+        const target = counts.reduce((sum, count, i) => sum + (count * denominations[i].val), 0);
+        animateValue(grandTotalEl, currentGrandTotal, target, 400);
+        currentGrandTotal = target;
+        updateComparison(target);
+    }
+
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            const val = Math.floor(progress * (end - start) + start);
+            obj.innerHTML = val.toLocaleString();
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
+    function updateComparison(total) {
+        const matchCard = document.getElementById('match-card');
+        const diffCard = document.getElementById('diff-card');
+        const varianceVal = document.getElementById('variance-val');
+
+        if (total === EXPECTED_TOTAL) {
+            matchCard.classList.remove('hidden');
+            setTimeout(() => matchCard.classList.add('visible'), 50);
+            diffCard.classList.add('hidden');
+            diffCard.classList.remove('visible');
+        } else {
+            matchCard.classList.add('hidden');
+            matchCard.classList.remove('visible');
+            diffCard.classList.remove('hidden');
+            setTimeout(() => diffCard.classList.add('visible'), 50);
+            const diff = total - EXPECTED_TOTAL;
+            varianceVal.innerText = `PKR ${Math.abs(diff).toLocaleString()} ${diff > 0 ? 'Over' : 'Short'}`;
+            varianceVal.classList.toggle('text-error', diff < 0);
+            varianceVal.classList.toggle('text-primary', diff > 0);
+        }
+    }
+
+    // Hold Logic
+    const holdBtn = document.getElementById('hold-confirm-btn');
+    const progress = document.getElementById('confirm-progress');
+    const btnText = document.getElementById('btn-text');
+    const btnIcon = document.getElementById('btn-icon');
+    const toast = document.getElementById('success-toast');
+    let holdTimer;
+
+    function startHold() {
+        progress.style.width = '100%';
+        holdTimer = setTimeout(completeAction, 2000);
+    }
+
+    function cancelHold() {
+        clearTimeout(holdTimer);
+        progress.style.transition = 'none';
+        progress.style.width = '0%';
+        setTimeout(() => progress.style.transition = '', 50);
+    }
+
+    function completeAction() {
+        holdBtn.classList.add('pointer-events-none');
+        btnText.innerText = 'Authorizing...';
+        btnIcon.innerText = 'sync';
+        btnIcon.classList.add('animate-spinner');
+
+        setTimeout(() => {
+            btnIcon.classList.remove('animate-spinner');
+            btnIcon.innerText = 'check_circle';
+            btnText.innerText = 'Shift Confirmed';
+            holdBtn.classList.replace('bg-primary', 'bg-emerald-500');
+            holdBtn.classList.replace('text-on-primary', 'text-white');
+            
+            // Show Toast
+            toast.classList.remove('-translate-y-full', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.add('-translate-y-full', 'opacity-0');
+            }, 3000);
+
+        }, 1500);
+    }
+
+    holdBtn.addEventListener('mousedown', startHold);
+    holdBtn.addEventListener('mouseup', cancelHold);
+    holdBtn.addEventListener('mouseleave', cancelHold);
+    holdBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold(); });
+    holdBtn.addEventListener('touchend', cancelHold);
+
+    // Initial Trigger
+    updateComparison(0);
+</script>
+</body></html>

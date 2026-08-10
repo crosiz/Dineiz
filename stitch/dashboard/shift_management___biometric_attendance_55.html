@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS | Shift Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+        .active-tab-underline { position: relative; }
+        .active-tab-underline::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background-color: #ff5722; border-radius: 99px; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "tertiary-fixed": "#e6deff",
+                "on-primary-container": "#541200",
+                "surface-container-low": "#f2f4f6",
+                "secondary-fixed": "#dae2fd",
+                "on-tertiary-fixed-variant": "#4629b6",
+                "surface-container-highest": "#e0e3e5",
+                "primary": "#b02f00",
+                "surface-variant": "#e0e3e5",
+                "inverse-primary": "#ffb5a0",
+                "on-secondary-fixed": "#131b2e",
+                "tertiary-container": "#927eff",
+                "secondary": "#565e74",
+                "error-container": "#ffdad6",
+                "on-surface": "#191c1e",
+                "on-primary-fixed": "#3b0900",
+                "outline-variant": "#e4beb4",
+                "background": "#f7f9fb",
+                "surface-bright": "#f7f9fb",
+                "primary-fixed": "#ffdbd1",
+                "secondary-container": "#dae2fd",
+                "surface-card": "#FFFFFF",
+                "text-muted": "#64748B",
+                "on-error-container": "#93000a",
+                "error": "#ba1a1a",
+                "text-main": "#0F172A",
+                "primary-fixed-dim": "#ffb5a0",
+                "surface-container": "#eceef0",
+                "on-primary-fixed-variant": "#862200",
+                "on-primary": "#ffffff",
+                "outline": "#907067",
+                "on-error": "#ffffff",
+                "inverse-on-surface": "#eff1f3",
+                "surface-tint": "#b02f00",
+                "surface-dim": "#d8dadc",
+                "primary-container": "#ff5722",
+                "surface-container-high": "#e6e8ea",
+                "surface-default": "#F8FAFC",
+                "on-tertiary-fixed": "#1b0063",
+                "tertiary": "#5f46ce",
+                "on-secondary-fixed-variant": "#3f465c",
+                "on-secondary-container": "#5c647a",
+                "surface": "#f7f9fb",
+                "inverse-surface": "#2d3133",
+                "secondary-fixed-dim": "#bec6e0",
+                "on-background": "#191c1e",
+                "border-subtle": "#E2E8F0",
+                "on-tertiary-container": "#29008a",
+                "on-tertiary": "#ffffff",
+                "on-secondary": "#ffffff",
+                "on-surface-variant": "#5b4039",
+                "tertiary-fixed-dim": "#c9beff",
+                "surface-container-lowest": "#ffffff"
+              },
+              "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+              },
+              "spacing": {
+                "gutter-mobile": "16px",
+                "margin-desktop": "40px",
+                "unit": "4px",
+                "margin-mobile": "16px",
+                "max-width": "1200px",
+                "gutter-desktop": "24px"
+              },
+              "fontFamily": {
+                "label-md": ["Inter"],
+                "headline-lg": ["Inter"],
+                "headline-md": ["Inter"],
+                "display-lg": ["Inter"],
+                "headline-lg-mobile": ["Inter"],
+                "label-sm": ["Inter"],
+                "body-md": ["Inter"],
+                "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-surface-default text-on-surface">
+<!-- Sidebar -->
+<aside class="fixed left-0 top-0 h-full w-[280px] bg-[#0F172A] flex flex-col py-8 px-4 z-50">
+<div class="mb-10 px-4">
+<h1 class="font-headline-md text-headline-md font-bold text-white tracking-tight">SwiftServe POS</h1>
+<p class="text-secondary-fixed-dim text-label-sm uppercase tracking-widest mt-1">Admin Terminal</p>
+</div>
+<nav class="flex-grow space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant/10 hover:text-white transition-colors group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-white border-l-4 border-primary-container bg-on-secondary-fixed-variant/20 group" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-md text-label-md">Operations</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant/10 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span class="font-label-md text-label-md">Business</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant/10 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span class="font-label-md text-label-md">Growth</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant/10 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-secondary-fixed-dim hover:bg-on-secondary-fixed-variant/10 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-on-secondary-fixed-variant/20 pt-6 px-4">
+<button class="w-full bg-primary-container text-white py-3 rounded-xl font-label-md text-label-md hover:brightness-110 transition-all flex items-center justify-center gap-2 mb-6">
+<span class="material-symbols-outlined text-[18px]">more_time</span>
+                Manage Shifts
+            </button>
+<div class="space-y-2">
+<a class="flex items-center gap-3 text-secondary-fixed-dim hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 text-secondary-fixed-dim hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Log Out</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="ml-[280px] min-h-screen">
+<!-- Top Bar -->
+<header class="h-20 bg-white/80 backdrop-blur-md border-b border-border-subtle flex items-center justify-between px-margin-desktop sticky top-0 z-40">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-[#0F172A]">Shift Management</h2>
+<p class="text-body-md text-secondary font-medium mt-0.5">ZKTeco biometric attendance • Real-time shift tracking</p>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 border border-green-100 rounded-full font-label-sm">
+<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    ZKTeco Connected
+                </div>
+<button class="px-5 py-2.5 border border-border-subtle text-on-surface font-label-md rounded-xl hover:bg-surface-container-low transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    Open Manual Shift
+                </button>
+<div class="h-10 w-10 rounded-full bg-surface-container-high overflow-hidden border border-border-subtle">
+<img alt="Administrator" class="w-full h-full object-cover" data-alt="A professional profile portrait of a confident male administrator with a modern hairstyle and stylish glasses. The background is a soft, neutral studio grey, and the lighting is even and high-fidelity, conveying a sense of corporate leadership and technical expertise in a premium SaaS environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlPHa3I6I70AZJFParR58jHLA0Zowa73vdYBeYlNPQuhZPBdKynRV4vWXydd9T9i7OgFbLNB-k8k7liUoZu4_Lj7mAbOFyP-EwwkjaIXdRjbj0vKLCiHTkVWQMwrPy89Xdre5GXVEQpQjqI_3WlY-St07b7u4ML0EaoiFR6z8UrMFWpdYrQeDQQCni-wyJgZ8B3JbvKOm49KKwodT6TuPKUj0LVCr8n9rEH1FUcRI4PvCTIZk0h-HE5gADSfCQJPN4mJK-werRCrl5"/>
+</div>
+</div>
+</header>
+<div class="p-margin-desktop max-w-max-width mx-auto">
+<!-- Device Banner -->
+<section class="mb-8 rounded-2xl bg-gradient-to-r from-[#0F172A] to-[#1E293B] p-8 text-white flex items-center justify-between shadow-lg relative overflow-hidden">
+<div class="absolute right-0 top-0 opacity-10">
+<span class="material-symbols-outlined text-[200px]" style="font-variation-settings: 'wght' 100;">fingerprint</span>
+</div>
+<div class="flex items-center gap-8 relative z-10">
+<div class="w-24 h-24 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+<span class="material-symbols-outlined text-[48px] text-primary-container">router</span>
+</div>
+<div class="space-y-2">
+<h3 class="font-headline-md text-headline-md">ZKTeco Device Status</h3>
+<div class="flex items-center gap-4 text-secondary-fixed-dim">
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">info</span> ZKTeco K40 (v2.1)</span>
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px]">location_on</span> Main Lobby - Terminal 01</span>
+</div>
+</div>
+</div>
+<div class="flex gap-12 relative z-10">
+<div class="text-center">
+<p class="text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Device</p>
+<p class="text-headline-md font-bold text-green-400">Online</p>
+</div>
+<div class="text-center">
+<p class="text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Last Sync</p>
+<p class="text-headline-md font-bold">4m ago</p>
+</div>
+<div class="text-center">
+<p class="text-label-sm text-secondary-fixed-dim uppercase tracking-wider">Today's Punches</p>
+<p class="text-headline-md font-bold">142</p>
+</div>
+<div class="flex flex-col gap-2">
+<button class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-label-md transition-all flex items-center gap-2 backdrop-blur-sm border border-white/10">
+<span class="material-symbols-outlined text-[18px]">sync</span> Force Sync
+                        </button>
+<button class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-label-md transition-all flex items-center gap-2 backdrop-blur-sm border border-white/10">
+<span class="material-symbols-outlined text-[18px]">settings</span> Device Settings
+                        </button>
+</div>
+</div>
+</section>
+<!-- Tabs -->
+<nav class="flex gap-8 mb-8 border-b border-border-subtle">
+<button class="pb-4 font-label-md text-label-md text-primary active-tab-underline" onclick="switchTab('active-shifts')">Active Shifts</button>
+<button class="pb-4 font-label-md text-label-md text-secondary hover:text-on-surface transition-colors" onclick="switchTab('attendance-log')">Attendance Log</button>
+<button class="pb-4 font-label-md text-label-md text-secondary hover:text-on-surface transition-colors" onclick="switchTab('schedule')">Schedule</button>
+<button class="pb-4 font-label-md text-label-md text-secondary hover:text-on-surface transition-colors" onclick="switchTab('reports')">Reports</button>
+</nav>
+<!-- Tab Content: Active Shifts -->
+<div class="space-y-8" id="active-shifts-tab">
+<div class="bg-green-50 border border-green-100 rounded-xl px-6 py-4 flex items-center gap-3">
+<span class="material-symbols-outlined text-green-600">supervised_user_circle</span>
+<span class="text-body-md font-medium text-green-800">6 staff currently clocked in across 3 branches</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<!-- Staff Card 1 -->
+<div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-border-subtle group hover:shadow-md transition-shadow">
+<div class="h-2 bg-primary-container"></div>
+<div class="p-6">
+<div class="flex items-start justify-between mb-6">
+<div class="flex gap-4">
+<div class="w-14 h-14 rounded-full border-2 border-primary-container/20 p-0.5">
+<img alt="Sarah Chen" class="w-full h-full rounded-full object-cover" data-alt="A professional profile photo of a young Asian female staff member named Sarah Chen. She is smiling warmly, wearing a neat corporate uniform. The photo has a soft-focus office background, bright daylighting, and high-fidelity detail consistent with a modern SaaS dashboard user profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk4YrBkjEeX9qFuHqGbRpI9NpqqAjmWBlfoq-W2wSSnn0CuxljtFzYdI4_9kAd13k73QoEubLKbY10uNlLZU5hDwKFRmifh-2000isI4TiphJjLkiv9UN_piBatlCofa4TKFW2W0HySp2OKAE3QJakBVu1qAeZnSwMqVl3-SX_RZSMjgTGpQgSm4Y5V3_S2TmAmPNJyK__6AoznGV3p-yOUZ0890inEqnJKbeEmhU0CWeggjs4A0ZBeLzIy7_vcat0nu7gMIA_mf14"/>
+</div>
+<div>
+<h4 class="font-headline-md text-[16px]">Sarah Chen</h4>
+<p class="text-label-sm text-secondary">Senior Cashier</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary-container" data-weight="fill">fingerprint</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<div class="text-label-sm text-secondary">Clocked in via ZKTeco</div>
+<div class="text-headline-md font-bold text-on-surface">09:15 AM</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm">
+<span class="text-secondary">Duration</span>
+<span class="font-bold">5h 23m</span>
+</div>
+<div class="h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary-container w-[65%]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-border-subtle">
+<div>
+<p class="text-[10px] uppercase text-secondary font-bold tracking-wider">Orders</p>
+<p class="font-bold text-headline-md">42</p>
+</div>
+<div>
+<p class="text-[10px] uppercase text-secondary font-bold tracking-wider">Branch</p>
+<p class="font-bold text-headline-md">North Hub</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Staff Card 2 -->
+<div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-border-subtle group hover:shadow-md transition-shadow">
+<div class="h-2 bg-tertiary"></div>
+<div class="p-6">
+<div class="flex items-start justify-between mb-6">
+<div class="flex gap-4">
+<div class="w-14 h-14 rounded-full border-2 border-tertiary/20 p-0.5">
+<img alt="Marcus Wright" class="w-full h-full rounded-full object-cover" data-alt="A professional profile photo of a middle-aged Black male manager named Marcus Wright. He looks professional and composed, wearing a navy blue blazer. The image has a clean, high-end look with soft studio lighting and a subtle gradient background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXg1kwzxRlYjIID7ug6zt5RjLi70wWv8mBf-jY9MC_Bt6E-ZtdqIYVuzh8tYi3ARvvzE1WmOEiZlT3zOqhEFVKXp2IBGcEFiSVKvV0IOAi-UU_iScGphrybSsrJYPBu8yrjeWLF6ocQ7YWl6aQ9a1AbTefPBr9TOmHe6agvTQa9691blR3olPyB_bDsYM8eoS391AnqhxmLwYGjnZFDPbhqLuFmlmqWFl5yj4vZiGZ1lOP7juQqB_Eup9NDRNiAyZjpjWYy_P_nv-I"/>
+</div>
+<div>
+<h4 class="font-headline-md text-[16px]">Marcus Wright</h4>
+<p class="text-label-sm text-secondary">Operations Manager</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-tertiary" data-weight="fill">fingerprint</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<div class="text-label-sm text-secondary">Clocked in via ZKTeco</div>
+<div class="text-headline-md font-bold text-on-surface">08:00 AM</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm text-tertiary font-bold">
+<span>Approaching Overtime</span>
+<span>7h 55m</span>
+</div>
+<div class="h-2 bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[95%]"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-border-subtle">
+<div>
+<p class="text-[10px] uppercase text-secondary font-bold tracking-wider">Status</p>
+<p class="font-bold text-headline-md">On Duty</p>
+</div>
+<div>
+<p class="text-[10px] uppercase text-secondary font-bold tracking-wider">Branch</p>
+<p class="font-bold text-headline-md">Central</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Staff Card 3: Overtime -->
+<div class="bg-red-50/50 rounded-2xl overflow-hidden shadow-sm border border-red-100 group hover:shadow-md transition-shadow">
+<div class="h-2 bg-error"></div>
+<div class="p-6">
+<div class="flex items-start justify-between mb-6">
+<div class="flex gap-4">
+<div class="w-14 h-14 rounded-full border-2 border-error/20 p-0.5">
+<img alt="Elena Rodriguez" class="w-full h-full rounded-full object-cover" data-alt="A professional profile photo of a Hispanic female chef named Elena Rodriguez. She is wearing a clean white chef's jacket. The lighting is bright and warm, giving a culinary yet professional administrative vibe suitable for a high-end SaaS dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzQfzI6BER3TYVWLdnftxodGC_TBSer8iJ0cDhsNIJXI4_MdOtLoQeC8KMbe3dVcrzD2tktIK3TVzKbiY4QV3mTOMMtofVwaRVi5YwysYzI7D8FPzBc5-3Cll84hVd-oC2szN8K3rs-U6sbqYD1N62nvyY83WJO7orHu7ST5hIcZcXmHb_rjh40GiGBUkb_9ro0mjngymEbEHo68WVMwv4z5ZxiOXpO3zzckwWlaxQWOJ_3bYJcQ1pfu411yk9LOHM-i34LATnZwhn"/>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h4 class="font-headline-md text-[16px]">Elena Rodriguez</h4>
+<span class="px-2 py-0.5 bg-error text-white text-[10px] font-bold rounded-full uppercase tracking-tighter">Overtime</span>
+</div>
+<p class="text-label-sm text-secondary">Head Chef</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-error" data-weight="fill">fingerprint</span>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<div class="text-label-sm text-secondary">Clocked in via ZKTeco</div>
+<div class="text-headline-md font-bold text-error">07:30 AM</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-label-sm text-error font-bold">
+<span>Limit Exceeded</span>
+<span>9h 12m</span>
+</div>
+<div class="h-2 bg-red-100 rounded-full overflow-hidden">
+<div class="h-full bg-error w-full"></div>
+</div>
+</div>
+<button class="w-full py-3 bg-error text-white rounded-xl font-label-md hover:brightness-110 transition-all">Force Clock-Out</button>
+</div>
+</div>
+</div>
+<!-- Placeholder Card -->
+<div class="border-2 border-dashed border-border-subtle rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-surface-container-low min-h-[320px]">
+<div class="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-secondary text-[32px]">person_off</span>
+</div>
+<h4 class="font-headline-md text-[16px] text-secondary">No active shifts</h4>
+<p class="text-label-sm text-secondary-fixed-dim mt-2 max-w-[160px]">Available for manual clock-in or ZKTeco sync</p>
+</div>
+</div>
+</div>
+<!-- Attendance Log Section (Hidden by default for JS demo) -->
+<div class="hidden space-y-6" id="attendance-log-tab">
+<div class="bg-white p-6 rounded-2xl border border-border-subtle flex flex-wrap gap-4 items-center justify-between">
+<div class="flex flex-wrap gap-4">
+<select class="rounded-xl border-border-subtle font-label-md focus:ring-primary-container">
+<option>Today: Oct 12, 2023</option>
+<option>Yesterday</option>
+<option>Last 7 Days</option>
+</select>
+<select class="rounded-xl border-border-subtle font-label-md focus:ring-primary-container">
+<option>All Branches</option>
+<option>North Hub</option>
+<option>Central</option>
+</select>
+<input class="rounded-xl border-border-subtle font-label-md focus:ring-primary-container px-4 py-2" placeholder="Search Staff..." type="text"/>
+</div>
+<button class="px-4 py-2 bg-on-surface text-white rounded-xl font-label-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">download</span> Export Report
+                    </button>
+</div>
+<div class="bg-white rounded-2xl border border-border-subtle overflow-hidden">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-low border-b border-border-subtle">
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Staff</th>
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Punch Type</th>
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Time</th>
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Device</th>
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Branch</th>
+<th class="px-6 py-4 font-label-sm text-secondary uppercase tracking-wider">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-subtle">
+<tr class="hover:bg-surface-container-lowest transition-colors border-l-4 border-primary-container">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Liam" class="w-8 h-8 rounded-full" data-alt="A clean, professional headshot of a staff member for a table entry. High fidelity and bright lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwS131XHZQNWZpuDOPiZpO54NN-V7Zj9Asa6wLPBtOH7C_6E4Uz4cuY8uvtsWes0tTEX0EPfUmqPWoa_wJ2eRQ07MSXEjItknub9zt-dZP3TDcKyFdRgNfDXvWE5M8sTQIdi50jM7_t22AoVFc0vcaEvd3YW1_zgiE1yWjud4D8RgRoOPl6or5IxZ6pg6px6G3FaCdTZrQqc20iJF-5bZ4WlMN9vWqic5hOWdPvMs-ZX8GjJvzfDhrgSO434I0jZ8tyWBBBeQedVEg"/>
+<span class="font-bold text-on-surface">Liam Carter</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-bold uppercase">Clock In</span></td>
+<td class="px-6 py-4 font-mono text-label-md">09:04:12 AM</td>
+<td class="px-6 py-4 text-secondary text-label-md">ZKTeco-T1</td>
+<td class="px-6 py-4 text-on-surface text-label-md">North Hub</td>
+<td class="px-6 py-4"><span class="text-primary-container font-bold text-label-md">Late (4m)</span></td>
+</tr>
+<tr class="hover:bg-surface-container-lowest transition-colors border-l-4 border-transparent">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<img alt="Aria" class="w-8 h-8 rounded-full" data-alt="A clean, professional headshot of a staff member for a table entry. High fidelity and bright lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD5XGsDBSlaRQrLy--jetr8-D6jOXBorByzptGtvCOoCffxTUawIE277QJqHTKHspys7iT5vH3V_9LrNT4xulHzEdQKJjwZMqhUxY7PDSTEqw_VOpzTNb4jhp4znWTwIHPP8V22mE4zFuVFyqkiVa3NxKE0IuuxEBkx6pZN9bWEcBPRLfVP9auk2fEweThLPF-pdw_qnCONBvRsvhHR2eI3oyIkmTlOAOi2v_tnf9bg65OHmB-nVxZ8zqVhiHSLJ-8RCgoi1D1E35Y-"/>
+<span class="font-bold text-on-surface">Aria Song</span>
+</div>
+</td>
+<td class="px-6 py-4"><span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase">Clock In</span></td>
+<td class="px-6 py-4 font-mono text-label-md">08:58:45 AM</td>
+<td class="px-6 py-4 text-secondary text-label-md">ZKTeco-T1</td>
+<td class="px-6 py-4 text-on-surface text-label-md">North Hub</td>
+<td class="px-6 py-4"><span class="text-green-600 font-bold text-label-md">On Time</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Schedule & Reports would follow similar high-fidelity patterns here -->
+<div class="hidden" id="schedule-tab">
+<div class="bg-white p-8 rounded-2xl border border-border-subtle text-center">
+<span class="material-symbols-outlined text-[64px] text-surface-container-highest mb-4">calendar_month</span>
+<h3 class="font-headline-md">Weekly Schedule Grid</h3>
+<p class="text-secondary max-w-md mx-auto mt-2">Visualizing staff rotations and planned shifts. This view is currently being synchronized with ZKTeco shift definitions.</p>
+</div>
+</div>
+<div class="hidden space-y-8" id="reports-tab">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="bg-white p-6 rounded-2xl border border-border-subtle shadow-sm">
+<p class="text-label-sm text-secondary uppercase font-bold tracking-widest">Total Shifts</p>
+<h3 class="text-display-lg font-display-lg mt-2">1,248</h3>
+<p class="text-green-600 font-bold text-label-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +12% this month
+                        </p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-border-subtle shadow-sm">
+<p class="text-label-sm text-secondary uppercase font-bold tracking-widest">Late Arrivals</p>
+<h3 class="text-display-lg font-display-lg mt-2 text-primary">18</h3>
+<p class="text-red-500 font-bold text-label-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> +2% this week
+                        </p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-border-subtle shadow-sm">
+<p class="text-label-sm text-secondary uppercase font-bold tracking-widest">Absent Days</p>
+<h3 class="text-display-lg font-display-lg mt-2">4</h3>
+<p class="text-green-600 font-bold text-label-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[16px]">trending_down</span> -50% from last month
+                        </p>
+</div>
+<div class="bg-white p-6 rounded-2xl border border-border-subtle shadow-sm">
+<p class="text-label-sm text-secondary uppercase font-bold tracking-widest">Avg. Shift</p>
+<h3 class="text-display-lg font-display-lg mt-2">7.8h</h3>
+<p class="text-secondary font-bold text-label-sm mt-1">Within standard range</p>
+</div>
+</div>
+<div class="bg-white p-8 rounded-2xl border border-border-subtle">
+<h4 class="font-headline-md mb-6">Attendance Heatmap (Last 30 Days)</h4>
+<div class="flex flex-wrap gap-1.5">
+<!-- Heatmap dots -->
+<script>
+                            const heatmapContainer = document.currentScript.parentElement;
+                            for(let i=0; i<30; i++) {
+                                const opacity = Math.random();
+                                const color = opacity > 0.8 ? 'bg-primary-container' : (opacity > 0.4 ? 'bg-primary-container/40' : 'bg-surface-container');
+                                heatmapContainer.insertAdjacentHTML('beforeend', `<div class="w-8 h-8 ${color} rounded-sm" title="Day ${i+1}"></div>`);
+                            }
+                        </script>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.getElementById('active-shifts-tab').classList.add('hidden');
+            document.getElementById('attendance-log-tab').classList.add('hidden');
+            document.getElementById('schedule-tab').classList.add('hidden');
+            document.getElementById('reports-tab').classList.add('hidden');
+
+            // Show selected tab
+            document.getElementById(tabId + '-tab').classList.remove('hidden');
+
+            // Update tab styles
+            const buttons = document.querySelectorAll('nav button');
+            buttons.forEach(btn => {
+                btn.classList.remove('text-primary', 'active-tab-underline');
+                btn.classList.add('text-secondary');
+            });
+
+            // Set active state on clicked button
+            const clickedBtn = Array.from(buttons).find(btn => btn.innerText.toLowerCase().includes(tabId.replace('-', ' ')));
+            if (clickedBtn) {
+                clickedBtn.classList.remove('text-secondary');
+                clickedBtn.classList.add('text-primary', 'active-tab-underline');
+            }
+        }
+
+        // Atmosphere effect: Pulse the device stats
+        setInterval(() => {
+            const punches = document.querySelector('section .text-headline-md.font-bold:last-child');
+            if(Math.random() > 0.7) {
+                const current = parseInt(punches.innerText);
+                punches.innerText = current + 1;
+                punches.classList.add('text-primary-container');
+                setTimeout(() => punches.classList.remove('text-primary-container'), 1000);
+            }
+        }, 5000);
+    </script>
+</body></html>

@@ -1,0 +1,177 @@
+services:
+  # ── Infrastructure ──
+
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: swiftserve_db
+    restart: always
+    environment:
+      POSTGRES_USER: swiftserve
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: swiftserve
+    ports:
+      - "5434:5432"
+    volumes:
+      - swiftserve_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U swiftserve" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: swiftserve_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - swiftserve_redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    container_name: swiftserve_meili
+    restart: always
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKeyForDevelopmentOnly123}
+      - MEILI_ENV=development
+    ports:
+      - "7700:7700"
+    volumes:
+      - swiftserve_meili_data:/meili_data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7700/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  forecast:
+    build:
+      context: ./apps/forecast
+    container_name: swiftserve_forecast
+    restart: always
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8090/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  pdf-worker:
+    build:
+      context: ./apps/pdf-worker
+    container_name: swiftserve_pdf_worker
+    restart: always
+    ports:
+      - "8091:8091"
+    environment:
+      - PORT=8091
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8091/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  aggregator-bridge:
+    build:
+      context: ./apps/aggregator-bridge
+    container_name: swiftserve_aggregator_bridge
+    restart: always
+    ports:
+      - "8092:8092"
+    environment:
+      - PORT=8092
+      - API_URL=http://api:8080
+      - BRIDGE_SECRET=${BRIDGE_SECRET:-dev-bridge-secret}
+#    depends_on:
+#      api:
+#        condition: service_started
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8092/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── Database Initialization ──
+
+  prisma-migrate:
+    image: node:22-alpine
+    container_name: swiftserve_prisma_migrate
+    working_dir: /app
+    env_file: .env.development
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/db exec prisma migrate dev --name init"
+    profiles: [ "migrate" ] # Only runs when explicitly targeted or using the make command
+  # ── Applications (Local Development) ──
+
+  # api:
+  #   image: node:22-alpine
+  #   container_name: swiftserve_api
+  #   working_dir: /app
+  #   env_file: .env.development
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "8081:8080"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command: >
+  #     sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/db generate && pnpm --filter api dev"
+  #   environment:
+  #     - NODE_ENV=development
+
+  # dashboard:
+  #   image: node:22-alpine
+  #   container_name: swiftserve_dashboard
+  #   working_dir: /app
+  #   env_file: .env.development
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     api:
+  #       condition: service_started
+  #   command: >
+  #     sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter dashboard dev"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - HOSTNAME=0.0.0.0
+
+  # pos:
+  #   image: node:22-alpine
+  #   container_name: swiftserve_pos
+  #   working_dir: /app
+  #   env_file: .env.development
+  #   volumes:
+  #     - .:/app
+  #   ports:
+  #     - "3001:3000" # Mapping to 3001 on host since Dashboard takes 3000
+  #   depends_on:
+  #     api:
+  #       condition: service_started
+  #   command: >
+  #     sh -c "npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/pos dev"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - HOSTNAME=0.0.0.0
+
+volumes:
+  swiftserve_db_data: {}
+  swiftserve_redis_data: {}
+  swiftserve_meili_data: {}
+  pnpm_store: {}

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe | Order Success</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @keyframes spring-bounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-spring {
+            animation: spring-bounce 400ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .dashed-border {
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1) 50%, transparent 50%);
+            background-position: bottom;
+            background-size: 8px 1px;
+            background-repeat: repeat-x;
+        }
+        @keyframes progress-deplete {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        .progress-bar-deplete {
+            animation: progress-deplete 25s linear forwards;
+        }
+        .receipt-glow {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        .btn-glow:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+        }
+        body {
+            background-color: #0A0A0F;
+            color: #f0e0d1;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#313030",
+                      "tertiary-fixed-dim": "#c7c6c4",
+                      "tertiary": "#cdccca",
+                      "tertiary-fixed": "#e3e2e0",
+                      "on-surface-variant": "#d8c3ad",
+                      "on-error": "#690005",
+                      "on-background": "#f0e0d1",
+                      "secondary": "#c9c6c5",
+                      "on-primary-fixed-variant": "#653e00",
+                      "on-primary-fixed": "#2a1700",
+                      "secondary-container": "#4a4949",
+                      "on-surface": "#f0e0d1",
+                      "primary": "#ffc174",
+                      "outline-variant": "#534434",
+                      "secondary-fixed": "#e5e2e1",
+                      "primary-container": "#f59e0b",
+                      "on-secondary-container": "#bab8b7",
+                      "primary-fixed": "#ffddb8",
+                      "background": "#19120a",
+                      "surface-container-low": "#221a12",
+                      "inverse-primary": "#855300",
+                      "error": "#ffb4ab",
+                      "surface": "#19120a",
+                      "surface-bright": "#41382e",
+                      "surface-container-high": "#31281f",
+                      "surface-container": "#261e15",
+                      "surface-variant": "#3c3329",
+                      "on-tertiary-container": "#434442",
+                      "outline": "#a08e7a",
+                      "on-primary": "#472a00",
+                      "inverse-surface": "#f0e0d1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "margin-mobile": "16px",
+                      "sm": "8px",
+                      "base": "8px",
+                      "gutter": "16px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Clash Display"],
+                      "body-sm": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "display-lg": ["Clash Display"],
+                      "label-md": ["Inter"],
+                      "headline-md": ["Clash Display"],
+                      "label-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-sm": ["Clash Display"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 overflow-x-hidden">
+<!-- Main Container -->
+<main class="w-full max-w-[480px] flex flex-col items-center gap-xl">
+<!-- SUCCESS ANIMATION AREA -->
+<section class="flex flex-col items-center text-center gap-md">
+<div class="animate-spring w-[88px] h-[88px] rounded-full flex items-center justify-center bg-[#10B9811F] border-[2.5px] border-[#10B981]">
+<span class="material-symbols-outlined text-[#10B981] text-[48px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="space-y-1">
+<h1 class="font-headline-md text-headline-md text-white">Payment Confirmed!</h1>
+<p class="font-label-lg text-label-lg text-neutral-500 uppercase tracking-widest">Order #ORD-1047</p>
+</div>
+</section>
+<!-- RECEIPT CARD -->
+<section class="receipt-glow w-full bg-[#111827] border border-white/10 rounded-2xl p-lg relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-[3px] bg-[#F59E0B]"></div>
+<!-- Restaurant Header -->
+<div class="flex flex-col items-center pb-md dashed-border">
+<h2 class="font-headline-sm text-headline-sm text-primary tracking-tight">SwiftServe</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Gulshan-e-Iqbal Branch — Block 4, Gulshan</p>
+</div>
+<!-- Order Meta Row -->
+<div class="grid grid-cols-2 gap-y-sm py-md dashed-border">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-neutral-500">Order #</span>
+<span class="font-body-md text-body-md text-white">ORD-1047</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-neutral-500">Table</span>
+<span class="font-body-md text-body-md text-white">T-5</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-neutral-500">Date &amp; Time</span>
+<span class="font-body-sm text-body-sm text-white">29 Jun 2025 • 09:15 PM</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-md text-label-md text-neutral-500">Cashier</span>
+<span class="font-body-md text-body-md text-white">Amna (Dine-In)</span>
+</div>
+</div>
+<!-- Items List -->
+<div class="py-md dashed-border">
+<div class="flex justify-between items-start mb-2">
+<div class="flex flex-col">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-[#F59E0B]">2x</span>
+<span class="font-body-lg text-body-lg text-white font-medium">Beef Biryani</span>
+</div>
+<span class="font-body-sm text-body-sm text-neutral-400 pl-[32px]">Regular Serving</span>
+</div>
+<span class="font-body-lg text-body-lg text-white">PKR 2,200</span>
+</div>
+</div>
+<!-- Totals Section -->
+<div class="pt-md space-y-2">
+<div class="flex justify-between font-body-sm text-body-sm text-neutral-400">
+<span>Subtotal</span>
+<span>PKR 2,200</span>
+</div>
+<div class="flex justify-between font-body-sm text-body-sm text-neutral-400">
+<span>GST (15%)</span>
+<span>PKR 330</span>
+</div>
+<div class="flex justify-between pt-sm font-headline-md text-headline-md text-white border-t border-white/5">
+<span>TOTAL</span>
+<span class="text-primary">PKR 2,530</span>
+</div>
+<div class="flex justify-between pt-2 font-body-sm text-body-sm text-neutral-400">
+<span>Cash Received</span>
+<span>PKR 3,000</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-[#10B981] font-bold">
+<span>Change</span>
+<span>PKR 470</span>
+</div>
+</div>
+</section>
+<!-- ACTION BUTTONS -->
+<section class="w-full flex gap-3">
+<button class="flex-1 h-[44px] bg-[#1E293B] border border-white/10 rounded-xl flex items-center justify-center gap-2 font-label-lg text-label-lg text-white hover:bg-[#2d3d57] transition-all active:scale-95">
+<span class="material-symbols-outlined text-[18px]">print</span>
+                Print
+            </button>
+<button class="flex-1 h-[44px] bg-[#1E293B] border border-white/10 rounded-xl flex items-center justify-center gap-2 font-label-lg text-label-lg text-white hover:bg-[#2d3d57] transition-all active:scale-95">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+                WhatsApp
+            </button>
+<button class="flex-1 h-[44px] bg-[#1E293B] border border-white/10 rounded-xl flex items-center justify-center gap-2 font-label-lg text-label-lg text-white hover:bg-[#2d3d57] transition-all active:scale-95">
+<span class="material-symbols-outlined text-[18px]">mail</span>
+                Email
+            </button>
+</section>
+<!-- AUTO-RETURN & CTA -->
+<section class="w-full flex flex-col gap-md">
+<div class="w-full space-y-2">
+<div class="flex justify-between px-2 font-label-md text-label-md text-neutral-500">
+<span>Returning to Home in <span id="timer">25</span>s</span>
+</div>
+<div class="w-full h-[2px] bg-white/5 rounded-full overflow-hidden">
+<div class="progress-bar-deplete h-full bg-[#F59E0B]"></div>
+</div>
+</div>
+<button class="btn-glow w-full h-[54px] bg-primary-container text-on-primary-container font-headline-sm text-headline-sm rounded-xl shadow-[0_4px_20px_rgba(245,158,11,0.25)] transition-all hover:brightness-110 active:scale-[0.97] flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                Start New Order
+            </button>
+</section>
+</main>
+<!-- Footer for Metadata compliance (Hidden visually if needed, but present as per JSON/System context) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-sm bg-surface-container-lowest text-secondary font-body-sm text-body-sm border-t border-outline-variant opacity-20 hover:opacity-100 transition-opacity">
+<span class="font-headline-sm text-headline-sm text-primary">SwiftServe</span>
+<div class="flex gap-4">
+<span class="font-label-md text-label-md">v2.4.0-stable</span>
+<span class="font-label-md text-label-md" id="clock">12:45 PM</span>
+</div>
+<span class="font-label-md text-label-md">Powered by Google Stitch</span>
+</footer>
+<script>
+        // Micro-interactions and timer
+        let timeLeft = 25;
+        const timerEl = document.getElementById('timer');
+        const countdown = setInterval(() => {
+            timeLeft--;
+            if (timerEl) timerEl.innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                // Logic to return home would go here
+            }
+        }, 1000);
+
+        // Footer clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const clockEl = document.getElementById('clock');
+            if (clockEl) clockEl.innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body></html>

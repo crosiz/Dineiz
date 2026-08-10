@@ -1,0 +1,2024 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  BRANCH_MANAGER
+  CASHIER
+  WAITER
+  CALL_CENTER_AGENT
+  KITCHEN_STAFF
+  RIDER
+  READ_ONLY
+  WORKER
+  COOK
+  GUARD
+}
+
+enum RegistrationSource {
+  WEB
+  MOBILE
+  POS
+}
+
+enum SuperAdminRole {
+  OWNER
+  SUPPORT
+  SALES
+}
+
+// -----------------------------------------------------------------------------
+// CORE TENANT & ORGANIZATION MODELS
+// -----------------------------------------------------------------------------
+
+model Tenant {
+  id                 String             @id @default(cuid())
+  name               String
+  domain             String?            @unique // Custom domain e.g., pos.theirrestaurant.com
+  logoUrl            String?
+  colorPrimary       String             @default("#FF5722")
+  colorSecondary     String             @default("#FF8A65")
+  plan               String             @default("STARTER")
+  status             String             @default("ACTIVE") // ACTIVE, TRIALING, PAST_DUE, CANCELLED, SUSPENDED
+  notes              String?
+  registrationSource RegistrationSource @default(WEB)
+  primaryPhone       String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  branches    Branch[]
+  users       User[]
+  categories  Category[]
+  items       Item[]
+  orders      Order[]
+  shifts      Shift[]
+  kdsStations KdsStation[]
+  tables      Table[]
+
+  // Inventory & deals
+  ingredients    Ingredient[]
+  recipes        Recipe[]
+  stocks         Stock[]
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+  promoCodes     PromoCode[]
+  combos         Combo[]
+  buyXGetYDeals  BuyXGetYDeal[]
+
+  // CRM / Loyalty
+  customers                  Customer[]
+  loyaltyTiers               LoyaltyTier[]
+  loyaltyLedger              LoyaltyPointLedger[]
+  loyaltySettings            LoyaltySettings?
+  loyaltyCampaigns           LoyaltyCampaign[]
+  loyaltyCategoryMultipliers LoyaltyCategoryMultiplier[]
+
+  deliveryZones DeliveryZone[]
+
+  riderAssignments RiderAssignment[]
+
+  // Integrations
+  aggregatorWebhookEvents    AggregatorWebhookEvent[]
+  aggregatorIntegrations     AggregatorIntegration[]
+  aggregatorMenuMappings     AggregatorMenuMapping[]
+  zapierWebhookSubscriptions ZapierWebhookSubscription[]
+  webhookEndpoints           WebhookEndpoint[]
+  erpIntegration             ErpIntegration?
+
+  // Branding
+  branding TenantBranding?
+
+  // Billing
+  subscription     TenantSubscription?
+  paymentHistories PaymentHistory[]
+
+  // Super Admin Extensions
+  featureOverrides TenantFeatureOverride[]
+  messages         SuperAdminMessage[]
+  auditLogs        AuditLog[]
+
+  // Settings
+  settings        Json?
+  ZktecoDevice    ZktecoDevice[]
+  VoidRequest     VoidRequest[]
+  deals           Deal[]
+  ScheduledReport ScheduledReport[]
+  AnomalySettings AnomalySettings?
+  AnomalyEvents   AnomalyEvent[]
+  qrSettings      QrSettings?
+}
+
+model Branch {
+  id             String    @id @default(cuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name           String
+  address        String?
+  city           String?
+  country        String?   @default("Pakistan")
+  phone          String?
+  email          String?
+  operatingHours Json?
+  openingTime    String? // e.g. "09:00"
+  closingTime    String? // e.g. "23:00"
+  colorHex       String?
+  initial        String?
+  imageUrl       String?
+  currency       String    @default("PKR")
+  timezone       String    @default("Asia/Karachi")
+  taxRate        Float     @default(0)
+  kdsEnabled     Boolean   @default(false)
+  kotPrinter     Boolean   @default(false)
+  kotAutoPrint   Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  branchCode     String?   @unique
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  users       User[]
+  orders      Order[]
+  shifts      Shift[]
+  kdsStations KdsStation[]
+
+  // Inventory
+  stocks         Stock[]
+  stockMovements StockMovement[]
+  purchaseOrders PurchaseOrder[]
+
+  // Delivery zones
+  deliveryZones DeliveryZone[]
+
+  // Floor Plan
+  floorPlan FloorPlan?
+  tables    Table[]
+
+  branchMenuItems      BranchMenuItem[]
+  branchMenuCategories BranchMenuCategory[]
+  ZktecoDevice         ZktecoDevice[]
+  VoidRequest          VoidRequest[]
+  ScheduledReport      ScheduledReport[]
+  aggregatorIntegrations AggregatorIntegration[]
+  AnomalyEvents        AnomalyEvent[]
+}
+
+// -----------------------------------------------------------------------------
+// BETTER AUTH CORE MODELS
+// -----------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  name          String
+  emailVerified Boolean  @default(false)
+  image         String?
+  password      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Custom for SwiftServe
+  tenantId     String?
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branchId     String?
+  branch       Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  role         Role       @default(CASHIER)
+  posPin       String? // Hashed PIN for quick POS login
+  status       UserStatus @default(PENDING)
+  phone        String?    @unique
+  lastActiveAt DateTime?
+  avatarColor  String?
+  deviceTokens String[]
+
+  sessions       Session[]
+  mobileSessions MobileSession[]
+  accounts       Account[]
+  shifts         Shift[]
+  devices        UserDevice[]
+  assignedOrders Order[]         @relation("AssignedWaiter")
+
+  // Rider-specific
+  riderAssignments RiderAssignment[]
+
+  // Settings & Security
+  twoFactorEnabled        Boolean                @default(false)
+  notificationPreferences Json?
+  AttendancePunch         AttendancePunch[]
+  StaffZktecoEnrollment   StaffZktecoEnrollment?
+  VoidRequest             VoidRequest[]
+  AnomalyEvents           AnomalyEvent[]
+}
+
+// -----------------------------------------------------------------------------
+// MOBILE AUTH MODELS
+// -----------------------------------------------------------------------------
+
+// Removed MobileUser model
+
+enum OtpPurpose {
+  REGISTRATION
+  LOGIN
+  RESET_PIN
+}
+
+model OtpSession {
+  id          String     @id @default(cuid())
+  phone       String
+  purpose     OtpPurpose
+  requestedAt DateTime   @default(now())
+  verifiedAt  DateTime?
+  ipAddress   String?
+  deviceId    String?
+
+  @@index([phone])
+}
+
+model MobileSession {
+  id           String    @id @default(cuid())
+  userId       String
+  token        String    @unique // Hashed JWT signature
+  deviceId     String?
+  deviceName   String? // e.g., "iPhone 13", "Samsung Galaxy S21"
+  platform     String? // "ios" | "android"
+  lastActiveAt DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// MENU MODELS
+// -----------------------------------------------------------------------------
+
+model Category {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  image       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant               Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items                Item[]
+  kdsRoutes            KdsStationRoute[]
+  branchMenuCategories BranchMenuCategory[]
+  loyaltyMultipliers   LoyaltyCategoryMultiplier[]
+
+  @@index([tenantId])
+}
+
+model Item {
+  id          String   @id @default(cuid())
+  tenantId    String
+  categoryId  String
+  name        String
+  description String?
+  basePrice   Float
+  unitType    String?  @default("Per Item")
+  tags        String[]
+  image       String?
+  isAvailable Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category   Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  variations Variation[]
+  addOns     AddOn[]
+  OrderItem  OrderItem[]
+  kdsRoutes  KdsStationRoute[]
+  aggregatorMappings AggregatorMenuMapping[]
+
+  // Inventory & deals
+  recipe          Recipe?
+  comboItems      ComboItem[]
+  bxgyBuyDeals    BuyXGetYDeal[]   @relation("BxGyBuyItem")
+  bxgyGetDeals    BuyXGetYDeal[]   @relation("BxGyGetItem")
+  branchMenuItems BranchMenuItem[]
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+model Variation {
+  id        String   @id @default(cuid())
+  itemId    String
+  name      String // e.g., "Small", "Medium", "Large"
+  price     Float // Price override or offset
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+model AddOn {
+  id        String   @id @default(cuid())
+  itemId    String
+  name      String // e.g., "Extra Cheese"
+  price     Float // Additional cost
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+// -----------------------------------------------------------------------------
+// ORDER MODELS
+// -----------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  IN_KITCHEN
+  READY
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryAssignmentStatus {
+  UNASSIGNED
+  ASSIGNED
+  PICKED_UP
+  COMPLETED
+  FAILED
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum OrderSource {
+  POS
+  QR_CODE
+  KIOSK
+  FOODPANDA
+  CAREEM
+  TALABAT
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+  SPLIT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  tenantId    String
+  branchId    String
+  orderNumber String // e.g., ORD-1001
+  tokenNumber String? // e.g., A-12
+  shiftId     String? // The shift this order was placed during
+  status      OrderStatus @default(PENDING)
+  type        OrderType   @default(DINE_IN)
+  source      OrderSource @default(POS)
+
+  totalAmount    Float
+  discountAmount Float @default(0)
+  taxAmount      Float @default(0)
+  netAmount      Float
+
+  // Dual-tax snapshot â€” rates stored at time of order creation for historical accuracy
+  cashTaxRate     Float? // Snapshot of branding.cashTaxRate at time of order
+  cardTaxRate     Float? // Snapshot of branding.cardTaxRate at time of order
+  appliedTaxRate  Float? // Actual rate used after payment method resolved
+  appliedTaxLabel String? // e.g. "GST (Cash 5%)"
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Delivery
+  deliveryAddress String?
+  deliveryLat     Float?
+  deliveryLng     Float?
+  deliveryEtaSec  Int?
+  deliveryZoneId  String?
+
+  // Dine-in Table
+  tableId String?
+
+  cashierId  String?
+  customerId String?
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch        @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  shift        Shift?        @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  deliveryZone DeliveryZone? @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull)
+  table        Table?        @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  customer     Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  assignedWaiterId   String?
+  assignedWaiterName String?
+  assignedAt         DateTime?
+  assignedWaiter     User?     @relation("AssignedWaiter", fields: [assignedWaiterId], references: [id], onDelete: SetNull)
+
+  riderAssignment RiderAssignment?
+
+  items       OrderItem[]
+  payments    Payment[]
+  VoidRequest VoidRequest[]
+  orderDeals  OrderDeal[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([tableId])
+  @@index([tenantId, branchId, createdAt(sort: Desc)])
+  @@index([tenantId, status, createdAt(sort: Desc)])
+  @@index([tenantId, branchId, status])
+  @@index([tableId, status])
+  @@index([cashierId, createdAt])
+}
+
+model RiderAssignment {
+  id          String                   @id @default(cuid())
+  tenantId    String
+  orderId     String                   @unique
+  riderId     String? // User with RIDER role
+  status      DeliveryAssignmentStatus @default(UNASSIGNED)
+  assignedAt  DateTime?
+  pickedUpAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rider  User?  @relation(fields: [riderId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([riderId])
+}
+
+// Delivery zones are stored as a polygon in GeoJSON-like JSON (array of [lng,lat] pairs)
+model DeliveryZone {
+  id        String   @id @default(cuid())
+  tenantId  String
+  branchId  String
+  name      String
+  polygon   Json // [[lng,lat],...]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  @@index([tenantId])
+  @@index([branchId])
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  itemId  String
+
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+  notes     String?
+
+  // Storing variations and addons as JSON to prevent historical price changes from affecting past orders
+  options Json?
+
+  // KDS per-item tracking â€” each line item can be tracked independently on the kitchen display
+  kdsStationId String? // Which station is responsible for this item
+  kdsStatus    KdsItemStatus @default(WAITING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item        Item          @relation(fields: [itemId], references: [id])
+  kdsStation  KdsStation?   @relation(fields: [kdsStationId], references: [id], onDelete: SetNull)
+  VoidRequest VoidRequest[]
+
+  @@index([orderId])
+  @@index([itemId])
+  @@index([kdsStationId])
+  @@index([kdsStatus])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String
+  amount        Float
+  method        PaymentMethod @default(CASH)
+  status        PaymentStatus @default(PENDING)
+  transactionId String? // For online payments
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// -----------------------------------------------------------------------------
+// SHIFT MODELS
+// -----------------------------------------------------------------------------
+
+enum ShiftStatus {
+  OPEN // Shift is active â€” terminal can process orders
+  CLOSED // Shift has been closed and reconciled
+  ABANDONED // Shift was left open with no activity for a long time
+}
+
+// A Shift represents one cashier's working session at a POS terminal.
+// It tracks cash float in/out, total sales, and payment method breakdowns
+// for end-of-day reconciliation.
+model Shift {
+  id       String @id @default(cuid())
+  tenantId String
+  branchId String
+  userId   String // The cashier who opened the shift
+
+  status ShiftStatus @default(OPEN)
+
+  // Cash float provided to the cashier at shift open
+  openingFloat Float @default(0)
+
+  // Recorded at shift close â€” cashier's physical count of cash in drawer
+  closingCash Float?
+
+  // System-calculated totals (populated on close)
+  totalSales    Float? // Sum of all completed order netAmounts during this shift
+  totalCash     Float? // Sum of CASH payments
+  totalCard     Float? // Sum of CARD payments
+  totalDiscount Float? // Sum of discounts applied
+  totalTax      Float? // Sum of tax collected
+  totalOrders   Int? // Count of orders in this shift
+
+  closedReason String? // Reason provided if FORCE_CLOSED_BY_MANAGER
+  totalRefunds Float?  @default(0)
+
+  // Variance = closingCash - (openingFloat + totalCash)
+  // Positive = overage, Negative = shortage
+  cashVariance Float?
+
+  method    String?   @default("MANUAL") // ZKTECO or MANUAL
+  openedAt  DateTime  @default(now())
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  notes String? // Supervisor notes on close
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  cashEntries   ShiftCashEntry[]
+  denominations ShiftDenomination[]
+  orders        Order[]
+  breaks        ShiftBreak[]
+  activities    ShiftActivity[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Tracks mid-shift cash-in / cash-out entries (e.g., safe drops, paid-outs)
+model ShiftCashEntry {
+  id      String @id @default(cuid())
+  shiftId String
+
+  type   ShiftCashEntryType
+  amount Float
+  reason String? // e.g., "Safe drop", "Paid out for supplies"
+
+  createdAt DateTime @default(now())
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+}
+
+enum ShiftCashEntryType {
+  CASH_IN // Money added to drawer (e.g., received change from safe)
+  CASH_OUT // Money removed from drawer (e.g., safe drop, paid-out)
+}
+
+// Denomination breakdown entered by cashier at shift close
+// e.g., 5 x Rs.1000, 10 x Rs.500, etc.
+model ShiftDenomination {
+  id      String @id @default(cuid())
+  shiftId String
+
+  denomination Float // Face value of the note/coin (e.g., 1000, 500, 100, 50, 20, 10, 5, 1)
+  quantity     Int // Number of notes/coins of this denomination
+  total        Float // denomination * quantity (denormalized for convenience)
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+}
+
+// Tracks every break a cashier takes during a shift
+model ShiftBreak {
+  id      String @id @default(cuid())
+  shiftId String
+
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  durationMinutes Int? // Populated when the break ends
+  reason          String?
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+}
+
+// Immutable audit trail of everything that happens during a shift
+model ShiftActivity {
+  id      String @id @default(cuid())
+  shiftId String
+
+  activityType  ShiftActivityType
+  occurredAt    DateTime          @default(now())
+  performedById String? // userId of whoever triggered the action
+  amount        Float? // For CASH_IN / CASH_OUT entries
+  notes         String?
+  metadata      Json? // Flexible payload (e.g. orderId, breakId)
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([shiftId])
+  @@index([activityType])
+}
+
+enum ShiftActivityType {
+  OPENED
+  BREAK_START
+  BREAK_END
+  CASH_IN
+  CASH_OUT
+  ORDER_COMPLETED
+  ORDER_VOIDED
+  DISCOUNT_APPLIED
+  CLOSED
+  FORCE_CLOSED
+  FORCE_CLOSED_BY_MANAGER
+}
+
+// -----------------------------------------------------------------------------
+// KDS STATION MODELS
+// -----------------------------------------------------------------------------
+
+// Per-item KDS tracking status (independent of the whole order status)
+enum KdsItemStatus {
+  WAITING // Item not yet acknowledged by any station
+  IN_PROGRESS // Kitchen is working on this item
+  DONE // Item is ready / plated
+  VOIDED // Item was removed / cancelled
+}
+
+// A KdsStation is a physical kitchen display screen dedicated to a specific
+// cooking area (e.g., Grill, Fryer, Cold Station, Drinks Bar).
+// Each station displays only the items routed to it via KdsStationRoute.
+model KdsStation {
+  id       String @id @default(cuid())
+  tenantId String
+  branchId String
+
+  name         String // e.g., "Grill", "Fryer", "Cold Station", "Drinks"
+  color        String  @default("#f97316") // Accent color shown on the KDS screen header
+  displayOrder Int     @default(0) // Controls column order on multi-station views
+  isActive     Boolean @default(true)
+
+  // Optional: if true, ALL new orders are routed here regardless of routing rules
+  // Useful for small kitchens with a single KDS screen
+  catchAll Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  routes     KdsStationRoute[] // Routing rules pointing to this station
+  orderItems OrderItem[] // Items currently assigned to this station
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([isActive])
+}
+
+// KdsStationRoute maps menu categories or individual items to a KDS station.
+// Routing priority: item-level rule > category-level rule > catch-all station.
+//
+// Examples:
+//   { stationId: "grill-id",  categoryId: "burgers-id" }  â†’ All burgers â†’ Grill
+//   { stationId: "fryer-id",  itemId: "fries-id" }         â†’ Fries item  â†’ Fryer
+//   { stationId: "drinks-id", categoryId: "drinks-id" }   â†’ Drinks cat  â†’ Drinks bar
+model KdsStationRoute {
+  id        String @id @default(cuid())
+  stationId String
+
+  // Exactly one of categoryId or itemId must be set (enforced at app layer)
+  categoryId String? // Route an entire menu category to this station
+  itemId     String? // Route a specific menu item to this station
+
+  priority Int @default(0) // Higher number = higher priority when multiple rules match
+
+  createdAt DateTime @default(now())
+
+  station  KdsStation @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  category Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  item     Item?      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([stationId])
+  @@index([categoryId])
+  @@index([itemId])
+}
+
+// -----------------------------------------------------------------------------
+// INVENTORY MODELS (Task 49+50+51+52)
+// -----------------------------------------------------------------------------
+
+enum UnitOfMeasure {
+  PCS
+  GRAM
+  KILOGRAM
+  ML
+  LITER
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELLED
+}
+
+enum StockMovementType {
+  PURCHASE_RECEIPT
+  DEDUCT_SALE
+  ADJUSTMENT
+  WASTAGE
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
+model Ingredient {
+  id           String        @id @default(cuid())
+  tenantId     String
+  name         String
+  category     String?
+  imageUrl     String?
+  minThreshold Float         @default(0)
+  unit         UnitOfMeasure @default(GRAM)
+  costPerUnit  Float         @default(0)
+  supplierName String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  recipeLines RecipeLine[]
+  stock       Stock[]
+  movements   StockMovement[]
+  poLines     PurchaseOrderLine[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// A recipe defines how much of each ingredient is consumed when producing 1 unit of an Item.
+model Recipe {
+  id        String   @id @default(cuid())
+  tenantId  String
+  itemId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  lines RecipeLine[]
+
+  @@index([tenantId])
+}
+
+model RecipeLine {
+  id           String @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float // in ingredient.unit, consumed per 1 item
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, ingredientId])
+  @@index([ingredientId])
+}
+
+// Stock is tracked per-branch for each ingredient.
+model Stock {
+  id           String @id @default(cuid())
+  tenantId     String
+  branchId     String
+  ingredientId String
+
+  quantity     Float @default(0)
+  reorderLevel Float @default(0)
+
+  updatedAt DateTime @updatedAt
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, ingredientId])
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([ingredientId])
+}
+
+model StockMovement {
+  id           String            @id @default(cuid())
+  tenantId     String
+  branchId     String
+  ingredientId String
+  type         StockMovementType
+  quantity     Float // positive for IN, negative for OUT
+  reference    String? // e.g. orderId, purchaseOrderId, transferId
+  note         String?
+  createdAt    DateTime          @default(now())
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([ingredientId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PurchaseOrder {
+  id           String              @id @default(cuid())
+  tenantId     String
+  branchId     String
+  supplierName   String?
+  status         PurchaseOrderStatus @default(DRAFT)
+  estimatedTotal Float               @default(0)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  lines PurchaseOrderLine[]
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([status])
+}
+
+model PurchaseOrderLine {
+  id              String @id @default(cuid())
+  purchaseOrderId String
+  ingredientId      String
+  orderedQty        Float
+  receivedQty       Float  @default(0)
+  estimatedUnitCost Float  @default(0)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([purchaseOrderId, ingredientId])
+  @@index([ingredientId])
+}
+
+// FCM device tokens for low-stock notifications.
+model UserDevice {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// -----------------------------------------------------------------------------
+// DEALS / PROMOS MODELS (Task 53+54+55)
+// -----------------------------------------------------------------------------
+
+enum PromoType {
+  PERCENT
+  FIXED
+}
+
+// -----------------------------------------------------------------------------
+// CRM / LOYALTY MODELS (Task 65)
+// -----------------------------------------------------------------------------
+
+model Customer {
+  id                     String    @id @default(cuid())
+  tenantId               String
+  name                   String
+  phone                  String?
+  email                  String?
+  birthDate              DateTime?
+  anniversary            DateTime?
+  notes                  String? // Internal notes
+  tags                   String[] // E.g., "corporate client", "vip host"
+  preferredPaymentMethod String?
+  preferredOrderType     String?
+
+  // Auto-calculated CRM metrics
+  totalOrders   Int       @default(0)
+  totalSpend    Float     @default(0)
+  lastVisitAt   DateTime?
+  loyaltyPoints Float     @default(0)
+  currentTierId String?
+  segment       String? // VIP, REGULAR, NEW, AT_RISK, LOST (updated nightly)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // GDPR/PDPA compliance (soft delete, scrub PII)
+
+  tenant      Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  currentTier LoyaltyTier?         @relation(fields: [currentTierId], references: [id], onDelete: SetNull)
+  orders      Order[]
+  staffNotes  CustomerNote[]
+  points      LoyaltyPointLedger[]
+
+  @@unique([tenantId, phone])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([segment])
+  @@index([deletedAt]) // To filter out deleted customers easily
+}
+
+model CustomerNote {
+  id         String @id @default(cuid())
+  customerId String
+  tenantId   String
+  staffName  String // Storing name directly for timeline display
+  noteText   String
+
+  createdAt DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+}
+
+model LoyaltyTier {
+  id         String   @id @default(cuid())
+  tenantId   String
+  name       String
+  minPoints  Int      @default(0)
+  multiplier Float    @default(1) // points multiplier for earnings
+  badgeColor String   @default("#FF5722")
+  benefits   Json? // e.g., { "birthdayBonus": true, "prioritySeating": true, "freeItem": "item_id" }
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customers Customer[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([minPoints])
+}
+
+enum LoyaltyPointType {
+  EARN
+  REDEEM
+  ADJUST
+  EXPIRE
+  REVERSE
+}
+
+model LoyaltyPointLedger {
+  id         String           @id @default(cuid())
+  tenantId   String
+  customerId String
+  type       LoyaltyPointType
+  points     Int
+  reference  String? // e.g. orderId
+  note       String?
+  expiresAt  DateTime?
+  createdAt  DateTime         @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model LoyaltySettings {
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  isActive           Boolean  @default(false)
+  baseEarnRatePoints Float    @default(1)
+  baseEarnRateSpend  Float    @default(10)
+  minOrderValue      Float    @default(0)
+  allowedOrderTypes  String[] // ["DINE_IN", "TAKEAWAY", "DELIVERY"]
+  isolateBranches    Boolean  @default(false)
+
+  expiryType      String    @default("MONTHS") // MONTHS or FIXED_DATE
+  expiryMonths    Int       @default(12)
+  expiryFixedDate DateTime?
+
+  minPointsToRedeem                 Int     @default(100)
+  redemptionValuePoints             Int     @default(100)
+  redemptionValuePkr                Float   @default(10)
+  maxRedemptionPercent              Float? // e.g. 50 for 50% of order
+  maxRedemptionFlat                 Float?
+  requireFullPaymentBeforeRedeeming Boolean @default(false)
+
+  tierRecalculationMethod String @default("LIFETIME") // LIFETIME or MONTHLY
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyCategoryMultiplier {
+  id         String @id @default(cuid())
+  tenantId   String
+  categoryId String
+  multiplier Float
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+}
+
+model LoyaltyCampaign {
+  id         String    @id @default(cuid())
+  tenantId   String
+  name       String
+  type       String // MULTIPLIER, BONUS
+  value      Float
+  condition  String? // JSON to define conditions like minSpend or specific days
+  validFrom  DateTime?
+  validTo    DateTime?
+  isActive   Boolean   @default(true)
+  usageCount Int       @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model PromoCode {
+  id          String    @id @default(cuid())
+  tenantId    String
+  code        String
+  type        PromoType @default(PERCENT)
+  value       Float
+  minOrder    Float? // optional minimum netAmount before discount
+  maxDiscount Float? // optional cap for percent promos
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean   @default(true)
+  usageLimit  Int?
+  usedCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([code])
+  @@index([isActive])
+}
+
+model Combo {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  price     Float
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  ComboItem[]
+
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model ComboItem {
+  id       String @id @default(cuid())
+  comboId  String
+  itemId   String
+  quantity Int    @default(1)
+
+  combo Combo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([comboId, itemId])
+  @@index([itemId])
+}
+
+model BuyXGetYDeal {
+  id        String    @id @default(cuid())
+  tenantId  String
+  name      String
+  buyItemId String
+  buyQty    Int       @default(1)
+  getItemId String
+  getQty    Int       @default(1)
+  isActive  Boolean   @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  buyItem Item   @relation("BxGyBuyItem", fields: [buyItemId], references: [id], onDelete: Cascade)
+  getItem Item   @relation("BxGyGetItem", fields: [getItemId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([isActive])
+  @@index([buyItemId])
+  @@index([getItemId])
+}
+
+model QrSettings {
+  id             String   @id @default(cuid())
+  tenantId       String   @unique
+  isEnabled      Boolean  @default(false)
+  allowModifications Boolean @default(true)
+  showImages     Boolean  @default(true)
+  language       String   @default("EN") // EN, UR, BOTH
+  autoConfirm    Boolean  @default(false)
+  allowOnlinePayment Boolean @default(false)
+  qrStyle        String   @default("square") // square, rounded, dots
+  qrColor        String   @default("#000000")
+  showLogoInQr   Boolean  @default(false)
+  heroImage      String?
+  welcomeMessage String?
+  footerMessage  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// ERP INTEGRATIONS (Task 85+86+87)
+// -----------------------------------------------------------------------------
+
+enum AggregatorProvider {
+  foodpanda
+  careem
+  talabat
+}
+
+enum AggregatorIntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  DEGRADED
+}
+
+model AggregatorIntegration {
+  id              String                      @id @default(cuid())
+  tenantId        String
+  provider        AggregatorProvider
+  status          AggregatorIntegrationStatus @default(DISCONNECTED)
+  restaurantId    String?
+  apiKey          String?
+  webhookSecret   String?
+  autoAccept      Boolean                     @default(false)
+  defaultPrepTime Int                         @default(30)
+  branchId        String?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider])
+}
+
+model AggregatorMenuMapping {
+  id                 String             @id @default(cuid())
+  tenantId           String
+  provider           AggregatorProvider
+  aggregatorItemId   String
+  aggregatorItemName String
+  itemId             String?
+  priceModifier      Float? // Optional percentage (+15%) or specific price adjustment
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item   Item?  @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, aggregatorItemId])
+  @@index([tenantId, provider])
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+enum ErpProvider {
+  ERPNEXT
+  QUICKBOOKS
+}
+
+model AggregatorWebhookEvent {
+  id         String             @id @default(cuid())
+  tenantId   String
+  provider   AggregatorProvider
+  event      String
+  payload    Json
+  receivedAt DateTime           @default(now())
+
+  processedAt  DateTime?
+  processError String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([provider])
+  @@index([event])
+  @@index([receivedAt])
+}
+
+model WebhookEndpoint {
+  id            String   @id @default(cuid())
+  tenantId      String
+  url           String
+  secret        String
+  events        String   // JSON array of subscribed events
+  isActive      Boolean  @default(true)
+  status        WebhookStatus @default(ACTIVE)
+  failureCount  Int      @default(0)
+  lastTriggered DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  deliveries    WebhookDelivery[]
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+enum WebhookStatus {
+  ACTIVE
+  FAILING
+  DISABLED
+}
+
+model WebhookDelivery {
+  id              String   @id @default(cuid())
+  webhookId       String
+  event           String
+  payload         String   @db.Text
+  requestHeaders  String   @db.Text
+  responseStatus  Int?
+  responseBody    String?  @db.Text
+  responseTime    Int?     // in ms
+  triggeredAt     DateTime @default(now())
+
+  webhookEndpoint WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+}
+
+model ZapierWebhookSubscription {
+  id        String   @id @default(cuid())
+  tenantId  String
+  event     String // e.g. "order.created", "order.updated", "order.delivered"
+  url       String
+  secret    String? // optional shared secret sent as header
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lastStatus      WebhookDeliveryStatus?
+  lastError       String?
+  lastDeliveredAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([event])
+  @@index([isActive])
+}
+
+model ErpIntegration {
+  id        String      @id @default(cuid())
+  tenantId  String      @unique
+  provider  ErpProvider
+  baseUrl   String?
+  apiKey    String?
+  enabled   Boolean     @default(false)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // High-water mark for incremental sync
+  lastSyncedAt DateTime?
+  lastError    String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([enabled])
+  @@index([provider])
+}
+
+// -----------------------------------------------------------------------------
+// FLOOR PLAN MODELS (Task Designer)
+// -----------------------------------------------------------------------------
+
+model FloorPlan {
+  id        String   @id @default(cuid())
+  branchId  String   @unique
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  floors    Json // array of FloorData objects
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Table {
+  id          String   @id @default(cuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  label       String // "T1", "T2", "VIP-1", "Bar 3"
+  capacity    Int // how many people can sit
+  shape       String // "round" | "square" | "rectangle" | "booth"
+  floorNumber Int      @default(1)
+  positionX   Float // saved position on canvas
+  positionY   Float
+  width       Float
+  height      Float
+  rotation    Float    @default(0)
+  isActive    Boolean  @default(true)
+  status      String   @default("free") // "free", "occupied", "dirty", "ready", "reserved"
+  orders      Order[] // active orders on this table
+  createdAt   DateTime @default(now())
+
+  @@index([branchId])
+  @@index([tenantId])
+}
+
+// -----------------------------------------------------------------------------
+// BRANCH AVAILABILITY & MENU SCOPING
+// -----------------------------------------------------------------------------
+
+model BranchMenuItem {
+  id            String   @id @default(cuid())
+  branchId      String
+  branch        Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  itemId        String
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  isAvailable   Boolean  @default(false)
+  isInStock     Boolean  @default(true)
+  overridePrice Float? // branch can override item price
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([branchId, itemId])
+  @@index([branchId])
+  @@index([itemId])
+}
+
+model BranchMenuCategory {
+  id          String   @id @default(cuid())
+  branchId    String
+  branch      Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([branchId, categoryId])
+  @@index([branchId])
+  @@index([categoryId])
+}
+
+// -----------------------------------------------------------------------------
+// BRANDING / WHITE-LABEL SETTINGS (per-tenant)
+// -----------------------------------------------------------------------------
+
+model TenantBranding {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Restaurant identity
+  restaurantName String  @default("")
+  tagline        String?
+  businessType   String  @default("Fine Dining")
+  phone          String?
+  website        String?
+
+  // Visual branding
+  logoUrl        String?
+  primaryColor   String  @default("#FF5722")
+  secondaryColor String  @default("#1A1A2E")
+  accentColor    String  @default("#FFB300")
+
+  // Custom domains
+  customPosDomain     String?
+  customConsoleDomain String?
+
+  // POS Terminal Settings
+  currency                    String  @default("PKR")
+  posLanguage                 String  @default("en")
+  requireShiftOpen            Boolean @default(true)
+  autoKotPrint                Boolean @default(true)
+  autoReceiptPrint            Boolean @default(true)
+  blockOutOfStock             Boolean @default(true)
+  allowCashierDiscounts       Boolean @default(false)
+  maxDiscountPercent          Float   @default(0)
+  discountLimit               Float   @default(0)
+  voidRequiresManagerApproval Boolean @default(true)
+  
+  kotEnabled                  Boolean @default(true)
+  posMarkReadyEnabled         Boolean @default(true)
+  cashEnabled                 Boolean @default(true)
+  cardEnabled                 Boolean @default(true)
+  jazzcashEnabled             Boolean @default(false)
+  easypaisaEnabled            Boolean @default(false)
+
+  // Receipt / invoice
+  receiptHeader      String?
+  receiptFooter      String?
+  showLogoOnReceipt  Boolean @default(true)
+  showTaxBreakdown   Boolean @default(true)
+  showTokenNumber    Boolean @default(false)
+  showCashierName    Boolean @default(false)
+  showTableNumber    Boolean @default(false)
+  receiptLanguage    String  @default("English (US)")
+  receiptPaperSize   String  @default("80mm")
+  receiptLayout      String  @default("CLASSIC")
+  downloadPdfReceipt Boolean @default(false)
+  receiptCopies      Int     @default(1)
+
+  // Payment toggles
+  cashShowTendered Boolean @default(true)
+  cashShowChange   Boolean @default(true)
+  cardShowMethod   Boolean @default(true)
+  showPoweredBy    Boolean @default(true)
+
+  // FBR / Tax Integration
+  fbrEnabled       Boolean @default(false)
+  fbrNtn           String?
+  fbrPosId         String?
+  fbrInvoicePrefix String?
+  fbrSrb           Boolean @default(false)
+  taxAuthority     String  @default("FBR")
+
+  // Tax configuration (legacy â€” kept for backward compatibility)
+  taxMode              String  @default("EXCLUSIVE")
+  dineinTaxRate        Float   @default(5) // @deprecated â€” use cashTaxRate
+  takeawayTaxRate      Float   @default(0) // @deprecated â€” use cashTaxRate
+  deliveryTaxRate      Float   @default(0) // @deprecated â€” use cashTaxRate
+  serviceChargeEnabled Boolean @default(false)
+  serviceChargeRate    Float   @default(10)
+
+  // Dual Tax Configuration (FBR Compliant â€” Pakistan withholding tax)
+  cashTaxEnabled       Boolean @default(true)
+  cashTaxRate          Float   @default(5) // GST rate for cash payments (%)
+  cashTaxLabel         String  @default("GST (Cash)")
+  cardTaxEnabled       Boolean @default(true)
+  cardTaxRate          Float   @default(17) // GST rate for card/digital payments (%)
+  cardTaxLabel         String  @default("GST (Card/Digital)")
+  showDualTaxOnReceipt Boolean @default(true) // Print both cash+card totals on pre-payment receipt
+  cashTaxNote          String? // e.g. "Per FBR SRO 1125(I)/2019"
+  cardTaxNote          String? // e.g. "Withholding tax applied"
+  taxRoundingMethod    String  @default("ROUND") // ROUND, FLOOR, CEIL
+
+  // Receipt advanced
+  showFbrLogo       Boolean @default(true)
+  showQrCode        Boolean @default(true)
+  showNtn           Boolean @default(true)
+  receiptDisclaimer String?
+  cashPaymentNote   String?
+  cardPaymentNote   String?
+
+  // App icons / meta images
+  faviconUrl String?
+  appIconUrl String?
+  ogImageUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// -----------------------------------------------------------------------------
+// SUPER ADMIN & SUBSCRIPTION MANAGEMENT
+// -----------------------------------------------------------------------------
+
+model SuperAdmin {
+  id          String         @id @default(cuid())
+  email       String         @unique
+  password    String
+  name        String
+  role        SuperAdminRole @default(SUPPORT)
+  isActive    Boolean        @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  auditLogs AuditLog[]
+  messages  SuperAdminMessage[]
+}
+
+model TenantSubscription {
+  id                 String    @id @default(cuid())
+  tenantId           String    @unique
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan               String    @default("STARTER") // FREE, PRO_GO, STARTER, PRO, ENTERPRISE
+  billingCycle       String    @default("MONTHLY") // MONTHLY, ANNUAL
+  status             String    @default("ACTIVE") // TRIALING, ACTIVE, PAST_DUE, CANCELLED
+  amount             Float     @default(0) // MRR amount in PKR
+  trialDays          Int       @default(14)
+  trialEndsAt        DateTime?
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime  @default(now())
+  nextRenewalDate    DateTime  @default(now())
+  cancelledAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+model PaymentHistory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  amount      Float
+  currency    String   @default("PKR")
+  method      String   @default("BANK_TRANSFER") // BANK_TRANSFER, CREDIT_CARD, CASH
+  reference   String?
+  status      String   @default("PAID") // PAID, FAILED, PENDING
+  description String
+  notes       String?
+  invoiceUrl  String?
+  paidAt      DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+}
+
+model TenantFeatureOverride {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  featureKey String
+  enabled    Boolean  @default(true) // For boolean features
+  limit      Int?     // For numeric limits (e.g. dailyOrders, branches)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, featureKey])
+  @@index([tenantId])
+}
+
+model PlanDefinition {
+  id          String   @id // e.g., GO_FREE, PRO
+  name        String
+  displayName String?
+  price       Json     // e.g., { monthly: 0, annual: 0 }
+  currency    String   @default("PKR")
+  limits      Json     // e.g., { branches: 1, staff: 1, dailyOrders: 30, reportDaysHistory: 1 }
+  features    Json     // boolean flags e.g., { mobileApp: true, tabletPOS: false, adminDashboard: false, ... }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SuperAdminMessage {
+  id              String      @id @default(cuid())
+  tenantId        String?
+  tenant          Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  superAdminId    String?
+  superAdmin      SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: SetNull)
+  channel         String      @default("EMAIL") // EMAIL, WHATSAPP, BOTH
+  subject         String?
+  body            String
+  status          String      @default("SENT") // SENT, FAILED, DELIVERED, SCHEDULED
+  recipientsCount Int         @default(1)
+  targetSegment   String? // ALL_CLIENTS, PRO_ONLY, STARTER_ONLY, SPECIFIC
+  openRate        Float?
+  deliveryRate    Float?
+  scheduledAt     DateTime?
+  sentAt          DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+
+  @@index([tenantId])
+  @@index([superAdminId])
+}
+
+model AuditLog {
+  id             String      @id @default(cuid())
+  superAdminId   String?
+  superAdmin     SuperAdmin? @relation(fields: [superAdminId], references: [id], onDelete: SetNull)
+  action         String // PLAN_CHANGED, PAYMENT_ADDED, FEATURE_OVERRIDE, MESSAGE_SENT, ACCOUNT_SUSPENDED, ACCOUNT_RESUMED, TENANT_CREATED, TENANT_DELETED, SUPER_ADMIN_CREATED, SUPER_ADMIN_TOGGLED
+  targetTenantId String?
+  targetTenant   Tenant?     @relation(fields: [targetTenantId], references: [id], onDelete: SetNull)
+  before         Json?
+  after          Json?
+  ipAddress      String?
+  notes          String?
+  createdAt      DateTime    @default(now())
+
+  @@index([superAdminId])
+  @@index([targetTenantId])
+}
+
+model FeatureFlag {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  isEnabled   Boolean  @default(true)
+  minimumPlan String   @default("FREE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// ZKTECO BIOMETRIC ATTENDANCE
+// -----------------------------------------------------------------------------
+
+model ZktecoDevice {
+  id         String            @id @default(cuid())
+  tenantId   String
+  branchId   String
+  name       String // "Main Counter Machine"
+  ipAddress  String
+  port       Int               @default(4370)
+  status     String            @default("OFFLINE") // ONLINE | OFFLINE
+  lastSyncAt DateTime?
+  createdAt  DateTime          @default(now())
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch            @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  punches    AttendancePunch[]
+
+  @@index([tenantId, branchId])
+}
+
+model AttendancePunch {
+  id          String       @id @default(cuid())
+  tenantId    String
+  branchId    String
+  userId      String
+  deviceId    String
+  zkUserId    Int // the numeric ID enrolled on ZKTeco device
+  punchTime   DateTime
+  punchType   String // CLOCK_IN | CLOCK_OUT | BREAK_START | BREAK_END
+  method      String // ZKTECO | MANUAL | WEBAUTHN
+  isLate      Boolean      @default(false)
+  lateMinutes Int          @default(0)
+  shiftId     String?
+  processedAt DateTime     @default(now())
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device      ZktecoDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, branchId, punchTime])
+  @@index([userId, punchTime])
+}
+
+model StaffZktecoEnrollment {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  deviceId   String
+  zkUserId   Int // numeric ID on the ZKTeco device
+  enrolledAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, zkUserId])
+}
+
+enum VoidRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model VoidRequest {
+  id          String            @id @default(cuid())
+  tenantId    String
+  branchId    String
+  orderId     String
+  orderItemId String
+  cashierId   String
+  quantity    Int
+  reason      String
+  status      VoidRequestStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch    Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  cashier   User      @relation(fields: [cashierId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// UNIFIED DEALS AND PROMOTIONS MODULE
+// -----------------------------------------------------------------------------
+
+enum DealType {
+  PERCENT
+  FIXED
+  BUY_X_GET_Y
+  HAPPY_HOUR
+  FREE_ITEM
+  COMBO_PRICE
+}
+
+model Deal {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  type        DealType
+
+  // JSON configuration tailored to the specific DealType
+  config Json
+
+  // Conditions
+  minOrderValue        Float?
+  maxUsesTotal         Int?
+  maxUsesPerCustomer   Int?
+  validFrom            DateTime?
+  validUntil           DateTime?
+  validTimeStart       String? // e.g. "14:00"
+  validTimeEnd         String? // e.g. "17:00"
+  validDaysOfWeek      Int[] // [1,2,3,4,5,6,7]
+  orderTypeRestriction String[] // ["DINE_IN", "TAKEAWAY", "DELIVERY"]
+  branchIds            String[] // empty means all branches
+
+  // POS Behavior
+  autoApply               Boolean @default(false)
+  requiresManagerApproval Boolean @default(false)
+  showNameOnReceipt       Boolean @default(true)
+  allowStacking           Boolean @default(false)
+
+  // Promo code
+  requiresPromoCode      Boolean @default(false)
+  promoCode              String?
+  promoCodeCaseSensitive Boolean @default(false)
+
+  isActive  Boolean @default(true)
+  usedCount Int     @default(0)
+  version   Int     @default(1) // For optimistic locking
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderDeals OrderDeal[]
+
+  // A Postgres partial index is ideal here, but Prisma doesn't fully support partial unique indexes easily
+  // We'll rely on app-level unique validation for non-null promo codes if needed, or just standard index.
+  @@index([tenantId, promoCode])
+  @@index([tenantId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model OrderDeal {
+  id              String  @id @default(cuid())
+  orderId         String
+  dealId          String?
+  dealName        String
+  dealType        String
+  discountApplied Float
+  promoCodeUsed   String?
+
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deal  Deal? @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([dealId])
+}
+
+// -----------------------------------------------------------------------------
+// CUSTOMER RELATIONSHIP MANAGEMENT (CRM) MODULE
+// -----------------------------------------------------------------------------
+
+enum ReportFormat {
+  PDF
+  EXCEL
+  CSV
+}
+
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ReportStatus {
+  ACTIVE
+  PAUSED
+}
+
+model ScheduledReport {
+  id             String          @id @default(cuid())
+  tenantId       String
+  branchId       String?
+  name           String
+  reportType     String
+  parameters     Json
+  format         ReportFormat
+  frequency      ReportFrequency
+  runAtTime      String // e.g., '09:00'
+  recipients     String[]
+  whatsappNumber String?
+  status         ReportStatus    @default(ACTIVE)
+
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  lastFileUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([nextRunAt])
+}
+
+// -----------------------------------------------------------------------------
+// ANOMALIES DETECTION MODULE
+// -----------------------------------------------------------------------------
+
+enum AnomalyType {
+  EXCESSIVE_VOIDS
+  LARGE_DISCOUNT
+  UNAUTHORIZED_DISCOUNT
+  CASH_VARIANCE
+  AFTER_HOURS_ORDER
+  DELETED_KITCHEN_ITEM
+  PRICE_MISMATCH
+  DUPLICATE_ORDER
+  REFUND_SPIKE
+  ZERO_VALUE_ORDER
+  ROUND_NUMBER_CASH
+  SPLIT_ORDER_SUSPICIOUS
+  HIGH_FREQUENCY_VOIDS
+  LOW_STOCK
+  STOCK_DISCREPANCY
+}
+
+enum AnomalySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AnomalyStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+model AnomalyEvent {
+  id               String          @id @default(cuid())
+  tenantId         String
+  branchId         String
+  type             AnomalyType
+  severity         AnomalySeverity
+  description      String
+  affectedEntityId String?
+  affectedUserId   String?
+  detectedAt       DateTime        @default(now())
+  status           AnomalyStatus   @default(OPEN)
+  resolutionNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch       Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  affectedUser User?   @relation(fields: [affectedUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([branchId])
+  @@index([type])
+  @@index([status])
+  @@index([detectedAt])
+}
+
+model AnomalySettings {
+  id             String  @id @default(cuid())
+  tenantId       String  @unique
+  thresholds     Json
+  toggles        Json
+  notifyPush     Boolean @default(true)
+  notifyEmail    Boolean @default(false)
+  notifyWhatsapp Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+

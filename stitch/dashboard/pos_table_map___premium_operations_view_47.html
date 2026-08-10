@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Table Map</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0A0A0F;
+            overflow: hidden;
+            height: 100vh;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .dot-pattern {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .table-shadow {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+        .pulse-orange {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.2); }
+        }
+        .floor-canvas {
+            cursor: grab;
+        }
+        .floor-canvas:active {
+            cursor: grabbing;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+    </style>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#e6deff",
+                    "surface-container-highest": "#e0e3e5",
+                    "secondary": "#565e74",
+                    "on-secondary-fixed-variant": "#3f465c",
+                    "surface-container-low": "#f2f4f6",
+                    "on-background": "#191c1e",
+                    "surface-container-high": "#e6e8ea",
+                    "on-primary-fixed": "#3b0900",
+                    "on-surface-variant": "#5b4039",
+                    "outline-variant": "#e4beb4",
+                    "background": "#0A0A0F",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed": "#ffdbd1",
+                    "on-tertiary-container": "#29008a",
+                    "surface-bright": "#f7f9fb",
+                    "primary-container": "#ff5722",
+                    "on-error-container": "#93000a",
+                    "surface": "#f7f9fb",
+                    "inverse-primary": "#ffb5a0",
+                    "tertiary-fixed-dim": "#c9beff",
+                    "error": "#ba1a1a",
+                    "border-subtle": "#E2E8F0",
+                    "text-main": "#FFFFFF",
+                    "on-primary-fixed-variant": "#862200",
+                    "secondary-fixed-dim": "#bec6e0",
+                    "inverse-surface": "#111827",
+                    "tertiary": "#5f46ce",
+                    "surface-container": "#eceef0",
+                    "primary-fixed-dim": "#ffb5a0",
+                    "surface-card": "#FFFFFF",
+                    "tertiary-container": "#927eff",
+                    "on-tertiary-fixed": "#1b0063",
+                    "primary": "#ff5722",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed-variant": "#4629b6",
+                    "surface-default": "#F8FAFC",
+                    "on-secondary-container": "#5c647a",
+                    "on-primary-container": "#541200",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e0e3e5",
+                    "on-surface": "#191c1e",
+                    "surface-dim": "#d8dadc",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-tint": "#b02f00",
+                    "secondary-fixed": "#dae2fd",
+                    "on-secondary-fixed": "#131b2e",
+                    "outline": "#907067",
+                    "secondary-container": "#dae2fd",
+                    "on-secondary": "#ffffff",
+                    "text-muted": "#94A3B8",
+                    "inverse-on-surface": "#eff1f3"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "4px",
+                    "gutter-desktop": "24px",
+                    "margin-desktop": "40px",
+                    "gutter-mobile": "16px",
+                    "max-width": "1200px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-md": ["13px", {"lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="flex flex-col select-none">
+<!-- TopNavBar (Derived from JSON with Custom Overrides for POS Context) -->
+<header class="bg-inverse-surface border-b border-outline-variant h-[52px] flex items-center justify-between px-6 z-40">
+<div class="flex items-center gap-4">
+<button class="text-text-muted hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[24px]">arrow_back</span>
+</button>
+<h1 class="text-white font-bold text-[16px] tracking-tight">Select Table</h1>
+</div>
+<div class="flex items-center bg-[#0F172A] rounded-full p-1 border border-white/5">
+<button class="bg-primary-container text-white px-4 py-1 rounded-full font-label-md text-label-md flex items-center gap-2">
+<span class="w-1.5 h-1.5 bg-white rounded-full"></span>
+                Ground Floor
+            </button>
+<button class="text-text-muted px-4 py-1 rounded-full font-label-md text-label-md hover:text-white transition-all">
+                First Floor
+            </button>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-[13px] text-text-muted">
+<span class="font-bold text-white">12</span> tables
+                <span class="text-white/10">•</span>
+<span class="text-emerald-400 font-medium">6 Free</span>
+<span class="text-white/10">•</span>
+<span class="text-rose-400 font-medium">4 Occupied</span>
+</div>
+<button class="bg-[#ff5722]/10 text-primary-container border border-primary-container/30 px-4 py-1.5 rounded-full font-bold text-[12px] flex items-center gap-2 hover:bg-primary-container hover:text-white transition-all active:scale-95">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                QUICK TAKEAWAY
+            </button>
+</div>
+</header>
+<!-- Legend Row -->
+<div class="bg-[#0F172A] h-[36px] flex items-center px-6 gap-6 border-b border-white/5">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+<span class="text-text-muted text-[11px] font-medium uppercase tracking-wider">Free</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+<span class="text-text-muted text-[11px] font-medium uppercase tracking-wider">Occupied</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+<span class="text-text-muted text-[11px] font-medium uppercase tracking-wider">Bill Requested</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-purple-500"></div>
+<span class="text-text-muted text-[11px] font-medium uppercase tracking-wider">Reserved</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+<span class="text-text-muted text-[11px] font-medium uppercase tracking-wider">Cleaning</span>
+</div>
+</div>
+<!-- Main Canvas -->
+<main class="flex-1 bg-[#1A1A2E] relative overflow-hidden dot-pattern floor-canvas">
+<!-- Floor Boundary -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-[#1E2640]/40 border-2 border-dashed border-white/10 rounded-[32px] pointer-events-none"></div>
+<!-- Tables -->
+<div class="relative w-full h-full">
+<!-- Table T-1 (Free) -->
+<div class="absolute top-[20%] left-[25%] group cursor-pointer transition-transform hover:scale-105" onclick="togglePanel('t1')">
+<!-- Chairs -->
+<div class="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-4 bg-white/5 border border-white/10 rounded-t-lg"></div>
+<div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-4 bg-white/5 border border-white/10 rounded-b-lg"></div>
+<div class="absolute -left-4 top-1/2 -translate-y-1/2 w-4 h-8 bg-white/5 border border-white/10 rounded-l-lg"></div>
+<div class="absolute -right-4 top-1/2 -translate-y-1/2 w-4 h-8 bg-white/5 border border-white/10 rounded-r-lg"></div>
+<!-- Main Table -->
+<div class="w-[88px] h-[88px] bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-emerald-500 rounded-2xl flex flex-col items-center justify-center table-shadow relative overflow-hidden">
+<div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="text-white font-bold text-lg">T-1</span>
+<div class="w-2 h-2 rounded-full bg-emerald-500 mt-1"></div>
+<!-- Wood Texture Grain (Simulated) -->
+<div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #ffffff 11px);"></div>
+</div>
+</div>
+<!-- Table T-4 (Occupied) -->
+<div class="absolute top-[45%] left-[55%] group transition-transform hover:scale-105" id="anchor-t4">
+<!-- Chairs -->
+<div class="absolute -top-4 left-4 w-6 h-4 bg-white/10 border border-white/20 rounded-t-lg"></div>
+<div class="absolute -top-4 right-4 w-6 h-4 bg-white/10 border border-white/20 rounded-t-lg"></div>
+<div class="absolute -bottom-4 left-4 w-6 h-4 bg-white/10 border border-white/20 rounded-b-lg"></div>
+<div class="absolute -bottom-4 right-4 w-6 h-4 bg-white/10 border border-white/20 rounded-b-lg"></div>
+<!-- Main Table -->
+<div class="w-[100px] h-[70px] bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-rose-500 rounded-xl flex flex-col items-center justify-center table-shadow cursor-pointer relative" onclick="toggleFloatingCard('t4')">
+<span class="text-white font-bold">T-4</span>
+<div class="flex items-center gap-1.5 mt-1">
+<div class="w-2 h-2 rounded-full bg-orange-500 pulse-orange"></div>
+<span class="text-orange-400 text-[10px] font-bold">18 min</span>
+</div>
+</div>
+<!-- Floating Order Card (T-4) -->
+<div class="hidden absolute -top-[210px] left-1/2 -translate-x-1/2 w-[280px] bg-[#1E293B] border border-white/10 rounded-xl shadow-2xl z-50 p-4" id="card-t4">
+<div class="flex justify-between items-start mb-3">
+<div>
+<p class="text-primary-container text-[11px] font-bold uppercase tracking-wider">Order #ORD-1047</p>
+<p class="text-white/60 text-[10px]">Started 18 minutes ago</p>
+</div>
+<span class="text-emerald-400 font-bold text-sm">PKR 2,450</span>
+</div>
+<div class="space-y-2 mb-4 max-h-[80px] overflow-y-auto custom-scrollbar pr-1">
+<div class="flex justify-between text-[11px]">
+<span class="text-white/80">2x Beef Smash Burger</span>
+<span class="text-white/50">1,800</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-white/80">1x Loaded Fries (L)</span>
+<span class="text-white/50">450</span>
+</div>
+<div class="flex justify-between text-[11px]">
+<span class="text-white/80">2x Fresh Lime</span>
+<span class="text-white/50">200</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<button class="bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold py-2 rounded-lg transition-colors border border-white/5">+ Add Items</button>
+<button class="bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold py-2 rounded-lg transition-colors border border-white/5">Print Bill</button>
+<button class="col-span-2 bg-primary-container hover:bg-primary-container/90 text-white text-[11px] font-black py-2.5 rounded-lg transition-all active:scale-95 shadow-lg shadow-orange-500/20">COLLECT PAYMENT</button>
+</div>
+<!-- Triangle Tip -->
+<div class="absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-[#1E293B]"></div>
+</div>
+</div>
+<!-- Table T-5 (Bill Requested) -->
+<div class="absolute top-[70%] left-[30%] group transition-transform hover:scale-105">
+<div class="w-[88px] h-[88px] bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-blue-500 rounded-full flex flex-col items-center justify-center table-shadow relative">
+<span class="text-white font-bold text-lg">T-5</span>
+<span class="material-symbols-outlined text-blue-400 text-[24px] mt-1" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+</div>
+<!-- Table T-8 (Reserved) -->
+<div class="absolute top-[15%] left-[70%] group transition-transform hover:scale-105">
+<div class="w-[60px] h-[60px] bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-purple-500 rounded-lg flex flex-col items-center justify-center table-shadow relative">
+<span class="text-white font-bold text-sm">T-8</span>
+<div class="w-1.5 h-1.5 rounded-full bg-purple-500 mt-0.5"></div>
+</div>
+</div>
+<!-- Table T-10 (Cleaning) -->
+<div class="absolute top-[65%] left-[80%] group transition-transform hover:scale-105">
+<div class="w-[70px] h-[70px] bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-amber-500 rounded-full flex flex-col items-center justify-center table-shadow relative">
+<span class="text-white font-bold text-sm">T-10</span>
+<span class="material-symbols-outlined text-amber-500 text-[18px]">cleaning_services</span>
+</div>
+</div>
+</div>
+<!-- Zoom Controls -->
+<div class="absolute bottom-6 left-6 flex flex-col gap-2 z-30">
+<button class="w-10 h-10 bg-[#111827] border border-white/10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+<button class="w-10 h-10 bg-[#111827] border border-white/10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<button class="w-10 h-10 bg-[#111827] border border-white/10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">center_focus_strong</span>
+</button>
+</div>
+<!-- System Status -->
+<div class="absolute bottom-6 right-6 flex items-center gap-3 z-30">
+<div class="flex items-center gap-2 bg-[#000000]/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<span class="text-white/60 text-[11px] font-medium uppercase tracking-widest">System Online v2.4</span>
+</div>
+</div>
+</main>
+<!-- Bottom Action Panel (T-1) -->
+<div class="fixed bottom-[-200px] left-0 w-full h-[200px] bg-[#111827] border-t border-white/10 transition-all duration-300 ease-out z-50 px-8 py-6 flex items-center justify-between" id="panel-t1">
+<div class="flex items-center gap-8">
+<div class="w-24 h-24 bg-gradient-to-br from-[#2D241E] to-[#1A1512] border-2 border-emerald-500 rounded-2xl flex flex-col items-center justify-center shadow-xl">
+<span class="text-white font-black text-2xl">T-1</span>
+<span class="text-emerald-500 text-[11px] font-bold">AVAILABLE</span>
+</div>
+<div>
+<h2 class="text-white font-display-lg text-display-lg leading-none mb-1">Table T-1</h2>
+<div class="flex items-center gap-4 text-text-muted">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">group</span> 4 Seats</span>
+<span class="w-1 h-1 bg-white/20 rounded-full"></span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">location_on</span> Ground Floor - Window</span>
+</div>
+<p class="text-white/40 mt-4 text-body-md font-body-md">Ready for a new session. No active reservations.</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-8 py-4 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-all border border-white/10" onclick="togglePanel('t1')">CANCEL</button>
+<button class="px-12 py-4 bg-primary-container text-white rounded-xl font-black text-lg shadow-xl shadow-orange-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+                START NEW ORDER
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- BottomNavBar (Shared Component) -->
+<nav class="fixed bottom-0 left-0 w-full h-[64px] bg-on-background dark:bg-on-background shadow-[0_-4px_12px_rgba(0,0,0,0.5)] flex justify-around items-center px-margin-mobile z-[60]">
+<!-- HOME -->
+<button class="flex flex-col items-center justify-center text-secondary-fixed-dim p-2 hover:bg-secondary-fixed-dim/10 transition-all">
+<span class="material-symbols-outlined text-headline-lg font-headline-lg">home</span>
+<span class="font-label-sm text-label-sm mt-1 uppercase">HOME</span>
+</button>
+<!-- MENU -->
+<button class="flex flex-col items-center justify-center text-secondary-fixed-dim p-2 hover:bg-secondary-fixed-dim/10 transition-all">
+<span class="material-symbols-outlined text-headline-lg font-headline-lg">restaurant_menu</span>
+<span class="font-label-sm text-label-sm mt-1 uppercase">MENU</span>
+</button>
+<!-- TICKETS - Active -->
+<button class="flex flex-col items-center justify-center text-primary-container bg-on-primary-fixed-variant/20 rounded-xl p-2 px-6">
+<span class="material-symbols-outlined text-headline-lg font-headline-lg" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="font-label-sm text-label-sm mt-1 uppercase font-bold">TICKETS</span>
+</button>
+<!-- STOCK -->
+<button class="flex flex-col items-center justify-center text-secondary-fixed-dim p-2 hover:bg-secondary-fixed-dim/10 transition-all">
+<span class="material-symbols-outlined text-headline-lg font-headline-lg">inventory_2</span>
+<span class="font-label-sm text-label-sm mt-1 uppercase">STOCK</span>
+</button>
+<!-- ADMIN -->
+<button class="flex flex-col items-center justify-center text-secondary-fixed-dim p-2 hover:bg-secondary-fixed-dim/10 transition-all">
+<span class="material-symbols-outlined text-headline-lg font-headline-lg">admin_panel_settings</span>
+<span class="font-label-sm text-label-sm mt-1 uppercase">ADMIN</span>
+</button>
+</nav>
+<script>
+        function togglePanel(id) {
+            const panel = document.getElementById('panel-t1');
+            const isVisible = panel.style.bottom === '64px';
+            
+            // Close other elements first
+            document.getElementById('card-t4').classList.add('hidden');
+            
+            if (isVisible) {
+                panel.style.bottom = '-200px';
+            } else {
+                panel.style.bottom = '64px';
+            }
+        }
+
+        function toggleFloatingCard(id) {
+            const card = document.getElementById('card-t4');
+            const isVisible = !card.classList.contains('hidden');
+            
+            // Close other elements first
+            document.getElementById('panel-t1').style.bottom = '-200px';
+            
+            if (isVisible) {
+                card.classList.add('hidden');
+            } else {
+                card.classList.remove('hidden');
+            }
+        }
+
+        // Close everything when clicking canvas
+        document.querySelector('.floor-canvas').addEventListener('click', (e) => {
+            if (e.target.classList.contains('floor-canvas')) {
+                document.getElementById('panel-t1').style.bottom = '-200px';
+                document.getElementById('card-t4').classList.add('hidden');
+            }
+        });
+    </script>
+</body></html>

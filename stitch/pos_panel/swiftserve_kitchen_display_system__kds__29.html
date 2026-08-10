@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Kitchen Display System</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-highest": "#3c3329",
+                    "secondary": "#c9c6c5",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "on-tertiary-fixed": "#1a1c1a",
+                    "primary": "#ffc174",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "on-error": "#690005",
+                    "tertiary-container": "#b1b1ae",
+                    "on-surface": "#f0e0d1",
+                    "surface-dim": "#19120a",
+                    "surface": "#19120a",
+                    "surface-variant": "#3c3329",
+                    "surface-container-low": "#221a12",
+                    "on-secondary": "#313030",
+                    "surface-container": "#261e15",
+                    "on-secondary-container": "#bab8b7",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-high": "#31281f",
+                    "inverse-on-surface": "#382f25",
+                    "outline-variant": "#534434",
+                    "on-secondary-fixed-variant": "#474646",
+                    "inverse-primary": "#855300",
+                    "primary-container": "#f59e0b",
+                    "on-primary-container": "#613b00",
+                    "on-background": "#f0e0d1",
+                    "secondary-fixed": "#e5e2e1",
+                    "on-tertiary-fixed-variant": "#464745",
+                    "surface-container-lowest": "#140d06",
+                    "on-surface-variant": "#d8c3ad",
+                    "secondary-container": "#4a4949",
+                    "tertiary-fixed": "#e3e2e0",
+                    "surface-tint": "#ffb95f",
+                    "on-primary": "#472a00",
+                    "on-primary-fixed": "#2a1700",
+                    "inverse-surface": "#f0e0d1",
+                    "error-container": "#93000a",
+                    "primary-fixed-dim": "#ffb95f",
+                    "on-tertiary-container": "#434442",
+                    "secondary-fixed-dim": "#c9c6c5",
+                    "background": "#080808", /* Ultra-dark for KDS */
+                    "outline": "#a08e7a",
+                    "tertiary": "#cdccca",
+                    "on-tertiary": "#2f312f",
+                    "primary-fixed": "#ffddb8",
+                    "on-primary-fixed-variant": "#653e00",
+                    "surface-bright": "#41382e",
+                    "error": "#ffb4ab"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Clash Display"],
+                    "label-lg": ["Inter"],
+                    "display-lg": ["Clash Display"],
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-sm": ["Clash Display"],
+                    "currency-display": ["Clash Display"],
+                    "headline-md": ["Clash Display"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "mono-bold": ["Inter", "monospace"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                    "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { background-color: #080808; overflow: hidden; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .pulse-green { animation: pulseGreen 1.5s infinite; }
+        @keyframes pulseGreen { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        .pulse-amber { animation: pulseAmber 2s infinite ease-in-out; }
+        @keyframes pulseAmber { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; transform: scale(1.02); } }
+        .pulse-red { animation: pulseRed 0.8s infinite alternate; }
+        @keyframes pulseRed { from { border-left-color: #ef4444; box-shadow: 0 0 0px #ef4444; } to { border-left-color: #b91c1c; box-shadow: 0 0 15px #ef444433; } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #080808; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+    </style>
+</head>
+<body class="flex flex-col h-screen select-none font-body-md text-on-surface">
+<!-- Top Bar -->
+<header class="h-[52px] flex items-center justify-between px-6 bg-[#080808] border-b border-outline-variant/30 z-50">
+<div class="flex items-center gap-6">
+<h1 class="font-headline-md text-headline-md text-primary tracking-tighter">KITCHEN COMMAND</h1>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container rounded-full border border-outline-variant/20">
+<span class="w-2 h-2 bg-green-500 rounded-full pulse-green"></span>
+<span class="text-label-md font-label-md uppercase tracking-widest text-green-500">Live</span>
+</div>
+</div>
+<div class="absolute left-1/2 -translate-x-1/2 flex items-center gap-4">
+<span class="font-bold text-[28px] text-on-surface font-mono-bold" id="current-time">14:24:08</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="bg-[#1C1700] border border-primary/20 px-4 py-1.5 rounded-lg flex items-center gap-3">
+<span class="text-label-md font-label-md text-primary/70 uppercase">Active Orders</span>
+<span class="text-headline-sm font-headline-sm text-primary">24</span>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">sync</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Lane: NEW ORDERS -->
+<section class="flex-1 flex flex-col border-r border-outline-variant/20">
+<header class="h-[44px] flex items-center justify-between px-4 bg-[#0D1520] border-b-[3px] border-[#3B82F6]">
+<h2 class="font-headline-sm text-headline-sm text-[#3B82F6] flex items-center gap-2">
+                    NEW ORDERS
+                </h2>
+<span class="bg-[#3B82F6] text-white px-2.5 py-0.5 rounded text-headline-sm">6</span>
+</header>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 bg-black/20">
+<!-- Order Ticket 1 (New, Green border) -->
+<article class="bg-[#141414] rounded-[14px] border-l-[6px] border-green-500 card-shadow flex flex-col">
+<div class="p-4 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ORD-2901</h3>
+<div class="inline-flex items-center px-2 py-0.5 bg-surface-container-highest rounded text-[11px] font-bold text-on-surface-variant uppercase mt-1">Table 04</div>
+</div>
+<span class="font-mono-bold text-headline-sm text-green-500">2m</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3 group">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0 active:scale-95 transition-all" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Double Smash Burger</p>
+<p class="text-[12px] italic text-secondary/60">No Onions, Extra Pickle</p>
+</div>
+</div>
+<div class="flex items-start gap-3 group">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Truffle Fries</p>
+<p class="text-[12px] font-bold text-primary flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">warning</span> ALLERGEN: DAIRY</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 bg-black/20 rounded-b-[14px]">
+<button class="w-full h-[44px] bg-primary/10 border border-primary/20 text-primary font-bold rounded-lg hover:bg-primary hover:text-on-primary transition-all uppercase tracking-wider text-label-lg">Move to Cooking</button>
+</div>
+</article>
+<!-- Order Ticket 2 (Green Border) -->
+<article class="bg-[#141414] rounded-[14px] border-l-[6px] border-green-500 card-shadow flex flex-col">
+<div class="p-4 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ORD-2905</h3>
+<div class="inline-flex items-center px-2 py-0.5 bg-primary-container/20 rounded text-[11px] font-bold text-primary uppercase mt-1">TAKEAWAY</div>
+</div>
+<span class="font-mono-bold text-headline-sm text-green-500">5m</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Margherita Pizza</p>
+<p class="text-[12px] italic text-secondary/60">Thin Crust, Well Done</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 bg-black/20 rounded-b-[14px]">
+<button class="w-full h-[44px] bg-primary/10 border border-primary/20 text-primary font-bold rounded-lg uppercase tracking-wider text-label-lg">Move to Cooking</button>
+</div>
+</article>
+</div>
+</section>
+<!-- Lane: IN PROGRESS -->
+<section class="flex-1 flex flex-col border-r border-outline-variant/20 bg-[#0a0a0a]">
+<header class="h-[44px] flex items-center justify-between px-4 bg-[#1C1400] border-b-[3px] border-[#F59E0B]">
+<h2 class="font-headline-sm text-headline-sm text-[#F59E0B] flex items-center gap-2">
+                    IN PROGRESS
+                </h2>
+<span class="bg-[#F59E0B] text-black px-2.5 py-0.5 rounded text-headline-sm">12</span>
+</header>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Order Ticket 3 (Amber border, Aging) -->
+<article class="bg-[#141414] rounded-[14px] border-l-[6px] border-amber-500 card-shadow flex flex-col">
+<div class="p-4 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ORD-2847</h3>
+<div class="inline-flex items-center px-2 py-0.5 bg-surface-container-highest rounded text-[11px] font-bold text-on-surface-variant uppercase mt-1">Table 07</div>
+</div>
+<span class="font-mono-bold text-headline-sm text-amber-500">14m</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Ribeye Steak - Med Rare</p>
+<p class="text-[12px] italic text-secondary/60">Mashed Potatoes, Asparagus</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Salmon Fillet</p>
+<p class="text-[12px] italic text-secondary/60">Lemon Butter Sauce</p>
+</div>
+</div>
+</div>
+</div>
+<div class="px-4 pb-1">
+<div class="w-full bg-surface-container-low h-1.5 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full w-2/3"></div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 bg-black/20 rounded-b-[14px]">
+<button class="w-full h-[44px] bg-[#f59e0b] text-black font-bold rounded-lg uppercase tracking-wider text-label-lg transition-transform active:scale-95">Mark All Ready</button>
+</div>
+</article>
+<!-- Order Ticket 4 (Pulsing Red Border, Late) -->
+<article class="bg-[#141414] rounded-[14px] border-l-[6px] pulse-red card-shadow flex flex-col">
+<div class="p-4 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ORD-2831</h3>
+<div class="inline-flex items-center px-2 py-0.5 bg-surface-container-highest rounded text-[11px] font-bold text-on-surface-variant uppercase mt-1">Table 12</div>
+</div>
+<span class="font-mono-bold text-headline-sm text-red-500">24m</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3">
+<button class="w-11 h-11 border-2 border-outline-variant/40 rounded-lg flex items-center justify-center bg-surface shrink-0" onclick="toggleItem(this)">
+<span class="material-symbols-outlined text-transparent text-[32px]">check</span>
+</button>
+<div>
+<p class="text-[17px] font-bold text-on-surface">Seafood Paella x2</p>
+<p class="text-[12px] italic text-red-400">URGENT - LONG LEAD TIME</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 bg-black/20 rounded-b-[14px]">
+<button class="w-full h-[44px] bg-[#f59e0b] text-black font-bold rounded-lg uppercase tracking-wider text-label-lg pulse-amber">Mark All Ready</button>
+</div>
+</article>
+</div>
+</section>
+<!-- Lane: READY -->
+<section class="flex-1 flex flex-col bg-[#050505]">
+<header class="h-[44px] flex items-center justify-between px-4 bg-[#0A1A0E] border-b-[3px] border-[#10B981]">
+<h2 class="font-headline-sm text-headline-sm text-[#10B981] flex items-center gap-2">
+                    READY
+                </h2>
+<span class="bg-[#10B981] text-black px-2.5 py-0.5 rounded text-headline-sm">6</span>
+</header>
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Order Ticket 5 (Completed/Dimmed) -->
+<article class="bg-[#141414] opacity-60 rounded-[14px] border-l-[6px] border-green-500 card-shadow flex flex-col">
+<div class="p-4 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">ORD-2855</h3>
+<div class="inline-flex items-center px-2 py-0.5 bg-surface-container-highest rounded text-[11px] font-bold text-on-surface-variant uppercase mt-1">Table 01</div>
+</div>
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-3">
+<div class="w-11 h-11 border-2 border-green-500 rounded-lg flex items-center justify-center bg-green-500/10 shrink-0">
+<span class="material-symbols-outlined text-green-500 text-[32px]">check</span>
+</div>
+<div>
+<p class="text-[17px] font-bold text-on-surface line-through decoration-primary">Caesar Salad</p>
+<p class="text-[12px] italic text-secondary/40">No Croutons</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-3 border-t border-outline-variant/10 bg-black/20 rounded-b-[14px]">
+<button class="w-full h-[44px] bg-outline-variant/20 text-on-surface/50 font-bold rounded-lg uppercase tracking-wider text-label-lg">BUMPED</button>
+</div>
+</article>
+</div>
+</section>
+</main>
+<!-- Bump Bar Hardware Labels -->
+<footer class="h-8 bg-[#000] border-t border-outline-variant/20 flex items-center justify-around px-8">
+<div class="flex items-center gap-10">
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F1</span> Scroll</span>
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F2</span> Previous</span>
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F3</span> Bump</span>
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F4</span> Next</span>
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F5</span> History</span>
+<span class="text-[10px] font-bold text-[#444] uppercase tracking-[0.2em]"><span class="bg-[#222] px-1 rounded mr-1">F6</span> Recall</span>
+</div>
+</footer>
+<script>
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-GB', { hour12: false });
+            document.getElementById('current-time').textContent = timeString;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function toggleItem(btn) {
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const parent = btn.closest('.group');
+            const textElements = parent.querySelectorAll('p');
+            
+            if (icon.classList.contains('text-transparent')) {
+                // Check it
+                icon.classList.remove('text-transparent');
+                icon.classList.add('text-primary');
+                btn.classList.add('border-primary', 'bg-primary/5');
+                textElements.forEach(p => {
+                    p.classList.add('line-through', 'opacity-40');
+                });
+            } else {
+                // Uncheck it
+                icon.classList.add('text-transparent');
+                icon.classList.remove('text-primary');
+                btn.classList.remove('border-primary', 'bg-primary/5');
+                textElements.forEach(p => {
+                    p.classList.remove('line-through', 'opacity-40');
+                });
+            }
+        }
+    </script>
+</body></html>

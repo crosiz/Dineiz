@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JazzCash QR Payment - TERMX-POS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Clash+Display:wght@400;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        @keyframes scan-line {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        .qr-scanner-effect::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #ffc174;
+            box-shadow: 0 0 15px #ffc174;
+            animation: scan-line 3s linear infinite;
+        }
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #ffc174;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-container": "#4a4949",
+                    "surface-container-lowest": "#140d06",
+                    "tertiary-fixed-dim": "#c7c6c4",
+                    "on-secondary-fixed": "#1c1b1b",
+                    "surface-container-high": "#31281f",
+                    "primary": "#ffc174",
+                    "surface-variant": "#3c3329",
+                    "on-tertiary-fixed": "#1a1c1a",
+                    "tertiary": "#cdccca",
+                    "background": "#19120a",
+                    "primary-fixed-dim": "#ffb95f",
+                    "on-primary": "#472a00",
+                    "surface-dim": "#19120a",
+                    "surface-container-highest": "#3c3329",
+                    "on-surface": "#f0e0d1",
+                    "on-error": "#690005",
+                    "on-secondary-fixed-variant": "#474646",
+                    "error-container": "#93000a",
+                    "on-primary-fixed-variant": "#653e00",
+                    "inverse-on-surface": "#382f25",
+                    "surface-container": "#261e15",
+                    "surface-bright": "#41382e",
+                    "inverse-primary": "#855300",
+                    "surface-container-low": "#221a12",
+                    "on-primary-container": "#613b00",
+                    "surface": "#19120a",
+                    "on-primary-fixed": "#2a1700",
+                    "on-error-container": "#ffdad6",
+                    "outline": "#a08e7a",
+                    "outline-variant": "#534434",
+                    "on-secondary-container": "#bab8b7",
+                    "primary-fixed": "#ffddb8",
+                    "on-surface-variant": "#d8c3ad",
+                    "on-tertiary-fixed-variant": "#464745",
+                    "primary-container": "#f59e0b",
+                    "on-tertiary": "#2f312f",
+                    "secondary-fixed-dim": "#c9c6c5",
+                    "on-background": "#f0e0d1",
+                    "error": "#ffb4ab",
+                    "secondary-fixed": "#e5e2e1",
+                    "inverse-surface": "#f0e0d1",
+                    "tertiary-fixed": "#e3e2e0",
+                    "secondary": "#c9c6c5",
+                    "on-secondary": "#313030",
+                    "surface-tint": "#ffb95f",
+                    "tertiary-container": "#b1b1ae",
+                    "on-tertiary-container": "#434442"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "xs": "4px",
+                    "margin-desktop": "32px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "margin-mobile": "16px",
+                    "base": "8px",
+                    "gutter": "16px"
+            },
+            "fontFamily": {
+                    "label-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Clash Display"],
+                    "headline-md": ["Clash Display"],
+                    "display-lg": ["Clash Display"],
+                    "currency-display": ["Clash Display"],
+                    "body-sm": ["Inter"],
+                    "headline-lg": ["Clash Display"]
+            },
+            "fontSize": {
+                    "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-hidden">
+<!-- Top Navigation Anchor -->
+<header class="bg-surface flex justify-between items-center w-full px-lg py-sm h-[64px] border-b border-outline-variant fixed top-0 z-50">
+<div class="font-headline-md text-headline-md font-bold text-primary">TERMX-POS</div>
+<div class="flex items-center gap-md">
+<div class="flex gap-sm">
+<span class="material-symbols-outlined text-primary">wifi</span>
+<span class="material-symbols-outlined text-primary">battery_full</span>
+<span class="material-symbols-outlined text-primary">sync</span>
+</div>
+<div class="h-8 w-px bg-outline-variant mx-sm"></div>
+<span class="text-on-surface-variant font-label-md">Operator #42</span>
+</div>
+</header>
+<!-- Side Navigation Anchor (Checkout Context) -->
+<aside class="fixed right-0 top-[64px] bottom-[80px] w-[360px] bg-surface-container border-l border-outline-variant flex flex-col p-md gap-sm">
+<div class="pb-md">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Checkout</h2>
+<p class="text-on-surface-variant font-label-md">Table 12 - $142.50</p>
+</div>
+<nav class="flex flex-col gap-sm">
+<button class="flex items-center gap-sm p-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-bright transition-opacity">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-label-md">Quick Pay</span>
+</button>
+<button class="flex items-center gap-sm p-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-bright transition-opacity">
+<span class="material-symbols-outlined">call_split</span>
+<span class="font-label-md">Split Check</span>
+</button>
+<button class="flex items-center gap-sm p-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-bright transition-opacity">
+<span class="material-symbols-outlined">percent</span>
+<span class="font-label-md">Discount</span>
+</button>
+<button class="flex items-center gap-sm p-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-bright transition-opacity">
+<span class="material-symbols-outlined">delete_forever</span>
+<span class="font-label-md">Void</span>
+</button>
+<button class="flex items-center gap-sm p-md text-on-surface-variant border border-outline-variant rounded-lg hover:bg-surface-bright transition-opacity">
+<span class="material-symbols-outlined">print</span>
+<span class="font-label-md">Print</span>
+</button>
+</nav>
+</aside>
+<!-- Main Content Canvas -->
+<main class="fixed left-0 top-[64px] right-[360px] bottom-[80px] flex items-center justify-center bg-[#111827] p-xl">
+<!-- JazzCash Payment Modal Area -->
+<div class="bg-surface-container-low rounded-xl w-full max-w-4xl h-full max-h-[600px] shadow-2xl flex overflow-hidden border border-outline-variant">
+<!-- LEFT COLUMN (55%) -->
+<div class="w-[55%] p-xl flex flex-col items-center justify-center border-r border-outline-variant bg-[#111827]">
+<div class="mb-xl">
+<img alt="JazzCash Logo" class="h-[40px] object-contain" data-alt="Official JazzCash brand logo featuring bold typography and brand colors, rendered in high definition on a clean transparent background for a professional financial technology integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHeCh_TVzg0Vo_4Z7yuaD_BIOnYjhH_L6U2MdzJfwtUj8EeVo9i_xXAcPGo7opx-LmgB0xe39TC7tYx9UhKJV5hhg_f0n7SsYii_l5vY9kdqvQwXKzsm97qLzJ0R39S3O8RwcO50KCGcpoPK2hw19skBF8fRBxKdEvLagA_Y3fZQ2GLzh9O1QGiwpQimqxEvaEJWTbk07HzSmKzz_SjplJcP3NjrQD5LAbVkG9ZKiWq6w1xxtrVLWjZ8jXlTkghh_JmdOyTTmL1-YV"/>
+</div>
+<h3 class="text-white font-label-lg mb-md">Scan to Pay</h3>
+<!-- QR CODE CONTAINER -->
+<div class="relative w-[240px] h-[240px] bg-white rounded-xl p-md border-2 border-primary flex items-center justify-center overflow-hidden">
+<div class="qr-scanner-effect absolute inset-0 pointer-events-none"></div>
+<img alt="QR Code" class="w-full h-full object-contain" data-alt="A high-contrast black and white QR code matrix designed for mobile scanning, presented on a bright white background with clean edges, representing a secure digital payment token for a commercial point of sale transaction." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCX5KskXUBetBJkxscGoxFn8m76EbGevJFulSVS_eizBKPQMfifiMI6P_ENTc7NucWLMqa_hvCo3a6Q2Y8yQ373CaXv3OcxYQ613tpCMAH37cAG9z5Fhy0KwhUio3SkbijDe3owyX_hC5nFi_2104pblu4XAQDX8Mro8Ig3ObB1vsdQNWEWMpf6fNJq-Zp0_NohBsy1c_d3RsHcjamJ_mG7Rlps0Gd8D4XLrRM32mRcWavPNIBMrPrdctA8wTHoYgoGzTU7_GbHhaix"/>
+</div>
+<div class="mt-md text-primary font-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+                    This QR expires in 4:45
+                </div>
+<div class="mt-xl text-center">
+<p class="text-on-surface-variant font-label-md uppercase tracking-wider">Amount Due</p>
+<h2 class="text-primary font-currency-display text-currency-display">PKR 5,650</h2>
+</div>
+<div class="mt-lg flex items-center gap-sm px-md py-xs bg-surface-container rounded-full border border-outline-variant">
+<div class="spinner"></div>
+<span class="text-on-surface-variant font-label-md">Waiting for payment...</span>
+</div>
+</div>
+<!-- RIGHT COLUMN (45%) -->
+<div class="w-[45%] bg-[#19120a] p-xl flex flex-col">
+<h3 class="text-on-surface font-headline-sm mb-lg">Payment Steps</h3>
+<div class="bg-[#1E293B] p-md rounded-xl space-y-md border border-outline-variant/20 shadow-inner">
+<div class="flex items-start gap-md">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 font-bold font-label-lg">1</div>
+<div>
+<p class="text-white font-label-lg">Open App</p>
+<p class="text-on-surface-variant text-label-md">Launch JazzCash on your phone</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant ml-auto">smartphone</span>
+</div>
+<div class="flex items-start gap-md">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 font-bold font-label-lg">2</div>
+<div>
+<p class="text-white font-label-lg">Tap Scan/Pay</p>
+<p class="text-on-surface-variant text-label-md">Select the scan icon in the dock</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant ml-auto">qr_code_scanner</span>
+</div>
+<div class="flex items-start gap-md">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 font-bold font-label-lg">3</div>
+<div>
+<p class="text-white font-label-lg">Scan QR</p>
+<p class="text-on-surface-variant text-label-md">Focus camera on the left code</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant ml-auto">photo_camera</span>
+</div>
+<div class="flex items-start gap-md">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center flex-shrink-0 font-bold font-label-lg">4</div>
+<div>
+<p class="text-white font-label-lg">Confirmed</p>
+<p class="text-on-surface-variant text-label-md">Payment will sync automatically</p>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant ml-auto" data-weight="fill">verified</span>
+</div>
+</div>
+<div class="mt-auto pt-lg">
+<p class="text-on-surface-variant font-label-md mb-sm">Or share payment link:</p>
+<div class="flex items-center gap-sm bg-surface-container-high p-sm rounded-lg border border-outline-variant group cursor-pointer hover:border-primary transition-colors">
+<span class="text-primary font-label-md truncate flex-1">jzsh.pk/pay/tx_8819203</span>
+<button class="material-symbols-outlined text-on-surface-variant group-hover:text-primary active:scale-90 transition-transform">content_copy</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Cancel Action -->
+<div class="fixed bottom-[112px] left-[calc(50%-180px)] w-[360px] flex justify-center">
+<button class="w-full flex items-center justify-center gap-sm py-md border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-variant active:scale-95 transition-all">
+<span class="material-symbols-outlined">close</span>
+<span class="font-label-lg">Cancel Payment</span>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Anchor -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-md pb-safe bg-surface h-[80px] border-t border-outline-variant z-50">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high p-sm rounded-xl transition-all duration-150">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-lg text-label-lg">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high p-sm rounded-xl transition-all duration-150">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-lg text-label-lg">Tables</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-xl py-xs ring-2 ring-primary ring-offset-2 ring-offset-background active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-lg text-label-lg">Orders</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high p-sm rounded-xl transition-all duration-150">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-lg text-label-lg">Admin</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for link copy
+        document.querySelector('.group.cursor-pointer').addEventListener('click', function() {
+            const btn = this.querySelector('.material-symbols-outlined');
+            const originalIcon = btn.innerText;
+            btn.innerText = 'check';
+            btn.style.color = '#ffc174';
+            
+            setTimeout(() => {
+                btn.innerText = originalIcon;
+                btn.style.color = '';
+            }, 2000);
+        });
+
+        // Simple Countdown logic
+        let time = 285; // 4:45 in seconds
+        const timerDisplay = document.querySelector('.flex.items-center.gap-xs');
+        
+        const countdown = setInterval(() => {
+            time--;
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            if (timerDisplay) {
+                timerDisplay.innerHTML = `<span class="material-symbols-outlined text-[16px]">schedule</span> This QR expires in ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+            if (time <= 0) clearInterval(countdown);
+        }, 1000);
+    </script>
+</body></html>

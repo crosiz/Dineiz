@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Deals &amp; Promotions</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#fff1ed",
+                        "tertiary": "#00628c",
+                        "outline": "#907067",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#ffe2da",
+                        "on-tertiary-container": "#fcfcff",
+                        "on-tertiary-fixed": "#001e2e",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "primary": "#b02f00",
+                        "surface-tint": "#b02f00",
+                        "inverse-primary": "#ffb5a0",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "on-surface": "#271813",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-container": "#007caf",
+                        "surface": "#fff8f6",
+                        "secondary": "#565e74",
+                        "on-secondary-container": "#5c647a",
+                        "on-secondary-fixed": "#131b2e",
+                        "surface-container-highest": "#fadcd4",
+                        "on-tertiary": "#ffffff",
+                        "background": "#fff8f6",
+                        "on-primary": "#ffffff",
+                        "primary-fixed": "#ffdbd1",
+                        "inverse-on-surface": "#ffede8",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-background": "#271813",
+                        "secondary-fixed": "#dae2fd",
+                        "outline-variant": "#e4beb4",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#ff5722",
+                        "on-error": "#ffffff",
+                        "surface-container": "#ffe9e4",
+                        "surface-bright": "#fff8f6",
+                        "on-primary-container": "#541200",
+                        "surface-variant": "#fadcd4",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27",
+                        "on-surface-variant": "#5b4039",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "surface-dim": "#f1d4cc",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-primary-fixed-variant": "#862200"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "section": "24px",
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "related": "8px",
+                        "page_margin": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "caption": ["Inter"],
+                        "h2": ["Inter"],
+                        "display": ["Inter"],
+                        "body": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #fff8f6; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #e4beb4; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- Sidebar Navigation Shell -->
+<aside class="fixed left-0 top-0 h-screen w-60 bg-slate-900 dark:bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col p-4 gap-y-1 z-50">
+<div class="mb-8 px-4 py-2">
+<h1 class="text-2xl font-black text-orange-500 italic">SwiftServe</h1>
+<p class="text-slate-500 text-xs uppercase tracking-widest font-bold">Premium POS</p>
+</div>
+<nav class="flex-grow space-y-1">
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="dashboard">dashboard</span>
+<span class="font-inter">Overview</span>
+</a>
+<a class="bg-orange-600 text-white rounded-lg flex items-center px-4 py-2 shadow-lg shadow-orange-900/20 active:scale-[0.98] transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-inter">Operations</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="storefront">storefront</span>
+<span class="font-inter">Business</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="trending_up">trending_up</span>
+<span class="font-inter">Growth</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg flex items-center px-4 py-2 transition-colors" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="analytics">analytics</span>
+<span class="font-inter">Analytics</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 border-t border-slate-800">
+<button class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined" data-icon="add_circle">add_circle</span>
+                Create Order
+            </button>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 left-60 right-0 h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm flex justify-between items-center px-6 z-40">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold text-slate-900 dark:text-white font-inter">Operations</span>
+<span class="text-slate-300">/</span>
+<span class="text-orange-600 font-bold font-inter">Deals &amp; Promotions</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-slate-500 font-medium text-sm">
+<span class="material-symbols-outlined text-orange-600" data-icon="location_on">location_on</span>
+                Main Branch
+            </div>
+<div class="flex items-center gap-4 text-slate-500">
+<button class="p-2 hover:bg-slate-50 rounded-full transition-colors"><span class="material-symbols-outlined" data-icon="search">search</span></button>
+<button class="p-2 hover:bg-slate-50 rounded-full transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="p-2 hover:bg-slate-50 rounded-full transition-colors"><span class="material-symbols-outlined" data-icon="help">help</span></button>
+</div>
+<img alt="User Profile" class="w-10 h-10 rounded-full object-cover border-2 border-slate-100" data-alt="A professional close-up of a high-end restaurant manager in a minimalist office setting. The person is dressed in modern business casual attire, looking directly at the camera with a confident and helpful expression. The background features soft, high-key lighting and a palette of warm whites and subtle oranges, reflecting a clean and premium corporate atmosphere." src="https://lh3.googleusercontent.com/aida/ADBb0ug82ZyCBhQ9nhPIzCRdMNmf0tlgGY9rZjlvGOeg2S8_Dz5-ipvued0mr5PHRdqTbTvWX1VEoemrYn3TDxVG0eNhkIHMcJVYM-FUAQNObYdnMvZX1pNDQ968g-Qa9azWc1X0IBND3Cu5osmYj9xF6YFpq21G7D2w_iGFiVwvp2xVkQ2Qzf8Tskx9beUKSVkrb1Lt3G8ZY4ZlMA-aZw5-tja2v-WMOXaIgH6JjYiZce8NJTx1GjZxkAzCGb47tNIpVwrRuEKblCm9odI"/>
+</div>
+</header>
+<!-- Main Content Area with 3-Column Layout -->
+<main class="ml-60 pt-16 h-screen flex overflow-hidden">
+<!-- Left Column: Filters & Search (280px) -->
+<aside class="w-[280px] bg-white border-r border-outline-variant flex flex-col p-6 gap-6">
+<div class="space-y-related">
+<label class="text-caption font-caption text-on-surface-variant uppercase tracking-wider">Search Deals</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none text-body font-body" placeholder="Search promotions..." type="text"/>
+</div>
+</div>
+<div class="space-y-related">
+<label class="text-caption font-caption text-on-surface-variant uppercase tracking-wider">Status Filters</label>
+<nav class="flex flex-col gap-1">
+<button class="flex items-center justify-between px-4 py-3 bg-surface-container-high text-primary font-bold rounded-lg transition-all">
+<span class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="all_inclusive">all_inclusive</span>
+                            All Deals
+                        </span>
+<span class="text-caption bg-white px-2 py-0.5 rounded-full shadow-sm">24</span>
+</button>
+<button class="flex items-center justify-between px-4 py-3 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all">
+<span class="flex items-center gap-3">
+<span class="material-symbols-outlined text-green-600" data-icon="check_circle">check_circle</span>
+                            Active
+                        </span>
+<span class="text-caption bg-surface-container-high px-2 py-0.5 rounded-full">12</span>
+</button>
+<button class="flex items-center justify-between px-4 py-3 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all">
+<span class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-600" data-icon="calendar_today">calendar_today</span>
+                            Scheduled
+                        </span>
+<span class="text-caption bg-surface-container-high px-2 py-0.5 rounded-full">8</span>
+</button>
+<button class="flex items-center justify-between px-4 py-3 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-all">
+<span class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error" data-icon="history">history</span>
+                            Expired
+                        </span>
+<span class="text-caption bg-surface-container-high px-2 py-0.5 rounded-full">4</span>
+</button>
+</nav>
+</div>
+<div class="mt-auto p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+<p class="text-caption font-caption text-primary font-bold mb-1">PRO TIP</p>
+<p class="text-[11px] leading-relaxed text-on-surface-variant">Scheduled deals automatically activate at midnight on their start date.</p>
+</div>
+</aside>
+<!-- Center Column: Deal Cards Grid (Flex) -->
+<section class="flex-grow overflow-y-auto p-6 sidebar-scroll">
+<div class="flex items-center justify-between mb-6">
+<div>
+<h2 class="text-h1 font-h1 text-on-surface">Active Promotions</h2>
+<p class="text-body font-body text-on-surface-variant">Manage your current storefront deals</p>
+</div>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-4 py-2 rounded-lg font-bold hover:bg-on-primary-fixed-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    New Promotion
+                </button>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-grid_gutter">
+<!-- Deal Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border-2 border-primary shadow-lg ring-4 ring-primary/5 transition-all">
+<div class="flex justify-between items-start mb-4">
+<span class="px-3 py-1 bg-primary-fixed text-on-primary-fixed-variant text-caption rounded-full font-bold">PERCENTAGE OFF</span>
+<div class="flex gap-2">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span></button>
+<button class="text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span></button>
+</div>
+</div>
+<h3 class="text-h2 font-h2 text-on-surface mb-2">Summer Happy Hour</h3>
+<p class="text-body font-body text-on-surface-variant mb-6 line-clamp-2">Get 20% off all appetizers and signature cocktails from 4 PM to 7 PM every weekday during the summer season.</p>
+<div class="flex items-center justify-between py-4 border-t border-dashed border-outline-variant">
+<div>
+<p class="text-caption text-on-surface-variant">Discount</p>
+<p class="text-h2 font-h2 text-primary">20.0%</p>
+</div>
+<div class="text-right">
+<p class="text-caption text-on-surface-variant">Minimum Spend</p>
+<p class="text-h2 font-h2 text-on-surface">$25.00</p>
+</div>
+</div>
+<div class="flex items-center gap-2 text-caption text-on-surface-variant mt-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="schedule">schedule</span>
+                        Expires in 14 days
+                    </div>
+</div>
+<!-- Deal Card 2 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant hover:border-primary-container transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="px-3 py-1 bg-secondary-fixed text-on-secondary-fixed-variant text-caption rounded-full font-bold">FIXED AMOUNT</span>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span></button>
+<button class="text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span></button>
+</div>
+</div>
+<h3 class="text-h2 font-h2 text-on-surface mb-2">New Customer Special</h3>
+<p class="text-body font-body text-on-surface-variant mb-6 line-clamp-2">Save $10 on your first dine-in order over $50. Welcome to the SwiftServe family!</p>
+<div class="flex items-center justify-between py-4 border-t border-dashed border-outline-variant">
+<div>
+<p class="text-caption text-on-surface-variant">Discount</p>
+<p class="text-h2 font-h2 text-primary">$10.00</p>
+</div>
+<div class="text-right">
+<p class="text-caption text-on-surface-variant">Minimum Spend</p>
+<p class="text-h2 font-h2 text-on-surface">$50.00</p>
+</div>
+</div>
+<div class="flex items-center gap-2 text-caption text-on-surface-variant mt-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="event">event</span>
+                        Running indefinitely
+                    </div>
+</div>
+<!-- Deal Card 3 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant hover:border-primary-container transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="px-3 py-1 bg-tertiary-fixed text-on-tertiary-fixed-variant text-caption rounded-full font-bold">BOGO DEAL</span>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span></button>
+<button class="text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span></button>
+</div>
+</div>
+<h3 class="text-h2 font-h2 text-on-surface mb-2">Taco Tuesday BOGO</h3>
+<p class="text-body font-body text-on-surface-variant mb-6 line-clamp-2">Buy one set of street tacos, get the second set of equal or lesser value for free. Available every Tuesday.</p>
+<div class="flex items-center justify-between py-4 border-t border-dashed border-outline-variant">
+<div>
+<p class="text-caption text-on-surface-variant">Discount</p>
+<p class="text-h2 font-h2 text-primary">100% (2nd item)</p>
+</div>
+<div class="text-right">
+<p class="text-caption text-on-surface-variant">Eligibility</p>
+<p class="text-h2 font-h2 text-on-surface">Main Course</p>
+</div>
+</div>
+<div class="flex items-center gap-2 text-caption text-on-surface-variant mt-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="update">update</span>
+                        Next activation: Tomorrow
+                    </div>
+</div>
+<!-- Deal Card 4 -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant hover:border-primary-container transition-all cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant text-caption rounded-full font-bold">LOYALTY REWARD</span>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="edit">edit</span></button>
+<button class="text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-[20px]" data-icon="delete">delete</span></button>
+</div>
+</div>
+<h3 class="text-h2 font-h2 text-on-surface mb-2">Coffee Club Freebie</h3>
+<p class="text-body font-body text-on-surface-variant mb-6 line-clamp-2">Every 5th coffee is on us! Valid for any regular size espresso-based beverage.</p>
+<div class="flex items-center justify-between py-4 border-t border-dashed border-outline-variant">
+<div>
+<p class="text-caption text-on-surface-variant">Discount</p>
+<p class="text-h2 font-h2 text-primary">FREE ITEM</p>
+</div>
+<div class="text-right">
+<p class="text-caption text-on-surface-variant">Requirement</p>
+<p class="text-h2 font-h2 text-on-surface">5 Stamps</p>
+</div>
+</div>
+<div class="flex items-center gap-2 text-caption text-on-surface-variant mt-2">
+<span class="material-symbols-outlined text-[16px]" data-icon="group">group</span>
+                        412 active participants
+                    </div>
+</div>
+</div>
+</section>
+<!-- Right Column: Performance Overview (320px) -->
+<aside class="w-[320px] bg-white border-l border-outline-variant flex flex-col overflow-y-auto sidebar-scroll">
+<div class="p-6 border-b border-outline-variant">
+<div class="flex items-center gap-3 mb-2">
+<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+<h2 class="text-h2 font-h2 text-on-surface">Performance Overview</h2>
+</div>
+<p class="text-caption text-on-surface-variant">Currently viewing: <span class="text-primary font-bold">Summer Happy Hour</span></p>
+</div>
+<div class="p-6 space-y-6">
+<!-- Main Stats -->
+<div class="grid grid-cols-1 gap-4">
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-caption text-on-surface-variant mb-1">Total Revenue</p>
+<p class="text-display font-display text-on-surface">$4,282.50</p>
+</div>
+<span class="text-green-600 flex items-center text-caption font-bold">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+                                +12%
+                            </span>
+</div>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-outline-variant">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-caption text-on-surface-variant mb-1">Total Redemptions</p>
+<p class="text-display font-display text-on-surface">842</p>
+</div>
+<span class="text-green-600 flex items-center text-caption font-bold">
+<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
+                                +5%
+                            </span>
+</div>
+</div>
+</div>
+<!-- Trend Chart Placeholder -->
+<div class="space-y-related">
+<div class="flex justify-between items-center">
+<label class="text-caption font-caption text-on-surface-variant uppercase tracking-wider">Usage Trend</label>
+<span class="text-caption text-primary font-bold">Last 7 Days</span>
+</div>
+<div class="h-32 w-full bg-surface-container-highest rounded-lg relative overflow-hidden flex items-end gap-1 p-2 border border-outline-variant">
+<div class="flex-grow bg-primary/20 h-[40%] rounded-t-sm"></div>
+<div class="flex-grow bg-primary/20 h-[60%] rounded-t-sm"></div>
+<div class="flex-grow bg-primary/20 h-[30%] rounded-t-sm"></div>
+<div class="flex-grow bg-primary h-[85%] rounded-t-sm relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 bg-on-surface text-white text-[10px] px-1 rounded">142</div>
+</div>
+<div class="flex-grow bg-primary/20 h-[55%] rounded-t-sm"></div>
+<div class="flex-grow bg-primary/20 h-[70%] rounded-t-sm"></div>
+<div class="flex-grow bg-primary/20 h-[45%] rounded-t-sm"></div>
+</div>
+</div>
+<!-- Detailed Metrics -->
+<div class="space-y-4">
+<label class="text-caption font-caption text-on-surface-variant uppercase tracking-wider">Metric Breakdown</label>
+<div class="space-y-3">
+<div class="flex justify-between items-center pb-2 border-b border-outline-variant">
+<span class="text-body text-on-surface-variant">Avg. Order Value</span>
+<span class="text-body font-bold text-on-surface">$34.12</span>
+</div>
+<div class="flex justify-between items-center pb-2 border-b border-outline-variant">
+<span class="text-body text-on-surface-variant">New Customers</span>
+<span class="text-body font-bold text-on-surface">128</span>
+</div>
+<div class="flex justify-between items-center pb-2 border-b border-outline-variant">
+<span class="text-body text-on-surface-variant">Customer ROI</span>
+<span class="text-body font-bold text-on-surface">3.4x</span>
+</div>
+</div>
+</div>
+<button class="w-full py-3 bg-white border border-outline text-primary font-bold rounded-lg hover:bg-surface-container-low transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="file_download">file_download</span>
+                    Export Full Report
+                </button>
+</div>
+</aside>
+</main>
+</body></html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Shift Open</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Clash Display placeholder - using Plus Jakarta Sans as fallback for local dev feel, but naming in config as Clash -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @import url('https://fonts.cdnfonts.com/css/clash-display');
+        
+        body {
+            background-color: #0D0D0D;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .clash-font {
+            font-family: 'Clash Display', sans-serif;
+        }
+
+        /* Custom Scrollbar for the denomination list */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #111111;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3c3329;
+            border-radius: 10px;
+        }
+
+        .stepper-btn:active {
+            transform: scale(0.92);
+        }
+        
+        .industrial-border {
+            border: 1px solid #1A1A1A;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#ffc174",
+                        "primary-container": "#f59e0b",
+                        "on-primary": "#472a00",
+                        "surface": "#0D0D0D",
+                        "surface-container": "#111111",
+                        "outline": "#1A1A1A",
+                        "outline-variant": "#3c3329",
+                        "amber-accent": "#F59E0B",
+                        "signal-red": "#EF4444",
+                        "signal-green": "#10B981"
+                    },
+                    fontFamily: {
+                        "headline": ["Clash Display", "sans-serif"],
+                        "body": ["Inter", "sans-serif"]
+                    },
+                    spacing: {
+                        "base": "8px"
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="flex flex-col h-screen w-full">
+<!-- ZONE 1: TOP BAR (56px) -->
+<header class="h-[56px] bg-[#111111] border-b border-[#1A1A1A] flex items-center justify-between px-6 shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-accent" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<h1 class="text-white font-semibold text-base tracking-tight">SwiftServe POS</h1>
+</div>
+<div class="h-4 w-[1px] bg-[#333]"></div>
+<span class="text-[#6B7280] text-sm font-medium">Shift Open</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-sm text-[#d8c3ad]">
+<div class="flex flex-col items-end leading-none">
+<span class="font-medium text-white" id="current-time">09:42 AM</span>
+<span class="text-[10px] uppercase tracking-wider text-[#6B7280]" id="current-date">Oct 24, 2023</span>
+</div>
+<div class="flex items-center gap-2 bg-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#333]">
+<div class="w-6 h-6 rounded-full bg-primary-container flex items-center justify-center text-[10px] font-bold text-on-primary">
+                        AH
+                    </div>
+<span class="text-xs font-medium text-white">Ahmed · Cashier</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ZONE 2: MAIN CONTENT (2 columns) -->
+<main class="flex-1 flex overflow-hidden">
+<!-- LEFT COLUMN: DENOMINATION COUNTER (55%) -->
+<section class="w-[55%] flex flex-col border-r border-[#1A1A1A] bg-[#0D0D0D]">
+<div class="p-8 pb-4">
+<h2 class="clash-font text-[22px] font-semibold text-white mb-1">Count Your Opening Float</h2>
+<p class="text-[#d8c3ad] text-sm">Verify the cash drawer contents before beginning your shift.</p>
+</div>
+<div class="flex-1 overflow-y-auto px-8 custom-scrollbar">
+<div class="bg-[#111111] rounded-xl border border-[#1A1A1A] overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-[#1A1A1A] sticky top-0 z-10">
+<tr>
+<th class="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#6B7280]">Denomination</th>
+<th class="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#6B7280] text-center">Quantity</th>
+<th class="py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-[#6B7280] text-right">Subtotal</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#1A1A1A]">
+<!-- Denominations Rows -->
+<script>
+                                const denominations = [
+                                    { val: 5000, type: 'Note' },
+                                    { val: 1000, type: 'Note' },
+                                    { val: 500, type: 'Note' },
+                                    { val: 100, type: 'Note' },
+                                    { val: 50, type: 'Note' },
+                                    { val: 20, type: 'Note' },
+                                    { val: 10, type: 'Coin' },
+                                    { val: 5, type: 'Coin' },
+                                    { val: 1, type: 'Coin' }
+                                ];
+                                
+                                denominations.forEach(d => {
+                                    document.write(`
+                                        <tr class="hover:bg-[#161616] transition-colors">
+                                            <td class="py-4 px-4">
+                                                <div class="flex items-center gap-3">
+                                                    <span class="inline-flex items-center justify-center min-w-[80px] px-3 py-1 bg-[#261e15] border border-[#3c3329] rounded text-primary text-xs font-bold">
+                                                        Rs. ${d.val.toLocaleString()}
+                                                    </span>
+                                                    <span class="text-[10px] text-[#6B7280] uppercase">${d.type}</span>
+                                                </div>
+                                            </td>
+                                            <td class="py-4 px-4">
+                                                <div class="flex items-center justify-center gap-4">
+                                                    <button class="stepper-btn w-10 h-10 rounded-lg bg-[#1A1A1A] border border-[#333] flex items-center justify-center text-white hover:bg-[#222] transition-all">
+                                                        <span class="material-symbols-outlined text-sm">remove</span>
+                                                    </button>
+                                                    <input type="number" value="0" class="w-16 bg-transparent border-none text-center text-white font-bold focus:ring-0 text-lg" />
+                                                    <button class="stepper-btn w-10 h-10 rounded-lg bg-[#1A1A1A] border border-[#333] flex items-center justify-center text-white hover:bg-[#222] transition-all">
+                                                        <span class="material-symbols-outlined text-sm">add</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <td class="py-4 px-4 text-right">
+                                                <span class="text-sm font-medium text-[#d8c3ad]">PKR 0</span>
+                                            </td>
+                                        </tr>
+                                    `);
+                                });
+                            </script>
+</tbody>
+</table>
+</div>
+<div class="h-8"></div>
+</div>
+<!-- Sticky Footer for Total -->
+<div class="p-8 bg-[#0D0D0D] border-t border-[#1A1A1A]">
+<div class="bg-[#111111] industrial-border p-5 rounded-xl flex items-center justify-between">
+<div>
+<p class="text-[10px] font-bold uppercase tracking-widest text-[#6B7280] mb-1">Total Calculated Float</p>
+<p class="clash-font text-3xl font-bold text-amber-accent">PKR 25,000</p>
+</div>
+<div class="text-right">
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10B98120] border border-[#10B98140]">
+<span class="w-2 h-2 rounded-full bg-signal-green animate-pulse"></span>
+<span class="text-[10px] font-bold text-signal-green uppercase tracking-wider">Live Sync Active</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN: SUMMARY & CONTEXT (45%) -->
+<section class="w-[45%] bg-[#0D0D0D] flex flex-col p-8 overflow-y-auto custom-scrollbar">
+<!-- Shift Context Card -->
+<div class="bg-[#111111] industrial-border rounded-xl p-6 mb-6">
+<h3 class="text-[10px] font-bold uppercase tracking-widest text-[#6B7280] mb-4">Shift Details</h3>
+<div class="grid grid-cols-2 gap-y-4">
+<div>
+<p class="text-[10px] text-[#6B7280] uppercase mb-0.5">Terminal</p>
+<p class="text-sm font-medium text-white">POS Terminal 01</p>
+</div>
+<div>
+<p class="text-[10px] text-[#6B7280] uppercase mb-0.5">Shift Type</p>
+<p class="text-sm font-medium text-white">Morning / Regular</p>
+</div>
+<div>
+<p class="text-[10px] text-[#6B7280] uppercase mb-0.5">Assigned Staff</p>
+<p class="text-sm font-medium text-white">Ahmed Raza</p>
+</div>
+<div>
+<p class="text-[10px] text-[#6B7280] uppercase mb-0.5">Last Closure</p>
+<p class="text-sm font-medium text-white">Oct 23, 11:45 PM</p>
+</div>
+</div>
+</div>
+<!-- Reconciliation Card -->
+<div class="bg-[#111111] industrial-border rounded-xl p-6 mb-6">
+<h3 class="text-[10px] font-bold uppercase tracking-widest text-[#6B7280] mb-4">Expected Reconciliation</h3>
+<div class="flex items-center justify-between mb-6">
+<span class="text-sm text-[#d8c3ad]">Expected Opening Float</span>
+<span class="text-lg font-bold text-white">PKR 20,000</span>
+</div>
+<!-- Comparison Indicator: OVER -->
+<div class="p-4 rounded-lg bg-[#F59E0B10] border border-[#F59E0B30] flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-amber-accent flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[#0D0D0D] font-bold">trending_up</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-bold text-amber-accent uppercase tracking-wider">Float Over</span>
+<span class="text-xs font-bold text-white">+ PKR 5,000</span>
+</div>
+<p class="text-xs text-[#d8c3ad] leading-relaxed">
+                            Current count is higher than the expected opening amount. Please verify denominations or add an opening note.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Opening Notes -->
+<div class="mb-8">
+<label class="block text-[10px] font-bold uppercase tracking-widest text-[#6B7280] mb-2">Opening Notes (Optional)</label>
+<textarea class="w-full bg-[#111111] border border-[#1A1A1A] rounded-xl focus:border-amber-accent focus:ring-1 focus:ring-amber-accent text-white text-sm placeholder-[#3c3329] transition-all resize-none" placeholder="Enter reason for variance or shift hand-over notes..." rows="3"></textarea>
+</div>
+<!-- Actions -->
+<div class="mt-auto space-y-4">
+<button class="w-full h-14 bg-amber-accent hover:bg-[#ffb129] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-3 group" id="confirm-btn">
+<span class="clash-font text-base font-bold text-[#0D0D0D]">Confirm Opening Float — PKR 25,000</span>
+<span class="material-symbols-outlined text-[#0D0D0D] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<div class="text-center">
+<a class="text-xs font-medium text-[#6B7280] hover:text-[#d8c3ad] transition-colors inline-flex items-center gap-1 underline underline-offset-4 decoration-[#333]" href="#">
+                        Skip float entry (manager override required)
+                    </a>
+</div>
+</div>
+</section>
+</main>
+<!-- Visual Polish: Noise/Texture Overlay (No SVG) -->
+<div class="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay">
+<div class="w-full h-full bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+</div>
+<script>
+        // Simple Interaction Logic
+        const confirmBtn = document.getElementById('confirm-btn');
+        confirmBtn.addEventListener('click', function() {
+            const originalContent = this.innerHTML;
+            this.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <svg class="animate-spin h-5 w-5 text-[#0D0D0D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="clash-font text-base font-bold text-[#0D0D0D]">Processing Shift Open...</span>
+                </div>
+            `;
+            this.classList.add('pointer-events-none', 'opacity-80');
+            
+            setTimeout(() => {
+                this.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-[#0D0D0D]">check_circle</span>
+                        <span class="clash-font text-base font-bold text-[#0D0D0D]">Shift Opened Successfully</span>
+                    </div>
+                `;
+                this.classList.remove('bg-amber-accent');
+                this.classList.add('bg-signal-green');
+            }, 1800);
+        });
+
+        // Time Update
+        function updateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+            document.getElementById('current-time').textContent = timeStr;
+            document.getElementById('current-date').textContent = dateStr;
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
+</body></html>

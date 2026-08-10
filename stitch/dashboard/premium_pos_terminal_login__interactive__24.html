@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS | Secure Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#b02f00",
+                        "primary-container": "#ff5722",
+                        "surface-dark": "#0A0A0F",
+                        "surface-navy": "#1E293B",
+                        "text-muted": "#64748B",
+                        "on-primary": "#ffffff",
+                    },
+                    backgroundImage: {
+                        'login-radial': 'radial-gradient(circle at center, #1A1A2E 0%, #0A0A0F 100%)',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'entrance-up': 'entranceUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'entrance-fade': 'entranceFade 0.8s ease-out forwards',
+                        'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
+                        'breathing': 'breathing 8s ease-in-out infinite',
+                        'pop': 'pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                    },
+                    keyframes: {
+                        entranceUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        entranceFade: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        shake: {
+                            '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                            '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                            '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                            '40%, 60%': { transform: 'translate3d(4px, 0, 0)' },
+                        },
+                        breathing: {
+                            '0%, 100%': { transform: 'scale(1)', opacity: '0.4' },
+                            '50%': { transform: 'scale(1.1)', opacity: '0.6' },
+                        },
+                        pop: {
+                            '0%': { transform: 'scale(0.8)' },
+                            '100%': { transform: 'scale(1.2)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0F;
+            font-family: "Inter", sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background-color 0.8s ease;
+        }
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            opacity: 0.02;
+            pointer-events: none;
+            background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuDEp4GZiPzMM2-6G-n2dVWn5KgJT4LL5d1vJ3xaty1Xgbyo8DtGbSz16P11qMRtNNhEkP2P9OICviSPNzJR28_wc8o_S7Zuih2QLK0BpCy0mNwuW6bocLGb7K7Q_MNgg4wbIGnCw7YDZ4zR35QM5MlDBK_Hoo9_K2w6b4g9KWMYRCuJ_VKgS6Ro9_AjJI1flkF4lPBqSg-xSRoImATmATYDXI9F2lB800hRWO0NCDrhHSbc7Cw80nIzxBccYlzMB24rUb0epUF10KUH);
+        }
+        .pin-dot {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .numpad-key {
+            transition: all 0.1s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .numpad-key:active {
+            transform: scale(0.93);
+            background-color: #ff5722 !important;
+            color: white !important;
+        }
+        .staff-card {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .staff-card.selected {
+            border: 2px solid #ff5722;
+            transform: scale(1.04) translateY(-8px);
+            box-shadow: 0 10px 25px -5px rgba(255, 87, 34, 0.4);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .staff-card:not(.selected) {
+            opacity: 0.6;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after {
+                animation-delay: -1ms !important;
+                animation-duration: 1ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 1ms !important;
+                transition-delay: -1ms !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-login-radial flex items-center justify-center relative select-none" id="main-body">
+<div class="noise-overlay"></div>
+<!-- Main Container (Landscape Tablet Optimized) -->
+<main class="w-[1280px] h-[800px] flex flex-col items-center justify-between py-12 px-16 relative z-10" id="login-content">
+<!-- Header Section -->
+<header class="w-full flex flex-col items-center gap-4 opacity-0 animate-entrance-up" style="animation-delay: 0.1s;">
+<div class="flex items-center gap-4">
+<div class="w-[52px] h-[52px] bg-primary-container rounded-full flex items-center justify-center shadow-lg shadow-primary-container/20">
+<span class="material-symbols-outlined text-white text-3xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<h1 class="text-white font-extrabold text-[22px] tracking-tight">SwiftServe POS</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-text-muted text-[14px] font-medium tracking-wide">Clifton Branch</span>
+<div class="flex items-center gap-1.5 bg-green-500/10 px-2 py-0.5 rounded-full">
+<span class="w-2 h-2 bg-green-500 rounded-full animate-pulse-slow"></span>
+<span class="text-green-500 text-[12px] font-bold uppercase tracking-widest">Open</span>
+</div>
+</div>
+</header>
+<!-- Center Interaction Zone -->
+<div class="flex flex-col items-center gap-10 w-full">
+<!-- Staff Rail -->
+<section class="flex gap-6 opacity-0 animate-entrance-up" id="staff-rail" style="animation-delay: 0.4s;">
+<!-- Staff 1 -->
+<div class="staff-card w-[132px] h-[160px] bg-white/5 rounded-xl flex flex-col items-center justify-center cursor-pointer border border-white/10 hover:bg-white/10" onclick="selectStaff(this)">
+<div class="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-3 shadow-lg">
+<span class="text-white font-bold text-xl">AM</span>
+</div>
+<span class="text-white font-semibold text-sm">Alex M.</span>
+<span class="text-text-muted text-xs">Manager</span>
+</div>
+<!-- Staff 2 (Selected by default for demo) -->
+<div class="staff-card selected w-[132px] h-[160px] bg-white/5 rounded-xl flex flex-col items-center justify-center cursor-pointer border border-white/10 hover:bg-white/10" onclick="selectStaff(this)">
+<div class="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-orange-400 to-red-600 flex items-center justify-center mb-3 shadow-lg">
+<span class="text-white font-bold text-xl">JS</span>
+</div>
+<span class="text-white font-semibold text-sm">Jordan S.</span>
+<span class="text-text-muted text-xs">Server</span>
+</div>
+<!-- Staff 3 -->
+<div class="staff-card w-[132px] h-[160px] bg-white/5 rounded-xl flex flex-col items-center justify-center cursor-pointer border border-white/10 hover:bg-white/10" onclick="selectStaff(this)">
+<div class="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center mb-3 shadow-lg">
+<span class="text-white font-bold text-xl">KL</span>
+</div>
+<span class="text-white font-semibold text-sm">Kate L.</span>
+<span class="text-text-muted text-xs">Server</span>
+</div>
+<!-- Staff 4 -->
+<div class="staff-card w-[132px] h-[160px] bg-white/5 rounded-xl flex flex-col items-center justify-center cursor-pointer border border-white/10 hover:bg-white/10" onclick="selectStaff(this)">
+<div class="w-[72px] h-[72px] rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center mb-3 shadow-lg">
+<span class="text-white font-bold text-xl">TR</span>
+</div>
+<span class="text-white font-semibold text-sm">Tom R.</span>
+<span class="text-text-muted text-xs">Bartender</span>
+</div>
+</section>
+<!-- PIN Section -->
+<div class="flex flex-col items-center gap-4">
+<div class="flex gap-4 mb-2" id="pin-dots-container">
+<div class="pin-dot w-5 h-5 rounded-full border-2 border-slate-700" id="dot-1"></div>
+<div class="pin-dot w-5 h-5 rounded-full border-2 border-slate-700" id="dot-2"></div>
+<div class="pin-dot w-5 h-5 rounded-full border-2 border-slate-700" id="dot-3"></div>
+<div class="pin-dot w-5 h-5 rounded-full border-2 border-slate-700" id="dot-4"></div>
+</div>
+<div class="h-6">
+<span class="text-red-500 text-sm font-medium opacity-0 transition-opacity" id="error-text">Incorrect PIN</span>
+</div>
+</div>
+<!-- Numpad -->
+<div class="grid grid-cols-3 gap-4 opacity-0 animate-entrance-up" style="animation-delay: 0.7s;">
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('1')">1</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('2')">2</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('3')">3</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('4')">4</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('5')">5</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('6')">6</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('7')">7</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('8')">8</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('9')">9</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-white shadow-lg" onclick="clearPin()">
+<span class="material-symbols-outlined text-3xl">backspace</span>
+</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-surface-navy flex items-center justify-center text-2xl font-bold text-white shadow-lg" onclick="pressKey('0')">0</button>
+<button class="numpad-key w-[76px] h-[76px] rounded-full bg-primary-container flex items-center justify-center text-white shadow-lg shadow-primary-container/30" onclick="confirmPin()">
+<span class="material-symbols-outlined text-3xl">check</span>
+</button>
+</div>
+</div>
+<!-- Footer -->
+<footer class="w-full flex justify-between items-end opacity-0 animate-entrance-fade" style="animation-delay: 1.2s;">
+<div class="flex flex-col gap-1">
+<span class="text-text-muted text-[12px] font-mono tracking-widest uppercase">Version 2.1.0</span>
+<span class="text-white/20 text-[10px]">Secure Encrypted Terminal SS-042</span>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="text-white text-2xl font-light tracking-widest tabular-nums" id="digital-clock">12:45 PM</span>
+<span class="text-text-muted text-[12px] uppercase tracking-wide" id="date-display">Oct 24, 2023</span>
+</div>
+</footer>
+</main>
+<!-- Overlay Background Texture -->
+<div class="absolute inset-0 z-0 pointer-events-none mix-blend-overlay overflow-hidden">
+<div class="w-full h-full bg-[radial-gradient(circle_at_50%_120%,rgba(255,87,34,0.15),transparent_50%)] animate-breathing"></div>
+</div>
+<script>
+        let currentPin = "";
+        const CORRECT_PIN = "1234";
+
+        // PIN Logic
+        function pressKey(key) {
+            if (currentPin.length < 4) {
+                currentPin += key;
+                updatePinDisplay();
+                
+                // Pop effect for current dot
+                const currentDot = document.getElementById(`dot-${currentPin.length}`);
+                currentDot.classList.add('animate-pop');
+                setTimeout(() => currentDot.classList.remove('animate-pop'), 300);
+
+                // Auto-confirm if 4 digits entered
+                if (currentPin.length === 4) {
+                    setTimeout(() => confirmPin(), 300);
+                }
+            }
+        }
+
+        function clearPin() {
+            if (currentPin.length > 0) {
+                currentPin = currentPin.slice(0, -1);
+                updatePinDisplay();
+                document.getElementById('error-text').classList.add('opacity-0');
+            }
+        }
+
+        function updatePinDisplay() {
+            for (let i = 1; i <= 4; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i <= currentPin.length) {
+                    dot.classList.add('bg-primary-container', 'border-primary-container', 'shadow-[0_0_12px_rgba(255,87,34,0.6)]');
+                    dot.classList.remove('border-slate-700', 'bg-green-500', 'border-green-500', 'bg-red-500', 'border-red-500', 'shadow-[0_0_15px_rgba(34,197,94,0.8)]', 'shadow-[0_0_15px_rgba(239,68,68,0.8)]');
+                } else {
+                    dot.classList.remove('bg-primary-container', 'border-primary-container', 'shadow-[0_0_12px_rgba(255,87,34,0.6)]', 'bg-green-500', 'border-green-500', 'bg-red-500', 'border-red-500', 'shadow-[0_0_15px_rgba(34,197,94,0.8)]', 'shadow-[0_0_15px_rgba(239,68,68,0.8)]');
+                    dot.classList.add('border-slate-700');
+                }
+            }
+        }
+
+        function confirmPin() {
+            const dots = document.querySelectorAll('.pin-dot');
+            const dotsContainer = document.getElementById('pin-dots-container');
+            
+            if (currentPin === CORRECT_PIN) {
+                // Success State
+                dots.forEach(dot => {
+                    dot.classList.remove('bg-primary-container', 'border-primary-container', 'shadow-[0_0_12px_rgba(255,87,34,0.6)]');
+                    dot.classList.add('bg-green-500', 'border-green-500', 'shadow-[0_0_15px_rgba(16,185,129,0.8)]', 'scale-125');
+                });
+                
+                setTimeout(() => {
+                    document.getElementById('main-body').style.backgroundColor = 'black';
+                    document.getElementById('login-content').classList.add('transition-opacity', 'duration-500', 'opacity-0');
+                }, 400);
+            } else if (currentPin.length > 0) {
+                // Error State
+                dots.forEach(dot => {
+                    dot.classList.remove('bg-primary-container', 'border-primary-container', 'shadow-[0_0_12px_rgba(255,87,34,0.6)]');
+                    dot.classList.add('bg-red-500', 'border-red-500', 'shadow-[0_0_15px_rgba(239,68,68,0.8)]');
+                });
+                
+                dotsContainer.classList.add('animate-shake');
+                document.getElementById('error-text').classList.remove('opacity-0');
+                
+                setTimeout(() => {
+                    dotsContainer.classList.remove('animate-shake');
+                    currentPin = "";
+                    updatePinDisplay();
+                }, 600);
+            }
+        }
+
+        // Staff Selection Logic
+        function selectStaff(element) {
+            document.querySelectorAll('.staff-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            currentPin = "";
+            updatePinDisplay();
+            document.getElementById('error-text').classList.add('opacity-0');
+        }
+
+        // Clock logic
+        function updateClock() {
+            const now = new Date();
+            const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+            const dateOptions = { month: 'short', day: '2-digit', year: 'numeric' };
+            
+            document.getElementById('digital-clock').textContent = now.toLocaleTimeString('en-US', timeOptions);
+            document.getElementById('date-display').textContent = now.toLocaleDateString('en-US', dateOptions);
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body></html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Order Success</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Clash+Display:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        @font-face {
+            font-family: 'Clash Display';
+            src: url('https://cdn.fontshare.com/wf/OAK6C6KSTT7N7O37N4U2H2M6P6S6Z6Q6/5O6N6T6Y6E6Z6Q6L6N6T6Y6E6Z6Q6L.woff2') format('woff2');
+        }
+        body {
+            background-color: #0D0D0D;
+            color: #f0e0d1;
+            font-family: 'Inter', sans-serif;
+        }
+        .receipt-paper {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .receipt-paper::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background-image: linear-gradient(-45deg, transparent 5px, #ffffff 5px), linear-gradient(45deg, transparent 5px, #ffffff 5px);
+            background-size: 10px 10px;
+        }
+        .progress-bar-fill {
+            animation: progress-fill 5s linear forwards;
+        }
+        @keyframes progress-fill {
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#19120a",
+                        "on-error": "#690005",
+                        "on-secondary-container": "#bab8b7",
+                        "inverse-on-surface": "#382f25",
+                        "on-secondary": "#313030",
+                        "background": "#19120a",
+                        "tertiary-container": "#b1b1ae",
+                        "inverse-surface": "#f0e0d1",
+                        "surface-container-high": "#31281f",
+                        "primary": "#ffc174",
+                        "on-primary-fixed": "#2a1700",
+                        "primary-container": "#f59e0b",
+                        "inverse-primary": "#855300",
+                        "surface-container-highest": "#3c3329",
+                        "surface-tint": "#ffb95f",
+                        "on-background": "#f0e0d1",
+                        "outline": "#a08e7a",
+                        "surface-container": "#261e15",
+                        "on-tertiary-fixed": "#1a1c1a",
+                        "on-primary-container": "#613b00",
+                        "on-error-container": "#ffdad6",
+                        "surface-variant": "#3c3329",
+                        "on-tertiary-container": "#434442",
+                        "secondary": "#c9c6c5",
+                        "primary-fixed": "#ffddb8",
+                        "surface-bright": "#41382e",
+                        "on-surface": "#f0e0d1",
+                        "surface": "#19120a",
+                        "secondary-fixed": "#e5e2e1",
+                        "outline-variant": "#534434",
+                        "on-tertiary": "#2f312f",
+                        "tertiary-fixed-dim": "#c7c6c4",
+                        "on-secondary-fixed-variant": "#474646",
+                        "tertiary": "#cdccca",
+                        "secondary-container": "#4a4949",
+                        "on-primary": "#472a00",
+                        "primary-fixed-dim": "#ffb95f",
+                        "on-surface-variant": "#d8c3ad",
+                        "tertiary-fixed": "#e3e2e0",
+                        "on-tertiary-fixed-variant": "#464745",
+                        "surface-container-low": "#221a12",
+                        "secondary-fixed-dim": "#c9c6c5",
+                        "on-secondary-fixed": "#1c1b1b",
+                        "surface-container-lowest": "#140d06",
+                        "on-primary-fixed-variant": "#653e00",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "success-bg": "#0F1F14",
+                        "success-green": "#4ADE80",
+                        "industrial-black": "#0D0D0D"
+                    },
+                    "spacing": {
+                        "xs": "4px", "sm": "8px", "md": "16px", "lg": "24px", "xl": "32px", "margin-desktop": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Clash Display"], "body-lg": ["Inter"], "label-md": ["Inter"], "label-lg": ["Inter"], "headline-md": ["Clash Display"], "display-lg": ["Clash Display"], "body-sm": ["Inter"], "body-md": ["Inter"], "headline-sm": ["Clash Display"], "currency-display": ["Clash Display"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-lg": ["14px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "currency-display": ["36px", {"lineHeight": "44px", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-industrial-black min-h-screen flex flex-col">
+<!-- Top AppBar (JSON Component Mapping) -->
+<header class="bg-background dark:bg-background border-b border-outline-variant flex justify-between items-center w-full px-margin-desktop py-md max-w-full sticky top-0 z-40">
+<div class="flex items-center gap-lg">
+<h1 class="text-headline-lg font-headline-lg font-bold text-primary dark:text-primary tracking-tight">TK-042 · Token #42 · Paid</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-sm px-md py-xs bg-surface-container rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-primary">person</span>
+<span class="font-label-lg text-label-lg text-on-surface">Ahmed · Cashier</span>
+</div>
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-sm rounded-full">bolt</button>
+</div>
+</header>
+<main class="flex-grow flex flex-col">
+<!-- Success Banner -->
+<section class="bg-success-bg px-margin-desktop py-lg flex justify-between items-center border-b border-success-green/20">
+<div class="flex items-center gap-lg">
+<div class="w-12 h-12 rounded-full bg-success-green flex items-center justify-center">
+<span class="material-symbols-outlined text-industrial-black font-bold">check</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-success-green">Payment Received</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Token #42 · Ahmed Khan · Paid</p>
+</div>
+</div>
+<!-- FBR Compact Status Widget -->
+<div class="bg-white/5 border border-white/10 p-md rounded-xl flex items-center gap-md">
+<div class="w-8 h-8">
+<img alt="FBR Logo" class="w-full h-full object-contain grayscale brightness-200" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB912B2C92VCYw6ofACafUYTJL21hdYXMfAVprFqx61X6uPTubCmudRmBbFPCMayEcMD7Cc2OFaXqI9gaaU7QmT5xkIOBnevSkhoGMpKpV6QRyB9OOCOtfZ9UbII4OkLcvGZqPZ94xbSGzwZCDaNy4OCeNvJ676npx7T7IxsH3ua4p7TPHiqzV-hmEmadueI9MbW4tg_FbBVeQOP-EmU5rQkTaIWO_5jQQPeRgib4RPl7RK9Ed-coJQMzJHRQUpb-GVFLw-u4o2M7pp"/>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md text-on-surface">FBR Verified</p>
+<p class="font-label-md text-label-md text-success-green">INV-882901-X</p>
+</div>
+</div>
+</section>
+<!-- Content Grid -->
+<div class="grid grid-cols-12 gap-xl px-margin-desktop py-xl flex-grow">
+<!-- LEFT COLUMN: Receipt Preview -->
+<div class="col-span-12 lg:col-span-5 flex flex-col gap-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface-variant px-sm border-l-4 border-primary">Receipt Preview</h3>
+<div class="receipt-paper bg-white text-industrial-black p-xl rounded-t-sm mx-auto w-full max-w-md flex flex-col gap-md">
+<div class="text-center border-b border-dashed border-gray-300 pb-md mb-md">
+<h4 class="font-headline-md text-headline-md uppercase tracking-tighter">The Grand Bistro</h4>
+<p class="text-xs font-medium">12/B Commercial Area, Phase 5, DHA</p>
+<p class="text-xs">NTN: 4421090-2</p>
+</div>
+<div class="flex justify-between text-sm font-bold border-b border-gray-100 pb-sm">
+<span>Token #42</span>
+<span>Takeaway</span>
+</div>
+<div class="text-xs space-y-1">
+<div class="flex justify-between"><span>Customer:</span><span class="font-semibold">Ahmed Khan</span></div>
+<div class="flex justify-between"><span>Date:</span><span>24 Oct 2023</span></div>
+<div class="flex justify-between"><span>Pickup:</span><span class="font-semibold">8:29 PM</span></div>
+</div>
+<table class="w-full text-xs mt-md">
+<thead>
+<tr class="border-y border-dashed border-gray-300">
+<th class="py-sm text-left">Item</th>
+<th class="py-sm text-center">Qty</th>
+<th class="py-sm text-right">Price</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-50">
+<tr>
+<td class="py-sm">Grilled Angus Burger<br/><span class="text-[10px] text-gray-500 italic">+ Extra Cheese, No Onion</span></td>
+<td class="py-sm text-center">1</td>
+<td class="py-sm text-right">1,250.00</td>
+</tr>
+<tr>
+<td class="py-sm">Truffle Parmesan Fries</td>
+<td class="py-sm text-center">2</td>
+<td class="py-sm text-right">900.00</td>
+</tr>
+<tr>
+<td class="py-sm">Classic Lemonade</td>
+<td class="py-sm text-center">1</td>
+<td class="py-sm text-right">450.00</td>
+</tr>
+</tbody>
+</table>
+<div class="border-t border-dashed border-gray-300 pt-md mt-md flex flex-col gap-1 text-sm">
+<div class="flex justify-between"><span>Subtotal</span><span>2,600.00</span></div>
+<div class="flex justify-between"><span>GST (16%)</span><span>416.00</span></div>
+<div class="flex justify-between font-bold text-lg border-t border-gray-100 pt-sm mt-sm">
+<span>TOTAL</span>
+<span>PKR 3,016.00</span>
+</div>
+</div>
+<div class="mt-lg border-t pt-lg flex flex-col items-center gap-sm">
+<div class="bg-gray-100 p-sm">
+<img alt="QR Code" class="w-24 h-24" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFbuTlM2o69JEpLn75LGKLfOL1Qru-MUAu4XiLzMWczpmwNObM08z69Z2LtN5MvV-HioRrQGILdiCBgv6gZ2AIAB_GQASJ-TDeL8SDPxXvPlJVjXmlmQgE_EqhtXaCyOQ9RllsGmXqbCoLnSs4Um9opV_lByo7gEMOqzxSQ46YmfDzDxnM1F9p2eU4SI96_24ooWj-tEXLaGq1_4Ckm0JcbaFZzDml6gHOggjpKGYcjq9DsEqkPifuVS_AivCknpahAvv147PXEhS_"/>
+</div>
+<p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">FBR Fiscal System Verified</p>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: Actions -->
+<div class="col-span-12 lg:col-span-7 flex flex-col gap-xl">
+<!-- Send Receipt Section -->
+<div class="bg-surface-container p-xl rounded-xl border border-outline-variant flex flex-col gap-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Send Receipt</h3>
+<div class="grid grid-cols-2 gap-md">
+<button class="col-span-2 bg-primary-container text-on-primary-container font-bold py-lg rounded-xl flex items-center justify-center gap-md hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">print</span>
+<span class="text-headline-sm">Print Receipt</span>
+</button>
+<button class="bg-surface-container-highest text-on-surface py-md rounded-xl flex items-center justify-center gap-sm border border-outline-variant hover:bg-primary/10 hover:border-primary transition-colors">
+<span class="material-symbols-outlined text-success-green">chat</span>
+<span class="font-label-lg">WhatsApp</span>
+</button>
+<button class="bg-surface-container-highest text-on-surface py-md rounded-xl flex items-center justify-center gap-sm border border-outline-variant hover:bg-primary/10 hover:border-primary transition-colors">
+<span class="material-symbols-outlined">mail</span>
+<span class="font-label-lg">Email Receipt</span>
+</button>
+</div>
+<div class="flex justify-center">
+<button class="text-on-surface-variant font-label-lg py-sm px-lg rounded-lg border border-outline-variant/30 hover:bg-white/5 transition-colors">
+                            Print Token Slip
+                        </button>
+</div>
+</div>
+<!-- Status Actions -->
+<div class="bg-surface-container p-xl rounded-xl border border-outline-variant flex flex-col gap-lg">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Token #42 — Ahmed Khan</h3>
+<div class="flex gap-md">
+<button class="flex-1 bg-success-green text-industrial-black font-bold py-md rounded-xl flex items-center justify-center gap-sm hover:brightness-110 transition-all">
+<span class="material-symbols-outlined">check_circle</span>
+                            Mark as Collected
+                        </button>
+<button class="flex-1 bg-surface-container-highest text-on-surface font-bold py-md rounded-xl border border-outline-variant flex items-center justify-center gap-sm hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+                            New Takeaway Order
+                        </button>
+</div>
+</div>
+<!-- PRIMARY CTA: Start Next Order -->
+<div class="mt-auto flex flex-col gap-md">
+<button class="relative overflow-hidden w-full bg-primary-container text-on-primary-container font-bold py-xl rounded-2xl flex items-center justify-center gap-md hover:brightness-110 transition-all shadow-lg shadow-primary-container/20 group" onclick="window.location.reload()">
+<div class="absolute bottom-0 left-0 h-1.5 bg-on-primary-container/30 w-full">
+<div class="progress-bar-fill h-full bg-on-primary-container/80"></div>
+</div>
+<span class="text-headline-md">Start Next Order</span>
+<span class="material-symbols-outlined text-headline-md group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</button>
+<p class="text-center font-label-md text-on-surface-variant italic">Auto-advancing in 5 seconds...</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer (JSON Component Mapping) -->
+<footer class="bg-surface-container-lowest dark:bg-surface-container-lowest border-t border-outline-variant fixed bottom-0 left-0 w-full z-50 flex justify-between items-center px-margin-desktop py-sm">
+<div class="flex items-center gap-md">
+<span class="font-headline-sm text-headline-sm text-primary">SwiftServe</span>
+<span class="font-label-md text-label-md text-secondary">v2.4.0-stable</span>
+</div>
+<div class="flex items-center gap-lg">
+<span class="font-body-sm text-body-sm text-secondary">Powered by Google Stitch</span>
+<span class="font-label-md text-label-md text-secondary font-bold">12:45 PM</span>
+</div>
+</footer>
+<script>
+        // Simple auto-advance simulation
+        setTimeout(() => {
+            console.log("Auto-advancing to new order...");
+            // In a real app: window.location.href = '/pos/new-order';
+        }, 5000);
+
+        // Interaction for buttons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('mousedown', () => {
+                btn.classList.add('scale-95');
+            });
+            btn.addEventListener('mouseup', () => {
+                btn.classList.remove('scale-95');
+            });
+        });
+    </script>
+</body></html>

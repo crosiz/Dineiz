@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe Go - Order History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&amp;family=Inter:wght@300..700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#372621",
+            "on-secondary-container": "#a7b6cc",
+            "inverse-surface": "#fadcd4",
+            "inverse-primary": "#b02f00",
+            "error-container": "#93000a",
+            "on-secondary-fixed-variant": "#39485a",
+            "surface-bright": "#483530",
+            "primary-container": "#ff5722",
+            "on-secondary-fixed": "#0d1c2d",
+            "surface-tint": "#ffb5a0",
+            "on-tertiary-fixed": "#002113",
+            "primary": "#ffb5a0",
+            "surface-variant": "#43302b",
+            "surface": "#1e100c",
+            "outline": "#ab8980",
+            "on-error-container": "#ffdad6",
+            "surface-container-low": "#271813",
+            "background": "#1e100c",
+            "on-tertiary": "#003824",
+            "surface-container-highest": "#43302b",
+            "outline-variant": "#5b4039",
+            "inverse-on-surface": "#3e2c27",
+            "primary-fixed": "#ffdbd1",
+            "on-surface-variant": "#e4beb4",
+            "surface-dim": "#1e100c",
+            "secondary-fixed-dim": "#b9c8de",
+            "primary-fixed-dim": "#ffb5a0",
+            "tertiary-fixed": "#6ffbbe",
+            "on-primary-container": "#541200",
+            "on-primary": "#5f1500",
+            "secondary": "#b9c8de",
+            "on-surface": "#fadcd4",
+            "on-primary-fixed-variant": "#862200",
+            "on-tertiary-fixed-variant": "#005236",
+            "on-secondary": "#233143",
+            "error": "#ffb4ab",
+            "tertiary": "#4edea3",
+            "secondary-fixed": "#d4e4fa",
+            "on-primary-fixed": "#3b0900",
+            "on-background": "#fadcd4",
+            "tertiary-container": "#00a572",
+            "on-error": "#690005",
+            "surface-container-lowest": "#180b07",
+            "surface-container": "#2c1c17",
+            "secondary-container": "#39485a",
+            "on-tertiary-container": "#00311f",
+            "tertiary-fixed-dim": "#4edea3"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "container-padding": "16px",
+            "stack-gap": "12px",
+            "touch-target-min": "48px",
+            "grid-gutter": "12px",
+            "unit": "4px"
+          },
+          "fontFamily": {
+            "label-xl": ["Space Grotesk"],
+            "label-sm": ["Space Grotesk"],
+            "body-md": ["Inter"],
+            "headline-lg-mobile": ["Space Grotesk"],
+            "headline-md": ["Space Grotesk"],
+            "body-sm": ["Inter"],
+            "label-md": ["Space Grotesk"],
+            "body-lg": ["Inter"],
+            "headline-lg": ["Space Grotesk"]
+          },
+          "fontSize": {
+            "label-xl": ["24px", {"lineHeight": "30px", "letterSpacing": "0.02em", "fontWeight": "700"}],
+            "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+            "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+            "headline-lg-mobile": ["26px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+            "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+            "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+            "label-md": ["14px", {"lineHeight": "18px", "fontWeight": "600"}],
+            "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    body {
+      background-color: #0A0A0F;
+      color: #fadcd4;
+      font-family: 'Inter', sans-serif;
+    }
+    .space-grotesk {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    .custom-shadow-glow {
+      box-shadow: 0 0 15px rgba(255, 87, 34, 0.1);
+    }
+    .active-pill {
+      background-color: #ff5722;
+      color: white;
+    }
+    .inactive-pill {
+      background-color: #1E293B;
+      color: #94A3B8;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="max-w-[390px] mx-auto min-h-screen relative flex flex-col pb-20">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 bg-surface-container flex items-center justify-between px-container-padding h-touch-target-min border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary cursor-pointer active:scale-95 transition-transform" data-icon="menu">menu</span>
+<h1 class="font-headline-md text-headline-md font-bold text-white uppercase tracking-tight">History</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-white cursor-pointer active:scale-95 transition-transform" data-icon="filter_list">filter_list</span>
+<span class="material-symbols-outlined text-primary cursor-pointer active:scale-95 transition-transform" data-icon="account_circle">account_circle</span>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto">
+<!-- Date Strip -->
+<div class="flex gap-2 overflow-x-auto px-container-padding py-4 items-center">
+<button class="active-pill flex-shrink-0 px-4 py-2 rounded-full font-label-md text-label-md transition-all active:scale-95">
+        Today 34
+      </button>
+<button class="inactive-pill flex-shrink-0 px-4 py-2 rounded-full font-label-md text-label-md transition-all active:scale-95">
+        Yesterday 28
+      </button>
+<button class="inactive-pill flex-shrink-0 px-4 py-2 rounded-full font-label-md text-label-md transition-all active:scale-95">
+        This Week
+      </button>
+<button class="inactive-pill flex-shrink-0 px-4 py-2 rounded-full font-label-md text-label-md transition-all active:scale-95">
+        This Month
+      </button>
+<button class="inactive-pill flex-shrink-0 px-4 py-2 rounded-full font-label-md text-label-md transition-all active:scale-95">
+        Custom
+      </button>
+</div>
+<!-- Search Bar -->
+<div class="px-container-padding sticky top-[48px] z-40 bg-background/95 backdrop-blur-sm pb-3">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]" data-icon="search">search</span>
+<input class="w-full h-[36px] bg-[#1A1A24] border-none rounded-lg pl-10 pr-4 text-[13px] placeholder:text-[#64748B] focus:ring-1 focus:ring-primary-container transition-all" placeholder="Search by bill #, table, item..." type="text"/>
+</div>
+</div>
+<!-- Summary Banner -->
+<div class="mx-container-padding mt-2 mb-4 p-4 rounded-r-lg bg-[rgba(255,87,34,0.08)] border-l-[3px] border-primary-container flex flex-col gap-2">
+<div class="flex justify-between items-end">
+<div>
+<p class="font-label-md text-[16px] font-bold text-primary-container">Today's Total: PKR 12,450</p>
+<p class="font-label-sm text-[14px] text-white">34 bills</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] text-on-tertiary-fixed-variant uppercase tracking-widest font-bold">+12% vs yesterday</p>
+</div>
+</div>
+<div class="w-full bg-white/10 h-1 rounded-full overflow-hidden mt-1">
+<div class="bg-primary-container h-full w-[72%] transition-all duration-1000 ease-out"></div>
+</div>
+</div>
+<!-- Payment Breakdown -->
+<div class="mx-container-padding bg-[#1A1A2E] rounded-[10px] p-3 mb-6 border border-white/5">
+<div class="flex justify-between items-center overflow-x-auto gap-4 scroll-smooth">
+<div class="flex items-center gap-2 flex-shrink-0">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<p class="text-[12px] font-medium whitespace-nowrap"><span class="text-[#64748B]">Cash:</span> PKR 8,200 <span class="text-[10px] opacity-60">(66%)</span></p>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0 border-l border-white/10 pl-4">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+<p class="text-[12px] font-medium whitespace-nowrap"><span class="text-[#64748B]">JazzCash:</span> PKR 2,800 <span class="text-[10px] opacity-60">(22%)</span></p>
+</div>
+<div class="flex items-center gap-2 flex-shrink-0 border-l border-white/10 pl-4">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<p class="text-[12px] font-medium whitespace-nowrap"><span class="text-[#64748B]">Card:</span> PKR 1,450 <span class="text-[10px] opacity-60">(12%)</span></p>
+</div>
+</div>
+</div>
+<!-- Orders List -->
+<div class="px-container-padding flex flex-col gap-3 pb-6">
+<!-- Order Item 1 -->
+<div class="bg-[#1A1A2E] border border-white/[0.06] rounded-[12px] p-[14px_16px] flex justify-between items-center active:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex-1 pr-4">
+<div class="flex items-baseline gap-2 mb-0.5">
+<span class="text-[14px] font-bold text-white">#034</span>
+<span class="text-[12px] text-[#64748B]">Table 3 • 3 items</span>
+</div>
+<p class="text-[12px] text-[#94A3B8] line-clamp-1">Beef Biryani, Raita, Cola, Extra Salad...</p>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[15px] font-bold text-white">PKR 1,610</span>
+<div class="flex items-center gap-2">
+<span class="text-[11px] text-[#64748B]">12:45 PM</span>
+<span class="px-2 py-0.5 bg-tertiary/20 text-tertiary text-[10px] font-bold rounded-full border border-tertiary/30">PAID</span>
+</div>
+</div>
+</div>
+<!-- Order Item 2 -->
+<div class="bg-[#1A1A2E] border border-white/[0.06] rounded-[12px] p-[14px_16px] flex justify-between items-center active:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex-1 pr-4">
+<div class="flex items-baseline gap-2 mb-0.5">
+<span class="text-[14px] font-bold text-white">#033</span>
+<span class="text-[12px] text-[#64748B]">Table 12 • 5 items</span>
+</div>
+<p class="text-[12px] text-[#94A3B8] line-clamp-1">Chicken Karahi, Nan (4), Fresh Lime...</p>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[15px] font-bold text-white">PKR 4,250</span>
+<div class="flex items-center gap-2">
+<span class="text-[11px] text-[#64748B]">12:30 PM</span>
+<span class="px-2 py-0.5 bg-tertiary/20 text-tertiary text-[10px] font-bold rounded-full border border-tertiary/30">PAID</span>
+</div>
+</div>
+</div>
+<!-- Order Item 3 (Cancelled) -->
+<div class="bg-[#1A1A2E] border border-white/[0.06] rounded-[12px] p-[14px_16px] flex justify-between items-center opacity-70 cursor-not-allowed">
+<div class="flex-1 pr-4">
+<div class="flex items-baseline gap-2 mb-0.5">
+<span class="text-[14px] font-bold text-white">#032</span>
+<span class="text-[12px] text-[#64748B]">Table 5 • 1 item</span>
+</div>
+<p class="text-[12px] text-[#94A3B8] line-clamp-1">Mutton Pulao...</p>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[15px] font-bold text-white line-through">PKR 850</span>
+<div class="flex items-center gap-2">
+<span class="text-[11px] text-[#64748B]">12:15 PM</span>
+<span class="px-2 py-0.5 bg-error/20 text-error text-[10px] font-bold rounded-full border border-error/30">CANCELLED</span>
+</div>
+</div>
+</div>
+<!-- Order Item 4 -->
+<div class="bg-[#1A1A2E] border border-white/[0.06] rounded-[12px] p-[14px_16px] flex justify-between items-center active:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex-1 pr-4">
+<div class="flex items-baseline gap-2 mb-0.5">
+<span class="text-[14px] font-bold text-white">#031</span>
+<span class="text-[12px] text-[#64748B]">Takeaway • 2 items</span>
+</div>
+<p class="text-[12px] text-[#94A3B8] line-clamp-1">Club Sandwich, French Fries...</p>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[15px] font-bold text-white">PKR 780</span>
+<div class="flex items-center gap-2">
+<span class="text-[11px] text-[#64748B]">11:58 AM</span>
+<span class="px-2 py-0.5 bg-tertiary/20 text-tertiary text-[10px] font-bold rounded-full border border-tertiary/30">PAID</span>
+</div>
+</div>
+</div>
+<!-- Order Item 5 -->
+<div class="bg-[#1A1A2E] border border-white/[0.06] rounded-[12px] p-[14px_16px] flex justify-between items-center active:bg-surface-variant transition-colors cursor-pointer">
+<div class="flex-1 pr-4">
+<div class="flex items-baseline gap-2 mb-0.5">
+<span class="text-[14px] font-bold text-white">#030</span>
+<span class="text-[12px] text-[#64748B]">Table 2 • 4 items</span>
+</div>
+<p class="text-[12px] text-[#94A3B8] line-clamp-1">Zinger Burger, Cheese Slices, Coke...</p>
+</div>
+<div class="text-right flex flex-col items-end gap-1">
+<span class="text-[15px] font-bold text-white">PKR 1,220</span>
+<div class="flex items-center gap-2">
+<span class="text-[11px] text-[#64748B]">11:40 AM</span>
+<span class="px-2 py-0.5 bg-tertiary/20 text-tertiary text-[10px] font-bold rounded-full border border-tertiary/30">PAID</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container-high border-t border-outline-variant shadow-lg flex justify-around items-center h-16 w-full px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="table_restaurant">table_restaurant</span>
+<span class="font-label-sm text-label-sm">Tables</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-sm text-label-sm">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-1 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="restaurant_menu">restaurant_menu</span>
+<span class="font-label-sm text-label-sm">Menu</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary dark:text-primary bg-primary-container/10 rounded-xl px-4 py-1 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="history" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-sm text-label-sm">History</span>
+</a>
+</nav>
+<!-- Floating Action Button -->
+<button class="fixed bottom-20 right-4 w-14 h-14 bg-primary-container text-white rounded-full flex items-center justify-center shadow-2xl active:scale-90 transition-all custom-shadow-glow z-40">
+<span class="material-symbols-outlined text-[28px]" data-icon="add">add</span>
+</button>
+<script>
+    // Micro-interactions for list items
+    document.querySelectorAll('.active\\:bg-surface-variant').forEach(item => {
+      item.addEventListener('touchstart', () => {
+        item.style.backgroundColor = 'rgba(67, 48, 43, 0.8)';
+      });
+      item.addEventListener('touchend', () => {
+        item.style.backgroundColor = '#1A1A2E';
+      });
+    });
+
+    // Handle horizontal scroll interaction for date strip
+    const dateStrip = document.querySelector('.overflow-x-auto');
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    dateStrip.addEventListener('mousedown', (e) => {
+      isDown = true;
+      startX = e.pageX - dateStrip.offsetLeft;
+      scrollLeft = dateStrip.scrollLeft;
+    });
+    dateStrip.addEventListener('mouseleave', () => {
+      isDown = false;
+    });
+    dateStrip.addEventListener('mouseup', () => {
+      isDown = false;
+    });
+    dateStrip.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - dateStrip.offsetLeft;
+      const walk = (x - startX) * 2;
+      dateStrip.scrollLeft = scrollLeft - walk;
+    });
+  </script>
+</body></html>

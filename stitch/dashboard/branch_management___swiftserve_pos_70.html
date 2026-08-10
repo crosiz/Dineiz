@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe - Branch Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#f1d4cc",
+                        "primary-container": "#ff5722",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#e4beb4",
+                        "on-primary-fixed-variant": "#862200",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed": "#c8e6ff",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#3e2c27",
+                        "background": "#fff8f6",
+                        "inverse-primary": "#ffb5a0",
+                        "surface-container-high": "#ffe2da",
+                        "on-background": "#271813",
+                        "on-surface-variant": "#5b4039",
+                        "secondary-container": "#dae2fd",
+                        "surface-container-lowest": "#ffffff",
+                        "surface": "#fff8f6",
+                        "surface-bright": "#fff8f6",
+                        "on-error": "#ffffff",
+                        "secondary": "#565e74",
+                        "on-tertiary-container": "#fcfcff",
+                        "surface-variant": "#fadcd4",
+                        "on-secondary-fixed-variant": "#3f465c",
+                        "outline": "#907067",
+                        "on-surface": "#271813",
+                        "surface-container": "#ffe9e4",
+                        "primary-fixed-dim": "#ffb5a0",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#00628c",
+                        "primary": "#b02f00",
+                        "tertiary-container": "#007caf",
+                        "surface-container-highest": "#fadcd4",
+                        "on-secondary-container": "#5c647a",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#b02f00",
+                        "secondary-fixed": "#dae2fd",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "surface-container-low": "#fff1ed",
+                        "on-primary-fixed": "#3b0900",
+                        "tertiary-fixed-dim": "#86cfff",
+                        "on-tertiary-fixed-variant": "#004c6d",
+                        "on-primary-container": "#541200",
+                        "on-tertiary-fixed": "#001e2e",
+                        "inverse-on-surface": "#ffede8",
+                        "primary-fixed": "#ffdbd1",
+                        "on-primary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "grid_gutter": "16px",
+                        "element": "16px",
+                        "page_margin": "24px",
+                        "related": "8px",
+                        "section": "24px"
+                    },
+                    "fontFamily": {
+                        "h1": ["Inter"],
+                        "body": ["Inter"],
+                        "h2": ["Inter"],
+                        "caption": ["Inter"],
+                        "display": ["Inter"]
+                    },
+                    "fontSize": {
+                        "h1": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "h2": ["16px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "caption": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "display": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="antialiased">
+<!-- Side Navigation -->
+<aside class="fixed left-0 top-0 h-full w-64 flex flex-col z-50 bg-slate-900 dark:bg-black border-r border-slate-800 shadow-2xl font-['Inter'] antialiased text-sm font-medium py-6">
+<div class="px-6 mb-10 flex items-center gap-3">
+<div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div>
+<h1 class="text-xl font-black text-white tracking-tight">SwiftServe</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">POS Intelligence</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Overview
+            </a>
+<a class="flex items-center gap-3 bg-orange-600 text-white rounded-lg px-4 py-2.5 mx-2 my-1" href="#">
+<span class="material-symbols-outlined">restaurant</span>
+                Operations
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">storefront</span>
+                Business
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+                Growth
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 text-slate-400 hover:text-white px-4 py-2.5 mx-2 my-1 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+</nav>
+<div class="px-4 mt-auto">
+<div class="bg-slate-800/50 rounded-xl p-4 flex items-center gap-3">
+<img alt="User profile" class="w-10 h-10 rounded-full border-2 border-orange-600 object-cover" data-alt="A professional corporate headshot of a restaurant manager in a high-end environment, featuring soft warm studio lighting that highlights a confident expression. The background is a blurred upscale interior with dark wood and gold accents, maintaining a sophisticated professional aesthetic with deep slate and orange tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAIdj8yE0IZssaNabnHa5UhvCuXQxbAx8sIni3GeCzot9y8qs01XeMfawzJ6jFSuXs775fEIwyx60L42VnvOfUdDn6k1xV8gzbU6sNeyWKTQWMsMIehan0S7M5QGATan_GIy3fwSf7jcfK_zeErIldNkyO2nQkBd2rrGXFe7LT_vDc0cQz6RJCiwbXo84JGMIDR36o_8xslzne8Lqr44oZArku9MlYJaPgLmFlxj6HyWZVrb3QP7mx7ol10MFb2Bxj5KOy-ABGN2E-"/>
+<div>
+<p class="text-white text-xs font-bold">Admin Panel</p>
+<p class="text-slate-500 text-[10px]">Head Office</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Top Navigation -->
+<header class="fixed top-0 right-0 left-64 h-16 w-[calc(100%-16rem)] z-40 bg-[#F8FAFC] dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center px-8 backdrop-blur-sm bg-opacity-90">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-400">search</span>
+<span class="text-slate-400 text-sm">Search branch operations...</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-orange-600">location_on</span>
+<span class="text-lg font-bold text-slate-900 dark:text-white">Main Branch</span>
+</div>
+<div class="flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-6">
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500">notifications</span>
+</button>
+<button class="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-2 transition-all">
+<span class="material-symbols-outlined text-slate-500">apps</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 pb-12 px-8 min-h-screen">
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h1 class="font-display text-display text-on-surface">Branches</h1>
+<p class="font-body text-body text-on-surface-variant">Manage your restaurant locations and branch performance.</p>
+</div>
+<button class="flex items-center gap-2 bg-primary-container text-white px-6 py-2.5 rounded-lg font-h2 shadow-lg shadow-primary-container/20 hover:opacity-90 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-lg">add_location_alt</span>
+                + Add Branch
+            </button>
+</div>
+<!-- Stats Strip -->
+<div class="flex flex-wrap gap-4 mb-8">
+<div class="flex items-center gap-3 bg-surface-container-low px-5 py-3 rounded-full border border-outline-variant shadow-sm">
+<div class="w-2 h-2 rounded-full bg-slate-900"></div>
+<span class="font-caption text-caption text-on-surface">4 Total Branches</span>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low px-5 py-3 rounded-full border border-outline-variant shadow-sm">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<span class="font-caption text-caption text-on-surface">3 Active</span>
+</div>
+<div class="flex items-center gap-3 bg-surface-container-low px-5 py-3 rounded-full border border-outline-variant shadow-sm">
+<div class="w-2 h-2 rounded-full bg-red-500"></div>
+<span class="font-caption text-caption text-on-surface">1 Inactive</span>
+</div>
+<div class="flex items-center gap-3 bg-primary-fixed px-5 py-3 rounded-full border border-primary-fixed-dim shadow-sm ml-auto">
+<span class="material-symbols-outlined text-sm text-primary">explore</span>
+<span class="font-caption text-caption text-on-primary-fixed font-bold uppercase tracking-wider">Karachi, Pakistan</span>
+</div>
+</div>
+<!-- Branch Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Clifton Branch -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden flex flex-col">
+<div class="h-32 bg-gradient-to-br from-[#FF5722] to-[#FF8A50] p-4 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 text-white opacity-10 font-black text-8xl">C</div>
+<div class="flex justify-between items-start z-10">
+<span class="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/30 uppercase">Active</span>
+<span class="material-symbols-outlined text-white cursor-pointer">more_vert</span>
+</div>
+<span class="text-white font-black text-4xl z-10">C</span>
+</div>
+<div class="p-5 flex-1">
+<h3 class="font-h1 text-h1 text-on-surface mb-2">Clifton Flagship</h3>
+<div class="space-y-2 mb-6">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">location_on</span>
+<span class="text-xs">Sea View Road, Clifton Block 4</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">call</span>
+<span class="text-xs">+92 21 3456 7890</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-xs">12:00 PM - 02:00 AM</span>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-4 flex justify-between">
+<div>
+<p class="text-[10px] uppercase text-slate-400 font-bold">Today's Revenue</p>
+<p class="font-h2 text-h2 text-on-surface">PKR 142,500</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] uppercase text-slate-400 font-bold">Orders</p>
+<p class="font-h2 text-h2 text-on-surface">84</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-slate-50/50 flex items-center justify-between gap-2 border-t border-slate-100">
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">visibility</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+</div>
+<button class="border border-primary-container text-primary-container px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-container hover:text-white transition-all">
+                        Floor Plan
+                    </button>
+</div>
+</div>
+<!-- Defense Branch -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden flex flex-col">
+<div class="h-32 bg-gradient-to-br from-[#3B82F6] to-[#60A5FA] p-4 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 text-white opacity-10 font-black text-8xl">D</div>
+<div class="flex justify-between items-start z-10">
+<span class="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/30 uppercase">Active</span>
+<span class="material-symbols-outlined text-white cursor-pointer">more_vert</span>
+</div>
+<span class="text-white font-black text-4xl z-10">D</span>
+</div>
+<div class="p-5 flex-1">
+<h3 class="font-h1 text-h1 text-on-surface mb-2">Defense Phase VI</h3>
+<div class="space-y-2 mb-6">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">location_on</span>
+<span class="text-xs">Khayaban-e-Ittehad, Phase 6</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">call</span>
+<span class="text-xs">+92 21 3987 6543</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-xs">11:00 AM - 12:00 AM</span>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-4 flex justify-between">
+<div>
+<p class="text-[10px] uppercase text-slate-400 font-bold">Today's Revenue</p>
+<p class="font-h2 text-h2 text-on-surface">PKR 98,200</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] uppercase text-slate-400 font-bold">Orders</p>
+<p class="font-h2 text-h2 text-on-surface">61</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-slate-50/50 flex items-center justify-between gap-2 border-t border-slate-100">
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">visibility</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+</div>
+<button class="border border-primary-container text-primary-container px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-container hover:text-white transition-all">
+                        Floor Plan
+                    </button>
+</div>
+</div>
+<!-- North Nazimabad Branch (Inactive) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden flex flex-col opacity-80 grayscale-[0.5]">
+<div class="h-32 bg-gradient-to-br from-[#64748B] to-[#94A3B8] p-4 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 text-white opacity-10 font-black text-8xl">N</div>
+<div class="flex justify-between items-start z-10">
+<span class="bg-slate-900/40 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/20 uppercase">Inactive</span>
+<span class="material-symbols-outlined text-white cursor-pointer">more_vert</span>
+</div>
+<span class="text-white font-black text-4xl z-10">N</span>
+</div>
+<div class="p-5 flex-1">
+<h3 class="font-h1 text-h1 text-on-surface mb-2">North Nazimabad</h3>
+<div class="space-y-2 mb-6 text-slate-400">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">location_on</span>
+<span class="text-xs">Block L, North Nazimabad</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">call</span>
+<span class="text-xs">+92 21 3661 2233</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-xs">Temporarily Closed</span>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-4 flex justify-between">
+<div>
+<p class="text-[10px] uppercase text-slate-400 font-bold">Today's Revenue</p>
+<p class="font-h2 text-h2 text-slate-400">PKR 0</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] uppercase text-slate-400 font-bold">Orders</p>
+<p class="font-h2 text-h2 text-slate-400">0</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-slate-50/50 flex items-center justify-between gap-2 border-t border-slate-100">
+<div class="flex gap-1">
+<button class="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">visibility</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+</div>
+<button class="border border-slate-300 text-slate-400 px-4 py-1.5 rounded-lg text-xs font-bold cursor-not-allowed">
+                        Under Reno
+                    </button>
+</div>
+</div>
+<!-- Gulshan Branch -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden flex flex-col">
+<div class="h-32 bg-gradient-to-br from-[#10B981] to-[#34D399] p-4 flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 text-white opacity-10 font-black text-8xl">G</div>
+<div class="flex justify-between items-start z-10">
+<span class="bg-white/20 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/30 uppercase">Active</span>
+<span class="material-symbols-outlined text-white cursor-pointer">more_vert</span>
+</div>
+<span class="text-white font-black text-4xl z-10">G</span>
+</div>
+<div class="p-5 flex-1">
+<h3 class="font-h1 text-h1 text-on-surface mb-2">Gulshan-e-Iqbal</h3>
+<div class="space-y-2 mb-6">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">location_on</span>
+<span class="text-xs">University Road, Gulshan</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">call</span>
+<span class="text-xs">+92 21 3498 1122</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-sm">schedule</span>
+<span class="text-xs">11:00 AM - 01:00 AM</span>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-4 flex justify-between">
+<div>
+<p class="text-[10px] uppercase text-slate-400 font-bold">Today's Revenue</p>
+<p class="font-h2 text-h2 text-on-surface">PKR 76,400</p>
+</div>
+<div class="text-right">
+<p class="text-[10px] uppercase text-slate-400 font-bold">Orders</p>
+<p class="font-h2 text-h2 text-on-surface">42</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-slate-50/50 flex items-center justify-between gap-2 border-t border-slate-100">
+<div class="flex gap-1">
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">visibility</span>
+</button>
+<button class="p-2 text-slate-500 hover:text-slate-900 transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span>
+</button>
+</div>
+<button class="border border-primary-container text-primary-container px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-primary-container hover:text-white transition-all">
+                        Floor Plan
+                    </button>
+</div>
+</div>
+<!-- Empty State / Add Placeholder -->
+<div class="bg-white/40 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-8 text-center group hover:border-primary-container/30 transition-all cursor-pointer">
+<div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4 group-hover:bg-primary-fixed transition-all">
+<span class="material-symbols-outlined text-3xl text-slate-400 group-hover:text-primary transition-all">add</span>
+</div>
+<h4 class="font-h2 text-h2 text-slate-500 group-hover:text-primary-container">Expand Network</h4>
+<p class="text-xs text-slate-400 mt-1">Configure a new kitchen and outlet</p>
+</div>
+</div>
+<!-- Geographic Context / Asymmetric Layout Element -->
+<div class="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 bg-surface-container-high rounded-xl p-6 flex items-center gap-8 relative overflow-hidden">
+<div class="absolute -right-12 -top-12 w-64 h-64 bg-primary-container opacity-[0.03] rounded-full"></div>
+<div class="z-10 flex-1">
+<span class="font-caption text-[10px] uppercase font-black text-primary tracking-[0.2em] mb-2 block">System Performance</span>
+<h2 class="font-display text-h1 text-on-surface mb-4">Network Connectivity Status</h2>
+<p class="text-body text-on-surface-variant max-w-md">All operational branches are currently synced with the central cloud ERP. Last global ping was successful at 14:02 PKT.</p>
+<div class="mt-6 flex gap-6">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></span>
+<span class="text-xs font-bold text-on-surface">3 Active Links</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-slate-300"></span>
+<span class="text-xs font-bold text-on-surface">1 Offline Cache</span>
+</div>
+</div>
+</div>
+<div class="w-48 h-48 bg-white/40 rounded-lg p-2 border border-white/60 hidden sm:block">
+<img alt="Branch Map" class="w-full h-full object-cover rounded shadow-inner" data-alt="A modern, high-tech stylized digital map of Karachi city with glowing data points representing restaurant locations. The map uses a minimalist aesthetic with a soft slate and blue color scheme, highlighted by sharp orange location pins. Professional data visualization style with glassmorphism elements." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVIxoQ672wY2jQJOZv9O_1nnCaMu2MYaBCsfI1hqkYnbSMF1jiTB7LdvHrv6qzv8Qw91BBpb44q5pFlm-67OctK3yAR5FgwaTbRsPTmxEPk5zXCqYVVjDfc9x7V0Aa1g4VhRgZA2kh-QT1Ce4papt3c4hkzBIv04W0O5Zt-YAWfSmnhBZBQ1fqwJinZDVlZtelzKqcbhS2R1bunz8q1e0Gn8jPwc3I5aT5vz-V792ImRMhNnJP83cBoMtomB898UEhf4Xb6krhCMUq"/>
+</div>
+</div>
+<div class="bg-slate-900 rounded-xl p-6 flex flex-col justify-between text-white shadow-xl relative overflow-hidden">
+<div class="z-10">
+<p class="text-orange-500 text-[10px] font-black tracking-widest uppercase mb-1">Alerts</p>
+<h3 class="font-h1 text-h1">Maintenance Due</h3>
+<p class="text-xs text-slate-400 mt-2">North Nazimabad hardware sync scheduled for tonight 03:00 AM.</p>
+</div>
+<button class="z-10 w-full mt-6 bg-white/10 hover:bg-white/20 text-white border border-white/10 py-2.5 rounded-lg text-xs font-bold transition-all">
+                    View Schedule
+                </button>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 text-9xl opacity-5 text-white">construction</span>
+</div>
+</div>
+</main>
+</body></html>

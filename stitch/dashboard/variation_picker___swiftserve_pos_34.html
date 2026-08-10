@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SwiftServe POS - Variation Picker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bottom-sheet-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .bottom-sheet-content::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-container": "#ff5722",
+                        "primary": "#b02f00",
+                        "surface": "#f7f9fb",
+                        "text-main": "#0F172A",
+                        "text-muted": "#64748B",
+                        "border-subtle": "#E2E8F0",
+                        "inverse-surface": "#2d3133"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Inter"]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-900 font-sans antialiased overflow-hidden">
+<!-- Global App Shell (Suppressed/Background for Context) -->
+<div class="fixed inset-0 flex">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col h-full py-8 gap-y-2 bg-inverse-surface dark:bg-on-surface w-[280px] shadow-md z-0 opacity-20 pointer-events-none">
+<div class="px-6 mb-8">
+<h1 class="font-headline-lg text-headline-lg text-surface-bright">SwiftServe</h1>
+</div>
+<div class="flex flex-col gap-1 px-4">
+<div class="flex items-center gap-3 px-4 py-3 bg-primary-container/10 border-l-[3px] border-primary-container text-primary-container font-bold">
+<span class="material-symbols-outlined">point_of_sale</span>
+<span>Register</span>
+</div>
+<div class="flex items-center gap-3 px-4 py-3 text-surface-variant font-medium">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Orders</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area Placeholder -->
+<main class="flex-1 p-8 opacity-10 pointer-events-none">
+<div class="grid grid-cols-4 gap-6">
+<div class="h-40 bg-slate-800 rounded-xl"></div>
+<div class="h-40 bg-slate-800 rounded-xl"></div>
+<div class="h-40 bg-slate-800 rounded-xl"></div>
+<div class="h-40 bg-slate-800 rounded-xl"></div>
+</div>
+</main>
+</div>
+<!-- Backdrop -->
+<div class="fixed inset-0 bg-black/75 backdrop-blur-[4px] z-[60] flex items-end justify-center">
+<!-- Bottom Sheet Container -->
+<div class="w-full max-w-[600px] bg-[#111827] rounded-t-[24px] max-h-[819px] flex flex-col shadow-2xl animate-slide-up relative">
+<!-- Drag Handle -->
+<div class="flex justify-center pt-3 pb-2">
+<div class="w-9 h-1 rounded-full bg-[#ffffff26]"></div>
+</div>
+<!-- Header -->
+<div class="flex items-center px-5 py-5 border-b border-[#ffffff10]">
+<div class="w-14 h-14 rounded-[12px] overflow-hidden bg-slate-800 flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A high-end studio food photography shot of a traditional Chicken Karahi served in a black iron wok. The dish is rich with red tomato-based gravy, garnished with vibrant green ginger slivers and fresh coriander. Soft, warm ambient lighting highlights the succulent textures of the chicken. The background is a clean, dark slate gray, maintaining a premium SaaS white-label aesthetic with deep orange and navy blue undertones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDI9vr1fh2wVf1jtwNxVi_EJG2jyvDxxM1RnRmOoZ92L7H2LRAgSzseptjdb7PSvibEwnI94JNFeAO378yWKmXOCPYMi7YP-_IetECc6twCn3M9XKGv8FtDdBPelvnWMU14vfrLadaumbuHC3la2LBO3OliR12s0Z-LzUA2d-QJKQG85vTDijKxe2n_G1xQK3Nf8hnSbO18XWtUs-bZ1_woxdNN14_RSzR76F5CXs1H4_Vi3bdMVJ7V2eGMDBAsXjc73LfY78I2oRN1"/>
+</div>
+<div class="ml-4 flex-1">
+<h2 class="text-[18px] font-bold text-white leading-tight">Chicken Karahi</h2>
+<p class="text-[14px] text-slate-400 font-medium">Base Price: PKR 1,200</p>
+</div>
+<button class="w-9 h-9 rounded-full bg-[#1e293b] flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Scrollable Content -->
+<div class="bottom-sheet-content overflow-y-auto px-6 py-6 flex-1">
+<!-- Section 1: Size Selection -->
+<section class="mb-8">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-[12px] font-bold uppercase tracking-widest text-slate-500">CHOOSE SIZE *</h3>
+<span class="text-[10px] font-bold bg-primary-container/20 text-primary-container px-2 py-0.5 rounded">REQUIRED</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Unselected Card -->
+<div class="relative p-4 rounded-xl bg-[#1E293B] border border-[#ffffff10] cursor-pointer hover:border-slate-500 transition-all active:scale-[0.98]">
+<div class="text-[15px] font-semibold text-white">Half</div>
+<div class="text-[13px] text-slate-400">PKR 1,200</div>
+</div>
+<!-- Selected Card -->
+<div class="relative p-4 rounded-xl bg-[#FF572215] border-2 border-primary-container cursor-pointer transition-all active:scale-[0.98]">
+<div class="text-[15px] font-semibold text-primary-container">Full</div>
+<div class="text-[13px] text-primary-container opacity-80">PKR 2,100</div>
+<div class="absolute top-2 right-2 w-5 h-5 bg-primary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Add-ons -->
+<section class="mb-8">
+<h3 class="text-[12px] font-bold uppercase tracking-widest text-slate-500 mb-2">ADD EXTRAS</h3>
+<div class="flex flex-col">
+<!-- Add-on Row -->
+<div class="flex items-center h-14 border-b border-[#ffffff05] group">
+<label class="flex items-center flex-1 cursor-pointer">
+<input class="w-6 h-6 rounded bg-[#1e293b] border-[#ffffff20] text-primary-container focus:ring-primary-container focus:ring-offset-slate-900 transition-all" type="checkbox"/>
+<span class="ml-4 text-[14px] text-white">Extra Ginger &amp; Chilies</span>
+</label>
+<span class="text-[13px] font-mono text-primary-container font-bold">+PKR 80</span>
+</div>
+<!-- Add-on Row -->
+<div class="flex items-center h-14 border-b border-[#ffffff05] group">
+<label class="flex items-center flex-1 cursor-pointer">
+<input checked="" class="w-6 h-6 rounded bg-[#1e293b] border-[#ffffff20] text-primary-container focus:ring-primary-container focus:ring-offset-slate-900 transition-all" type="checkbox"/>
+<span class="ml-4 text-[14px] text-white">Raita (Yogurt Sauce)</span>
+</label>
+<span class="text-[13px] font-mono text-primary-container font-bold">+PKR 120</span>
+</div>
+<!-- Add-on Row -->
+<div class="flex items-center h-14 border-b border-[#ffffff05] group">
+<label class="flex items-center flex-1 cursor-pointer">
+<input class="w-6 h-6 rounded bg-[#1e293b] border-[#ffffff20] text-primary-container focus:ring-primary-container focus:ring-offset-slate-900 transition-all" type="checkbox"/>
+<span class="ml-4 text-[14px] text-white">Salad Plate</span>
+</label>
+<span class="text-[13px] font-mono text-primary-container font-bold">+PKR 150</span>
+</div>
+</div>
+</section>
+<!-- Section 3: Special Note -->
+<section class="mb-8">
+<h3 class="text-[12px] font-bold uppercase tracking-widest text-slate-500 mb-4">SPECIAL NOTE</h3>
+<textarea class="w-full bg-[#1E293B] border border-[#ffffff10] rounded-[10px] text-white text-[14px] px-4 py-3 focus:ring-2 focus:ring-primary-container/50 focus:border-primary-container outline-none transition-all placeholder-slate-600 resize-none" placeholder="No onions, extra spicy..." rows="3"></textarea>
+</section>
+<!-- Quantity Stepper -->
+<section class="flex flex-col items-center py-4">
+<div class="flex items-center gap-8">
+<button class="w-11 h-11 rounded-full bg-[#1E293B] flex items-center justify-center text-white active:scale-90 transition-transform">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<span class="text-2xl font-bold text-white">1</span>
+<button class="w-11 h-11 rounded-full bg-[#1E293B] flex items-center justify-center text-white active:scale-90 transition-transform">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</section>
+</div>
+<!-- Sticky Action Button -->
+<div class="p-6 pt-2 border-t border-[#ffffff10] bg-[#111827]/80 backdrop-blur-md">
+<button class="w-full h-14 bg-primary-container hover:bg-primary rounded-[14px] flex items-center justify-between px-6 transition-all active:scale-[0.98] shadow-lg shadow-primary-container/20">
+<span class="text-[16px] font-bold text-white">Add to Order</span>
+<span class="text-[16px] font-extrabold text-white">PKR 1,280</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Micro-interaction for Selection States -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.grid-cols-2 > div');
+            cards.forEach(card => {
+                card.addEventListener('click', () => {
+                    cards.forEach(c => {
+                        c.className = "relative p-4 rounded-xl bg-[#1E293B] border border-[#ffffff10] cursor-pointer hover:border-slate-500 transition-all active:scale-[0.98]";
+                        const check = c.querySelector('.absolute');
+                        if(check) check.remove();
+                        const title = c.querySelector('.text-[15px]');
+                        const price = c.querySelector('.text-[13px]');
+                        title.className = "text-[15px] font-semibold text-white";
+                        price.className = "text-[13px] text-slate-400";
+                    });
+
+                    card.className = "relative p-4 rounded-xl bg-[#FF572215] border-2 border-primary-container cursor-pointer transition-all active:scale-[0.98]";
+                    const title = card.querySelector('.text-[15px]');
+                    const price = card.querySelector('.text-[13px]');
+                    title.className = "text-[15px] font-semibold text-primary-container";
+                    price.className = "text-[13px] text-primary-container opacity-80";
+                    
+                    const checkMark = document.createElement('div');
+                    checkMark.className = "absolute top-2 right-2 w-5 h-5 bg-primary-container rounded-full flex items-center justify-center";
+                    checkMark.innerHTML = '<span class="material-symbols-outlined text-white text-[14px]" style="font-variation-settings: \'wght\' 700;">check</span>';
+                    card.appendChild(checkMark);
+                });
+            });
+        });
+    </script>
+</body></html>
