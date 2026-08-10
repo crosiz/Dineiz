@@ -410,7 +410,7 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
       data: { status }
     });
 
-    const { getIO } = await import('../../lib/socket');
+    const { getIO } = await import('../../lib/socket.js');
     const io = getIO();
     if (io) {
       io.to(`branch:${table.branchId}`).emit('table:status_changed', { tableId, status });

@@ -1,5 +1,5 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { requireRole } from '../../middleware/auth';
+import { requireRole, requireAuth } from '../../middleware/auth';
 import {
   getSettingsHandler,
   updateSettingsHandler,
@@ -23,7 +23,7 @@ import {
 
 export const loyaltyRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const authRole = requireRole(['TENANT_ADMIN']);
-  const { requireAuth } = await import('../../middleware/auth');
+
 
   // Allow cashiers (and POS) to fetch settings for checkout
   fastify.get('/settings', { preHandler: requireAuth }, getSettingsHandler);

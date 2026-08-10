@@ -18,6 +18,7 @@ const trustedOrigins = [
 ].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
 export const auth = betterAuth({
+    baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:3000',
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),

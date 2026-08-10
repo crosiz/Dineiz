@@ -109,7 +109,7 @@ export async function assignRider(tenantId: string, orderId: string, riderId: st
     }
   });
 
-  const { getIO } = await import('../../lib/socket');
+  const { getIO } = await import('../../lib/socket.js');
   const io = getIO();
   if (io) {
     io.to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
@@ -146,7 +146,7 @@ export async function updateDeliveryStatus(tenantId: string, orderId: string, st
     await updateOrder(tenantId, orderId, { status: OrderStatus.COMPLETED });
   }
 
-  const { getIO } = await import('../../lib/socket');
+  const { getIO } = await import('../../lib/socket.js');
   const io = getIO();
   if (io) {
     io.to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
