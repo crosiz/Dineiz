@@ -1,5 +1,5 @@
 {
-  "extends": "@swiftserve/config/typescript/base.json",
+  "extends": "@dineiz/config/typescript/base.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "."

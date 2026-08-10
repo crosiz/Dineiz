@@ -1,5 +1,5 @@
 ﻿import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma, Role } from '@swiftserve/db';
+import { prisma, Role } from '@dineiz/db';
 import { requireRole } from '../../middleware/auth';
 import { z } from 'zod';
 

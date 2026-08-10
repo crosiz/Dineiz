@@ -52,7 +52,7 @@ export class StaffHandlers {
 
     // Auto-generate email for POS staff if omitted
     if (!body.email) {
-      body.email = `staff_${Math.random().toString(36).substring(2, 10)}@swiftserve.local`;
+      body.email = `staff_${Math.random().toString(36).substring(2, 10)}@dineiz.local`;
     }
 
     // Role-based security rules

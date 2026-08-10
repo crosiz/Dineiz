@@ -27,7 +27,7 @@ clean:
 
 clean-nm:
 	docker compose down
-	docker volume rm swiftserve_api_nm swiftserve_dashboard_nm swiftserve_pos_nm swiftserve_prisma_nm swiftserve_pnpm_store 2>nul || true
+	docker volume rm dineiz_api_nm dineiz_dashboard_nm dineiz_pos_nm dineiz_prisma_nm dineiz_pnpm_store 2>nul || true
 	docker compose up db redis meilisearch -d
 
 # Run this on Windows host whenever package.json files change

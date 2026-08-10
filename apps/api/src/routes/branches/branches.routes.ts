@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { requireRole, requireTenant } from '../../middleware/auth';
-import { createBranchSchema, updateBranchSchema } from '@swiftserve/schemas';
+import { createBranchSchema, updateBranchSchema } from '@dineiz/schemas';
 import {
   handleListBranches,
   handleCreateBranch,

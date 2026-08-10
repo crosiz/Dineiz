@@ -5,7 +5,7 @@ import { useDashboardContext } from '@/contexts/dashboard-context';
 import { io, Socket } from 'socket.io-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const SOUND_PREF_KEY = 'swiftserve_sound_pref';
+const SOUND_PREF_KEY = 'dineiz_sound_pref';
 
 export interface LiveOrder {
   id: string;

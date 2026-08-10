@@ -1,5 +1,5 @@
-import { prisma } from '@swiftserve/db';
-import { CreateBranchInput, UpdateBranchInput } from '@swiftserve/schemas';
+import { prisma } from '@dineiz/db';
+import { CreateBranchInput, UpdateBranchInput } from '@dineiz/schemas';
 import crypto from 'crypto';
 import { startOfDay, endOfDay } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';

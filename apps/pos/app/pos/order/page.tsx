@@ -405,6 +405,7 @@ function OrderEntryPageContent() {
     const tableId = selectedTableId;
     const isEdit = isEditing;
     const isHeld = searchParams.get('isHeld') === 'true';
+    const rawOrderId = searchParams.get('orderId');
     const isActuallyEdit = !!paymentOrderId && !isHeld;
     const isAppending = isActuallyEdit && existingOrderData;
 
@@ -468,17 +469,24 @@ function OrderEntryPageContent() {
             tokenNumber: order.tokenNumber || 'NEW',
             type: orderTypeStr,
             cashierName: sessionObj.cashierName || sessionObj.userId,
-            tenantName: branding.restaurantName || 'SwiftServe',
+            tenantName: branding.restaurantName || 'Dineiz',
             branchName: sessionObj.branchName || 'Main Branch',
             items: cart.map(c => ({
               name: c.name,
               quantity: c.quantity,
               notes: c.notes,
               variationName: c.selectedVariation?.name,
-              addOnNames: c.selectedAddOns?.map((a: any) => a.name)
+              addOnNames: c.selectedAddOns?.map((a: any) => a.name),
+              unitPrice: c.basePrice || 0,
+              subtotal: (c.basePrice || 0) * c.quantity
             })),
             notes: orderNote,
             createdAt: order.createdAt || new Date().toISOString(),
+            subtotal: order.subtotal || 0,
+            discountAmount: order.discountAmount || 0,
+            taxAmount: order.taxAmount || 0,
+            total: order.total || 0,
+            paymentMethod: order.paymentMethod || 'CASH',
           });
         }
       } catch (printErr) {

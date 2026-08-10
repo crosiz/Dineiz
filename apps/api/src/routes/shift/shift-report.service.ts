@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import ExcelJS from 'exceljs';
 
 export async function getShiftReport(tenantId: string, shiftId: string, format: 'pdf' | 'excel') {

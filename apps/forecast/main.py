@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from prophet import Prophet
 
 
-app = FastAPI(title="SwiftServe Forecast Service", version="0.1.0")
+app = FastAPI(title="Dineiz Forecast Service", version="0.1.0")
 
 
 class HistoryPoint(BaseModel):

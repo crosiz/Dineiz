@@ -1,4 +1,4 @@
-# SwiftServe — Bug Fix Specification
+# Dineiz — Bug Fix Specification
 **Priority: Critical — All features below are broken or missing**
 **Date: April 2026**
 **Status: All 87 tasks marked complete but core functionality is non-functional**
@@ -10,7 +10,7 @@
 **File: `apps/dashboard/app/(dashboard)/dashboard/page.tsx`**
 
 ### What is happening
-The dashboard home page shows only "Welcome to SwiftServe admin. Sidebar and layout pending." — no KPI cards, no charts, no live data, nothing functional.
+The dashboard home page shows only "Welcome to Dineiz admin. Sidebar and layout pending." — no KPI cards, no charts, no live data, nothing functional.
 
 ### What must be built
 Build a complete dashboard home page with ALL of the following sections:
@@ -90,7 +90,7 @@ A live order monitoring page with:
    - Branch name (for multi-branch owners)
 
 3. **Socket.IO integration:**
-   - Connect to `api.swiftserve.com` socket on page mount
+   - Connect to `api.dineiz.com` socket on page mount
    - Listen for `order:created`, `order:updated`, `order:status_changed` events
    - Move cards between columns automatically when status changes
    - Play a subtle audio chime when a new order arrives
@@ -364,7 +364,7 @@ After Antigravity implements each fix, test in this order:
 
 ```
 1. Open http://localhost:3000
-2. Login with admin@swiftserve.app / Admin1234!
+2. Login with admin@dineiz.app / Admin1234!
 3. Dashboard home — verify 4 KPI cards show (even with 0 values)
 4. Click Orders → Live — verify page loads without crash
 5. Click Menu → Add Category — verify slide-over opens
@@ -373,7 +373,7 @@ After Antigravity implements each fix, test in this order:
 8. Upload the CSV template — verify items are created
 9. Click Branches → Add Branch — verify form opens
 10. Add a new branch — verify it appears in list
-11. Logout and login as manager@swiftserve.app / Manager1234!
+11. Logout and login as manager@dineiz.app / Manager1234!
 12. Verify dashboard shows only Main Branch data
 13. Verify "Add Branch" button is hidden
 14. Verify branch performance section is hidden

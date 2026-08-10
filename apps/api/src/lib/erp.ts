@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export async function getErpIntegration(tenantId: string) {
   return prisma.erpIntegration.findUnique({ where: { tenantId } });
@@ -36,7 +36,7 @@ export async function syncOrdersToErpNext(tenantId: string): Promise<ErpSyncResu
     orders,
   };
 
-  const endpoint = `${cfg.baseUrl.replace(/\/+$/, '')}/api/swiftserve/orders/batch`;
+  const endpoint = `${cfg.baseUrl.replace(/\/+$/, '')}/api/dineiz/orders/batch`;
   const resp = await fetch(endpoint, {
     method: 'POST',
     headers: {

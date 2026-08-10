@@ -1,4 +1,4 @@
-# SwiftServe — Restaurant Floor Plan Designer
+# Dineiz — Restaurant Floor Plan Designer
 ## Feature Specification v1.0
 
 ---
@@ -6,7 +6,7 @@
 ## Overview
 
 The Restaurant Floor Plan Designer is a drag-and-drop 2.5D visual tool built into
-the SwiftServe dashboard. Branch managers design their restaurant layout once.
+the Dineiz dashboard. Branch managers design their restaurant layout once.
 Cashiers then see a live table map on the POS showing which tables are free or
 occupied in real time.
 

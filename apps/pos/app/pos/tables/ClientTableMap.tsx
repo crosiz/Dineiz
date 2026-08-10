@@ -309,7 +309,7 @@ export default function ClientTableMap() {
           tokenNumber: popupOrder.orderNumber || popupOrder.id?.slice(-4) || 'N/A',
           type: popupOrder.type || 'DINE_IN',
           cashierName: session.cashierName || undefined,
-          tenantName: session.restaurantName || 'SwiftServe',
+          tenantName: session.restaurantName || 'Dineiz',
           branchName: session.branchName || 'Main Branch',
           items: (popupOrder.items || []).map((item: any) => ({
             name: item.name || item.item?.name || item.menuItem?.name || 'Unknown Item',

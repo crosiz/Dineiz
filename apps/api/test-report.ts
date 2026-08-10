@@ -1,5 +1,5 @@
 import { getShiftReport } from './src/routes/shift/shift-report.service';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 async function run() {
   try {

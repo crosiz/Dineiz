@@ -1,5 +1,5 @@
 import { Worker } from 'bullmq';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { handleWebhookPayload } from '../routes/aggregators/aggregators.service';
 import IORedis from 'ioredis';
 

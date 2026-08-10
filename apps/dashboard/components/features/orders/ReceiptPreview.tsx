@@ -17,7 +17,7 @@ function generatePDF(order: any, type: string) {
 
   doc.setFont('courier', 'bold');
   doc.setFontSize(11);
-  doc.text('SWIFTSERVE', PAPER_WIDTH / 2, y, { align: 'center' });
+  doc.text('DINEIZ', PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
   
   doc.setFont('courier', 'normal');
@@ -99,7 +99,7 @@ function generatePDF(order: any, type: string) {
 
   doc.text('--------------------------------', PAPER_WIDTH / 2, y, { align: 'center' });
   y += 6;
-  doc.text('POWERED BY SWIFTSERVE', PAPER_WIDTH / 2, y, { align: 'center' });
+  doc.text('POWERED BY DINEIZ', PAPER_WIDTH / 2, y, { align: 'center' });
 
   doc.save(`RECEIPT-${order.orderNumber}.pdf`);
 }
@@ -113,7 +113,7 @@ export function ReceiptPreview({ order, type }: ReceiptPreviewProps) {
            style={{ fontFamily: '"Courier New", Courier, monospace' }}>
         
         {/* Receipt content */}
-        <div className="text-center font-bold text-sm mb-2">SWIFTSERVE</div>
+        <div className="text-center font-bold text-sm mb-2">DINEIZ</div>
         {type === 'CUSTOMER_BILL' && <div className="text-center mb-2 uppercase font-bold text-xs">Customer Bill</div>}
         {type === 'PAID_RECEIPT' && <div className="text-center mb-2 uppercase font-bold text-xs">Paid Receipt</div>}
         
@@ -186,7 +186,7 @@ export function ReceiptPreview({ order, type }: ReceiptPreviewProps) {
         )}
 
         <div className="text-center mt-6 text-[9px] text-slate-500">
-          POWERED BY SWIFTSERVE
+          POWERED BY DINEIZ
         </div>
 
         {/* Zigzag bottom edge effect using CSS */}

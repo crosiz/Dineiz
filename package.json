@@ -1,8 +1,8 @@
 {
-  "name": "swiftserve",
+  "name": "dineiz",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --parallel --filter=!@swiftserve/rider",
+    "dev": "turbo run dev --parallel --filter=!@dineiz/rider",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo lint",

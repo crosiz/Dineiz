@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { webhooksQueue } from './queue';
 
 export async function enqueueZapierEvent(params: { tenantId: string; event: string; payload: any }) {

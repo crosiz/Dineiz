@@ -13,8 +13,8 @@
     "test:e2e:report": "playwright show-report tests/playwright-report"
   },
   "dependencies": {
-    "@swiftserve/schemas": "workspace:*",
-    "@swiftserve/ui": "workspace:*",
+    "@dineiz/schemas": "workspace:*",
+    "@dineiz/ui": "workspace:*",
     "@tanstack/react-query": "^5.99.2",
     "@types/qrcode": "^1.5.6",
     "@xyflow/react": "^12.0.0",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@swiftserve/config": "workspace:*",
+    "@dineiz/config": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/node": "^20",
     "@types/react": "npm:types-react@19.0.0-rc.0",

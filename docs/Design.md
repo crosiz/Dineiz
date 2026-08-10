@@ -1,4 +1,4 @@
-# SwiftServe POS — Design System & UI/UX Guidelines
+# Dineiz POS — Design System & UI/UX Guidelines
 
 > Inspired by Blink POS's clean, high-contrast, touch-optimized interface — evolved for 2026 with modern ergonomics, RTL support, and multi-tenant branding flexibility.
 
@@ -6,7 +6,7 @@
 
 ## 1. Design Philosophy
 
-SwiftServe follows four core design principles:
+Dineiz follows four core design principles:
 
 **Speed over decoration.** Every tap should achieve something. No animations longer than 200ms on the POS screen. No carousels, no banners, no distractions during order punching.
 
@@ -20,7 +20,7 @@ SwiftServe follows four core design principles:
 
 ## 2. Color System
 
-### 2.1 Base Palette (Default / SwiftServe Brand)
+### 2.1 Base Palette (Default / Dineiz Brand)
 
 | Token | Hex | Usage |
 |---|---|---|
@@ -221,7 +221,7 @@ Pill-shaped badges with colored fill at 15% opacity and matching text color:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ [≡ Menu]  SwiftServe        Branch: Clifton   Shift: #S-041  │  ← Top bar 56px
+│ [≡ Menu]  Dineiz        Branch: Clifton   Shift: #S-041  │  ← Top bar 56px
 ├────────────────────────────────┬─────────────────────────────┤
 │ [Burgers] [Pizza] [Drinks] [+] │  Order #0042 · Dine-In T-7  │  ← Category tabs
 │────────────────────────────────│─────────────────────────────│
@@ -333,7 +333,7 @@ Tenant branding is applied at runtime via CSS custom property injection:
 :root {
   --color-brand-primary: /* tenant hex */;
   --color-brand-secondary: /* tenant hex */;
-  --tenant-logo-url: url("https://cdn.swiftserve.io/tenants/{id}/logo.svg");
+  --tenant-logo-url: url("https://cdn.dineiz.io/tenants/{id}/logo.svg");
 }
 ```
 
@@ -367,4 +367,4 @@ The POS punching screen does not collapse below `lg` — it is a fixed-layout ta
 
 ---
 
-*SwiftServe POS — Design System v1.0 — April 2026 — Confidential*
+*Dineiz POS — Design System v1.0 — April 2026 — Confidential*

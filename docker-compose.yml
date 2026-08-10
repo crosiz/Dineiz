@@ -3,30 +3,30 @@ services:
 
   db:
     image: timescale/timescaledb:latest-pg16
-    container_name: swiftserve_db
+    container_name: dineiz_db
     restart: always
     environment:
-      POSTGRES_USER: swiftserve
+      POSTGRES_USER: dineiz
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: swiftserve
+      POSTGRES_DB: dineiz
     ports:
       - "5434:5432"
     volumes:
-      - swiftserve_db_data:/var/lib/postgresql/data
+      - dineiz_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U swiftserve" ]
+      test: [ "CMD-SHELL", "pg_isready -U dineiz" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7.2-alpine
-    container_name: swiftserve_redis
+    container_name: dineiz_redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
-      - swiftserve_redis_data:/data
+      - dineiz_redis_data:/data
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
@@ -35,7 +35,7 @@ services:
 
   meilisearch:
     image: getmeili/meilisearch:v1.12
-    container_name: swiftserve_meili
+    container_name: dineiz_meili
     restart: always
     environment:
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKeyForDevelopmentOnly123}
@@ -43,7 +43,7 @@ services:
     ports:
       - "7700:7700"
     volumes:
-      - swiftserve_meili_data:/meili_data
+      - dineiz_meili_data:/meili_data
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7700/health" ]
       interval: 10s
@@ -53,7 +53,7 @@ services:
   forecast:
     build:
       context: ./apps/forecast
-    container_name: swiftserve_forecast
+    container_name: dineiz_forecast
     restart: always
     ports:
       - "8090:8090"
@@ -66,7 +66,7 @@ services:
   pdf-worker:
     build:
       context: ./apps/pdf-worker
-    container_name: swiftserve_pdf_worker
+    container_name: dineiz_pdf_worker
     restart: always
     ports:
       - "8091:8091"
@@ -81,7 +81,7 @@ services:
   aggregator-bridge:
     build:
       context: ./apps/aggregator-bridge
-    container_name: swiftserve_aggregator_bridge
+    container_name: dineiz_aggregator_bridge
     restart: always
     ports:
       - "8092:8092"
@@ -102,7 +102,7 @@ services:
 
   prisma-migrate:
     image: node:22-alpine
-    container_name: swiftserve_prisma_migrate
+    container_name: dineiz_prisma_migrate
     working_dir: /app
     env_file: .env.development
     volumes:
@@ -111,13 +111,13 @@ services:
       db:
         condition: service_healthy
     command: >
-      sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/db exec prisma migrate dev --name init"
+      sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @dineiz/db exec prisma migrate dev --name init"
     profiles: [ "migrate" ] # Only runs when explicitly targeted or using the make command
   # ── Applications (Local Development) ──
 
   # api:
   #   image: node:22-alpine
-  #   container_name: swiftserve_api
+  #   container_name: dineiz_api
   #   working_dir: /app
   #   env_file: .env.development
   #   volumes:
@@ -130,13 +130,13 @@ services:
   #     redis:
   #       condition: service_healthy
   #   command: >
-  #     sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/db generate && pnpm --filter api dev"
+  #     sh -c "apk add --no-cache openssl && npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @dineiz/db generate && pnpm --filter api dev"
   #   environment:
   #     - NODE_ENV=development
 
   # dashboard:
   #   image: node:22-alpine
-  #   container_name: swiftserve_dashboard
+  #   container_name: dineiz_dashboard
   #   working_dir: /app
   #   env_file: .env.development
   #   volumes:
@@ -154,7 +154,7 @@ services:
 
   # pos:
   #   image: node:22-alpine
-  #   container_name: swiftserve_pos
+  #   container_name: dineiz_pos
   #   working_dir: /app
   #   env_file: .env.development
   #   volumes:
@@ -165,13 +165,13 @@ services:
   #     api:
   #       condition: service_started
   #   command: >
-  #     sh -c "npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @swiftserve/pos dev"
+  #     sh -c "npm install -g pnpm && pnpm config set store-dir /pnpm-store && pnpm install --no-frozen-lockfile && pnpm --filter @dineiz/pos dev"
   #   environment:
   #     - NODE_ENV=development
   #     - HOSTNAME=0.0.0.0
 
 volumes:
-  swiftserve_db_data: {}
-  swiftserve_redis_data: {}
-  swiftserve_meili_data: {}
+  dineiz_db_data: {}
+  dineiz_redis_data: {}
+  dineiz_meili_data: {}
   pnpm_store: {}

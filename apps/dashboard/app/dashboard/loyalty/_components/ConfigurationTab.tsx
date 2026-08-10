@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Input } from '@swiftserve/ui/src/components/input';
-import { Button } from '@swiftserve/ui/src/components/button';
+import { Input } from '@dineiz/ui/src/components/input';
+import { Button } from '@dineiz/ui/src/components/button';
 
 export function ConfigurationTab({ settings, onRefresh }: { settings: any, onRefresh: () => void }) {
   const [formData, setFormData] = useState(settings || {});

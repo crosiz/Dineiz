@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useBrandingStore } from '@/lib/branding-store'
 
 function ReceiptPageContent() {
   const searchParams = useSearchParams()

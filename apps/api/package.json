@@ -14,8 +14,8 @@
     "@fastify/cors": "^10.0.0",
     "@fastify/multipart": "^10.0.0",
     "@socket.io/redis-adapter": "^8.3.0",
-    "@swiftserve/db": "workspace:*",
-    "@swiftserve/schemas": "workspace:*",
+    "@dineiz/db": "workspace:*",
+    "@dineiz/schemas": "workspace:*",
     "@types/bcrypt": "^6.0.0",
     "@upstash/redis": "^1.38.2",
     "bcrypt": "^6.0.0",
@@ -40,7 +40,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@swiftserve/config": "workspace:*",
+    "@dineiz/config": "workspace:*",
     "@types/node": "^22.0.0",
     "minimatch": "^10.2.5",
     "tsx": "^4.10.0",

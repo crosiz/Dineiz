@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { requireTenant } from '../../middleware/auth';
 import { AnomalyType, AnomalySeverity, AnomalyStatus } from '@prisma/client';
 

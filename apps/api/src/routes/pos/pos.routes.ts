@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../middleware/auth';
 import { z } from 'zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get('/api/pos/stats', {

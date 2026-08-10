@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma } from '@swiftserve/db';
-import { createTenantSchema, updateTenantSettingsSchema, createBranchSchema } from '@swiftserve/schemas';
+import { prisma } from '@dineiz/db';
+import { createTenantSchema, updateTenantSettingsSchema, createBranchSchema } from '@dineiz/schemas';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
 import { emitBrandingUpdated } from '../../lib/socket';
@@ -111,7 +111,7 @@ export const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
         tenantId: tenant.id,
         branchId: branch.id,
         name: 'Owner',
-        email: `${phone}@swiftservego.local`, // Generate a fake email or use phone
+        email: `${phone}@dineizgo.local`, // Generate a fake email or use phone
         role: 'TENANT_ADMIN',
         posPin: pin,
         password: '', // Password not used for posPin login, but field might be required

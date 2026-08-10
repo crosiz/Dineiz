@@ -1,4 +1,4 @@
-import { prisma, Prisma } from '@swiftserve/db';
+import { prisma, Prisma } from '@dineiz/db';
 import { redis } from '../../lib/redis';
 import { runAnalyticsAggregationJob } from '../../jobs/analyticsSync';
 import { format, addDays, differenceInDays } from 'date-fns';

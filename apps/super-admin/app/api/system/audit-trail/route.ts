@@ -1,5 +1,5 @@
 import { NextResponse } from 'next';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
 
 export async function GET(request: Request) {

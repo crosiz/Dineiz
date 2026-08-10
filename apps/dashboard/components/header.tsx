@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@swiftserve/ui";
+import { Button } from "@dineiz/ui";
 import { useUser } from "@/contexts/user-context";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";

@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { prisma } from "@swiftserve/db";
+import { prisma } from "@dineiz/db";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
 import { v2 as cloudinary } from 'cloudinary';
 
@@ -82,7 +82,7 @@ export const mobileRestaurantRoutes: FastifyPluginAsyncZod = async (fastify) => 
       const buffer = await data.toBuffer();
       
       const uploadPromise = new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream({ folder: 'swiftserve/logos' }, (error, result) => {
+        cloudinary.uploader.upload_stream({ folder: 'dineiz/logos' }, (error, result) => {
           if (error) reject(error);
           else resolve(result);
         }).end(buffer);

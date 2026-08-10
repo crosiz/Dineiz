@@ -7,7 +7,7 @@ app.use(express.json({ limit: "2mb" }));
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 
 // Generic webhook relay (Foodpanda/Careem) scaffold.
-// Validates shared secret and forwards payload to SwiftServe API.
+// Validates shared secret and forwards payload to Dineiz API.
 const WebhookSchema = z.object({
   tenantId: z.string().min(1),
   provider: z.enum(["foodpanda", "careem"]),

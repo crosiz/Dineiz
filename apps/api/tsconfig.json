@@ -1,5 +1,5 @@
 {
-  "extends": "@swiftserve/config/typescript/fastify.json",
+  "extends": "@dineiz/config/typescript/fastify.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",

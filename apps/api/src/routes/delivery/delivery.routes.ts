@@ -1,5 +1,5 @@
 ﻿import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
 import { getEtaSeconds, pointInPolygon } from '../../lib/googleRoutes';

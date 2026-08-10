@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "@swiftserve/db";
+import { prisma } from "@dineiz/db";
 import { redis } from "./redis";
 
 // Build the list of trusted origins from env + sensible dev defaults.

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { zktecoService } from '../../services/zkteco.service';
 import { processPunch } from '../../services/attendance.service';
 import { createDeviceSchema, enrollUserSchema } from './zkteco.schema';

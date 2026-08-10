@@ -46,7 +46,7 @@ export async function handleBumpOrder(req: FastifyRequest, reply: FastifyReply) 
   const order = await bumpOrder(tenantId, id);
 
   if (order.tableId) {
-    const { prisma } = await import('@swiftserve/db');
+    const { prisma } = await import('@dineiz/db');
     const { emitTableStatusChanged } = await import('../../lib/socket');
     await prisma.table.updateMany({ where: { id: order.tableId, tenantId }, data: { status: 'ready' } });
     emitTableStatusChanged(order.branchId, { tableId: order.tableId, status: 'ready', orderId: order.id, since: order.createdAt.toISOString() }, tenantId);

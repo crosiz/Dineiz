@@ -206,7 +206,7 @@ export default function PaymentModal({
         tokenNumber: orderId.substring(orderId.length - 4),
         type: useCartStore.getState().orderType || 'DINE_IN',
         cashierName: session.cashierName ?? undefined,
-        tenantName: session.restaurantName || 'SwiftServe',
+        tenantName: session.restaurantName || 'Dineiz',
         branchName: session?.branchName || 'Main Branch',
         items: displayItems.map((c: any) => ({
           name: c.name || c.item?.name || c.itemName || 'Unknown Item',

@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { getMeili } from '../lib/meili';
 
 export async function syncMenuToMeili(tenantId: string) {

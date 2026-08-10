@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Button } from '@swiftserve/ui/src/components/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@swiftserve/ui/src/components/card';
+import { Button } from '@dineiz/ui/src/components/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@dineiz/ui/src/components/card';
 import { UploadCloud, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function BulkUpload() {

@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Wand2, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
-import { Button } from '@swiftserve/ui/src/components/button';
-import { Input } from '@swiftserve/ui/src/components/input';
+import { Button } from '@dineiz/ui/src/components/button';
+import { Input } from '@dineiz/ui/src/components/input';
 import { toast } from 'sonner';
 
 type Category = { id: string; name: string };

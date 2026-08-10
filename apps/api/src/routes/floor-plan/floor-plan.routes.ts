@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma } from '@swiftserve/db';
-import { FloorPlanUpdateSchema, TableCreateSchema, TableUpdateSchema } from '@swiftserve/schemas';
+import { prisma } from '@dineiz/db';
+import { FloorPlanUpdateSchema, TableCreateSchema, TableUpdateSchema } from '@dineiz/schemas';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
 

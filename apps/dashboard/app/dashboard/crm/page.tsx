@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@swiftserve/ui/src/components/card';
-import { Button } from '@swiftserve/ui/src/components/button';
-import { Input } from '@swiftserve/ui/src/components/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/components/card';
+import { Button } from '@dineiz/ui/src/components/button';
+import { Input } from '@dineiz/ui/src/components/input';
 import { apiFetch } from '@/lib/api';
 import { AdminOnly } from '@/components/admin-only';
 import { useBranchFilter } from '@/hooks/useBranchFilter';

@@ -88,7 +88,7 @@ export function getIO(): SocketIOServer | null {
 
 function registerKDSNamespace(io: SocketIOServer): void {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { prisma } = require('@swiftserve/db') as typeof import('@swiftserve/db');
+  const { prisma } = require('@dineiz/db') as typeof import('@dineiz/db');
 
   const kds = io.of('/kds');
 

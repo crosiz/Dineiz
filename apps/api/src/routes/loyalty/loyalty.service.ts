@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export async function redeemLoyaltyForOrder(order: any, redeemedPointsAmount: number) {
   if (!order.customerId || !redeemedPointsAmount || redeemedPointsAmount <= 0) return;

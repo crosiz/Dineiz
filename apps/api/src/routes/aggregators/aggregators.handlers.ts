@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma, AggregatorProvider } from '@swiftserve/db';
+import { prisma, AggregatorProvider } from '@dineiz/db';
 import { handleWebhookPayload } from './aggregators.service';
 import { aggregatorsQueue } from '../../lib/queue';
 import { z } from 'zod';

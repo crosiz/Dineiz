@@ -5,7 +5,7 @@ import {
   startBreak, endBreak, canCloseShift, getShiftReport,
 } from './shift.service';
 import { OpenShiftSchema, CloseShiftSchema, CashEntrySchema, CanCloseQuerySchema } from './shift.schema';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export async function handleGetCurrentShift(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user!;

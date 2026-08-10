@@ -226,6 +226,7 @@ export const useCartStore = create<CartStore>()(
           lastValidatedAt: null,
           isValidating: false,
           applied: [],
+          eligible: [],
         },
         selectedTableId: null,
         selectedTableLabel: null,
@@ -356,7 +357,7 @@ export const useCartStore = create<CartStore>()(
           ),
 
         clearCart: () =>
-          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null }, false, 'clearCart'),
+          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [], eligible: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null }, false, 'clearCart'),
         setOrderType: (type) => set({ orderType: type }, false, 'setOrderType'),
         setOrderContext: (ctx) => set((s) => ({
           selectedTableId: ctx.tableId !== undefined ? ctx.tableId : s.selectedTableId,

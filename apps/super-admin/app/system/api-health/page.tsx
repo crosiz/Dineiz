@@ -79,7 +79,7 @@ export default function ApiHealthPage() {
       {healthData?.isAnyQueueBackedUp && (
         <div className="bg-amber-950/60 border border-amber-500/50 p-4 rounded-xl flex items-center gap-3 text-amber-200 text-xs">
           <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
-          <span>WARNING: One or more BullMQ queues are backing up (> 100 jobs waiting). Please inspect worker tasks.</span>
+          <span>WARNING: One or more BullMQ queues are backing up (&gt; 100 jobs waiting). Please inspect worker tasks.</span>
         </div>
       )}
 

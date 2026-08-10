@@ -1,6 +1,6 @@
 # Complete E2E Testing Document
 
-This document covers all manual and automated End-to-End test cases for the SwiftServe platform, which includes the **Admin Panel**, **POS Application**, and **Sync & Coordination**.
+This document covers all manual and automated End-to-End test cases for the Dineiz platform, which includes the **Admin Panel**, **POS Application**, and **Sync & Coordination**.
 
 ## Admin Panel Tests (AP)
 

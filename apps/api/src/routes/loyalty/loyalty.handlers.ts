@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export const getSettingsHandler = async (req: FastifyRequest, reply: FastifyReply) => {
   const tenantId = (req.user as any).tenantId;

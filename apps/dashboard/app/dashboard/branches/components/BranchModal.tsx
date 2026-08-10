@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, ChevronLeft, ChevronRight, ArrowUpCircle } from 'lucide-react';
-import { Button } from '@swiftserve/ui';
-import { Input } from '@swiftserve/ui';
+import { Button } from '@dineiz/ui';
+import { Input } from '@dineiz/ui';
 import { toast } from 'sonner';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

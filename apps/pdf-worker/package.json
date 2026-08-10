@@ -1,5 +1,5 @@
 {
-  "name": "@swiftserve/pdf-worker",
+  "name": "@dineiz/pdf-worker",
   "private": true,
   "version": "0.1.0",
   "type": "module",

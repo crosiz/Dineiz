@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { createAnomalyIfNotExists } from '../routes/anomalies/anomaly.service';
 import { Worker, Job } from 'bullmq';
 import { anomalyQueue } from '../lib/queue';

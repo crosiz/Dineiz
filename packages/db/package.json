@@ -1,5 +1,5 @@
 {
-  "name": "@swiftserve/db",
+  "name": "@dineiz/db",
   "version": "0.0.0",
   "private": true,
   "main": "./dist/index.js",
@@ -25,7 +25,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@swiftserve/config": "workspace:*",
+    "@dineiz/config": "workspace:*",
     "@types/bcryptjs": "^2.4.6",
     "@types/ws": "^8.18.1",
     "prisma": "^5.22.0",

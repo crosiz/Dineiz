@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 // NOTE: selectedBranchId has been removed from here.
 // Branch context is now managed by DashboardContext (contexts/dashboard-context.tsx),
-// which persists to sessionStorage under 'swiftserve_branch_ctx'.
+// which persists to sessionStorage under 'dineiz_branch_ctx'.
 
 interface UIStore {
   sidebarCollapsed: boolean;
@@ -19,7 +19,7 @@ export const useUIStore = create<UIStore>()(
       setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
     }),
     {
-      name: 'swiftserve_sidebar_collapsed',
+      name: 'dineiz_sidebar_collapsed',
       partialize: (state) => ({ sidebarCollapsed: state.sidebarCollapsed }),
     }
   )

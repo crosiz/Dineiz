@@ -1,5 +1,5 @@
 import { NextResponse } from 'next';
-import { prisma, SuperAdminRole } from '@swiftserve/db';
+import { prisma, SuperAdminRole } from '@dineiz/db';
 import { getCurrentSuperAdmin, hashPassword } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 

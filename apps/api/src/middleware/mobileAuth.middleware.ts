@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import * as jwt from 'jsonwebtoken';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export interface MobileJwtPayload {
   userId: string;

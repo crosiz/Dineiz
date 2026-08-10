@@ -1,5 +1,5 @@
 {
-  "extends": "@swiftserve/config/typescript/nextjs.json",
+  "extends": "@dineiz/config/typescript/nextjs.json",
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {

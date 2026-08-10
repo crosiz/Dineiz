@@ -11,7 +11,7 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@swiftserve/ui', '@swiftserve/schemas'],
+  transpilePackages: ['@dineiz/ui', '@dineiz/schemas'],
 };
 
 export default withPWA(nextConfig);

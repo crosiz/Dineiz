@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { endOfDay, startOfDay, subDays } from 'date-fns';
 import { getAnalyticsSummary, getDashboardAnalytics } from '../analytics/analytics.service';
 

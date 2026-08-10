@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 function isWithinWindow(now: Date, startsAt?: Date | null, endsAt?: Date | null) {
   if (startsAt && now < startsAt) return false;

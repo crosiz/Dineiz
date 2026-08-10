@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@swiftserve/db');
+const { PrismaClient } = require('@dineiz/db');
 const prisma = new PrismaClient();
 
 async function check() {

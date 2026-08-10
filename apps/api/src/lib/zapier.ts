@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export type ZapierEventName =
   | 'order.created'
@@ -17,7 +17,7 @@ export function buildZapierHeaders(sub: { secret: string | null }) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (sub.secret) headers['X-SwiftServe-Webhook-Secret'] = sub.secret;
+  if (sub.secret) headers['X-Dineiz-Webhook-Secret'] = sub.secret;
   return headers;
 }
 

@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { redis } from '../../lib/redis';
 import { 
   emitRiderLocationUpdated, 

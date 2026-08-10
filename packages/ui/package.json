@@ -1,5 +1,5 @@
 {
-  "name": "@swiftserve/ui",
+  "name": "@dineiz/ui",
   "version": "0.0.0",
   "private": true,
   "main": "./src/index.ts",
@@ -13,7 +13,7 @@
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
-    "@swiftserve/config": "workspace:*",
+    "@dineiz/config": "workspace:*",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.1",
     "react": "^19.0.0",

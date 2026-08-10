@@ -19,11 +19,7 @@ export default function ShiftReportSelectorPage() {
   useTopBar({
     pageTitle: 'Shift Reports',
     breadcrumb: 'Select a Shift',
-    leftActions: (
-      <button onClick={() => router.back()} className="p-2 -ml-2 rounded-full hover:bg-[#E2E8F0] text-[#64748B] transition-colors">
-        <ChevronLeft size={24} />
-      </button>
-    )
+    showBackButton: true,
   });
 
   useEffect(() => {

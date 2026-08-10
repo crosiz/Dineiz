@@ -380,8 +380,8 @@ export default function AdminPage() {
                 label="Connect USB Printer" 
                 onClick={async () => {
                    try {
-                     const { getConnectedPrinter } = await import('@/lib/printer/webusb');
-                     await getConnectedPrinter();
+                     const { requestPrinter } = await import('@/lib/printer/webusb');
+                     await requestPrinter();
                      toast.success('Printer connected successfully!');
                    } catch(e: any) {
                      toast.error(e.message || 'Failed to connect printer');

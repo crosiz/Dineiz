@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { comparePassword, signSuperAdminToken, SUPERADMIN_COOKIE_NAME } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 

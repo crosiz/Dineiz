@@ -1,5 +1,5 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
 import { getResend, getTwilio } from '../../lib/messaging';

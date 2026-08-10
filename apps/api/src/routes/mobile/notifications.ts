@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { prisma } from "@swiftserve/db";
+import { prisma } from "@dineiz/db";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
 
 export const mobileNotificationsRoutes: FastifyPluginAsyncZod = async (fastify) => {

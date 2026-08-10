@@ -1,4 +1,4 @@
-import { prisma, Prisma } from '@swiftserve/db';
+import { prisma, Prisma } from '@dineiz/db';
 import { redis } from '../lib/redis';
 import { toZonedTime, format } from 'date-fns-tz';
 

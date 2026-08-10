@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@swiftserve/ui', '@swiftserve/schemas'],
+  transpilePackages: ['@dineiz/ui', '@dineiz/schemas'],
   typescript: {
     ignoreBuildErrors: true,
   },

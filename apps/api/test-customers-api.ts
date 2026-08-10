@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 const { execSync } = require('child_process');
 const crypto = require('crypto');
 

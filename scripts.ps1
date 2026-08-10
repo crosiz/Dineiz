@@ -9,7 +9,7 @@ switch ($Command) {
   "clean"   { docker compose down -v }
   "clean-nm" {
     docker compose down
-    docker volume rm swiftserve_api_nm swiftserve_dashboard_nm swiftserve_pos_nm swiftserve_prisma_nm swiftserve_pnpm_store
+    docker volume rm dineiz_api_nm dineiz_dashboard_nm dineiz_pos_nm dineiz_prisma_nm dineiz_pnpm_store
   }
   default   { Write-Host "Commands: infra, dev, migrate, seed, logs, stop, clean, clean-nm" }
 }

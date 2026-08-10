@@ -1,8 +1,8 @@
 import { auth } from '../lib/auth';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { User, Session } from '@swiftserve/db';
+import type { User, Session } from '@dineiz/db';
 
 declare module 'fastify' {
   interface FastifyRequest {

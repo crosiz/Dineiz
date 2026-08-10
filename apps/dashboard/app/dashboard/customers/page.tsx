@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Button } from '@swiftserve/ui/src/components/button';
+import { Button } from '@dineiz/ui/src/components/button';
 import { getCustomers, createCustomer } from '@/lib/api/customers';
 import { AdminOnly } from '@/components/admin-only';
 import { toast } from 'sonner';

@@ -1,6 +1,6 @@
-# SwiftServe POS — Recommended Tech Stack (2026)
+# Dineiz POS — Recommended Tech Stack (2026)
 
-> A full-system technology recommendation for SwiftServe POS, covering every layer from frontend to deployment. Each choice is justified against the PRD's requirements: multi-tenant SaaS, offline-first, real-time KDS, sub-500ms order sync, 10,000 concurrent tenants, and South Asian/MENA market constraints.
+> A full-system technology recommendation for Dineiz POS, covering every layer from frontend to deployment. Each choice is justified against the PRD's requirements: multi-tenant SaaS, offline-first, real-time KDS, sub-500ms order sync, 10,000 concurrent tenants, and South Asian/MENA market constraints.
 
 ---
 
@@ -132,7 +132,7 @@ BullMQ's bull board UI is exposed under `/internal/jobs` for ops monitoring.
 ### Monorepo Structure: **Turborepo**
 
 ```
-swiftserve/
+dineiz/
 ├── apps/
 │   ├── pos/            ← Next.js POS PWA
 │   ├── dashboard/      ← Next.js admin dashboard
@@ -249,7 +249,7 @@ Transactional emails (invoice PDFs, welcome emails, shift reports) sent via Rese
 - Menu item images, receipt PDFs, proof-of-delivery photos stored in S3.
 - All objects are private by default; pre-signed URLs (15-minute expiry) are issued by the API for each access.
 - CloudFront CDN serves menu images globally with edge caching — critical for the QR ordering interface where customers load the full menu on their phones.
-- Bucket naming convention: `swiftserve-tenant-{tenant_id}` with strict IAM policies per tenant.
+- Bucket naming convention: `dineiz-tenant-{tenant_id}` with strict IAM policies per tenant.
 
 ### Invoice PDF Generation: **Puppeteer (headless Chrome) in a dedicated worker**
 
@@ -280,7 +280,7 @@ Used for two specific features in Phase 3:
 
 ### API Gateway for Aggregators: **Custom webhook relay service**
 
-A dedicated `aggregator-bridge` microservice (Node.js, Fastify) handles polling and webhook reception from Foodpanda, Careem, HungerStation, and Talabat. Each aggregator's proprietary API format is normalized to the SwiftServe internal order schema. This isolation ensures that a breaking change in Foodpanda's API does not affect the core order API.
+A dedicated `aggregator-bridge` microservice (Node.js, Fastify) handles polling and webhook reception from Foodpanda, Careem, HungerStation, and Talabat. Each aggregator's proprietary API format is normalized to the Dineiz internal order schema. This isolation ensures that a breaking change in Foodpanda's API does not affect the core order API.
 
 ### Maps: **Google Maps Platform (Maps JS API + Routes API)**
 
@@ -296,7 +296,7 @@ A dedicated `aggregator-bridge` microservice (Node.js, Fastify) handles polling 
 | UAE/KSA | Stripe, PayFast, HyperPay | Stripe SDK, REST |
 | Future | Checkout.com | REST (regional coverage) |
 
-Payment gateway credentials are stored encrypted per-tenant using AWS KMS. SwiftServe never stores raw card data (PRD PCI-DSS requirement).
+Payment gateway credentials are stored encrypted per-tenant using AWS KMS. Dineiz never stores raw card data (PRD PCI-DSS requirement).
 
 ---
 
@@ -309,7 +309,7 @@ All services are containerized. Base images use `node:22-alpine` and `python:3.1
 ### Orchestration: **AWS EKS (Kubernetes)**
 
 AWS EKS manages the production cluster. Key configurations:
-- **Namespace per environment:** `swiftserve-prod`, `swiftserve-staging`, `swiftserve-dev`.
+- **Namespace per environment:** `dineiz-prod`, `dineiz-staging`, `dineiz-dev`.
 - **HorizontalPodAutoscaler:** API pods scale on CPU (target 60%) and custom metric: Socket.IO connection count.
 - **Node groups:** Separate node groups for API workloads (compute-optimized), ML workers (memory-optimized), and PDF workers (burstable).
 
@@ -325,8 +325,8 @@ All AWS resources (EKS cluster, RDS, ElastiCache, S3 buckets, CloudFront distrib
 ### DNS & SSL: **AWS Route 53 + AWS Certificate Manager**
 
 Custom domain white-labeling (e.g., `pos.restaurantname.com`) is handled via:
-1. Tenant admin adds a `CNAME` record pointing to `{tenant_id}.tenants.swiftserve.io`.
-2. The SwiftServe ingress controller (NGINX Ingress) reads the `Host` header to route to the correct tenant namespace.
+1. Tenant admin adds a `CNAME` record pointing to `{tenant_id}.tenants.dineiz.io`.
+2. The Dineiz ingress controller (NGINX Ingress) reads the `Host` header to route to the correct tenant namespace.
 3. **cert-manager** with Let's Encrypt automatically provisions and renews SSL certificates for each custom domain.
 
 ### CDN: **CloudFront (static assets) + Vercel Edge (QR menu)**
@@ -341,7 +341,7 @@ Custom domain white-labeling (e.g., `pos.restaurantname.com`) is handled via:
 | **Grafana + Prometheus** | Infrastructure metrics: pod CPU/memory, queue depth, DB connection pool |
 | **Sentry** | Error tracking for frontend (Next.js, Expo) and backend (Fastify) |
 | **Axiom** | Log aggregation and search (replaces ELK stack — cheaper, faster at this scale) |
-| **Uptime Kuma** | Public uptime monitoring; status page at `status.swiftserve.io` |
+| **Uptime Kuma** | Public uptime monitoring; status page at `status.dineiz.io` |
 | **AWS CloudWatch** | RDS performance insights, EKS control plane logs |
 
 ### Backup & Recovery
@@ -362,7 +362,7 @@ Custom domain white-labeling (e.g., `pos.restaurantname.com`) is handled via:
 | **Secrets** | AWS Secrets Manager. Secrets injected as environment variables at pod startup. Never in source code or Docker images. |
 | **Dependency scanning** | Dependabot on all npm and Python packages. Critical CVEs block merge. |
 | **Audit log** | Every write operation appended to `audit_events` table: `tenant_id`, `user_id`, `action`, `before_state` (JSONB), `after_state` (JSONB), `ip_address`, `timestamp`. |
-| **PCI-DSS** | SwiftServe never stores raw card data. All card transactions flow through PCI-DSS certified gateway SDKs. |
+| **PCI-DSS** | Dineiz never stores raw card data. All card transactions flow through PCI-DSS certified gateway SDKs. |
 
 ---
 
@@ -402,4 +402,4 @@ Custom domain white-labeling (e.g., `pos.restaurantname.com`) is handled via:
 
 ---
 
-*SwiftServe POS — Tech Stack Recommendation v1.0 — April 2026 — Confidential*
+*Dineiz POS — Tech Stack Recommendation v1.0 — April 2026 — Confidential*

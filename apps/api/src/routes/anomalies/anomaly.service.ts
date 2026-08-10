@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { AnomalyType, AnomalySeverity, AnomalyStatus } from '@prisma/client';
 import { subHours, subMinutes } from 'date-fns';
 

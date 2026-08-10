@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { CreateStaff, StaffQuery, UpdateStaff, ResetPin } from './staff.schema';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
@@ -198,7 +198,7 @@ export class StaffService {
       data: {
         status: 'INACTIVE' as any,
         posPin: null,
-        email: `deleted_${id}@swiftserve.invalid`, // prevent email reuse conflicts
+        email: `deleted_${id}@dineiz.invalid`, // prevent email reuse conflicts
       }
     });
     return { success: true };

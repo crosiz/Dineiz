@@ -100,7 +100,7 @@ export function useKDS(branchId: string | null): UseKDSReturn {
     const handleOrderUpdated = (updated: KDSOrder) => {
       setOrders((prev) => {
         // Remove DELIVERED and CANCELLED from the active queue
-        if (updated.status === 'DELIVERED' || updated.status === 'CANCELLED' || updated.status === 'COMPLETED') {
+        if ((updated.status as any) === 'DELIVERED' || (updated.status as any) === 'CANCELLED' || (updated.status as any) === 'COMPLETED') {
           return prev.filter((o) => o.id !== updated.id);
         }
         

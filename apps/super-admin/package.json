@@ -9,9 +9,9 @@
     "lint": "eslint \"**/*.ts*\""
   },
   "dependencies": {
-    "@swiftserve/db": "workspace:*",
-    "@swiftserve/schemas": "workspace:*",
-    "@swiftserve/ui": "workspace:*",
+    "@dineiz/db": "workspace:*",
+    "@dineiz/schemas": "workspace:*",
+    "@dineiz/ui": "workspace:*",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -28,7 +28,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@swiftserve/config": "workspace:*",
+    "@dineiz/config": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",

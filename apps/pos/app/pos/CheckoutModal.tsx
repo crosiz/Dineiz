@@ -58,6 +58,23 @@ export default function CheckoutModal({ onClose, onSuccess }: Props) {
   const [loyaltyProfile, setLoyaltyProfile] = useState<any>(null);
   const [loyaltySettings, setLoyaltySettings] = useState<any>(null);
   const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const calculateTax = () => {
+    // Already tracked in cart store natively
+  };
+
+  const cashLabel = branding.cashTaxLabel ?? 'GST (Cash)';
+  const cashRate = branding.cashTaxRate ?? 17;
+  const cardLabel = branding.cardTaxLabel ?? 'GST (Card/Digital)';
+  const cardRate = branding.cardTaxRate ?? 17;
+
+  const cashTotal = () => {
+    const tax = branding.cashTaxEnabled !== false ? Math.round(Math.ceil(totalAmt / 2) * (cashRate / 100)) : 0;
+    return Math.ceil(totalAmt / 2) + tax;
+  };
+  const cardTotal = () => {
+    const tax = branding.cardTaxEnabled !== false ? Math.round(Math.floor(totalAmt / 2) * (cardRate / 100)) : 0;
+    return Math.floor(totalAmt / 2) + tax;
+  };
 
   useEffect(() => {
     async function loadLoyalty() {
@@ -268,7 +285,7 @@ export default function CheckoutModal({ onClose, onSuccess }: Props) {
         tokenNumber: 'PRE-BILL',
         type: (orderType as any) || 'DINE_IN',
         cashierName: session.cashierName ?? 'Operator',
-        tenantName: session.restaurantName || 'SwiftServe',
+        tenantName: session.restaurantName || 'Dineiz',
         branchName: session.branchName || 'Main Branch',
         items: cart.map((c) => ({
           name: c.name,
@@ -364,7 +381,7 @@ export default function CheckoutModal({ onClose, onSuccess }: Props) {
                           <p className="text-xs text-outline italic">
                             {c.selectedVariation?.name}
                             {c.selectedAddOns.length > 0 && c.selectedVariation ? ', ' : ''}
-                            {c.selectedAddOns.map((a) => a.name).join(', ')}
+                            {c.selectedAddOns.map((a: any) => a.name).join(', ')}
                           </p>
                         )}
                       </div>

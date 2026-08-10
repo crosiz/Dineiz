@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { getTwilio } from '../lib/messaging';
 
 export async function runBirthdayRewardsJob(args: { tenantId: string }) {

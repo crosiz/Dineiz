@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerator';
 import { emitDashboardStatsUpdated } from '../../lib/socket';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';

@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { generateReportData } from './reports.service';
 import { generateCSV, generateExcel, generatePDF } from './generators';
 import { reportsQueue } from '../../lib/queue';

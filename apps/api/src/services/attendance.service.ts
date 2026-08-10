@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db'
+import { prisma } from '@dineiz/db'
 import { addMinutes, differenceInMinutes } from 'date-fns'
 import type { AttendancePunchData } from './zkteco.service'
 

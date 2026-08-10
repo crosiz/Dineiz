@@ -159,11 +159,11 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
 export function PromoCodeModal({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState('');
   const setPromoCode = useCartStore((s) => s.setPromoCode);
-  const validateAndApplyDeals = useCartStore((s) => s.validateAndApplyDeals);
+  const fetchEligibleDeals = useCartStore((s) => s.fetchEligibleDeals);
 
   const handleApply = async () => {
     setPromoCode(code);
-    await validateAndApplyDeals();
+    await fetchEligibleDeals();
     onClose();
   };
 

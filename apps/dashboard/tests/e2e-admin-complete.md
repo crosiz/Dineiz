@@ -6,7 +6,7 @@ This document is a human-run checklist covering every screen, every role, and ev
 
 **Test 1.1 — Business Owner first login:**
 - **Precondition:** A new tenant has been created with owner email admin@kababjees.pk and password Admin@123456.
-- **Steps:** Go to console.swiftserve.com/login. Enter the credentials. Tap Sign In. Observe the sidebar.
+- **Steps:** Go to console.dineiz.com/login. Enter the credentials. Tap Sign In. Observe the sidebar.
 - **Expected:** Login succeeds. Dashboard home page loads. Sidebar shows ALL sections including Overview, Operations, Business, Growth, Analytics, Integrations, and Settings. The header shows "Enterprise Management" badge. The branch selector dropdown in the top right shows all branches.
 
 **Test 1.2 — Branch Manager login (created by owner):**

@@ -136,7 +136,7 @@ export default function ReceiptClient() {
         tokenNumber: order.tokenNumber,
         type: order.type,
         cashierName: session?.cashierName ?? undefined,
-        tenantName: session?.restaurantName || 'SwiftServe',
+        tenantName: session?.restaurantName || 'Dineiz',
         branchName: session?.branchName || 'Main Branch',
         items: order.items.map((c: any) => ({
           name: c.item?.name || c.itemName || 'Item',
@@ -224,7 +224,7 @@ export default function ReceiptClient() {
           
           {/* Header */}
           <div className="text-center mb-2">
-            <h2 className="font-bold text-xl uppercase">{session?.restaurantName || 'SwiftServe'}</h2>
+            <h2 className="font-bold text-xl uppercase">{session?.restaurantName || 'Dineiz'}</h2>
           </div>
           
           <div className="border-b border-dashed border-gray-400 my-2"></div>

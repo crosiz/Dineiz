@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { requireAuth } from '../../middleware/auth';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { deleteOrderItem } from './order.service';
 
 const VoidRequestCreateSchema = z.object({

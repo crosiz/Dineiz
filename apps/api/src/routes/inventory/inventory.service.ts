@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
 
 export async function getInventorySummary(tenantId: string, branchId?: string) {

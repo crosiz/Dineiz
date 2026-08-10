@@ -27,7 +27,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [selectedBranchId, setSelectedBranchIdState] = useState<string | null>(() => {
     if (isBranchManager) return userBranchId ?? null;
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('swiftserve_branch') || null;
+      return sessionStorage.getItem('dineiz_branch') || null;
     }
     return null;
   });
@@ -41,11 +41,11 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     
     // Persist to sessionStorage
     if (id) {
-      sessionStorage.setItem('swiftserve_branch', id);
-      sessionStorage.setItem('swiftserve_branch_name', name || 'All Branches');
+      sessionStorage.setItem('dineiz_branch', id);
+      sessionStorage.setItem('dineiz_branch_name', name || 'All Branches');
     } else {
-      sessionStorage.removeItem('swiftserve_branch');
-      sessionStorage.removeItem('swiftserve_branch_name');
+      sessionStorage.removeItem('dineiz_branch');
+      sessionStorage.removeItem('dineiz_branch_name');
     }
   };
 
@@ -62,7 +62,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     if (isBranchManager) {
       setSelectedBranchName(branch?.name || 'My Branch');
     } else {
-      const savedName = sessionStorage.getItem('swiftserve_branch_name');
+      const savedName = sessionStorage.getItem('dineiz_branch_name');
       if (savedName) setSelectedBranchName(savedName);
     }
   }, [isBranchManager, branch]);

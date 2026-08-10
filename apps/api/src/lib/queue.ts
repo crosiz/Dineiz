@@ -127,7 +127,7 @@ createWorker('customers', async (job: any) => {
 
 // Aggregator Webhook Worker
 import { handleWebhookPayload } from '../routes/aggregators/aggregators.service';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 createWorker('aggregators', async (job: any) => {
   const { eventId } = job.data;

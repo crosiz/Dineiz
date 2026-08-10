@@ -1,5 +1,5 @@
 {
-  "extends": "@swiftserve/config/typescript/react-library.json",
+  "extends": "@dineiz/config/typescript/react-library.json",
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",

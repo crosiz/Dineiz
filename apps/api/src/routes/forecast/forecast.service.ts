@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { redis } from '../../lib/redis';
 import { format, subDays, startOfDay, getHours, getDay } from 'date-fns';
 

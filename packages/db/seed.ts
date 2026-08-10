@@ -78,7 +78,7 @@ async function main() {
   }
 
   // Add Manager User
-  const managerEmail = 'manager@swiftserve.local';
+  const managerEmail = 'manager@dineiz.local';
   const managerPassword = 'Manager@1234';
   const managerName = 'Manager';
   const managerPin = '5678';

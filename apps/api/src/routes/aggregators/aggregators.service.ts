@@ -1,4 +1,4 @@
-import { prisma, AggregatorWebhookEvent, OrderSource, OrderType, OrderStatus } from '@swiftserve/db';
+import { prisma, AggregatorWebhookEvent, OrderSource, OrderType, OrderStatus } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
 
 function generateOrderNumber() {

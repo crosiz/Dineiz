@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 async function run() {
   const session = await prisma.session.findFirst({orderBy:{createdAt:'desc'}});

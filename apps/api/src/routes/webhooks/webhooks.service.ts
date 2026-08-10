@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 
 export async function listWebhooks(tenantId: string) {

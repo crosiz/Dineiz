@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { sendWhatsAppMessage } from '../lib/whatsapp';
 
 export async function processAbandonedShifts() {

@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 export async function listCustomers(tenantId: string, query: { q?: string; limit: number; cursor?: string }) {
   const { q, limit, cursor } = query;

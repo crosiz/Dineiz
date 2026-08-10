@@ -5,7 +5,7 @@ import {
 import {
   emitNewOrder, emitOrderUpdated, emitOrderCancelled, emitTableStatusChanged,
 } from '../../lib/socket';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 
 
 export async function handleCreateOrder(request: FastifyRequest, reply: FastifyReply) {

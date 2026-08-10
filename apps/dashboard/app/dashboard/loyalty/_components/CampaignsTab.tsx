@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { Button } from '@swiftserve/ui/src/components/button';
-import { Input } from '@swiftserve/ui/src/components/input';
+import { Button } from '@dineiz/ui/src/components/button';
+import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
 
 export function CampaignsTab() {

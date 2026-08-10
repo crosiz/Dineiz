@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OrderCreateSchema, OrderUpdateSchema } from '@swiftserve/schemas';
+import { OrderCreateSchema, OrderUpdateSchema } from '@dineiz/schemas';
 
 export const OrderListQuerySchema = z.object({
   branchId: z.string().optional(),

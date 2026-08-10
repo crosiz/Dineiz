@@ -1,4 +1,4 @@
-﻿import { prisma } from '@swiftserve/db';
+﻿import { prisma } from '@dineiz/db';
 
 export async function getDashboardSummary(tenantId: string, branchId?: string) {
   const todayStr = new Date().toISOString().split('T')[0];

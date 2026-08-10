@@ -1,6 +1,6 @@
 import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
-import { prisma } from "@swiftserve/db";
+import { prisma } from "@dineiz/db";
 import * as bcrypt from "bcrypt";
 import * as crypto from "crypto";
 import * as jwt from "jsonwebtoken";

@@ -131,7 +131,7 @@ export default function MenuDashboard({ onViewChange }: Props) {
             tokenNumber: resData.tokenNumber || 'NEW',
             type: orderType.toUpperCase(),
             cashierName: session.cashierName,
-            tenantName: session.restaurantName || 'SwiftServe',
+            tenantName: session.restaurantName || 'Dineiz',
             branchName: session.branchName || 'Main Branch',
             items: cart.map((c) => ({
               name: c.name,

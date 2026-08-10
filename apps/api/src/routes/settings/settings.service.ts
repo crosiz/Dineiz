@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { uploadImage } from '../../lib/cloudinary';
 import { getIO } from '../../lib/socket';
 import { defaultQueue } from '../../lib/queue';
@@ -239,7 +239,7 @@ export async function uploadBrandingImage(tenantId: string, type: string, buffer
   const { v2: cloudinary } = require('cloudinary');
   
   const result = await cloudinary.uploader.upload(dataURI, {
-    folder: `swiftserve/${tenantId}/branding`,
+    folder: `dineiz/${tenantId}/branding`,
     public_id: type,
     overwrite: true,
     transformation: type === 'logo'

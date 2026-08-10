@@ -51,7 +51,7 @@ async function executeUsbPrint(type: PrintDocumentType, data: PrintOrder) {
       bytes = buildKOT(data);
       break;
     case 'CANCELLATION_KOT':
-      bytes = buildCancellationKOT(data, data.items[0], data.cancellationReason || 'No reason');
+      bytes = buildCancellationKOT(data, data.items[0], (data as any).cancellationReason || 'No reason');
       break;
     case 'CUSTOMER_BILL':
     case 'PAID_RECEIPT':
@@ -199,7 +199,7 @@ async function generateKOT(data: any) {
 
   doc.setFontSize(12);
   doc.setFont(FONT, 'bold');
-  const tenantName = getTenantName(data.tenantName || 'SwiftServe');
+  const tenantName = getTenantName(data.tenantName || 'Dineiz');
   doc.text(tenantName, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
   
@@ -285,7 +285,7 @@ async function buildBill(data: any, isPaid: boolean) {
 
   doc.setFontSize(11);
   doc.setFont(FONT, 'bold');
-  const tenantName = branding.restaurantName || data.tenantName || 'SwiftServe';
+  const tenantName = branding.restaurantName || data.tenantName || 'Dineiz';
   doc.text(tenantName, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
   
@@ -511,7 +511,7 @@ async function generateCancellationKOT(data: any) {
   doc.text('CANCELLATION NOTICE', PAPER_WIDTH / 2, y, { align: 'center' });
   doc.setTextColor(0);
   y += 5;
-  const tenantName = getTenantName(data.tenantName || 'SwiftServe');
+  const tenantName = getTenantName(data.tenantName || 'Dineiz');
   doc.setFontSize(10);
   doc.text(tenantName, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;

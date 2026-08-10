@@ -1,5 +1,5 @@
 import ZKLib from 'zklib'
-import { prisma } from '@swiftserve/db'
+import { prisma } from '@dineiz/db'
 
 export interface AttendancePunchData {
   userId: string

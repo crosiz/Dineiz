@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { prisma } from '@swiftserve/db';
-import { createBranchSchema, updateBranchSchema } from '@swiftserve/schemas';
+import { prisma } from '@dineiz/db';
+import { createBranchSchema, updateBranchSchema } from '@dineiz/schemas';
 import { listBranches, createBranch, updateBranch, toggleBranchStatus, deleteBranch } from './branches.service';
 
 export async function handleListBranches(request: FastifyRequest, reply: FastifyReply) {

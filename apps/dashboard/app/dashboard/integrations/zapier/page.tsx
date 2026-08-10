@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@swiftserve/ui/src/components/card';
-import { Input } from '@swiftserve/ui/src/components/input';
-import { Button } from '@swiftserve/ui/src/components/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/components/card';
+import { Input } from '@dineiz/ui/src/components/input';
+import { Button } from '@dineiz/ui/src/components/button';
 import { apiFetch } from '../../../../lib/api';
 
 type ZapierSub = {

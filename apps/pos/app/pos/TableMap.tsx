@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ReactFlow, Background, Node, useNodesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ShapeComponents } from '@swiftserve/ui';
+import { ShapeComponents } from '@dineiz/ui';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { useSocket } from '@/contexts/SocketContext';

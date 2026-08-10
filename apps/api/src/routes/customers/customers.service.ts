@@ -1,5 +1,5 @@
-import { prisma } from '@swiftserve/db';
-import { Prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
+import { Prisma } from '@dineiz/db';
 
 export class CustomersService {
   static normalizePhone(phone: string) {

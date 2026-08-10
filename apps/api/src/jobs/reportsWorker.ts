@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { generateReportData } from '../routes/reports/reports.service';
 import { generateCSV, generateExcel, generatePDF, generatePDFBuffer } from '../routes/reports/generators';
 import { Resend } from 'resend';

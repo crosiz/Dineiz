@@ -194,7 +194,7 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  // Custom for SwiftServe
+  // Custom for Dineiz
   tenantId     String?
   tenant       Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branchId     String?

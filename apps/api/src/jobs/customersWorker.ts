@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { differenceInDays } from 'date-fns';
 
 function percentile(arr: number[], p: number) {

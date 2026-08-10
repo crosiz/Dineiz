@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { preGenerateForecastsForTenant } from '../routes/forecast/forecast.service';
 
 export async function runForecastGeneration() {

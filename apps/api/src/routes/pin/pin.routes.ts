@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/auth';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { redis } from '../../lib/redis';

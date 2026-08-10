@@ -47,7 +47,7 @@ import qrRoutes from './routes/qr/qr.routes';
 import webhooksRoutes from './routes/webhooks/webhooks.routes';
 import { initSocketIO } from './lib/socket';
 import { rbacMiddleware } from './middleware/rbac.middleware';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { zktecoService } from './services/zkteco.service';
 import { processPunch } from './services/attendance.service';
 import { initSmsWorker } from './jobs/sms.worker';

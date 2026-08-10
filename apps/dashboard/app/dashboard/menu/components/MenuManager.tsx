@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Button } from '@swiftserve/ui/src/components/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@swiftserve/ui/src/components/card';
+import { Button } from '@dineiz/ui/src/components/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/components/card';
 import { Plus, Edit, Trash2, Image as ImageIcon, ChevronDown, ChevronRight, UtensilsCrossed } from 'lucide-react';
 import { useUser } from '@/contexts/user-context';
 import { toast } from 'sonner';

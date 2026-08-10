@@ -1,4 +1,4 @@
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import { getFcm } from './fcm';
 
 export async function sendLowStockIfNeeded(args: {

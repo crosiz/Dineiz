@@ -1,4 +1,4 @@
-import { prisma, OrderStatus, OrderType } from '@swiftserve/db';
+import { prisma, OrderStatus, OrderType } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
 
 export async function getSettings(tenantId: string) {

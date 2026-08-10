@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { prisma } from '@swiftserve/db';
+import { prisma } from '@dineiz/db';
 import LoginClient from './LoginClient';
 
 export const dynamic = 'force-dynamic';
