@@ -4,7 +4,7 @@ Welcome to the **Dineiz** monorepo! This repository houses the entire suite of a
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 This project is structured as a [Turborepo](https://turbo.build/repo), allowing for lightning-fast incremental builds and shared packages across multiple applications.
 
@@ -20,7 +20,7 @@ This project is structured as a [Turborepo](https://turbo.build/repo), allowing 
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ### Apps (`/apps`)
 - **`api/`**: The core Fastify backend service powering the entire platform.
@@ -40,7 +40,7 @@ This project is structured as a [Turborepo](https://turbo.build/repo), allowing 
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 > [!WARNING]
 > **Windows Developers:** Never run `pnpm dev`, `pnpm install`, or any pnpm command directly on your Windows host if you intend to use Docker volumes. Running pnpm on Windows can corrupt the Docker `node_modules` mappings due to symlink/pathing issues. Always use Docker via `make dev`.
