@@ -38,3 +38,4 @@ aggregatorsWorker.on('failed', async (job, err) => {
     }
   }
 });
+aggregatorsWorker.on('error', (err) => console.error('BullMQ error [aggregatorsWorker]:', err.message || err));

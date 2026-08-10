@@ -11,6 +11,7 @@ connection.on('error', (err) => {
 });
 
 export const smsQueue = new Queue('sms', { connection });
+smsQueue.on('error', (err) => console.error('BullMQ error [smsQueue]:', err.message || err));
 
 let twilioClient: twilio.Twilio | null = null;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_ACCOUNT_SID.startsWith('AC') && process.env.TWILIO_AUTH_TOKEN) {
@@ -55,4 +56,5 @@ export const initSmsWorker = () => {
   worker.on('failed', (job, err) => {
     console.error(`SMS Job failed: ${job?.id}`, err);
   });
+  worker.on('error', (err) => console.error('BullMQ error [Worker-sms]:', err.message || err));
 };

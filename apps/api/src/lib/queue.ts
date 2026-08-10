@@ -18,14 +18,19 @@ connection.on('error', (err) => {
   console.error('Redis connection error in queue.ts:', err.message || err);
 });
 
+const catchError = <T extends { on: (e: string, cb: (err: any) => void) => any }>(obj: T, name: string): T => {
+  obj.on('error', (err) => console.error(`BullMQ error [${name}]:`, err.message || err));
+  return obj;
+};
+
 // Define queues here
-export const defaultQueue = new Queue('default', { connection });
-export const meiliSyncQueue = new Queue('meili-sync', { connection });
-export const rewardsQueue = new Queue('rewards', { connection });
+export const defaultQueue = catchError(new Queue('default', { connection }), 'defaultQueue');
+export const meiliSyncQueue = catchError(new Queue('meili-sync', { connection }), 'meiliSyncQueue');
+export const rewardsQueue = catchError(new Queue('rewards', { connection }), 'rewardsQueue');
 
 // Custom exponential backoff for Webhooks: 5m, 30m, 2h, 8h, 24h
 const WEBHOOK_DELAYS = [5 * 60, 30 * 60, 2 * 3600, 8 * 3600, 24 * 3600].map(s => s * 1000);
-export const webhooksQueue = new Queue('webhooks', { 
+export const webhooksQueue = catchError(new Queue('webhooks', { 
   connection,
   defaultJobOptions: {
     attempts: WEBHOOK_DELAYS.length + 1,
@@ -43,23 +48,23 @@ export const webhooksQueue = new Queue('webhooks', {
       }
     }
   }
-});
-export const erpSyncQueue = new Queue('erp-sync', { connection });
-export const analyticsQueue = new Queue('analytics', { connection });
-export const reportsQueue = new Queue('reports', { connection });
-export const anomalyQueue = new Queue('anomalies', { connection });
-export const forecastQueue = new Queue('forecast', { connection });
-export const aggregatorsQueue = new Queue('aggregators', { connection });
-export const customersQueue = new Queue('customers', { connection });
+}), 'webhooksQueue');
+export const erpSyncQueue = catchError(new Queue('erp-sync', { connection }), 'erpSyncQueue');
+export const analyticsQueue = catchError(new Queue('analytics', { connection }), 'analyticsQueue');
+export const reportsQueue = catchError(new Queue('reports', { connection }), 'reportsQueue');
+export const anomalyQueue = catchError(new Queue('anomalies', { connection }), 'anomalyQueue');
+export const forecastQueue = catchError(new Queue('forecast', { connection }), 'forecastQueue');
+export const aggregatorsQueue = catchError(new Queue('aggregators', { connection }), 'aggregatorsQueue');
+export const customersQueue = catchError(new Queue('customers', { connection }), 'customersQueue');
 
 // Export a generic function to create new workers easily
 export function createWorker(queueName: string, processor: any) {
-  return new Worker(queueName, processor, { connection });
+  return catchError(new Worker(queueName, processor, { connection }), `Worker-${queueName}`);
 }
 
 // Export a generic function to monitor queue events
 export function createQueueEvents(queueName: string) {
-  return new QueueEvents(queueName, { connection });
+  return catchError(new QueueEvents(queueName, { connection }), `QueueEvents-${queueName}`);
 }
 
 console.log('BullMQ initialized with Redis connection');
