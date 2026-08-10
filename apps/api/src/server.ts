@@ -56,6 +56,14 @@ import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
 import { anomalyQueue, reportsQueue } from './lib/queue';
 
+// Prevent transient network errors (like Redis ECONNRESET promise rejections) from crashing the server
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[PROCESS] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[PROCESS] Uncaught Exception:', err);
+});
+
 const fastify = Fastify({
   logger: process.env.AXIOM_TOKEN ? {
     transport: {

@@ -134,4 +134,5 @@ export const initAnomalyWorker = () => {
   worker.on('failed', (job, err) => {
     console.error(`Anomaly Job failed: ${job?.id}`, err);
   });
+  worker.on('error', (err) => console.error('BullMQ error [Worker-anomalies]:', err.message || err));
 };

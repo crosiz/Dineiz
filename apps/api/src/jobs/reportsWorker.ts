@@ -182,4 +182,5 @@ export const initReportsWorker = () => {
   worker.on('failed', (job, err) => {
     console.error(`Reports Job failed: ${job?.id}`, err);
   });
+  worker.on('error', (err) => console.error('BullMQ error [Worker-reports]:', err.message || err));
 };
