@@ -31,6 +31,8 @@ const jsonLd = {
   }
 };
 
+export const dynamic = 'force-static';
+
 export default function DhabaPage() {
   return (
     <>
@@ -232,3 +234,4 @@ export default function DhabaPage() {
     </>
   );
 }
+

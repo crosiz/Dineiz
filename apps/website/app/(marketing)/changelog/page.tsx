@@ -55,6 +55,8 @@ const entries = [
   },
 ];
 
+export const dynamic = 'force-static';
+
 export default function ChangelogPage() {
   return (
     <>
@@ -89,3 +91,4 @@ export default function ChangelogPage() {
     </>
   );
 }
+

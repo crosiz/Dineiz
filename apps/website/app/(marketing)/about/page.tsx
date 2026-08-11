@@ -23,6 +23,8 @@ const team = [
   { name: "Bilal Hassan", role: "Lead Customer Success", initials: "BH" },
 ];
 
+export const dynamic = 'force-static';
+
 export default function AboutPage() {
   return (
     <>
@@ -100,3 +102,4 @@ export default function AboutPage() {
     </>
   );
 }
+

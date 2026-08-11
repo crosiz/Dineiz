@@ -10,6 +10,8 @@ export const metadata = generateSEOMetadata({
   path: "/blog",
 });
 
+export const dynamic = 'force-static';
+
 export default async function BlogListingPage() {
   const posts = await getAllBlogPosts();
   const categories = await getCategories();
@@ -18,3 +20,4 @@ export default async function BlogListingPage() {
     <BlogClient posts={posts} categories={categories} />
   );
 }
+

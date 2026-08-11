@@ -11,6 +11,8 @@ export const metadata = generateSEOMetadata({
   path: "/case-studies",
 });
 
+export const dynamic = 'force-static';
+
 export default async function CaseStudiesPage() {
   const caseStudies = await getAllCaseStudies();
 
@@ -82,3 +84,4 @@ export default async function CaseStudiesPage() {
     </>
   );
 }
+

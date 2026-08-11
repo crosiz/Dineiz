@@ -17,6 +17,8 @@ export const metadata = generateSEOMetadata({
   path: "/",
 });
 
+export const dynamic = 'force-static';
+
 export default function Homepage() {
   return (
     <>
@@ -32,3 +34,4 @@ export default function Homepage() {
     </>
   );
 }
+

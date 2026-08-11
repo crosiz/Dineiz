@@ -3,6 +3,8 @@ import { generateSEOMetadata } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({ title: "Refund Policy — Dineiz", description: "Read Dineiz's refund and cancellation policy.", path: "/refund-policy" });
 
+export const dynamic = 'force-static';
+
 export default function RefundPolicyPage() {
   return (
     <section className="bg-white py-16">
@@ -34,3 +36,4 @@ export default function RefundPolicyPage() {
     </section>
   );
 }
+

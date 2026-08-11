@@ -3,6 +3,8 @@ import { generateSEOMetadata } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({ title: "Cookie Policy — Dineiz", description: "Learn how Dineiz uses cookies on its website.", path: "/cookie-policy" });
 
+export const dynamic = 'force-static';
+
 export default function CookiePolicyPage() {
   return (
     <section className="bg-white py-16">
@@ -31,3 +33,4 @@ export default function CookiePolicyPage() {
     </section>
   );
 }
+

@@ -20,6 +20,8 @@ const featureList = [
   { title: "Staff Shift Reconciliation", icon: Zap, desc: "Opening float, cashier drawer reconciliation, and manager PIN overrides." },
 ];
 
+export const dynamic = 'force-static';
+
 export default function FeaturesPage() {
   return (
     <>
@@ -60,3 +62,4 @@ export default function FeaturesPage() {
     </>
   );
 }
+

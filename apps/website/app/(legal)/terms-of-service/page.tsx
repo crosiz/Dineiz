@@ -3,6 +3,8 @@ import { generateSEOMetadata } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({ title: "Terms of Service — Dineiz", description: "Read Dineiz Terms of Service.", path: "/terms-of-service" });
 
+export const dynamic = 'force-static';
+
 export default function TermsPage() {
   return (
     <section className="bg-white py-16">
@@ -32,3 +34,4 @@ export default function TermsPage() {
     </section>
   );
 }
+

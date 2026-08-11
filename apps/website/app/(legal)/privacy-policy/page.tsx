@@ -7,6 +7,8 @@ export const metadata = generateSEOMetadata({
   path: "/privacy-policy",
 });
 
+export const dynamic = 'force-static';
+
 export default function PrivacyPolicyPage() {
   return (
     <section className="bg-white py-16">
@@ -36,3 +38,4 @@ export default function PrivacyPolicyPage() {
     </section>
   );
 }
+

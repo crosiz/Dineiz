@@ -11,6 +11,8 @@ const roles = [
   { title: "UX Designer", team: "Product", type: "Full-time · Remote" },
 ];
 
+export const dynamic = 'force-static';
+
 export default function CareersPage() {
   return (
     <>
@@ -48,3 +50,4 @@ export default function CareersPage() {
     </>
   );
 }
+

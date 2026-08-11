@@ -10,6 +10,8 @@ const tiers = [
   { name: "Integration Partner", desc: "Integrate your hardware or software with Dineiz. Joint marketing and co-sell opportunities.", badge: "bg-blue-100 text-blue-700" },
 ];
 
+export const dynamic = 'force-static';
+
 export default function PartnersPage() {
   return (
     <>
@@ -46,3 +48,4 @@ export default function PartnersPage() {
     </>
   );
 }
+

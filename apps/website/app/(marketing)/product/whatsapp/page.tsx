@@ -19,6 +19,8 @@ const features = [
   { icon: TrendingUp, title: "WhatsApp Order Analytics", desc: "See how many orders come from WhatsApp, average value, peak times, and most popular items." },
 ];
 
+export const dynamic = 'force-static';
+
 export default function WhatsAppPage() {
   const jsonLd = generateSoftwareApplicationSchema("Dineiz WhatsApp AI", "Automated WhatsApp ordering for Pakistani restaurants.", "999");
   return (
@@ -62,3 +64,4 @@ export default function WhatsAppPage() {
     </>
   );
 }
+

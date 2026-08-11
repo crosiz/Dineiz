@@ -31,6 +31,8 @@ const jsonLd = {
   }))
 };
 
+export const dynamic = 'force-static';
+
 export default function PricingPage() {
   return (
     <>
@@ -42,3 +44,4 @@ export default function PricingPage() {
     </>
   );
 }
+

@@ -31,6 +31,8 @@ const jsonLd = {
   }
 };
 
+export const dynamic = 'force-static';
+
 export default function FoodCartPage() {
   return (
     <>
@@ -188,3 +190,4 @@ export default function FoodCartPage() {
     </>
   );
 }
+

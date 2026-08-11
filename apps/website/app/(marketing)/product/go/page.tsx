@@ -19,6 +19,8 @@ const features = [
   { icon: Globe, title: "Multi-Language UI", desc: "Switch between English and Urdu interface — whichever your staff is comfortable with." },
 ];
 
+export const dynamic = 'force-static';
+
 export default function GoPage() {
   const jsonLd = generateSoftwareApplicationSchema("Dineiz Go", "Free mobile POS for food carts and small restaurants in Pakistan.", "0");
   return (
@@ -62,3 +64,4 @@ export default function GoPage() {
     </>
   );
 }
+

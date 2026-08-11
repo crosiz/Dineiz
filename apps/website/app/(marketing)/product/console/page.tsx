@@ -19,6 +19,8 @@ const features = [
   { icon: Bell, title: "Smart Alerts", desc: "Get SMS or WhatsApp alerts when sales drop, stock runs low, or a cashier voids too many orders." },
 ];
 
+export const dynamic = 'force-static';
+
 export default function ConsolePage() {
   const jsonLd = generateSoftwareApplicationSchema("Dineiz Console", "Web-based analytics dashboard for restaurant owners in Pakistan.", "2999");
   return (
@@ -62,3 +64,4 @@ export default function ConsolePage() {
     </>
   );
 }
+

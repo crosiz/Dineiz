@@ -43,6 +43,8 @@ const features = [
   },
 ];
 
+export const dynamic = 'force-static';
+
 export default function POSPage() {
   const jsonLd = generateSoftwareApplicationSchema(
     "Dineiz POS",
@@ -151,3 +153,4 @@ export default function POSPage() {
     </>
   );
 }
+
