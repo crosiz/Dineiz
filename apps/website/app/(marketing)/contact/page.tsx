@@ -2,6 +2,7 @@ import React from "react";
 import { Phone, Mail, Clock } from "lucide-react";
 import { generateSEOMetadata } from "@/lib/seo";
 import { ContactForm } from "@/components/contact/ContactForm";
+import { WhatsAppButton } from "@/components/contact/WhatsAppButton";
 
 export const metadata = generateSEOMetadata({
   title: "Contact Dineiz — Book a Demo or Get Support",
@@ -9,9 +10,34 @@ export const metadata = generateSEOMetadata({
   path: "/contact",
 });
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: 'Dineiz',
+  image: 'https://dineiz.com/logo.png',
+  telephone: '+923141986044',
+  email: 'hello@dineiz.com',
+  address: {
+    '@type': 'PostalAddress',
+    addressCountry: 'PK'
+  },
+  openingHoursSpecification: {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+    ],
+    opens: '09:00',
+    closes: '22:00'
+  }
+};
+
 export default function ContactPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <section className="bg-white border-b border-gray-100 py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16">
@@ -45,14 +71,7 @@ export default function ContactPage() {
                 })}
               </div>
               <div className="mt-8">
-                <a
-                  href="https://wa.me/923141986044?text=Hi%2C%20I%27d%20like%20a%20Dineiz%20demo"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  WhatsApp Us Now
-                </a>
+                <WhatsAppButton />
               </div>
             </div>
 

@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { event } from "@/lib/gtag";
 
 type Plan = {
   id: string;
@@ -117,6 +118,13 @@ export function PlanCard({ plan, billingCycle }: PlanCardProps) {
         <div className="mt-auto pt-6">
           <Link
             href={plan.ctaLink}
+            onClick={() => {
+              if (plan.ctaLink.includes("play.google.com")) {
+                event({ action: 'download_app', category: 'conversion', label: `Pricing Card - ${plan.name}` });
+              } else {
+                event({ action: 'sign_up_click', category: 'conversion', label: `Pricing Card - ${plan.name}` });
+              }
+            }}
             className={`flex items-center justify-center w-full h-[48px] rounded-xl text-[14px] font-bold transition-all ${
               plan.isPopular
                 ? "bg-[#FF6B35] text-white hover:bg-[#e65a25]"

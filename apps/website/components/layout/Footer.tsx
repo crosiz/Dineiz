@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Instagram, Linkedin, MessageCircle, Youtube } from "lucide-react";
 
 const productLinks = [
@@ -34,12 +35,8 @@ export function Footer() {
           
           {/* Column 1: Brand & Socials */}
           <div className="flex flex-col gap-5">
-            <Link
-              href="/"
-              className="flex items-center w-fit"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.svg" alt="Dineiz Logo" className="h-7 w-auto object-contain hover:scale-105 transition-transform duration-300" />
+            <Link href="/" className="inline-block mb-6">
+              <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain hover:scale-105 transition-transform duration-300" />
             </Link>
             <p className="text-[14px] text-gray-500 leading-snug">
               Smart billing for Pakistan&apos;s restaurants.

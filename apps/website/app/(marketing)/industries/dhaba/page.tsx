@@ -3,6 +3,7 @@ import { generateSEOMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Smartphone, Printer, Receipt, ArrowRight, CheckCircle2, TrendingUp, Users } from "lucide-react";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
+import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Dhaba Billing Software Pakistan — Dineiz Free App',
@@ -224,6 +225,9 @@ export default function DhabaPage() {
         </div>
       </section>
 
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <InternalLinks currentPath="/industries/dhaba" />
+      </div>
       <FinalCTASection />
     </>
   );

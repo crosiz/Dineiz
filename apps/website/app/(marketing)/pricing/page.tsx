@@ -20,7 +20,7 @@ const jsonLd = {
     item: {
       '@type': 'Product',
       name: plan.name,
-      description: plan.description || plan.tagline,
+      description: plan.tagline,
       offers: {
         '@type': 'Offer',
         price: plan.monthlyPrice || 0,

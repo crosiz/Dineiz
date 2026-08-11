@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { event } from "@/lib/gtag";
 
 const products = [
   { name: "Dineiz POS", desc: "Tablet-based billing terminal", href: "/product/pos" },
@@ -58,8 +60,7 @@ export function Navbar() {
             href="/"
             className="flex items-center"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="Dineiz Logo" className="h-7 w-auto object-contain" />
+            <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain" priority />
           </Link>
 
           {/* Desktop Navigation */}
@@ -142,6 +143,7 @@ export function Navbar() {
 
             <Link
               href="/signup"
+              onClick={() => event({ action: 'sign_up_click', category: 'conversion', label: 'Navbar Desktop CTA' })}
               className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold bg-[#FF6B35] text-white rounded-full shadow-[0_2px_8px_rgba(255,107,53,0.25)] hover:bg-[#ea580c] hover:shadow-[0_4px_12px_rgba(255,107,53,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
             >
               Start Free Trial
@@ -175,8 +177,7 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/logo.svg" alt="Dineiz Logo" className="h-7 w-auto object-contain" />
+                <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain" priority />
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
@@ -238,7 +239,10 @@ export function Navbar() {
 
               <Link
                 href="/signup"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  event({ action: 'sign_up_click', category: 'conversion', label: 'Navbar Mobile CTA' });
+                }}
                 className="block text-center py-3.5 text-sm font-bold bg-[#FF6B35] text-white rounded-xl shadow-[0_4px_14px_rgba(255,107,53,0.3)] hover:bg-[#ea580c] transition-colors"
               >
                 Start Free Trial

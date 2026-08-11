@@ -3,6 +3,7 @@ import { generateSEOMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { QrCode, Heart, Palette, Smartphone, Coffee, Star, Check } from "lucide-react";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
+import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Café POS Pakistan — Dineiz Coffee Shop Billing Software',
@@ -205,6 +206,9 @@ export default function CafePage() {
         </div>
       </section>
 
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <InternalLinks currentPath="/industries/cafe" />
+      </div>
       <FinalCTASection />
     </>
   );

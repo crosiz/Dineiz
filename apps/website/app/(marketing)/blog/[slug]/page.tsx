@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Clock, Calendar, ArrowLeft, MessageCircle } from "lucide-react";
 import { getBlogPostBySlug, getAllBlogPosts } from "@/lib/mdx";
 import { generateSEOMetadata, generateArticleSchema } from "@/lib/seo";
+import { InternalLinks } from "@/components/seo/InternalLinks";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -112,6 +113,11 @@ export default async function BlogPostPage({ params }: PageProps) {
                 <MessageCircle size={14} /> Share on WhatsApp
               </a>
             </div>
+          </div>
+
+          {/* Internal Links for SEO */}
+          <div className="mt-8">
+            <InternalLinks currentPath={`/blog/${post.slug}`} />
           </div>
         </div>
       </article>

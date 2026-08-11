@@ -3,6 +3,7 @@ import { generateSEOMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { Smartphone, MessageCircle, Wallet, DownloadCloud, Store } from "lucide-react";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
+import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Food Cart Billing App Pakistan — Free POS for Street Food',
@@ -180,6 +181,9 @@ export default function FoodCartPage() {
         </div>
       </section>
 
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <InternalLinks currentPath="/industries/food-cart" />
+      </div>
       <FinalCTASection />
     </>
   );

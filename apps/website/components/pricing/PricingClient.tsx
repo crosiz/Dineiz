@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { PLANS } from "@/lib/plans";
+import { event } from "@/lib/gtag";
 import { PlanCard } from "./PlanCard";
 import { ComparisonTable } from "./ComparisonTable";
 import { FAQ } from "./FAQ";
@@ -11,6 +12,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 export function PricingClient() {
   const [isAnnual, setIsAnnual] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    event({ action: "pricing_view", category: "engagement", label: "Pricing Page Load" });
+  }, []);
 
   const scroll = (direction: "left" | "right") => {
     if (scrollRef.current) {

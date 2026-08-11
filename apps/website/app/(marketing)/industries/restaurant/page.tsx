@@ -3,6 +3,7 @@ import { generateSEOMetadata } from "@/lib/seo";
 import Link from "next/link";
 import { BarChart3, ShieldCheck, LayoutGrid, Tablet, CheckCircle2 } from "lucide-react";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
+import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Restaurant POS Pakistan — Dineiz Management Software',
@@ -182,6 +183,9 @@ export default function RestaurantPage() {
         </div>
       </section>
 
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <InternalLinks currentPath="/industries/restaurant" />
+      </div>
       <FinalCTASection />
     </>
   );

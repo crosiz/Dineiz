@@ -11,6 +11,9 @@ interface SEOProps {
   canonical?: string
   path?: string
   noIndex?: boolean
+  type?: 'website' | 'article'
+  publishedTime?: string
+  authors?: string[]
 }
 
 export function generateSEOMetadata({
@@ -21,6 +24,9 @@ export function generateSEOMetadata({
   canonical,
   path,
   noIndex = false,
+  type = 'website',
+  publishedTime,
+  authors,
 }: SEOProps): Metadata {
   const fullTitle = `${title} | Dineiz`
   const finalUrl = canonical ?? (path ? `${BASE_URL}${path}` : BASE_URL)
@@ -34,7 +40,7 @@ export function generateSEOMetadata({
       'dhaba billing app',
       ...keywords,
     ].join(', '),
-    authors: [{ name: 'Dineiz', url: BASE_URL }],
+    authors: authors ? authors.map(name => ({ name })) : [{ name: 'Dineiz', url: BASE_URL }],
     creator: 'Dineiz by Crosiz Technologies',
     metadataBase: new URL(BASE_URL),
     alternates: {
@@ -50,7 +56,8 @@ export function generateSEOMetadata({
       siteName: 'Dineiz',
       images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
       locale: 'en_PK',
-      type: 'website',
+      type: type,
+      ...(type === 'article' && publishedTime ? { publishedTime } : {}),
     },
     twitter: {
       card: 'summary_large_image',
@@ -65,14 +72,18 @@ export function generateSEOMetadata({
   }
 }
 
-export function generateSoftwareApplicationSchema() {
+export function generateSoftwareApplicationSchema(
+  name = 'Dineiz',
+  description = 'Restaurant POS and management software for Pakistan',
+  price = '0'
+) {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Dineiz',
+    name,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web, Android, iOS',
-    description: 'Restaurant POS and management software for Pakistan',
+    description,
     url: 'https://dineiz.com',
     creator: {
       '@type': 'Organization',
@@ -81,7 +92,7 @@ export function generateSoftwareApplicationSchema() {
     },
     offers: {
       '@type': 'Offer',
-      price: '0',
+      price,
       priceCurrency: 'PKR',
       description: 'Free plan available',
     },
@@ -93,8 +104,33 @@ export function generateSoftwareApplicationSchema() {
   }
 }
 
-export function generateArticleSchema() {
-  return {}
+export function generateArticleSchema(
+  title: string,
+  description: string,
+  url: string,
+  datePublished: string,
+  authorName: string
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description: description,
+    url: url,
+    datePublished: new Date(datePublished).toISOString(),
+    author: {
+      '@type': 'Person',
+      name: authorName
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Dineiz',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://dineiz.com/logo.png'
+      }
+    }
+  }
 }
 
 export function generateOrganizationSchema() {

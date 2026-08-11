@@ -6,6 +6,7 @@ import "./globals.css";
 
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { generateSEOMetadata } from "@/lib/seo";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -104,6 +105,9 @@ export default function RootLayout({
 
         <Footer />
         <Analytics />
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );
