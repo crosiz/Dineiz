@@ -19,6 +19,15 @@ const nextConfig: NextConfig = {
   experimental: {
     mdxRs: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/signup',
+        destination: 'https://wa.me/923141986044?text=Hi%2C%20I%20am%20interested%20in%20starting%20a%20free%20trial%20of%20Dineiz%20POS.',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

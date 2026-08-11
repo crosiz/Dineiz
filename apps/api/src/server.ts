@@ -252,8 +252,8 @@ async function build() {
 async function start() {
   try {
     const app = await build();
-    await app.listen({ port: Number(process.env.PORT) || 8080, host: '0.0.0.0' });
-    app.log.info(`Server started on port ${process.env.PORT || 8080}`);
+    await app.listen({ port: Number(process.env.PORT) || 4000, host: '0.0.0.0' });
+    app.log.info(`Server started on port ${process.env.PORT || 4000}`);
 
     // Attach Socket.IO to the underlying HTTP server AFTER Fastify is listening
     // so the HTTP server instance is fully initialised.

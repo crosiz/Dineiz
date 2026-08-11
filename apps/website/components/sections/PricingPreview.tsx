@@ -24,10 +24,10 @@ const allFeatures = [
 
 const plans = [
   {
-    id: "starter",
-    name: "Starter",
-    tagline: "Free forever",
-    desc: "For small restaurants just getting started.",
+    id: "go_free",
+    name: "Go Free",
+    tagline: "For small dhabas",
+    desc: "Perfect for single-counter setups.",
     price: { monthly: 0, annual: 0 },
     cta: "Start Free",
     href: "/contact",
@@ -51,11 +51,11 @@ const plans = [
     ],
   },
   {
-    id: "growth",
-    name: "Growth",
+    id: "starter",
+    name: "Starter",
     tagline: "Most popular",
-    desc: "For single-location restaurants ready to scale.",
-    price: { monthly: 4999, annual: 3749 },
+    desc: "For restaurants with a counter.",
+    price: { monthly: 2999, annual: 2499 },
     cta: "Start Free Trial",
     href: "/contact",
     highlight: true,
@@ -73,7 +73,7 @@ const plans = [
       false,  // FoodPanda
       true,   // JazzCash
       true,   // WhatsApp
-      false,  // KDS
+      true,   // KDS
       false,  // Multi-branch
     ],
   },
@@ -82,7 +82,7 @@ const plans = [
     name: "Pro",
     tagline: "Full power",
     desc: "For multi-branch restaurants demanding advanced features.",
-    price: { monthly: 9999, annual: 7499 },
+    price: { monthly: 5999, annual: 4999 },
     cta: "Start Free Trial",
     href: "/contact",
     highlight: false,

@@ -13,6 +13,7 @@ import { runCustomersSegmentsJob } from '../jobs/customersWorker';
 // Shared Redis connection for BullMQ
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
+  keepAlive: 10000,
 });
 connection.on('error', (err) => {
   console.error('Redis connection error in queue.ts:', err.message || err);

@@ -3,7 +3,9 @@ import { Redis as UpstashRedis } from '@upstash/redis';
 import { env } from '../env';
 
 // Keep ioredis for Socket.io adapter & BullMQ compatibility
-export const redis = new IORedis(env.REDIS_URL);
+export const redis = new IORedis(env.REDIS_URL, {
+  keepAlive: 10000,
+});
 
 // Preferred client for standard kv operations
 export const upstash = new UpstashRedis({
@@ -15,6 +17,6 @@ redis.on('error', (err) => {
   console.error('Redis (ioredis) connection error:', err);
 });
 
-redis.on('connect', () => {
+redis.once('connect', () => {
   console.log('Connected to Redis (ioredis)');
 });

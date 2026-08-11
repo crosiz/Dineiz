@@ -3,7 +3,10 @@ import { prisma } from '@dineiz/db';
 import { handleWebhookPayload } from '../routes/aggregators/aggregators.service';
 import IORedis from 'ioredis';
 
-const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379');
+const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  keepAlive: 10000,
+});
 connection.on('error', (err) => {
   console.error('Redis connection error in aggregatorsWorker.ts:', err.message || err);
 });

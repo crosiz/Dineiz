@@ -1,382 +1,252 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  ChevronDown, Menu, X, ArrowRight,
-  Monitor, Smartphone, LayoutDashboard, MessageCircle,
-  UtensilsCrossed, Coffee, ShoppingCart, Store,
-  BookOpen, FileText, History, Handshake,
-} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, X, ChevronDown } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const products = [
-  {
-    name: "Dineiz POS",
-    description: "Tablet-based billing terminal for dine-in & takeaway",
-    href: "/product/pos",
-    icon: Monitor,
-  },
-  {
-    name: "Dineiz Go",
-    description: "Mobile PWA for food carts and counter-service restaurants",
-    href: "/product/go",
-    icon: Smartphone,
-  },
-  {
-    name: "Dineiz Console",
-    description: "Centralized analytics dashboard for owners",
-    href: "/product/console",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "WhatsApp AI",
-    description: "Take orders via WhatsApp automatically — 24/7",
-    href: "/product/whatsapp",
-    icon: MessageCircle,
-  },
+  { name: "Dineiz POS", desc: "Tablet-based billing terminal", href: "/product/pos" },
+  { name: "Dineiz Go", desc: "Mobile PWA for counter service", href: "/product/go" },
+  { name: "Dineiz Console", desc: "Analytics dashboard for owners", href: "/product/console" },
+  { name: "WhatsApp Orders", desc: "Automated WhatsApp ordering", href: "/product/whatsapp" },
 ];
 
 const industries = [
-  { name: "Full-Service Restaurant", href: "/industries/restaurant", icon: UtensilsCrossed },
-  { name: "Small Restaurants", href: "/industries/dhaba", icon: Store },
-  { name: "Café & Bakery", href: "/industries/cafe", icon: Coffee },
-  { name: "Food Carts & Shops", href: "/industries/food-cart", icon: ShoppingCart },
+  { name: "Full-Service Restaurant", desc: "For fine dining & casual eateries", href: "/industries/restaurant" },
+  { name: "Small Restaurants", desc: "For dhabas & local food spots", href: "/industries/dhaba" },
+  { name: "Café & Bakery", desc: "For coffee shops & bakeries", href: "/industries/cafe" },
+  { name: "Food Carts & Shops", desc: "For kiosks & takeaway stalls", href: "/industries/food-cart" },
 ];
-
-const resources = [
-  { name: "Blog", href: "/blog", icon: BookOpen },
-  { name: "Case Studies", href: "/case-studies", icon: FileText },
-  { name: "Changelog", href: "/changelog", icon: History },
-  { name: "Partners", href: "/partners", icon: Handshake },
-];
-
-function Dropdown({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex items-center gap-1.5 text-sm font-medium transition-all duration-200 py-1.5 px-3 rounded-lg",
-          open ? "text-brand-600 bg-brand-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-        )}
-      >
-        {label}
-        <ChevronDown
-          size={14}
-          className={cn("transition-transform duration-300", open ? "rotate-180 text-brand-600" : "text-gray-400")}
-        />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute top-full left-0 mt-2 z-50 min-w-[280px] bg-white border border-[#d2d2d7]/50 rounded-xl shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-1.5 origin-top-left"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 export function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
-    function onScroll() { setScrolled(window.scrollY > 8); }
-    window.addEventListener("scroll", onScroll);
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Prevent scrolling when mobile drawer is open
+  // Prevent scrolling on body when mobile menu is open
   useEffect(() => {
-    if (mobileOpen) document.body.style.overflow = "hidden";
-    else document.body.style.overflow = "unset";
-    return () => { document.body.style.overflow = "unset"; };
-  }, [mobileOpen]);
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [mobileMenuOpen]);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.05, delayChildren: 0.1 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: { opacity: 1, x: 0 },
-  };
+  const isActive = (path: string) => pathname?.startsWith(path);
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-40 w-full transition-all duration-300",
-        scrolled
-          ? "bg-white/90 backdrop-blur-lg border-b border-[#d2d2d7]/50 shadow-[0_1px_0_rgba(0,0,0,0.02)]"
-          : "bg-white border-b border-[#d2d2d7]"
-      )}
-    >
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-8">
-        {/* Logo */}
-        <Link href="/" className="flex items-center shrink-0">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.svg"
-            alt="Dineiz"
-            className="block"
-            style={{ height: 32, width: 'auto', objectFit: 'contain' }}
-          />
-        </Link>
+    <>
+      <header
+        className={cn(
+          "sticky top-0 z-50 w-full bg-white transition-all duration-200",
+          scrolled ? "backdrop-blur-xl bg-white/80 border-b border-gray-100" : ""
+        )}
+      >
+        <div className="mx-auto flex h-14 md:h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          
+          {/* Brand Logo & Wordmark */}
+          <Link
+            href="/"
+            className="flex items-center"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="Dineiz Logo" className="h-7 w-auto object-contain" />
+          </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-3 flex-1">
-          {/* Products */}
-          <Dropdown label="Products">
-            <div className="p-1 space-y-0.5">
-              {products.map((p) => {
-                const Icon = p.icon;
-                return (
-                  <Link
-                    key={p.href}
-                    href={p.href}
-                    className="flex items-start gap-3 px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="w-9 h-9 rounded-md bg-brand-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-brand-100 group-hover:scale-105 transition-all">
-                      <Icon size={16} className="text-brand-500" />
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-8">
+            {/* Products Dropdown */}
+            <div className="group relative">
+              <button
+                className={cn(
+                  "flex items-center gap-1 text-[14px] font-medium transition-colors duration-150",
+                  isActive("/product") || isActive("/industries") ? "text-[#FF6B35]" : "text-[#1A1A1A] hover:text-[#FF6B35]"
+                )}
+              >
+                Products
+                <ChevronDown size={14} className="opacity-50 transition-transform group-hover:rotate-180" />
+              </button>
+
+              {/* Dropdown Card */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 pt-4 opacity-0 invisible translate-y-1 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-150 ease-out">
+                <div className="w-[600px] bg-white border border-gray-100 rounded-xl shadow-xl p-6 grid grid-cols-2 gap-8">
+                  {/* Products Column */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Products</h3>
+                    <div className="flex flex-col gap-4">
+                      {products.map((p) => (
+                        <Link key={p.href} href={p.href} className="group/item">
+                          <div className="text-[14px] font-medium text-[#1A1A1A] group-hover/item:text-[#FF6B35] transition-colors">
+                            {p.name}
+                          </div>
+                          <div className="text-[13px] text-gray-500 mt-0.5">
+                            {p.desc}
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900 group-hover:text-brand-600 transition-colors">
-                        {p.name}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-0.5 leading-snug">{p.description}</div>
+                  </div>
+
+                  {/* Industries Column */}
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">By Industry</h3>
+                    <div className="flex flex-col gap-4">
+                      {industries.map((i) => (
+                        <Link key={i.href} href={i.href} className="group/item">
+                          <div className="text-[14px] font-medium text-[#1A1A1A] group-hover/item:text-[#FF6B35] transition-colors">
+                            {i.name}
+                          </div>
+                          <div className="text-[13px] text-gray-500 mt-0.5">
+                            {i.desc}
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="border-t border-gray-100 px-4 py-3 mt-1 bg-gray-50/50 rounded-b-lg">
+
+            <Link
+              href="/pricing"
+              className={cn(
+                "text-[14px] font-medium transition-colors duration-150",
+                isActive("/pricing") ? "text-[#FF6B35]" : "text-[#1A1A1A] hover:text-[#FF6B35]"
+              )}
+            >
+              Pricing
+            </Link>
+
+            <Link
+              href="/blog"
+              className={cn(
+                "text-[14px] font-medium transition-colors duration-150",
+                isActive("/blog") ? "text-[#FF6B35]" : "text-[#1A1A1A] hover:text-[#FF6B35]"
+              )}
+            >
+              Blog
+            </Link>
+          </nav>
+
+          {/* Right Action Buttons (Desktop) */}
+          <div className="hidden md:flex items-center gap-4 shrink-0">
+
+            <Link
+              href="/signup"
+              className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold bg-[#FF6B35] text-white rounded-full shadow-[0_2px_8px_rgba(255,107,53,0.25)] hover:bg-[#ea580c] hover:shadow-[0_4px_12px_rgba(255,107,53,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
+            >
+              Start Free Trial
+            </Link>
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden text-[#1A1A1A] p-2 -mr-2"
+            aria-label="Open menu"
+          >
+            <Menu size={24} strokeWidth={2} />
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Full-Screen Overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ y: "-100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "-100%" }}
+            transition={{ type: "tween", duration: 0.3, ease: "easeInOut" }}
+            className="fixed inset-0 z-[100] bg-white flex flex-col"
+          >
+            <div className="flex h-14 items-center justify-between px-4 sm:px-6">
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.svg" alt="Dineiz Logo" className="h-7 w-auto object-contain" />
+              </Link>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-[#1A1A1A] p-2 -mr-2"
+                aria-label="Close menu"
+              >
+                <X size={24} strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 pt-8 pb-24 flex flex-col gap-[20px]">
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Products</div>
+              {products.map((p) => (
+                <Link
+                  key={p.href}
+                  href={p.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center h-[48px] text-[20px] font-medium text-[#1A1A1A]"
+                >
+                  {p.name}
+                </Link>
+              ))}
+
+              <div className="h-px bg-gray-100 my-4" />
+
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">By Industry</div>
+              {industries.map((i) => (
+                <Link
+                  key={i.href}
+                  href={i.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center h-[48px] text-[20px] font-medium text-[#1A1A1A]"
+                >
+                  {i.name}
+                </Link>
+              ))}
+
+              <div className="h-px bg-gray-100 my-4" />
+
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Company</div>
               <Link
                 href="/pricing"
-                className="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center h-[48px] text-[20px] font-medium text-[#1A1A1A]"
               >
-                View pricing and compare plans <ArrowRight size={12} />
+                Pricing
+              </Link>
+              <Link
+                href="/blog"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center h-[48px] text-[20px] font-medium text-[#1A1A1A]"
+              >
+                Blog
               </Link>
             </div>
-          </Dropdown>
 
-          {/* Industries */}
-          <Dropdown label="Industries">
-            <div className="p-1 space-y-0.5">
-              {industries.map((i) => {
-                const Icon = i.icon;
-                return (
-                  <Link
-                    key={i.href}
-                    href={i.href}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-brand-600 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center group-hover:bg-brand-50 transition-colors shrink-0">
-                      <Icon size={14} className="text-gray-500 group-hover:text-brand-500 transition-colors" />
-                    </div>
-                    {i.name}
-                  </Link>
-                );
-              })}
-            </div>
-          </Dropdown>
+            {/* Mobile Bottom Action Area */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-gray-100 flex flex-col gap-3">
 
-          {/* Resources */}
-          <Dropdown label="Resources">
-            <div className="p-1 space-y-0.5">
-              {resources.map((r) => {
-                const Icon = r.icon;
-                return (
-                  <Link
-                    key={r.href}
-                    href={r.href}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-brand-600 transition-colors group"
-                  >
-                    <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center group-hover:bg-brand-50 transition-colors shrink-0">
-                      <Icon size={14} className="text-gray-500 group-hover:text-brand-500 transition-colors" />
-                    </div>
-                    {r.name}
-                  </Link>
-                );
-              })}
-            </div>
-          </Dropdown>
-
-          <Link href="/pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors py-1.5 px-3 rounded-lg hover:bg-gray-50">
-            Pricing
-          </Link>
-        </div>
-
-        {/* Desktop CTAs */}
-        <div className="hidden lg:flex items-center gap-4 shrink-0">
-          <Link
-            href="/contact"
-            className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            Book Demo
-          </Link>
-          <Link
-            href="/contact"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-bold bg-brand-500 text-white rounded-full shadow-[0_2px_8px_rgba(255,107,53,0.25)] hover:bg-brand-600 hover:shadow-[0_4px_12px_rgba(255,107,53,0.35)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200"
-          >
-            Start Free Trial
-          </Link>
-        </div>
-
-        {/* Mobile toggle */}
-        <button
-          onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation"
-          className="lg:hidden p-2 -mr-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-        >
-          <Menu size={22} />
-        </button>
-      </nav>
-
-      {/* Mobile Drawer using Framer Motion */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setMobileOpen(false)}
-              className="lg:hidden fixed inset-0 z-[90] bg-gray-900/40 backdrop-blur-sm"
-            />
-            
-            {/* Sliding Drawer */}
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed inset-y-0 right-0 z-[100] w-[90%] max-w-sm bg-white shadow-2xl flex flex-col px-6 pb-8 pt-6 border-l border-gray-100"
-            >
-              {/* Header inside drawer */}
-              <div className="flex items-center justify-end mb-6">
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  aria-label="Close navigation"
-                  className="p-2 -mr-2 rounded-full bg-gray-50 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <motion.div 
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="flex-1 overflow-y-auto pr-2"
+              <Link
+                href="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-center py-3.5 text-sm font-bold bg-[#FF6B35] text-white rounded-xl shadow-[0_4px_14px_rgba(255,107,53,0.3)] hover:bg-[#ea580c] transition-colors"
               >
-                {/* Products */}
-                <motion.div variants={itemVariants} className="mb-8">
-                  <div className="text-[11px] font-bold text-brand-500 uppercase tracking-widest mb-4">Products</div>
-                  <div className="space-y-4">
-                    {products.map((p) => (
-                      <Link
-                        key={p.href}
-                        href={p.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-3 text-lg font-bold text-gray-900 hover:text-brand-600 transition-colors"
-                      >
-                        <p.icon size={18} className="text-gray-400" />
-                        {p.name}
-                      </Link>
-                    ))}
-                  </div>
-                </motion.div>
-
-                {/* Industries */}
-                <motion.div variants={itemVariants} className="mb-8">
-                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Industries</div>
-                  <div className="space-y-4">
-                    {industries.map((i) => (
-                      <Link
-                        key={i.href}
-                        href={i.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-3 text-base font-semibold text-gray-700 hover:text-brand-600 transition-colors"
-                      >
-                        <i.icon size={16} className="text-gray-400" />
-                        {i.name}
-                      </Link>
-                    ))}
-                  </div>
-                </motion.div>
-                
-                {/* Resources */}
-                <motion.div variants={itemVariants} className="mb-8">
-                  <div className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Resources</div>
-                  <div className="space-y-4">
-                    {resources.map((r) => (
-                      <Link
-                        key={r.href}
-                        href={r.href}
-                        onClick={() => setMobileOpen(false)}
-                        className="flex items-center gap-3 text-base font-semibold text-gray-700 hover:text-brand-600 transition-colors"
-                      >
-                        <r.icon size={16} className="text-gray-400" />
-                        {r.name}
-                      </Link>
-                    ))}
-                  </div>
-                </motion.div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="mt-auto pt-6 border-t border-gray-100 flex flex-col gap-3"
-              >
-                <Link
-                  href="/pricing"
-                  onClick={() => setMobileOpen(false)}
-                  className="block text-center py-3.5 text-sm font-bold text-gray-900 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  View Pricing
-                </Link>
-                <Link
-                  href="/contact"
-                  onClick={() => setMobileOpen(false)}
-                  className="block text-center py-3.5 text-sm font-bold bg-brand-500 text-white rounded-xl shadow-[0_4px_14px_rgba(255,107,53,0.3)] hover:bg-brand-600 transition-colors"
-                >
-                  Start Free Trial
-                </Link>
-              </motion.div>
-            </motion.div>
-          </>
+                Start Free Trial
+              </Link>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
-    </header>
+    </>
   );
 }
