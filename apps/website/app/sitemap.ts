@@ -34,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const dynamicCaseStudyPages = caseStudies.map((study) => ({
     url: `${BASE}/case-studies/${study.slug}`,
-    lastModified: new Date(study.date),
+    lastModified: now,
     priority: 0.6,
     changeFrequency: 'monthly' as const
   }))
