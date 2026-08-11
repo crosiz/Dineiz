@@ -1,4 +1,5 @@
 import { MetadataRoute } from 'next'
+import { getAllBlogPosts, getAllCaseStudies } from '@/lib/mdx'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const BASE = 'https://dineiz.com'
@@ -21,5 +22,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/blog`, priority: 0.7, changeFrequency: 'daily' },
   ].map(page => ({ ...page, lastModified: now, changeFrequency: page.changeFrequency as "weekly" | "monthly" | "daily" }))
 
-  return staticPages
+  const blogPosts = await getAllBlogPosts()
+  const caseStudies = await getAllCaseStudies()
+
+  const dynamicBlogPages = blogPosts.map((post) => ({
+    url: `${BASE}/blog/${post.slug}`,
+    lastModified: new Date(post.date),
+    priority: 0.6,
+    changeFrequency: 'monthly' as const
+  }))
+
+  const dynamicCaseStudyPages = caseStudies.map((study) => ({
+    url: `${BASE}/case-studies/${study.slug}`,
+    lastModified: new Date(study.date),
+    priority: 0.6,
+    changeFrequency: 'monthly' as const
+  }))
+
+  return [...staticPages, ...dynamicBlogPages, ...dynamicCaseStudyPages]
 }
