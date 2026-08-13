@@ -8,6 +8,7 @@ import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import QuickMenu from '@/components/QuickMenu';
 import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
+import { useSWROrders } from '@/hooks/useSWROrders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -27,7 +28,16 @@ export default function HomeDashboard() {
     totalValue: 0,
     averagePerOrder: 0,
   });
-  const [activeOrders, setActiveOrders] = useState<any[]>([]);
+  // Instant paint from the IndexedDB (Dexie) cache, refreshed from the network
+  // in the background — same stale-while-revalidate hook TicketsDashboard uses,
+  // instead of an uncached fetch on every mount.
+  const { orders: activeOrders } = useSWROrders({
+    branchId: session?.branchId ?? null,
+    dataMode: 'live',
+    myOrdersOnly: false,
+    sortOrder: 'newest',
+    historySearch: '',
+  });
   const [alerts, setAlerts] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
 
@@ -136,23 +146,6 @@ export default function HomeDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchStats, posSocket]);
-
-  // Active Orders Logic
-  useEffect(() => {
-    if (!session?.branchId) return;
-    fetch(`${API_URL}/api/orders/live?branchId=${session.branchId}`, {
-      credentials: 'include',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          const ordersArray = Array.isArray(data) ? data : data.orders || [];
-          setActiveOrders(ordersArray);
-        }
-      })
-      .catch(() => {});
-  }, [session?.branchId]);
 
   // Alerts Logic
   const fetchAlerts = useCallback(() => {

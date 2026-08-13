@@ -1,4 +1,5 @@
 import { prisma } from '@dineiz/db';
+import { upstash } from '../../lib/redis';
 import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerator';
 import { emitDashboardStatsUpdated } from '../../lib/socket';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
@@ -507,14 +508,21 @@ export async function listOrderHistory(
   };
 }
 
+const LIVE_ORDERS_CACHE_TTL_SECONDS = 4;
+
 export async function listLiveOrders(tenantId: string, branchId: string | undefined) {
+  const cacheKey = `live-orders:${tenantId}:${branchId ?? 'all'}`;
+  const cached = await upstash.get(cacheKey).catch(() => null);
+  if (cached) return cached;
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const now = Date.now();
 
-  // Fetch all non-cancelled active orders + last 20 completed today
-  const [activeOrders, recentCompleted] = await Promise.all([
+  // Active orders and today's summary source data are independent — fetch
+  // concurrently. (Previously this also re-fetched the last 20 completed
+  // orders in full with all relations, but the result was never used.)
+  const [activeOrders, todayOrders] = await Promise.all([
     prisma.order.findMany({
       where: {
         tenantId,
@@ -532,18 +540,11 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
     prisma.order.findMany({
       where: {
         tenantId,
-        ...(branchId ? { branchId } : {}),
-        status: { in: ['COMPLETED'] },
+        ...(branchId && { branchId }),
         createdAt: { gte: todayStart },
+        status: { not: 'CANCELLED' },
       },
-      orderBy: { updatedAt: 'desc' },
-      take: 20,
-      include: {
-        items: { include: { item: { select: { name: true } } } },
-        branch: { select: { name: true } },
-        shift: { include: { user: { select: { name: true } } } },
-        table: { select: { label: true } },
-      },
+      select: { netAmount: true, status: true, createdAt: true, updatedAt: true },
     }),
   ]);
 
@@ -573,45 +574,31 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
     minutesElapsed: Math.floor((now - new Date(o.createdAt).getTime()) / 60000),
   });
 
-  // Summary KPIs for today
-  const todayOrders = await prisma.order.findMany({
-    where: {
-      tenantId,
-      ...(branchId && { branchId }),
-      createdAt: { gte: todayStart },
-      status: { not: 'CANCELLED' },
-    },
-    select: { netAmount: true, status: true, createdAt: true, updatedAt: true },
-  });
-
+  // Summary KPIs for today — derived from the todayOrders fetched above
+  // (COMPLETED is a subset of it, no need for a separate query).
   const todayOrderCount = todayOrders.length;
-  const todayRevenue = todayOrders
-    .filter((o: any) => o.status === 'COMPLETED')
-    .reduce((s: number, o: any) => s + (o.netAmount ?? 0), 0);
+  const completedTodayOrders = todayOrders.filter((o) => o.status === 'COMPLETED');
+  const todayRevenue = completedTodayOrders.reduce((s, o) => s + (o.netAmount ?? 0), 0);
   const inProgressCount = activeOrders.length;
 
-  const completedToday = await prisma.order.findMany({
-    where: {
-      tenantId,
-      branchId: branchId ?? undefined,
-      status: { in: ['COMPLETED'] },
-      createdAt: { gte: todayStart }
-    },
-    select: { createdAt: true, updatedAt: true }
-  });
-
-  const avgPrepSeconds = completedToday.length > 0
-    ? completedToday.reduce((sum, o) =>
+  const avgPrepSeconds = completedTodayOrders.length > 0
+    ? completedTodayOrders.reduce((sum, o) =>
         sum + (o.updatedAt.getTime() - o.createdAt.getTime()), 0
-      ) / completedToday.length / 1000
+      ) / completedTodayOrders.length / 1000
     : 0;
-    
+
   const avgPrepTime = Math.round(avgPrepSeconds / 60);
 
-  return {
+  const result = {
     orders: allOrders.map(mapOrder),
     summary: { todayOrderCount, todayRevenue, avgPrepTime, inProgressCount },
   };
+
+  upstash.set(cacheKey, result, { ex: LIVE_ORDERS_CACHE_TTL_SECONDS }).catch((e) =>
+    console.error('Failed to cache live orders:', e)
+  );
+
+  return result;
 }
 
 
