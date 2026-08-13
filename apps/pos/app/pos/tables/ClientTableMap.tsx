@@ -72,6 +72,7 @@ export default function ClientTableMap() {
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
   const [popupOrder, setPopupOrder] = useState<any>(null);
   const [popupLoading, setPopupLoading] = useState<boolean>(false);
+  const [popupError, setPopupError] = useState<boolean>(false);
   const [showOverrideModal, setShowOverrideModal] = useState<boolean>(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
@@ -215,13 +216,17 @@ export default function ClientTableMap() {
     };
   }, [socket, selectedTable]);
 
-  // Fetch active order for occupied tables with 3-second timeout
+  // Fetch active order for occupied tables
   const fetchActiveOrder = useCallback(async (tableId: string) => {
     setPopupLoading(true);
     setPopupOrder(null);
+    setPopupError(false);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    // Generous but bounded — a real fetch failure/hang should still surface an
+    // error state rather than hang the popup forever, but 3s was cutting off
+    // normal responses under real-world latency and silently showing "no order".
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const token = getToken();
@@ -233,10 +238,17 @@ export default function ClientTableMap() {
 
       if (res.ok) {
         const orderData = await res.json();
-        setPopupOrder(orderData.orders?.[0] || orderData.data?.[0] || null);
+        const order = orderData.orders?.[0] || orderData.data?.[0] || null;
+        setPopupOrder(order);
+        // A table marked occupied with genuinely no matching order is itself
+        // unexpected — surface it instead of silently showing "add items".
+        if (!order) setPopupError(true);
+      } else {
+        setPopupError(true);
       }
     } catch {
-      // Proceed smoothly on timeout or network error without blocking UI
+      // Real network/timeout failure — distinct from "table has no order yet"
+      setPopupError(true);
     } finally {
       setPopupLoading(false);
     }
@@ -625,6 +637,16 @@ export default function ClientTableMap() {
               <div className="flex items-center justify-center py-6 gap-2 text-xs font-semibold text-slate-500">
                 <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
                 <span>Loading active order...</span>
+              </div>
+            ) : popupError ? (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2 text-center">
+                <p className="text-xs text-rose-700 font-semibold">Couldn't load this table's order.</p>
+                <button
+                  onClick={() => fetchActiveOrder(selectedTable.id)}
+                  className="text-xs font-bold text-rose-700 underline hover:text-rose-900"
+                >
+                  Retry
+                </button>
               </div>
             ) : popupOrder ? (
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">

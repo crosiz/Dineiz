@@ -185,7 +185,24 @@ export function useSWROrders({
     refetchInterval: dataMode === 'live' ? refetchIntervalMs : false,
   });
 
-  // ── 4. Derive isStale ─────────────────────────────────────────────────────
+  // ── 4. Refetch when the tab becomes visible again ─────────────────────────
+  //
+  // The global QueryClient disables refetchOnWindowFocus (to avoid mid-
+  // transaction flashes elsewhere in the POS), and refetchInterval pauses
+  // entirely while the tab is hidden — so switching away and back otherwise
+  // leaves this view showing whatever was last fetched before the tab was
+  // backgrounded until the next 15s poll tick catches up. For live orders,
+  // a stale board is worse than a brief refetch, so resync immediately here.
+  useEffect(() => {
+    if (dataMode !== 'live') return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refetch();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [dataMode, refetch]);
+
+  // ── 5. Derive isStale ─────────────────────────────────────────────────────
   const orders = networkData ?? initialData ?? [];
   // We're "stale" when showing IDB seed data and the background fetch is still running
   const isStale = isFetching && initialData !== undefined && networkData === initialData;

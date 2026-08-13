@@ -18,18 +18,20 @@ export async function handleCreateOrder(request: FastifyRequest, reply: FastifyR
     emitNewOrder(tenantId, body.branchId, order);
 
     if (body.tableId) {
-      // Persist table status to DB so it survives page refresh
-      await prisma.table.update({
+      // Fire-and-forget: the client already has its order confirmation, and the
+      // table shouldn't need to wait on this write to turn occupied on-screen —
+      // emit as soon as the (usually near-instant) DB write resolves in the background.
+      prisma.table.update({
         where: { id: body.tableId, tenantId },
         data: { status: 'occupied' },
+      }).then(() => {
+        emitTableStatusChanged(body.branchId, {
+          tableId: body.tableId,
+          status: 'occupied',
+          orderId: order.id,
+          since: order.createdAt.toISOString(),
+        }, tenantId);
       }).catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
-
-      emitTableStatusChanged(body.branchId, {
-        tableId: body.tableId,
-        status: 'occupied',
-        orderId: order.id,
-        since: order.createdAt.toISOString(),
-      }, tenantId);
     }
 
     return reply.status(201).send(order);
@@ -122,15 +124,26 @@ export async function handleUpdateOrder(request: FastifyRequest, reply: FastifyR
   }
 
   if (order.tableId) {
-    if (order.status === 'READY') {
-      await prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: 'OCCUPIED' } });
-      emitTableStatusChanged(order.branchId, { tableId: order.tableId, status: 'OCCUPIED', orderId: order.id, since: order.createdAt.toISOString() }, tenantId);
-    } else if (order.status === 'COMPLETED') {
-      await prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: 'FREE' } });
-      emitTableStatusChanged(order.branchId, { tableId: order.tableId, status: 'FREE' }, tenantId);
-    } else if (order.status === 'CANCELLED') {
-      await prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: 'FREE' } });
-      emitTableStatusChanged(order.branchId, { tableId: order.tableId, status: 'FREE' }, tenantId);
+    // Fire-and-forget: don't make the client wait on this write before it sees
+    // its order update confirmed — emit as soon as the DB write resolves.
+    // Lowercase to match the Table.status column's documented convention
+    // (schema.prisma: "free", "occupied", "dirty", "ready", "reserved") and
+    // emitTableStatusChanged's own signature — the previous uppercase values
+    // here were a pre-existing type/casing mismatch against both.
+    let newTableStatus: 'occupied' | 'free' | null = null;
+    if (order.status === 'READY') newTableStatus = 'occupied';
+    else if (order.status === 'COMPLETED' || order.status === 'CANCELLED') newTableStatus = 'free';
+
+    if (newTableStatus) {
+      prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: newTableStatus } })
+        .then(() => {
+          emitTableStatusChanged(order.branchId, {
+            tableId: order.tableId,
+            status: newTableStatus,
+            ...(newTableStatus === 'occupied' ? { orderId: order.id, since: order.createdAt.toISOString() } : {}),
+          }, tenantId);
+        })
+        .catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
     }
   }
 
