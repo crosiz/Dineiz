@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMenuFromCache, syncMenuToCache } from '../lib/offlineHelpers';
 import { getToken } from '../lib/pos-session';
 import type { CachedMenuItem } from '../lib/db';
@@ -58,34 +58,47 @@ async function fetchMenuFromAPI(tenantId: string, branchId?: string | null): Pro
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 /**
- * useMenu — fetches the menu from the API and syncs to IndexedDB.
- * Falls back to IndexedDB cache if the network request fails (offline support).
+ * useMenu — paints instantly from the IndexedDB cache (if any), then refreshes
+ * from the network in the background and patches the result in silently.
+ * Falls back to a blocking network fetch only on the very first-ever load,
+ * when there is nothing cached yet.
  *
  * @param tenantId - The tenant whose menu to load
  */
 export function useMenu(tenantId: string | null, branchId?: string | null) {
+  const queryClient = useQueryClient();
+  const queryKey = ['menu', tenantId, branchId];
+
   return useQuery<CachedMenuItem[], Error>({
-    queryKey: ['menu', tenantId, branchId],
+    queryKey,
     enabled: !!tenantId,
 
     queryFn: async () => {
-      try {
-        // 1. Try the network first
-        const freshItems = await fetchMenuFromAPI(tenantId!, branchId);
+      const cached = await getMenuFromCache(tenantId!);
 
-        // 2. Sync the fresh data into IndexedDB for future offline use
-        await syncMenuToCache(tenantId!, freshItems);
+      // Kick off a network refresh in the background; it patches the query
+      // cache directly via setQueryData once it lands, without blocking paint.
+      const refresh = fetchMenuFromAPI(tenantId!, branchId)
+        .then(async (freshItems) => {
+          await syncMenuToCache(tenantId!, freshItems);
+          queryClient.setQueryData<CachedMenuItem[]>(queryKey, freshItems);
+          return freshItems;
+        })
+        .catch((e) => {
+          console.error('Failed to refresh menu from network:', e);
+          return null;
+        });
 
-        return freshItems;
-      } catch (e) {
-        console.error("Failed to fetch/sync menu:", e);
-        // 3. Network failed — fall back to IndexedDB cache (offline mode)
-        const cached = await getMenuFromCache(tenantId!);
-        if (cached.length === 0) {
-          throw new Error('No menu data available. Please connect to the internet.');
-        }
+      if (cached.length > 0) {
         return cached;
       }
+
+      // Nothing cached yet (first-ever load) — must wait for the network.
+      const freshItems = await refresh;
+      if (!freshItems) {
+        throw new Error('No menu data available. Please connect to the internet.');
+      }
+      return freshItems;
     },
 
     // On refetch (e.g., background refresh), use cached data as placeholder

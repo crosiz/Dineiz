@@ -80,10 +80,6 @@ function resolveAppliedTax(
   if (!payments || payments.length === 0) {
     let rate = cashTaxEnabled ? cashTaxRate : 0;
     let label = cashTaxEnabled ? `${cashTaxLabel} ${cashTaxRate}%` : 'Tax Disabled';
-    
-    require('fs').writeFileSync('C:\\Users\\Hp\\AppData\\Local\\Temp\\resolve_tax_debug.log', JSON.stringify({
-      cashTaxEnabled, cashTaxRate, cardTaxEnabled, cardTaxRate, subtotal, clientTaxAmount
-    }));
 
     if (clientTaxAmount !== undefined) {
       const cardRateTax = applyRounding(subtotal * ((cardTaxEnabled ? cardTaxRate : 0) / 100), roundingMethod);
@@ -127,6 +123,41 @@ function resolveAppliedTax(
 
 // ─── Service functions ────────────────────────────────────────────────────────
 
+async function checkPlanLimits(tenantId: string): Promise<void> {
+  const tenantData = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { featureOverrides: true }
+  });
+
+  if (!tenantData || !tenantData.plan) return;
+
+  let limit = -1;
+  const planDef = await prisma.planDefinition.findUnique({ where: { id: tenantData.plan } });
+  if (!planDef) return;
+
+  const overrides = tenantData.featureOverrides || [];
+  const orderLimitOverride = overrides.find(o => o.featureKey === 'dailyOrders');
+
+  if (orderLimitOverride && !isNaN(Number(orderLimitOverride.value))) {
+    limit = Number(orderLimitOverride.value);
+  } else if (planDef.limits && (planDef.limits as any).dailyOrders !== undefined) {
+    limit = (planDef.limits as any).dailyOrders;
+  }
+
+  if (limit === -1) return;
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const todayOrdersCount = await prisma.order.count({
+    where: { tenantId, createdAt: { gte: startOfDay } }
+  });
+
+  if (todayOrdersCount >= limit) {
+    throw new Error('PLAN_LIMIT_EXCEEDED');
+  }
+}
+
 export async function createOrder(
   tenantId: string,
   userId: string,
@@ -134,50 +165,21 @@ export async function createOrder(
 ) {
   const { items, payments, orderDeals, branchId, cashierId, customerPhone, customerName, ...orderData } = body;
 
-  // ── Plan Limits Check ─────────────────────────────────────────────────────
-  const tenantData = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    include: { featureOverrides: true }
-  });
-  
-  if (tenantData && tenantData.plan) {
-    let limit = -1;
-    const planDef = await prisma.planDefinition.findUnique({ where: { id: tenantData.plan } });
-    if (planDef) {
-      const overrides = tenantData.featureOverrides || [];
-      const orderLimitOverride = overrides.find(o => o.featureKey === 'dailyOrders');
-      
-      if (orderLimitOverride && !isNaN(Number(orderLimitOverride.value))) {
-        limit = Number(orderLimitOverride.value);
-      } else if (planDef.limits && (planDef.limits as any).dailyOrders !== undefined) {
-        limit = (planDef.limits as any).dailyOrders;
-      }
-
-      if (limit !== -1) {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const todayOrdersCount = await prisma.order.count({
-          where: { tenantId, createdAt: { gte: startOfDay } }
-        });
-
-        if (todayOrdersCount >= limit) {
-          throw new Error('PLAN_LIMIT_EXCEEDED');
-        }
-      }
-    }
-  }
-
-  // ── Server-side dual-tax calculation ──────────────────────────────────────
-  // Fetch tenant branding to get authoritative tax rates
-  const tenantBranding = await prisma.tenantBranding.findUnique({
-    where: { tenantId },
-    select: {
-      cashTaxEnabled: true, cashTaxRate: true, cashTaxLabel: true,
-      cardTaxEnabled: true, cardTaxRate: true, cardTaxLabel: true,
-      taxRoundingMethod: true,
-    },
-  });
+  // ── Independent lookups run concurrently instead of as a sequential waterfall ──
+  const [, tenantBranding, orderNumber, tokenNumber, routedItems] = await Promise.all([
+    checkPlanLimits(tenantId),
+    prisma.tenantBranding.findUnique({
+      where: { tenantId },
+      select: {
+        cashTaxEnabled: true, cashTaxRate: true, cashTaxLabel: true,
+        cardTaxEnabled: true, cardTaxRate: true, cardTaxLabel: true,
+        taxRoundingMethod: true,
+      },
+    }),
+    generateOrderNumber(tenantId),
+    generateTokenNumber(branchId, userId),
+    routeItemsToKdsStations(tenantId, branchId, items),
+  ]);
 
   const cashTaxEnabled = tenantBranding?.cashTaxEnabled ?? true;
   const cashTaxRate = tenantBranding?.cashTaxRate ?? 5;
@@ -225,10 +227,6 @@ export async function createOrder(
     appliedTaxLabel,
   };
 
-  const orderNumber = await generateOrderNumber(tenantId);
-  const tokenNumber = await generateTokenNumber(branchId, userId);
-  const routedItems = await routeItemsToKdsStations(tenantId, branchId, items);
-
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -250,13 +248,14 @@ export async function createOrder(
     return created;
   });
 
-  // Auto-create/update customer profile
+  // Auto-create/update customer profile — fire-and-forget, doesn't need to
+  // complete before the order is returned and sent to the kitchen.
   if (customerPhone) {
     // Basic phone normalization
     let phone = customerPhone.replace(/[\s-]/g, '');
     if (phone.startsWith('03')) phone = '+923' + phone.slice(2);
-    
-    await prisma.customer.upsert({
+
+    prisma.customer.upsert({
       where: { tenantId_phone: { tenantId, phone } },
       create: {
         tenantId,
@@ -275,21 +274,23 @@ export async function createOrder(
     }).catch(e => console.error('Auto-create customer error:', e));
   }
 
-  // Low stock push notifications
+  // Low stock push notifications — fire-and-forget, must not delay the
+  // response (and therefore the socket emit that sends the order to the kitchen).
   const itemIdsForOrder = [...new Set(order.items.map((i: any) => i.itemId))];
   if (itemIdsForOrder.length > 0) {
-    const recipes = await prisma.recipe.findMany({
+    prisma.recipe.findMany({
       where: { tenantId, itemId: { in: itemIdsForOrder } },
       include: { lines: true },
-    });
-    const ingredientIds = [...new Set(recipes.flatMap((r) => r.lines.map((l) => l.ingredientId)))];
-    for (const ingredientId of ingredientIds) {
-      await sendLowStockIfNeeded({ tenantId, branchId, ingredientId });
-    }
+    }).then((recipes) => {
+      const ingredientIds = [...new Set(recipes.flatMap((r) => r.lines.map((l) => l.ingredientId)))];
+      return Promise.all(
+        ingredientIds.map((ingredientId) => sendLowStockIfNeeded({ tenantId, branchId, ingredientId }))
+      );
+    }).catch(e => console.error('Low stock notification error:', e));
   }
 
-  await enqueueZapierEvent({ tenantId, event: 'order.created', payload: order }).catch(() => {});
-  
+  enqueueZapierEvent({ tenantId, event: 'order.created', payload: order }).catch(() => {});
+
   // Asynchronously process loyalty redemption (if any) during order creation
   if (orderData.redeemedPointsAmount) {
     redeemLoyaltyForOrder(order, orderData.redeemedPointsAmount).catch(e => console.error('Loyalty Redeem Error:', e));

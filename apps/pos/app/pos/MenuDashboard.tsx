@@ -11,6 +11,8 @@ import { MenuItemCard } from '@/components/MenuItemCard';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getToken } from '@/lib/pos-session';
+import { queueOfflineOrder } from '@/lib/offlineHelpers';
+import { registerOrderSync } from '@/lib/syncRegistration';
 
 interface Props {
   onViewChange: (view: 'home' | 'menu' | 'tickets') => void;
@@ -123,7 +125,7 @@ export default function MenuDashboard({ onViewChange }: Props) {
       });
       if (res.ok) {
         const resData = await res.json().catch(() => ({}));
-        
+
         try {
           const { printDocument } = await import('@/lib/print.service');
           await printDocument('KOT', {
@@ -153,9 +155,52 @@ export default function MenuDashboard({ onViewChange }: Props) {
         if (orderType === 'dine-in') {
           router.push('/pos/tables');
         }
+      } else {
+        const errorData = await res.json().catch(() => null);
+        if (res.status === 402 && errorData?.error === 'PLAN_LIMIT_EXCEEDED') {
+          throw new Error('PLAN_LIMIT_EXCEEDED');
+        }
+        throw new Error(`API ${res.status}`);
       }
     } catch (e) {
-      console.error(e);
+      if ((e as Error).message === 'PLAN_LIMIT_EXCEEDED') {
+        toast.error('Daily order limit reached for your plan. Please contact your admin to upgrade.');
+        return;
+      }
+
+      const isOffline = !navigator.onLine || (e as Error).message === 'offline';
+      if (isOffline) {
+        await queueOfflineOrder({
+          tenantId: session.tenantId!,
+          branchId: session.branchId!,
+          cashierId: session.cashierId || 'cashier-1',
+          type: (orderType.toUpperCase() as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'),
+          tableId: tableId ?? undefined,
+          subtotal,
+          discountAmount,
+          taxAmount,
+          total,
+          items: cart.map((c) => ({
+            itemId: c.itemId,
+            itemName: c.name,
+            quantity: c.quantity,
+            unitPrice: c.unitPrice,
+            variationId: c.selectedVariation?.id,
+            addonIds: c.selectedAddOns.map((a) => a.id),
+            notes: c.notes,
+          })),
+        });
+        await registerOrderSync();
+
+        toast.success('No connection — order saved locally and will sync automatically.');
+        clearCart();
+        if (orderType === 'dine-in') {
+          router.push('/pos/tables');
+        }
+      } else {
+        console.error(e);
+        toast.error('Failed to send order to kitchen. Please try again.');
+      }
     }
   };
 

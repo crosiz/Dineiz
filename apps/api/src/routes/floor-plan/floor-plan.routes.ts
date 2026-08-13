@@ -14,10 +14,32 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const { branchId } = (request.params as any);
     const tenantId = request.user!.tenantId!;
 
-    let floorPlan = await prisma.floorPlan.findUnique({
-      where: { branchId },
-    });
+    // These three lookups are independent of each other — run them concurrently
+    // instead of as a sequential waterfall.
+    const [existingFloorPlan, tables, activeOrders] = await Promise.all([
+      prisma.floorPlan.findUnique({ where: { branchId } }),
+      prisma.table.findMany({ where: { branchId, tenantId, isActive: true } }),
+      prisma.order.findMany({
+        where: {
+          branchId,
+          tenantId,
+          status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+          type: 'DINE_IN',
+          tableId: { not: null }
+        },
+        select: {
+          id: true,
+          status: true,
+          tableId: true,
+          createdAt: true,
+          assignedWaiterId: true,
+          assignedWaiterName: true,
+          assignedWaiter: { select: { avatarColor: true } }
+        }
+      }),
+    ]);
 
+    let floorPlan = existingFloorPlan;
     if (!floorPlan) {
       floorPlan = await prisma.floorPlan.create({
         data: {
@@ -26,29 +48,6 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
         }
       });
     }
-
-    const tables = await prisma.table.findMany({
-      where: { branchId, tenantId, isActive: true }
-    });
-
-    const activeOrders = await prisma.order.findMany({
-      where: {
-        branchId,
-        tenantId,
-        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
-        type: 'DINE_IN',
-        tableId: { not: null }
-      },
-      select: {
-        id: true,
-        status: true,
-        tableId: true,
-        createdAt: true,
-        assignedWaiterId: true,
-        assignedWaiterName: true,
-        assignedWaiter: { select: { avatarColor: true } }
-      }
-    });
 
     const tablesWithStatus = tables.map(t => {
       const order = activeOrders.find(o => o.tableId === t.id);

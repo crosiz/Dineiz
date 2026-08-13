@@ -35,7 +35,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const posInstance = io(`${SOCKET_URL}/pos`, {
       auth: { token },
       autoConnect: true,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
 
     posInstance.on('connect', () => setIsConnected(true));
@@ -46,7 +46,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const kdsInstance = io(`${SOCKET_URL}/kds`, {
       auth: { token },
       autoConnect: true,
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
     });
 
     kdsInstance.on('connect', () => setIsKdsConnected(true));

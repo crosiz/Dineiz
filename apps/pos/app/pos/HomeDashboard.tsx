@@ -220,8 +220,21 @@ export default function HomeDashboard() {
 
   useEffect(() => {
     fetchTables();
-    const interval = setInterval(fetchTables, 30000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchTables();
+      }
+    }, 30000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTables();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchTables]);
 
   return (

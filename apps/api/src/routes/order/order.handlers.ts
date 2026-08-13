@@ -38,7 +38,6 @@ export async function handleCreateOrder(request: FastifyRequest, reply: FastifyR
     if (e.message === 'PLAN_LIMIT_EXCEEDED') {
       return reply.status(402).send({ error: 'PLAN_LIMIT_EXCEEDED', message: 'Daily order limit reached for your plan.' });
     }
-    require('fs').writeFileSync('C:\\Users\\Hp\\AppData\\Local\\Temp\\order_error2.log', JSON.stringify({ msg: e.message, stack: e.stack }, null, 2));
     return reply.status(500).send({ error: e.message });
   }
 }
