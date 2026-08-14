@@ -13,6 +13,7 @@
     "test:e2e:report": "playwright show-report tests/playwright-report"
   },
   "dependencies": {
+    "@dineiz/db": "workspace:*",
     "@dineiz/schemas": "workspace:*",
     "@dineiz/ui": "workspace:*",
     "@tanstack/react-query": "^5.99.2",

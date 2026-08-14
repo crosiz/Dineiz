@@ -19,7 +19,7 @@ const withPWA = require('next-pwa')({
 });
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@dineiz/ui', '@dineiz/schemas'],
+  transpilePackages: ['@dineiz/ui', '@dineiz/schemas', '@dineiz/db'],
 };
 
 export default withPWA(nextConfig);
