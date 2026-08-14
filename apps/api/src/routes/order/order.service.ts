@@ -228,25 +228,30 @@ export async function createOrder(
     appliedTaxLabel,
   };
 
-  const order = await prisma.$transaction(async (tx) => {
-    const created = await tx.order.create({
-      data: {
-        ...orderData,
-        tenantId,
-        branchId,
-        orderNumber,
-        tokenNumber,
-        ...taxAuditFields,
-        items: { create: routedItems },
-        ...(payments?.length > 0 && { payments: { create: payments } }),
-        ...(orderDeals?.length > 0 && { orderDeals: { create: orderDeals } }),
-      },
-      include: { items: true, payments: true, orderDeals: true },
-    });
-
-    // Inventory auto-deduct is now handled asynchronously when order is COMPLETED.
-
-    return created;
+  // A nested-write create() is already atomic in Postgres/Prisma on its own —
+  // this used to also do inventory auto-deduct here, which is why it was
+  // wrapped in an explicit interactive $transaction. That's now handled
+  // asynchronously when an order is COMPLETED, leaving a single create()
+  // call as the only thing in the transaction body. An explicit interactive
+  // transaction around one operation is pure overhead (an extra BEGIN/COMMIT
+  // round-trip) and, worse, subject to Prisma's default 5s interactive-
+  // transaction timeout — on a higher-latency DB connection, the handful of
+  // round-trips a single order create + include triggers can exceed that
+  // and abort the whole order with a P2028 error. Calling create() directly
+  // keeps the same atomicity guarantee without either problem.
+  const order = await prisma.order.create({
+    data: {
+      ...orderData,
+      tenantId,
+      branchId,
+      orderNumber,
+      tokenNumber,
+      ...taxAuditFields,
+      items: { create: routedItems },
+      ...(payments?.length > 0 && { payments: { create: payments } }),
+      ...(orderDeals?.length > 0 && { orderDeals: { create: orderDeals } }),
+    },
+    include: { items: true, payments: true, orderDeals: true },
   });
 
   // Auto-create/update customer profile — fire-and-forget, doesn't need to

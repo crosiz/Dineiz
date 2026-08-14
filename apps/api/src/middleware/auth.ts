@@ -60,17 +60,24 @@ export const requireAuth = async (request: FastifyRequest, reply: FastifyReply) 
     return reply.status(401).send({ error: 'Unauthorized' });
   }
 
-  // Fetch the full user record from Prisma so custom fields (tenantId,
-  // branchId, role, posPin) are always available — regardless of whether
-  // Better Auth's additionalFields has surfaced them yet.
-  try {
-    const fullUser = await prisma.user.findUnique({
-      where: { id: sessionData.user.id },
-    });
+  // additionalFields in lib/auth.ts (tenantId, branchId, role, posPin) means
+  // Better Auth's own session resolution already queries the User row and
+  // surfaces these fields most of the time — re-fetching the full user again
+  // unconditionally here duplicated that DB round-trip on every single
+  // authenticated request across the whole API. Only pay for a second fetch
+  // when those fields are genuinely absent from the session (the actual
+  // "hasn't surfaced yet" case this was guarding against), not on every call.
+  const sessionUser = sessionData.user as any;
+  const hasCoreFields = 'tenantId' in sessionUser && 'role' in sessionUser;
 
-    if (!fullUser) {
-      return reply.status(401).send({ error: 'Unauthorized: user not found' });
-    }
+  try {
+    const fullUser: User = hasCoreFields
+      ? (sessionUser as User)
+      : await (async () => {
+          const u = await prisma.user.findUnique({ where: { id: sessionUser.id } });
+          if (!u) throw new Error('USER_NOT_FOUND');
+          return u;
+        })();
 
     if (fullUser.role === 'BRANCH_MANAGER' && !fullUser.branchId) {
       return reply.status(403).send({ error: 'No branch assigned to this manager' });
@@ -80,6 +87,9 @@ export const requireAuth = async (request: FastifyRequest, reply: FastifyReply) 
     request.session = sessionData.session as unknown as Session;
     request.scopedBranchId = fullUser.role === 'BRANCH_MANAGER' ? fullUser.branchId : null;
   } catch (err: any) {
+    if (err?.message === 'USER_NOT_FOUND') {
+      return reply.status(401).send({ error: 'Unauthorized: user not found' });
+    }
     request.log?.error?.({ err }, 'requireAuth: DB lookup failed');
     return reply.status(500).send({ error: 'Auth error: failed to load user', details: err?.message });
   }
