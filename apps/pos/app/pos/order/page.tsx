@@ -15,6 +15,8 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
+import { queueOfflineOrder } from '@/lib/offlineHelpers';
+import { registerOrderSync } from '@/lib/syncRegistration';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -459,39 +461,46 @@ function OrderEntryPageContent() {
       setOrderNote('');
       toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} sent to kitchen!`);
 
-      try {
-        const { useBrandingStore } = await import('@/lib/branding-store');
-        const branding = useBrandingStore.getState().branding;
-        if (branding.autoKotPrint !== false) {
-          const { printDocument } = await import('@/lib/print.service');
-          await printDocument('KOT', {
-            orderNumber: order.orderNumber || order.id?.slice(-6),
-            tokenNumber: order.tokenNumber || 'NEW',
-            type: orderTypeStr,
-            cashierName: sessionObj.cashierName || sessionObj.userId,
-            tenantName: branding.restaurantName || 'Dineiz',
-            branchName: sessionObj.branchName || 'Main Branch',
-            items: cart.map(c => ({
-              name: c.name,
-              quantity: c.quantity,
-              notes: c.notes,
-              variationName: c.selectedVariation?.name,
-              addOnNames: c.selectedAddOns?.map((a: any) => a.name),
-              unitPrice: c.basePrice || 0,
-              subtotal: (c.basePrice || 0) * c.quantity
-            })),
-            notes: orderNote,
-            createdAt: order.createdAt || new Date().toISOString(),
-            subtotal: order.subtotal || 0,
-            discountAmount: order.discountAmount || 0,
-            taxAmount: order.taxAmount || 0,
-            total: order.total || 0,
-            paymentMethod: order.paymentMethod || 'CASH',
-          });
+      // Fire-and-forget: printing (and the WebUSB device round-trip it can
+      // involve) must never delay getting the cashier back to Home after a
+      // successful order — a missing/unpaired printer previously blocked
+      // this whole flow until the print attempt failed.
+      (async () => {
+        try {
+          const { useBrandingStore } = await import('@/lib/branding-store');
+          const branding = useBrandingStore.getState().branding;
+          if (branding.autoKotPrint !== false) {
+            const { printDocument } = await import('@/lib/print.service');
+            await printDocument('KOT', {
+              orderNumber: order.orderNumber || order.id?.slice(-6),
+              tokenNumber: order.tokenNumber || 'NEW',
+              type: orderTypeStr,
+              cashierName: sessionObj.cashierName || sessionObj.userId,
+              tenantName: branding.restaurantName || 'Dineiz',
+              branchName: sessionObj.branchName || 'Main Branch',
+              items: cart.map(c => ({
+                name: c.name,
+                quantity: c.quantity,
+                notes: c.notes,
+                variationName: c.selectedVariation?.name,
+                addOnNames: c.selectedAddOns?.map((a: any) => a.name),
+                unitPrice: c.basePrice || 0,
+                subtotal: (c.basePrice || 0) * c.quantity
+              })),
+              notes: orderNote,
+              createdAt: order.createdAt || new Date().toISOString(),
+              subtotal: order.subtotal || 0,
+              discountAmount: order.discountAmount || 0,
+              taxAmount: order.taxAmount || 0,
+              total: order.total || 0,
+              paymentMethod: order.paymentMethod || 'CASH',
+            });
+          }
+        } catch (printErr) {
+          console.error('KOT Print failed', printErr);
+          toast.error('Order sent, but KOT printing failed. Check printer connection in Settings.');
         }
-      } catch (printErr) {
-        console.error('KOT Print failed', printErr);
-      }
+      })();
 
       // If this was a held order, remove it from local DB
       if (isHeld && rawOrderId) {
@@ -510,7 +519,44 @@ function OrderEntryPageContent() {
       setDiscount(null);
       router.push('/pos/home');
     } catch (err) {
-      toast.error('Failed to send order. Check connection.');
+      const isOffline = !navigator.onLine || (err as Error).message === 'offline';
+      if (isOffline && !isAppending) {
+        try {
+          await queueOfflineOrder({
+            tenantId: sessionObj.tenantId,
+            branchId: sessionObj.branchId,
+            cashierId: sessionObj.userId || sessionObj.cashierId || 'cashier-1',
+            shiftId: shift.shiftId ?? undefined,
+            type: (orderTypeStr as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'),
+            tableId: (tableId && tableId !== 'undefined') ? tableId : undefined,
+            subtotal,
+            discountAmount,
+            taxAmount,
+            total,
+            notes: orderNote,
+            items: cart.map(item => ({
+              itemId: item.itemId,
+              itemName: item.name,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              variationId: item.selectedVariation?.id,
+              addonIds: item.selectedAddOns?.map((a) => a.id),
+              notes: item.notes,
+            })),
+          });
+          await registerOrderSync();
+
+          toast.success('No connection — order saved locally and will sync automatically.');
+          clearCart();
+          setDiscount(null);
+          router.push('/pos/home');
+        } catch (queueErr) {
+          console.error('Failed to queue offline order', queueErr);
+          toast.error('Failed to save order offline. Please retry.');
+        }
+      } else {
+        toast.error('Failed to send order. Check connection.');
+      }
     } finally {
       setKitchenLoading(false);
     }

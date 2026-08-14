@@ -9,6 +9,7 @@ import { AdminPinModal } from '@/components/AdminPinModal';
 import { useSocket } from '@/contexts/SocketContext';
 import { getToken, getPosSession } from '@/lib/pos-session';
 import { useCartStore } from '@/lib/store';
+import { getDB } from '@/lib/db';
 import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
 import {
@@ -126,11 +127,11 @@ export default function ClientTableMap() {
 
     try {
       const token = getToken();
-      
+
       const res = await fetch(`${API_URL}/api/floor-plan/${branchId}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).catch(() => null);
-      
+
       let data: any = null;
       if (res?.ok) {
         const plan = await res.json();
@@ -161,12 +162,34 @@ export default function ClientTableMap() {
         if (extractedFloors.length > 0) {
           setFloors(extractedFloors);
         }
+
+        // Cache for instant paint on the next visit to this branch's floor plan
+        getDB().ordersCache.put({
+          cacheKey: `floor-plan-${branchId}`,
+          data: rawTables,
+          cachedAt: Date.now(),
+        }).catch(() => {});
       }
     } catch (err) {
       console.error('Failed to fetch table map:', err);
     } finally {
       setIsLoading(false);
     }
+  }, [branchId]);
+
+  // Paint instantly from the IndexedDB cache (if any) while the network
+  // fetch below runs in the background — avoids a fresh blank load every time.
+  useEffect(() => {
+    if (!branchId) return;
+    let cancelled = false;
+    getDB().ordersCache.get(`floor-plan-${branchId}`).then((cached) => {
+      if (cancelled || !cached || !Array.isArray(cached.data) || cached.data.length === 0) return;
+      setTables(cached.data);
+      const extractedFloors = Array.from(new Set(cached.data.map((t: any) => t.floor || 1))).sort((a: number, b: number) => a - b);
+      if (extractedFloors.length > 0) setFloors(extractedFloors);
+      setIsLoading(false);
+    }).catch(() => {});
+    return () => { cancelled = true; };
   }, [branchId]);
 
   useEffect(() => {
@@ -216,11 +239,21 @@ export default function ClientTableMap() {
     };
   }, [socket, selectedTable]);
 
-  // Fetch active order for occupied tables
+  // Fetch active order for occupied tables — paints instantly from cache
+  // (if this table's order was already viewed this session) while the
+  // network request below refreshes it silently in the background.
   const fetchActiveOrder = useCallback(async (tableId: string) => {
-    setPopupLoading(true);
-    setPopupOrder(null);
     setPopupError(false);
+
+    const cacheKey = `table-order-${tableId}`;
+    const cached = await getDB().ordersCache.get(cacheKey).catch(() => null);
+    if (cached?.data?.[0]) {
+      setPopupOrder(cached.data[0]);
+      setPopupLoading(false);
+    } else {
+      setPopupLoading(true);
+      setPopupOrder(null);
+    }
 
     const controller = new AbortController();
     // Generous but bounded — a real fetch failure/hang should still surface an
@@ -240,15 +273,21 @@ export default function ClientTableMap() {
         const orderData = await res.json();
         const order = orderData.orders?.[0] || orderData.data?.[0] || null;
         setPopupOrder(order);
-        // A table marked occupied with genuinely no matching order is itself
-        // unexpected — surface it instead of silently showing "add items".
-        if (!order) setPopupError(true);
-      } else {
+        if (order) {
+          getDB().ordersCache.put({ cacheKey, data: [order], cachedAt: Date.now() }).catch(() => {});
+        } else if (!cached?.data?.[0]) {
+          // A table marked occupied with genuinely no matching order (and
+          // nothing usable in cache) is itself unexpected — surface it
+          // instead of silently showing "add items".
+          setPopupError(true);
+        }
+      } else if (!cached?.data?.[0]) {
         setPopupError(true);
       }
     } catch {
-      // Real network/timeout failure — distinct from "table has no order yet"
-      setPopupError(true);
+      // Real network/timeout failure — only show the error state if we
+      // don't already have cached data on screen to fall back on.
+      if (!cached?.data?.[0]) setPopupError(true);
     } finally {
       setPopupLoading(false);
     }

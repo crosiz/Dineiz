@@ -36,13 +36,15 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
 // ─── USB / ESC/POS PRINTER EXECUTION ─────────────────────────────────────────
 
 async function executeUsbPrint(type: PrintDocumentType, data: PrintOrder) {
-  let device = await getPersistedPrinter();
+  // Only ever reconnect to an already-paired device here. requestDevice()
+  // (the picker dialog) requires a direct, synchronous user gesture — it can
+  // never succeed when called from this auto-print path, which always runs
+  // after an awaited order-creation request. Pairing happens explicitly via
+  // the Connect Printer action in Settings/Admin (see usePrinter.ts), which
+  // calls requestPrinter() directly from a click handler.
+  const device = await getPersistedPrinter();
   if (!device) {
-    const { requestPrinter } = await import('./printer/webusb');
-    device = await requestPrinter();
-  }
-  if (!device) {
-    throw new Error('No thermal printer connected or paired. Please connect in Settings.');
+    throw new Error('No thermal printer paired. Connect one in Settings before printing.');
   }
 
   let bytes: Uint8Array;
