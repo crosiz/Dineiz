@@ -419,6 +419,9 @@ importers:
 
   apps/pos:
     dependencies:
+      '@dineiz/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@dineiz/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
