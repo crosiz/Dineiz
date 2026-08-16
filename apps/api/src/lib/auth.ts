@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@dineiz/db";
-import { redis } from "./redis";
+import { upstash } from "./redis";
 
 // Build the list of trusted origins from env + sensible dev defaults.
 // TRUSTED_ORIGINS is a comma-separated list, e.g.:
@@ -68,20 +68,28 @@ export const auth = betterAuth({
         },
     },
 
+    // Uses Upstash's REST client (HTTPS per call) rather than a persistent
+    // ioredis/TCP connection. Sessions live only here (no DB fallback — see
+    // storeInDb handling in better-auth's internal adapter), so this needs
+    // to be the reliable path; a stateless HTTPS call per command sidesteps
+    // long-lived-socket resets that a persistent TCP connection is prone to.
+    // The REST client auto-JSON-parses values on get(), but better-auth
+    // expects the raw string it stored — re-stringify non-string results.
     secondaryStorage: {
         get: async (key) => {
-            const value = await redis.get(key);
-            return value ? value : null;
+            const value = await upstash.get<unknown>(key);
+            if (value === null || value === undefined) return null;
+            return typeof value === "string" ? value : JSON.stringify(value);
         },
         set: async (key, value, ttl) => {
             if (ttl) {
-                await redis.set(key, value, "EX", ttl);
+                await upstash.set(key, value, { ex: ttl });
             } else {
-                await redis.set(key, value);
+                await upstash.set(key, value);
             }
         },
         delete: async (key) => {
-            await redis.del(key);
+            await upstash.del(key);
         }
     }
 });

@@ -5,6 +5,7 @@ import twilio from 'twilio';
 // Create a Redis connection
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
+  lazyConnect: true,
 });
 connection.on('error', (err) => {
   console.error('Redis connection error in sms.worker.ts:', err.message || err);

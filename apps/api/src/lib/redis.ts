@@ -24,9 +24,11 @@ export const redis = new IORedis(env.REDIS_URL, {
   connectTimeout: 8000,
   commandTimeout: 5000,
   maxRetriesPerRequest: 1,
+  lazyConnect: true,
 });
 
-// Preferred client for standard kv operations
+// Preferred client for standard kv operations, and what auth.ts's
+// secondaryStorage (session storage) uses — see the comment there for why.
 export const upstash = new UpstashRedis({
   url: env.UPSTASH_REDIS_REST_URL,
   token: env.UPSTASH_REDIS_REST_TOKEN,

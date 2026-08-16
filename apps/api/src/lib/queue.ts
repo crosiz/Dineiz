@@ -5,15 +5,18 @@ import { runBirthdayRewardsJob } from '../jobs/birthdayRewards';
 import { deliverZapierWebhook } from '../jobs/zapier';
 import { runErpSync } from '../jobs/erpSync';
 import { runAnalyticsAggregationJob } from '../jobs/analyticsSync';
-import { runReportsJob } from '../jobs/reportsWorker';
 import { runAnomalyJob } from '../jobs/anomalyWorker';
 import { runForecastGeneration } from '../jobs/forecastWorker';
 import { runCustomersSegmentsJob } from '../jobs/customersWorker';
 
-// Shared Redis connection for BullMQ
+// Shared Redis connection for BullMQ.
+// lazyConnect: don't open this connection until a queue is actually used
+// (.add(), a worker polling, etc.) — reduces standing connection count
+// against a connection-limited Redis plan when jobs aren't in play.
 const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
   keepAlive: 10000,
+  lazyConnect: true,
 });
 connection.on('error', (err) => {
   console.error('Redis connection error in queue.ts:', err.message || err);
@@ -58,8 +61,23 @@ export const forecastQueue = catchError(new Queue('forecast', { connection }), '
 export const aggregatorsQueue = catchError(new Queue('aggregators', { connection }), 'aggregatorsQueue');
 export const customersQueue = catchError(new Queue('customers', { connection }), 'customersQueue');
 
+// Each Worker needs its own dedicated (duplicated) blocking Redis connection,
+// so running all of them locally opens ~10 extra connections on top of the
+// queues/socket.io/auth clients. Against a connection-limited Redis instance
+// (e.g. a shared dev Upstash plan) that's enough to cause thrashing/resets
+// across every client sharing it — including the auth session store, which
+// has no DB fallback. Set DISABLE_QUEUE_WORKERS=true locally to skip starting
+// background job processors when you don't need them (e.g. just testing sign-in/UI).
+const workersEnabled = process.env.DISABLE_QUEUE_WORKERS !== 'true';
+if (!workersEnabled) {
+  console.log('DISABLE_QUEUE_WORKERS=true — skipping background job workers');
+}
+
 // Export a generic function to create new workers easily
 export function createWorker(queueName: string, processor: any) {
+  if (!workersEnabled) {
+    return { on: () => {} } as unknown as Worker;
+  }
   return catchError(new Worker(queueName, processor, { connection }), `Worker-${queueName}`);
 }
 
@@ -114,10 +132,10 @@ createWorker('analytics', async (job: any) => {
   return runAnalyticsAggregationJob(tenantId, branchId, new Date(date));
 });
 
-// Reports Generation Worker
-createWorker('reports', async (job: any) => {
-  return runReportsJob();
-});
+// Reports Generation Worker — registered in jobs/reportsWorker.ts's
+// initReportsWorker() instead (it has proper job-name matching + retry/
+// backoff config); this used to be duplicated here as a second, redundant
+// consumer of the same 'reports' queue.
 
 // Anomalies Detection Worker
 createWorker('anomalies', async (job: any) => {

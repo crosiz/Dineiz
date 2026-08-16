@@ -260,13 +260,17 @@ async function start() {
     initSocketIO(app.server);
     app.log.info('Socket.IO v4 initialized with Redis adapter');
 
-    // Background jobs
-    initSmsWorker();
-    initAnomalyWorker();
-    initReportsWorker();
+    // Background jobs (each opens its own dedicated Redis connection for
+    // blocking reads — skip them locally via DISABLE_QUEUE_WORKERS=true,
+    // see lib/queue.ts for why)
+    if (process.env.DISABLE_QUEUE_WORKERS !== 'true') {
+      initSmsWorker();
+      initAnomalyWorker();
+      initReportsWorker();
 
-    // Schedule repeatable jobs
-    anomalyQueue.add('detectAnomalies', {}, { repeat: { pattern: '*/15 * * * *' } });
+      // Schedule repeatable jobs
+      anomalyQueue.add('detectAnomalies', {}, { repeat: { pattern: '*/15 * * * *' } });
+    }
     reportsQueue.add('runReportsJob', {}, { repeat: { pattern: '* * * * *' } });
 
     // Run abandoned shifts check every hour

@@ -46,14 +46,27 @@ let io: SocketIOServer | null = null;
  * Should be called exactly once during server startup, after Fastify is ready.
  */
 export function initSocketIO(httpServer: HttpServer): SocketIOServer {
-  const pubClient = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-  const subClient = pubClient.duplicate();
+  // The Redis adapter is only needed to fan events out across multiple API
+  // instances. A single local dev process doesn't need it — and each of its
+  // pub/sub clients is another persistent connection against a
+  // connection-limited Redis plan. Skip it locally via DISABLE_QUEUE_WORKERS
+  // (same flag as lib/queue.ts) and fall back to Socket.IO's in-memory adapter.
+  const useRedisAdapter = process.env.DISABLE_QUEUE_WORKERS !== 'true';
+  let adapter: ReturnType<typeof createAdapter> | undefined;
+  if (useRedisAdapter) {
+    const pubClient = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    const subClient = pubClient.duplicate();
 
-  pubClient.on('error', (e) => console.error('[Socket.IO Redis pub]', e.message));
-  subClient.on('error', (e) => console.error('[Socket.IO Redis sub]', e.message));
+    pubClient.on('error', (e) => console.error('[Socket.IO Redis pub]', e.message));
+    subClient.on('error', (e) => console.error('[Socket.IO Redis sub]', e.message));
+
+    adapter = createAdapter(pubClient, subClient);
+  } else {
+    console.log('DISABLE_QUEUE_WORKERS=true — Socket.IO using in-memory adapter (no Redis)');
+  }
 
   io = new SocketIOServer(httpServer, {
-    adapter: createAdapter(pubClient, subClient),
+    ...(adapter ? { adapter } : {}),
     cors: {
       origin: [
         process.env.DASHBOARD_URL ?? 'http://localhost:3000',

@@ -8,7 +8,12 @@ import Redis from "ioredis";
 import { smsQueue } from "../../jobs/sms.worker";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+// lazyConnect: this route file's Redis client is only needed once a mobile
+// OTP request comes in — no reason to hold a connection open (and eat into
+// the shared Redis plan's connection budget) for every other request path.
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  lazyConnect: true,
+});
 redis.on('error', (err) => {
   console.error('Redis connection error in mobile.ts:', err.message || err);
 });
