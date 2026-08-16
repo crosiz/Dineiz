@@ -761,7 +761,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
       )}
       {/* Sub-header Toolbar */}
-      <div className="px-margin-desktop py-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E8F0]">
+      <div className="px-8 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E8F0]">
         
         {/* Left: Filter Buttons / Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
@@ -838,7 +838,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       </div>
 
         {/* Order Cards Area */}
-        <div className="px-margin-desktop mt-2">
+        <div className="px-8 mt-2">
           {/* History-only first-load spinner — live always shows cached data instantly */}
           {isLoading && <div className="text-[#94A3B8] text-center py-10 font-medium">Loading order history...</div>}
           {!isLoading && filteredOrders.length === 0 && <div className="text-[#94A3B8] text-center py-10 font-medium">No orders found.</div>}
