@@ -5,7 +5,6 @@ import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useTopBar } from '@/hooks/useTopBar';
 import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
-import QuickMenu from '@/components/QuickMenu';
 import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';

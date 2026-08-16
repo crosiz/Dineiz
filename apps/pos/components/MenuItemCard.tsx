@@ -57,9 +57,12 @@ interface MenuItemCardProps {
   cartQty: number
   onTap: (item: any) => void
   viewMode?: ViewMode
+  /** When provided, renders an 86/restore toggle a cashier can tap without opening the item. */
+  onToggleAvailable?: (item: any, nextAvailable: boolean) => void
+  isTogglingAvailable?: boolean
 }
 
-export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuItemCardProps) {
+export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggleAvailable, isTogglingAvailable }: MenuItemCardProps) {
   const theme = getTheme(item.categoryName || '');
   const unavailable = item.isAvailable === false;
   const hasOptions = (item.variations && item.variations.length > 0) || (item.addOns && item.addOns.length > 0);
@@ -68,6 +71,21 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
   const isLarge = viewMode === 'large';
   const isDetailed = viewMode === 'detailed';
   const isMinimal = viewMode === 'minimal';
+
+  // Rendered inline (not absolutely positioned) next to each layout's price/options
+  // row, so it never collides with the SPICY/POPULAR/cart-qty corner badges.
+  const availabilityToggle = onToggleAvailable ? (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggleAvailable(item, unavailable); }}
+      disabled={isTogglingAvailable}
+      title={unavailable ? 'Mark available' : 'Mark sold out (86)'}
+      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border transition-colors disabled:opacity-50 ${unavailable ? 'bg-[#0F172A] border-[#0F172A] text-white hover:brightness-125' : 'bg-white border-[#E2E8F0] text-[#94A3B8] hover:text-[#DC2626] hover:border-[#F5C6C2]'}`}
+    >
+      <span className="material-symbols-outlined text-[13px]">
+        {isTogglingAvailable ? 'hourglass_top' : unavailable ? 'restart_alt' : 'block'}
+      </span>
+    </button>
+  ) : null;
 
   // --- DETAILED (SHOWCASE) STYLE ---
   if (isDetailed) {
@@ -112,11 +130,14 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
             <p className="text-[#D97706] font-bold text-[16px] tracking-tight">
               PKR {item.basePrice.toLocaleString('en-PK')}
             </p>
-            {hasOptions && !unavailable && (
-              <span className="bg-[#F1F5F9] text-[#475569] text-[9px] font-bold px-2 py-1 rounded-md tracking-wider border border-[#CBD5E1]">
-                OPTIONS
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {hasOptions && !unavailable && (
+                <span className="bg-[#F1F5F9] text-[#475569] text-[9px] font-bold px-2 py-1 rounded-md tracking-wider border border-[#CBD5E1]">
+                  OPTIONS
+                </span>
+              )}
+              {availabilityToggle}
+            </div>
           </div>
         </div>
       </button>
@@ -156,7 +177,8 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
           </p>
         </div>
 
-        <div className="shrink-0 flex items-center pr-1">
+        <div className="shrink-0 flex items-center gap-1.5 pr-1">
+          {availabilityToggle}
           {cartQty > 0 && (
             <div className="w-6 h-6 bg-[var(--pos-primary,#F59E0B)] text-white rounded-full flex items-center justify-center font-bold text-[12px] shadow-sm">
               {cartQty}
@@ -214,11 +236,14 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
             <p className="text-amber-300 font-bold text-[16px] drop-shadow-md">
               PKR {item.basePrice.toLocaleString('en-PK')}
             </p>
-            {hasOptions && !unavailable && (
-              <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-2 py-1 rounded-md tracking-wide">
-                OPTIONS
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {hasOptions && !unavailable && (
+                <span className="bg-white/20 backdrop-blur-md border border-white/30 text-white text-[10px] font-bold px-2 py-1 rounded-md tracking-wide">
+                  OPTIONS
+                </span>
+              )}
+              {availabilityToggle}
+            </div>
           </div>
         </div>
         
@@ -267,13 +292,14 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
             <p className="text-[#D97706] font-bold text-[14px]">
               PKR {item.basePrice.toLocaleString('en-PK')}
             </p>
-            <div className="flex gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0">
               {item.name.toLowerCase().includes('popular') && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide">POP</span>}
               {hasOptions && !unavailable && (
                 <span className="bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1] text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide">
                   OPTIONS
                 </span>
               )}
+              {availabilityToggle}
             </div>
           </div>
         </div>
@@ -353,11 +379,14 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid' }: MenuIt
               PKR {item.basePrice.toLocaleString('en-PK')}
             </p>
           </div>
-          {hasOptions && !unavailable && (
-            <span className="bg-[#F1F5F9] text-[#475569] text-[9px] font-bold px-1.5 py-1 rounded-md tracking-wider border border-[#CBD5E1]">
-              OPTIONS
-            </span>
-          )}
+          <div className="flex items-center gap-1.5">
+            {hasOptions && !unavailable && (
+              <span className="bg-[#F1F5F9] text-[#475569] text-[9px] font-bold px-1.5 py-1 rounded-md tracking-wider border border-[#CBD5E1]">
+                OPTIONS
+              </span>
+            )}
+            {availabilityToggle}
+          </div>
         </div>
       </div>
     </button>

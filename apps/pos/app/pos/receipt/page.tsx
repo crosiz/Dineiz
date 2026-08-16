@@ -66,7 +66,7 @@ function ReceiptPageContent() {
 
   return (
     <div style={{
-      height: '100%', overflow: 'auto', backgroundColor: '#0A0A0F',
+      height: '100%', overflow: 'auto', backgroundColor: '#F8FAFC',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'flex-start', padding: '24px 16px',
     }}>
@@ -74,7 +74,7 @@ function ReceiptPageContent() {
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <div style={{
           width: '80px', height: '80px', borderRadius: '50%',
-          backgroundColor: 'rgba(16,185,129,0.12)',
+          backgroundColor: '#E9F7F0',
           border: '2.5px solid #10B981',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto 12px',
@@ -84,7 +84,7 @@ function ReceiptPageContent() {
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
-        <h2 style={{ color: 'white', fontSize: '22px', fontWeight: 700, margin: 0 }}>
+        <h2 style={{ color: '#0F172A', fontSize: '22px', fontWeight: 700, margin: 0 }}>
           Payment Confirmed
         </h2>
         <p style={{ color: '#64748B', fontSize: '13px', marginTop: '4px' }}>
@@ -95,18 +95,19 @@ function ReceiptPageContent() {
       {/* Receipt card */}
       <div style={{
         width: '100%', maxWidth: '420px',
-        backgroundColor: '#111827',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderTop: '3px solid var(--pos-primary, #FF5722)',
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderTop: '3px solid var(--pos-primary, #F59E0B)',
         borderRadius: '16px',
         padding: '20px',
         marginBottom: '16px',
+        boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)',
         fontFamily: 'Courier New, monospace',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
           <img src="/brand/dineiz-receipt-logo.svg" alt="Dineiz Receipt Logo" style={{ height: '44px', objectFit: 'contain' }} />
         </div>
-        <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '14px', color: 'white', margin: '0 0 4px' }}>
+        <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '14px', color: '#0F172A', margin: '0 0 4px' }}>
           {branding.restaurantName ?? 'Dineiz Go'}
         </p>
         {branding.fbrNtn && (
@@ -115,18 +116,16 @@ function ReceiptPageContent() {
           </p>
         )}
 
-        <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', margin: '10px 0' }} />
+        <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
 
         {order?.items?.map((item: any, i: number) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#94A3B8', marginBottom: '4px' }}>
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>
             <span>{item.quantity}× {item.itemName}</span>
-            <span style={{ color: 'white' }}>PKR {item.subtotal?.toLocaleString('en-PK')}</span>
+            <span style={{ color: '#0F172A' }}>PKR {item.subtotal?.toLocaleString('en-PK')}</span>
           </div>
         ))}
 
-        <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', margin: '10px 0' }} />
-
-        <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', margin: '10px 0' }} />
+        <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B' }}>
           <span>Subtotal</span><span>PKR {Math.round(order?.totalAmount ?? 0).toLocaleString('en-PK')}</span>
@@ -140,15 +139,15 @@ function ReceiptPageContent() {
           <span>{order?.appliedTaxLabel || 'GST'}</span>
           <span>PKR {Math.round(order?.taxAmount ?? 0).toLocaleString('en-PK')}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: 'white', marginTop: '6px' }}>
-          <span>TOTAL</span><span style={{ color: 'var(--pos-primary, #FF5722)' }}>PKR {Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
+          <span>TOTAL</span><span style={{ color: 'var(--pos-primary, #F59E0B)' }}>PKR {Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}</span>
         </div>
         {method === 'CASH' && amountPaid > 0 && (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
               <span>Cash Received</span><span>PKR {Math.round(amountPaid).toLocaleString('en-PK')}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#10B981', marginTop: '2px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#0F7A55', marginTop: '2px' }}>
               <span>Change</span><span>PKR {Math.round(change).toLocaleString('en-PK')}</span>
             </div>
           </>
@@ -156,8 +155,8 @@ function ReceiptPageContent() {
 
         {branding.receiptFooter && (
           <>
-            <div style={{ borderTop: '1px dashed rgba(255,255,255,0.1)', margin: '10px 0' }} />
-            <p style={{ textAlign: 'center', fontSize: '10px', color: '#4B5563', fontStyle: 'italic' }}>
+            <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
+            <p style={{ textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontStyle: 'italic' }}>
               {branding.receiptFooter}
             </p>
           </>
@@ -168,13 +167,13 @@ function ReceiptPageContent() {
       <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button
           onClick={() => window.print()}
-          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#1E293B', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
+          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
         >
           🖨 Print
         </button>
         <button
           onClick={() => {/* WhatsApp flow */}}
-          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#065F46', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
+          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#0F7A55', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
         >
           📱 WhatsApp
         </button>
@@ -184,13 +183,13 @@ function ReceiptPageContent() {
         <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
           <button
             onClick={async () => { await markCleaning(); router.push('/pos/tables') }}
-            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#1E293B', border: '1px solid rgba(245,158,11,0.3)', color: '#F59E0B', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
+            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFF8EC', border: '1px solid rgba(245,158,11,0.3)', color: '#B4770B', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
           >
             🧹 Mark as Cleaning
           </button>
           <button
             onClick={() => router.push(`/pos/order?type=dine-in&tableId=${tableId}&tableLabel=${tableLabel}`)}
-            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#1E293B', border: '1px solid rgba(255,255,255,0.08)', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
+            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
           >
             + New Order {tableLabel}
           </button>
@@ -203,10 +202,10 @@ function ReceiptPageContent() {
         style={{
           width: '100%', maxWidth: '420px', height: '52px',
           borderRadius: '12px', border: 'none',
-          backgroundColor: 'var(--pos-primary, #FF5722)',
+          backgroundColor: 'var(--pos-primary, #F59E0B)',
           color: 'white', fontSize: '15px', fontWeight: 700,
           cursor: 'pointer', marginBottom: '12px',
-          boxShadow: '0 4px 14px rgba(255,87,34,0.35)',
+          boxShadow: '0 4px 14px rgba(245,158,11,0.3)',
         }}
       >
         ⚡ Start New Order
@@ -215,12 +214,12 @@ function ReceiptPageContent() {
       {/* Auto-redirect countdown */}
       {autoRedirect && (
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#4B5563', fontSize: '12px', margin: '0 0 4px' }}>
+          <p style={{ color: '#94A3B8', fontSize: '12px', margin: '0 0 4px' }}>
             Returning to home in {countdown}s
           </p>
           <button
             onClick={() => setAutoRedirect(false)}
-            style={{ background: 'none', border: 'none', color: '#374151', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
+            style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
           >
             Cancel auto-redirect
           </button>
@@ -239,7 +238,7 @@ function ReceiptPageContent() {
 
 export default function ReceiptPage() {
   return (
-    <Suspense fallback={<div style={{ color: 'white', textAlign: 'center', paddingTop: '50px' }}>Loading...</div>}>
+    <Suspense fallback={<div style={{ color: '#0F172A', textAlign: 'center', paddingTop: '50px' }}>Loading...</div>}>
       <ReceiptPageContent />
     </Suspense>
   )

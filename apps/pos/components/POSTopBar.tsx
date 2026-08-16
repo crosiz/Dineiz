@@ -307,28 +307,28 @@ export function POSTopBar() {
 
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-[#140d06] border border-[#534434]/60 rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.8)] overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
 
             <div className="p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-5">
-                <span className="material-symbols-outlined text-red-500 text-[32px]">logout</span>
+              <div className="w-16 h-16 rounded-full bg-[#FDECEC] border border-[#F5C6C2] flex items-center justify-center mb-5">
+                <span className="material-symbols-outlined text-[#DC2626] text-[32px]">logout</span>
               </div>
-              <h3 className="font-bold text-[#f0e0d1] text-[22px] clash-display tracking-wide mb-2">Sign Out of POS?</h3>
-              <p className="text-[#d8c3ad] text-[14px] mb-8">
-                Your session will be closed, but your <strong className="text-[var(--pos-primary)]">shift will remain active</strong> for when you return.
+              <h3 className="font-bold text-[#0F172A] text-[22px] clash-display tracking-wide mb-2">Sign Out of POS?</h3>
+              <p className="text-[#64748B] text-[14px] mb-8">
+                Your session will be closed, but your <strong className="text-[var(--pos-primary,#F59E0B)]">shift will remain active</strong> for when you return.
               </p>
 
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setShowSignOutConfirm(false)}
-                  className="flex-1 h-[52px] rounded-[14px] border border-[#534434] text-[#d8c3ad] hover:text-[#f0e0d1] hover:bg-[#1C1410] active:scale-[0.98] transition-all font-semibold text-[15px]"
+                  className="flex-1 h-[52px] rounded-[14px] border border-[#E2E8F0] text-[#475569] hover:bg-[#F1F5F9] active:scale-[0.98] transition-all font-semibold text-[15px]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="flex-1 h-[52px] rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-[15px] active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(239,68,68,0.2)]"
+                  className="flex-1 h-[52px] rounded-[14px] bg-[#DC2626] hover:bg-[#C4362E] text-white font-bold text-[15px] active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(220,38,38,0.25)]"
                 >
                   Sign Out
                 </button>
@@ -341,22 +341,22 @@ export function POSTopBar() {
 
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-[#140d06] border border-[#534434]/60 rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.8)] overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
 
             <div className="p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-5">
-                <span className="material-symbols-outlined text-orange-500 text-[32px]">coffee</span>
+              <div className="w-16 h-16 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 border border-[var(--pos-primary,#F59E0B)]/30 flex items-center justify-center mb-5">
+                <span className="material-symbols-outlined text-[var(--pos-primary,#F59E0B)] text-[32px]">coffee</span>
               </div>
-              <h2 className="font-bold text-[#f0e0d1] text-[22px] clash-display tracking-wide mb-2">Take a Break?</h2>
-              <p className="text-[#d8c3ad] text-[14px] leading-relaxed mb-8 max-w-[280px]">
+              <h2 className="font-bold text-[#0F172A] text-[22px] clash-display tracking-wide mb-2">Take a Break?</h2>
+              <p className="text-[#64748B] text-[14px] leading-relaxed mb-8 max-w-[280px]">
                 You'll be locked out temporarily. Your shift stays active and all orders continue.
               </p>
 
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setShowTakeBreakConfirm(false)}
-                  className="flex-1 h-[48px] rounded-[14px] border border-[#534434] text-[#f0e0d1] font-semibold text-[15px] hover:bg-[#261e15] active:scale-[0.98] transition-all"
+                  className="flex-1 h-[48px] rounded-[14px] border border-[#E2E8F0] text-[#475569] font-semibold text-[15px] hover:bg-[#F1F5F9] active:scale-[0.98] transition-all"
                 >
                   Cancel
                 </button>

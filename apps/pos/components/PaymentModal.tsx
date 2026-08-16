@@ -324,13 +324,13 @@ export default function PaymentModal({
 
   if (showSuccess) {
     return (
-      <div className="fixed inset-0 bg-[#000000F2] flex items-center justify-center p-6 z-[60] animate-in fade-in duration-300 backdrop-blur-sm">
+      <div className="fixed inset-0 bg-white flex items-center justify-center p-6 z-[60] animate-in fade-in duration-300">
         <div className="text-center space-y-6 max-w-md animate-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-[var(--pos-orange)] rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_var(--pos-orange)] opacity-80">
-            <span className="material-symbols-outlined text-white text-[40px] font-bold">check</span>
+          <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-[#10B981] text-[40px] font-bold">check</span>
           </div>
-          <h2 className="text-3xl font-bold text-white">Payment Successful</h2>
-          <p className="text-muted text-lg">Order #{orderId} has been completed.</p>
+          <h2 className="text-3xl font-bold text-[#0F172A]">Payment Successful</h2>
+          <p className="text-[#64748B] text-lg">Order #{orderId} has been completed.</p>
         </div>
       </div>
     );

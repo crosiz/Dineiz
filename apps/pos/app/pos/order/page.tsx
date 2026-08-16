@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
 import { useMenu, groupByCategory } from '@/hooks/useMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -192,6 +193,34 @@ function OrderEntryPageContent() {
   };
 
   const { data: menuItems = [], isLoading: menuLoading } = useMenu(session?.tenantId || 'DEFAULT_TENANT', session?.branchId);
+  const menuQueryClient = useQueryClient();
+  const menuQueryKey = ['menu', session?.tenantId || 'DEFAULT_TENANT', session?.branchId];
+  const [togglingItemId, setTogglingItemId] = useState<string | null>(null);
+
+  // Lets a cashier 86 an item straight from the menu grid instead of routing
+  // through the dashboard — hits the same endpoint (ALL_STAFF-authorized)
+  // that BRANCH_MANAGER availability toggles use.
+  const handleToggleAvailability = async (item: CachedMenuItem, nextAvailable: boolean) => {
+    setTogglingItemId(item.id);
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+      const res = await fetch(`${API_URL}/api/v1/menu/items/${item.id}/availability`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+        body: JSON.stringify({ isAvailable: nextAvailable, branchId: session?.branchId }),
+      });
+      if (!res.ok) throw new Error('Failed to update item availability');
+
+      menuQueryClient.setQueryData<CachedMenuItem[]>(menuQueryKey, (prev) =>
+        (prev || []).map((m) => (m.id === item.id ? { ...m, isAvailable: nextAvailable } : m))
+      );
+      toast.success(nextAvailable ? `${item.name} marked available` : `${item.name} marked sold out`);
+    } catch {
+      toast.error('Could not update availability — check your connection.');
+    } finally {
+      setTogglingItemId(null);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -915,6 +944,8 @@ function OrderEntryPageContent() {
                   cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                   onTap={handleItemTap}
                   viewMode={viewMode}
+                  onToggleAvailable={handleToggleAvailability}
+                  isTogglingAvailable={togglingItemId === item.id}
                 />
               ))
             )}
