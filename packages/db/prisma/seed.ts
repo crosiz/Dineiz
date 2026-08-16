@@ -8,6 +8,15 @@ function hashPin(pin: string): string {
   return crypto.createHash('sha256').update(pin).digest('hex')
 }
 
+// Same pattern as branches.service.ts's createBranch() / mobile onboarding —
+// the dashboard's "POS Code" field on a branch card. Without this, seeded
+// branches show "N/A" and can't be linked to a POS terminal.
+function makeBranchCode(city?: string | null): string {
+  const cityCode = city ? city.substring(0, 3).toUpperCase() : 'BRN'
+  const randomStr = crypto.randomBytes(3).toString('hex').toUpperCase()
+  return `SS-${cityCode}-${randomStr}`
+}
+
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }
@@ -132,6 +141,7 @@ async function main() {
       colorHex: BRANCH_COLORS[0],
       initial: 'C',
       taxRate: 15,
+      branchCode: makeBranchCode('Karachi'),
     },
     {
       name: 'Defence Phase 6',
@@ -143,6 +153,7 @@ async function main() {
       colorHex: BRANCH_COLORS[1],
       initial: 'D',
       taxRate: 15,
+      branchCode: makeBranchCode('Karachi'),
     },
     {
       name: 'Gulshan-e-Iqbal',
@@ -154,6 +165,7 @@ async function main() {
       colorHex: BRANCH_COLORS[2],
       initial: 'G',
       taxRate: 15,
+      branchCode: makeBranchCode('Karachi'),
     },
     {
       name: 'North Nazimabad',
@@ -166,6 +178,7 @@ async function main() {
       initial: 'N',
       taxRate: 15,
       isActive: false,
+      branchCode: makeBranchCode('Karachi'),
     },
   ]
 

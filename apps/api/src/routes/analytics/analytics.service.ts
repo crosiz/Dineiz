@@ -1,5 +1,5 @@
 import { prisma, Prisma } from '@dineiz/db';
-import { redis } from '../../lib/redis';
+import { upstash } from '../../lib/redis';
 import { runAnalyticsAggregationJob } from '../../jobs/analyticsSync';
 import { format, addDays, differenceInDays } from 'date-fns';
 
@@ -404,21 +404,39 @@ export async function getDashboardAnalytics(tenantId: string, branchId: string |
     }
   }
 
-  let cached = await redis.mget(...keys);
-  
-  // Find misses and compute
+  // Uses Upstash's REST client (stateless HTTPS per call, values come back
+  // already JSON-parsed) rather than a persistent TCP connection — see
+  // lib/redis.ts / auth.ts for why. Still a read-through cache backed by
+  // Postgres, so a hiccup here should degrade to "recompute everything",
+  // not fail the whole request.
+  const safeMget = async (ks: string[]): Promise<(any | null)[]> => {
+    try {
+      return await upstash.mget(...ks);
+    } catch (err: any) {
+      console.error('[Analytics] Redis mget failed, recomputing from DB:', err.message || err);
+      return new Array(ks.length).fill(null);
+    }
+  };
+
+  let cached = await safeMget(keys);
+
+  // Find misses and compute. Keep the freshly-computed payload in memory too
+  // (keyed by cache key) in case the cache write itself also fails — we
+  // shouldn't lose data we just calculated because Redis is unhappy.
+  const freshlyComputed = new Map<string, any>();
   for (let i = 0; i < keys.length; i++) {
     if (!cached[i]) {
       const parts = keys[i].split(':');
       const bId = parts[2];
       const dStr = parts[3];
       // Compute inline
-      await runAnalyticsAggregationJob(tenantId, bId, new Date(dStr + 'T12:00:00Z'));
+      const payload = await runAnalyticsAggregationJob(tenantId, bId, new Date(dStr + 'T12:00:00Z'));
+      freshlyComputed.set(keys[i], payload);
     }
   }
 
   // Re-fetch to guarantee we have all
-  cached = await redis.mget(...keys);
+  cached = await safeMget(keys);
 
   // Merge payloads
   const result = {
@@ -435,8 +453,8 @@ export async function getDashboardAnalytics(tenantId: string, branchId: string |
   const dailyMap: any = {};
 
   for (let i = 0; i < keys.length; i++) {
-    if (!cached[i]) continue;
-    const payload = JSON.parse(cached[i]!);
+    const payload = cached[i] ?? freshlyComputed.get(keys[i]);
+    if (!payload) continue;
     const parts = keys[i].split(':');
     const bId = parts[2];
     const dStr = parts[3];

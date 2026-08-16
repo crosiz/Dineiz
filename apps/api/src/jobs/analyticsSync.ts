@@ -1,5 +1,5 @@
 import { prisma, Prisma } from '@dineiz/db';
-import { redis } from '../lib/redis';
+import { upstash } from '../lib/redis';
 import { toZonedTime, format } from 'date-fns-tz';
 
 export async function runAnalyticsAggregationJob(tenantId: string, branchId: string, date: Date, tz: string = 'Asia/Karachi') {
@@ -138,5 +138,16 @@ export async function runAnalyticsAggregationJob(tenantId: string, branchId: str
     ttl = 60 * 60 * 24 * 30; // 30 days for older
   }
 
-  await redis.set(key, JSON.stringify(payload), 'EX', ttl);
+  // Uses Upstash's REST client (stateless HTTPS per call) rather than a
+  // persistent TCP connection — see lib/redis.ts / auth.ts for why that
+  // matters here. Still wrapped: this is a cache write for an
+  // already-computed, always-recomputable payload, so a hiccup shouldn't
+  // fail the whole aggregation.
+  try {
+    await upstash.set(key, payload, { ex: ttl });
+  } catch (err: any) {
+    console.error(`[AnalyticsJob] Failed to cache ${key}:`, err.message || err);
+  }
+
+  return payload;
 }

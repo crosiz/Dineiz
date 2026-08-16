@@ -3,7 +3,17 @@ import { prisma } from '@dineiz/db';
 import { createTenantSchema, updateTenantSettingsSchema, createBranchSchema } from '@dineiz/schemas';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { emitBrandingUpdated } from '../../lib/socket';
+
+// Same pattern as branches.service.ts's createBranch() / mobile onboarding —
+// the dashboard's "POS Code" field on a branch card. Without this, branches
+// created here show "N/A" and can't be linked to a POS terminal.
+function makeBranchCode(city?: string | null): string {
+  const cityCode = city ? city.substring(0, 3).toUpperCase() : 'BRN';
+  const randomStr = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `SS-${cityCode}-${randomStr}`;
+}
 
 export const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
   
@@ -102,6 +112,7 @@ export const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
         city,
         address: '',
         phone,
+        branchCode: makeBranchCode(city),
       }
     });
 
