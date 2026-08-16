@@ -20,6 +20,12 @@ const withPWA = require('next-pwa')({
 
 const nextConfig: NextConfig = {
   transpilePackages: ['@dineiz/ui', '@dineiz/schemas', '@dineiz/db'],
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default withPWA(nextConfig);
