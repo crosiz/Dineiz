@@ -1,8 +1,9 @@
 import { prisma } from '@dineiz/db';
-import { generateReportData } from '../routes/reports/reports.service';
-import { generateCSV, generateExcel, generatePDF, generatePDFBuffer } from '../routes/reports/generators';
+import { generateReportData, type ReportData } from '../routes/reports/reports.service';
+import { generateCSV, generateExcel, generatePDF } from '../routes/reports/generators';
+import { getTenantBranding } from '../routes/settings/settings.service';
+import { saveReportFile, buildReportDownloadUrl, cleanupOldReportFiles } from '../lib/reportStorage';
 import { Resend } from 'resend';
-import { v2 as cloudinary } from 'cloudinary';
 import twilio from 'twilio';
 import { Worker, Job } from 'bullmq';
 import { reportsQueue } from '../lib/queue';
@@ -16,21 +17,21 @@ if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_ACCOUNT_SID.startsWith(
   twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 }
 
-cloudinary.config({
-  cloud_name: env.CLOUDINARY_CLOUD_NAME,
-  api_key: env.CLOUDINARY_API_KEY,
-  api_secret: env.CLOUDINARY_API_SECRET
-});
+function buildReportEmailHTML(data: ReportData, reportUrl: string, restaurantName: string) {
+  const summaryRows = (data.summary || [])
+    .map(s => `<tr><td style="padding:4px 12px 4px 0;color:#666;">${s.label}</td><td style="padding:4px 0;font-weight:600;">${typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</td></tr>`)
+    .join('');
 
-function buildReportEmailHTML(data: any, reportUrl: string, branding: any) {
   return `
-    <h2>Your Scheduled Report</h2>
-    <p>Please find attached the scheduled report you requested.</p>
-    <p>You can also <a href="${reportUrl}">download it here</a>.</p>
+    <h2>${data.title}</h2>
+    <p>Scheduled report for <b>${restaurantName}</b> — ${data.period}</p>
+    ${summaryRows ? `<table>${summaryRows}</table>` : ''}
+    <p>The full report is attached${reportUrl ? ` and can also be <a href="${reportUrl}">downloaded here</a>` : ''}.</p>
+    <p style="color:#999;font-size:11px;margin-top:24px;">Powered by Dineiz</p>
   `;
 }
 
-async function sendWhatsAppMessage(phone: string, message: any) {
+async function sendWhatsAppMessage(phone: string, message: { document: { link: string; filename: string }; caption: string }) {
   if (!twilioClient) {
     console.warn('Twilio not configured. Skipping WhatsApp message to', phone);
     return;
@@ -40,7 +41,7 @@ async function sendWhatsAppMessage(phone: string, message: any) {
       from: process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886',
       to: phone.startsWith('whatsapp:') ? phone : `whatsapp:${phone}`,
       body: message.caption,
-      mediaUrl: message.document ? [message.document.link] : undefined
+      mediaUrl: [message.document.link],
     });
     console.log(`Sent WhatsApp message to ${phone}`);
   } catch (err) {
@@ -51,55 +52,42 @@ async function sendWhatsAppMessage(phone: string, message: any) {
 export async function sendScheduledReport(scheduledReport: any) {
   const { reportType, parameters: params, format, recipients, whatsappNumber, tenantId, name: restaurantName, branchId } = scheduledReport;
 
-  // Generate report data
   const data = await generateReportData(tenantId, branchId || undefined, reportType, params as any);
+  const branding = await getTenantBranding(tenantId);
+  if (!branding) throw new Error(`Tenant ${tenantId} not found — cannot render report branding`);
 
-  let reportUrl = '';
-  let pdfBuffer: Buffer | null = null;
+  let buffer: Buffer;
+  let ext: 'pdf' | 'xlsx' | 'csv';
+  let contentType: string;
 
   if (format === 'PDF') {
-    pdfBuffer = await generatePDFBuffer(reportType, data, {});
-    
-    // Upload to Cloudinary for a temporary shareable URL
-    reportUrl = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { resource_type: 'raw', folder: `${tenantId}/reports`, format: 'pdf',
-          public_id: `${reportType}-${Date.now()}`,
-          invalidate: true, tags: ['auto-delete'] },
-        (error, result) => {
-          if (error) {
-            // fallback for mock environment
-            console.error('Cloudinary upload error:', error);
-            resolve(`https://mock-storage.com/${scheduledReport.id}.pdf`);
-          } else {
-            resolve(result?.secure_url || '');
-          }
-        }
-      );
-      if (pdfBuffer) {
-        uploadStream.end(pdfBuffer);
-      } else {
-        resolve(`https://mock-storage.com/${scheduledReport.id}.pdf`);
-      }
-    });
-  } else if (format === 'CSV') {
-    // Generate file
-    const csvString = generateCSV(data);
-    reportUrl = `https://mock-storage.com/${scheduledReport.id}.csv`;
+    buffer = await generatePDF(data, branding);
+    ext = 'pdf';
+    contentType = 'application/pdf';
   } else if (format === 'EXCEL') {
-    const buffer = await generateExcel(data, scheduledReport.name);
-    reportUrl = `https://mock-storage.com/${scheduledReport.id}.xlsx`;
+    buffer = await generateExcel(data, scheduledReport.name);
+    ext = 'xlsx';
+    contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  } else {
+    buffer = Buffer.from(generateCSV(data), 'utf-8');
+    ext = 'csv';
+    contentType = 'text/csv';
   }
 
-  // Send via Resend email
-  if (recipients?.length > 0 && format === 'PDF' && pdfBuffer) {
+  // Store locally (no Cloudinary) so we have a shareable link for the email
+  // body and for WhatsApp media delivery, which requires a public HTTPS URL.
+  const { filename } = saveReportFile(buffer, ext);
+  const reportUrl = buildReportDownloadUrl(filename);
+
+  // Email — real attachment for every format, not just PDF.
+  if (recipients?.length > 0) {
     try {
       await resend.emails.send({
         from: env.EMAIL_FROM,
         to: recipients,
-        subject: `${reportType} Report — ${restaurantName}`,
-        html: buildReportEmailHTML(data, reportUrl, {}),
-        attachments: [{ filename: `${reportType}-report.pdf`, content: pdfBuffer }]
+        subject: `${data.title} — ${restaurantName}`,
+        html: buildReportEmailHTML(data, reportUrl, restaurantName),
+        attachments: [{ filename: `${reportType}-report.${ext}`, content: buffer }]
       });
       console.log(`[ReportsWorker] Sent email to ${recipients.join(', ')}`);
     } catch (e: any) {
@@ -107,23 +95,20 @@ export async function sendScheduledReport(scheduledReport: any) {
     }
   }
 
-  // Send via WhatsApp
-  const whatsappRecipients = whatsappNumber ? [whatsappNumber] : [];
-  if (whatsappRecipients?.length > 0 && format === 'PDF') {
-    for (const phone of whatsappRecipients) {
-      await sendWhatsAppMessage(phone, {
-        type: 'document',
-        document: { link: reportUrl, filename: `${reportType}-report.pdf` },
-        caption: `📊 ${reportType} Report for ${restaurantName}\nGenerated: ${new Date().toLocaleString('en-PK')}`
-      });
-    }
+  // WhatsApp — media messages need a real document (PDF works reliably; a
+  // spreadsheet/CSV as WhatsApp "document" media is also fine for Twilio).
+  if (whatsappNumber) {
+    await sendWhatsAppMessage(whatsappNumber, {
+      document: { link: reportUrl, filename: `${reportType}-report.${ext}` },
+      caption: `📊 ${data.title} for ${restaurantName}\nGenerated: ${new Date().toLocaleString('en-PK')}`
+    });
   }
 
   const now = new Date();
   const nextRun = new Date(now);
   const [hours, minutes] = scheduledReport.runAtTime.split(':').map(Number);
   nextRun.setHours(hours, minutes, 0, 0);
-  
+
   if (scheduledReport.frequency === 'DAILY') {
     nextRun.setDate(nextRun.getDate() + 1);
   } else if (scheduledReport.frequency === 'WEEKLY') {
@@ -131,12 +116,11 @@ export async function sendScheduledReport(scheduledReport: any) {
   } else if (scheduledReport.frequency === 'MONTHLY') {
     nextRun.setMonth(nextRun.getMonth() + 1);
   }
-  
+
   if (nextRun <= now) {
     nextRun.setDate(nextRun.getDate() + 1);
   }
 
-  // Update last run timestamp
   await prisma.scheduledReport.update({
     where: { id: scheduledReport.id },
     data: { lastRunAt: now, nextRunAt: nextRun, lastFileUrl: reportUrl }
@@ -144,8 +128,10 @@ export async function sendScheduledReport(scheduledReport: any) {
 }
 
 export async function runReportsJob() {
+  cleanupOldReportFiles();
+
   const now = new Date();
-  
+
   const dueReports = await prisma.scheduledReport.findMany({
     where: {
       status: 'ACTIVE',
@@ -173,7 +159,7 @@ export const initReportsWorker = () => {
     if (job.name === 'runReportsJob') {
       await runReportsJob();
     }
-  }, { 
+  }, {
     connection: reportsQueue.opts.connection,
     attempts: 3,
     backoff: { type: 'exponential', delay: 1000 }

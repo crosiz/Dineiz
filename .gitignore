@@ -43,6 +43,9 @@ next-env.d.ts
 # Turbo
 .turbo
 
+# Transient locally-generated files (e.g. scheduled report exports)
+apps/api/storage/
+
 # IDEs and Editors
 .idea/
 .vscode/

@@ -3,12 +3,36 @@ import { z } from 'zod';
 import { prisma } from '@dineiz/db';
 import { generateReportData } from './reports.service';
 import { generateCSV, generateExcel, generatePDF } from './generators';
-import { reportsQueue } from '../../lib/queue';
 import { requireTenant } from '../../middleware/auth';
+import { getTenantBranding } from '../settings/settings.service';
+import { resolveReportFile } from '../../lib/reportStorage';
+import fs from 'fs';
+
+// Writes raw bytes straight to the underlying HTTP response, bypassing
+// Fastify's reply.send() serializer pipeline. Necessary because this plugin
+// uses fastify-type-provider-zod, whose serializer JSON-encodes anything
+// passed to reply.send() that isn't matched by a response schema — including
+// Buffers (they'd come out as `{"0":37,"1":80,...}` instead of real bytes).
+// Routes without a zod schema (e.g. shift.routes.ts) don't hit this; ours
+// declare a body schema for validation, so we route the response manually.
+function sendBinary(reply: any, buffer: Buffer, contentType: string, disposition: string) {
+  reply.raw.writeHead(200, {
+    'Content-Type': contentType,
+    'Content-Disposition': disposition,
+    'Content-Length': buffer.length,
+    'Access-Control-Allow-Origin': reply.request?.headers?.origin || '*',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
+  });
+  reply.raw.end(buffer);
+  reply.sent = true;
+}
 
 export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
 
-  // POST /generate - Synchronously generate or queue report
+  // POST /generate - generate the real file and stream it directly to the browser.
+  // No Cloudinary, no intermediate storage — bytes go straight from the
+  // generator to the response, same pattern as shift.handlers.ts.
   app.post(
     '/generate',
     {
@@ -25,29 +49,26 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { tenantId, branchId } = request.user as any;
       const { reportType, reportName, format, parameters } = request.body as any;
-      
-      const actualName = reportName || reportType;
+      const actualName = (reportName || reportType).replace(/[^a-zA-Z0-9-_ ]/g, '').trim() || reportType;
 
       const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
-      
-      // If we are just getting JSON preview data, we could return it directly
-      // but if the format is file, we generate the file
+
       if (format === 'CSV') {
-        const csvString = generateCSV(rawData);
-        // We could upload it or return as Base64. Let's return raw string for frontend blob creation.
-        return { data: csvString, fileType: 'text/csv' };
+        const buffer = Buffer.from(generateCSV(rawData), 'utf-8');
+        sendBinary(reply, buffer, 'text/csv', `attachment; filename="${actualName}.csv"`);
       } else if (format === 'EXCEL') {
         const buffer = await generateExcel(rawData, actualName);
-        return { data: buffer.toString('base64'), fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' };
+        sendBinary(reply, buffer, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', `attachment; filename="${actualName}.xlsx"`);
       } else {
-        // PDF mock upload to cloudinary
-        const fileUrl = await generatePDF(rawData, actualName);
-        return { fileUrl };
+        const branding = await getTenantBranding(tenantId);
+        if (!branding) return reply.status(404).send({ message: 'Tenant not found' });
+        const buffer = await generatePDF(rawData, branding);
+        sendBinary(reply, buffer, 'application/pdf', `attachment; filename="${actualName}.pdf"`);
       }
     }
   );
 
-  // POST /preview - Just get JSON raw data
+  // POST /preview - structured JSON data, rendered as a table client-side (CSV/Excel formats)
   app.post(
     '/preview',
     {
@@ -64,6 +85,56 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
       const { reportType, parameters } = request.body as any;
       const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
       return { data: rawData };
+    }
+  );
+
+  // POST /preview/pdf - the actual "preview": a real rendered PDF, streamed
+  // inline (not attachment) so the browser can display it directly. Same
+  // generator as /generate, zero cloud storage either way.
+  app.post(
+    '/preview/pdf',
+    {
+      preHandler: requireTenant,
+      schema: {
+        body: z.object({
+          reportType: z.string(),
+          parameters: z.any()
+        })
+      }
+    },
+    async (request, reply) => {
+      const { tenantId, branchId } = request.user as any;
+      const { reportType, parameters } = request.body as any;
+
+      const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
+      const branding = await getTenantBranding(tenantId);
+      if (!branding) return reply.status(404).send({ message: 'Tenant not found' });
+      const buffer = await generatePDF(rawData, branding);
+
+      sendBinary(reply, buffer, 'application/pdf', 'inline');
+    }
+  );
+
+  // GET /download/:filename - serves locally-stored scheduled-report files
+  // (see lib/reportStorage.ts). Token-based filename, no auth required since
+  // this is also the link Twilio/WhatsApp fetches, and Resend email links.
+  app.get(
+    '/download/:filename',
+    {
+      schema: { params: z.object({ filename: z.string() }) }
+    },
+    async (request, reply) => {
+      const { filename } = request.params as { filename: string };
+      const filePath = resolveReportFile(filename);
+      if (!filePath) return reply.status(404).send({ message: 'Report file not found or expired' });
+
+      const ext = filename.split('.').pop();
+      const contentType = ext === 'pdf' ? 'application/pdf'
+        : ext === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'text/csv';
+
+      const buffer = fs.readFileSync(filePath);
+      sendBinary(reply, buffer, contentType, `attachment; filename="report.${ext}"`);
     }
   );
 
@@ -98,7 +169,7 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { tenantId, branchId } = request.user as any;
       const body = request.body as any;
-      
+
       const newReport = await prisma.scheduledReport.create({
         data: {
           tenantId,
@@ -117,7 +188,7 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
       return newReport;
     }
   );
-  
+
   // PUT /scheduled/:id/toggle - Toggle active/paused
   app.put(
     '/scheduled/:id/toggle',
@@ -136,10 +207,10 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
       const { tenantId } = request.user as any;
       const { id } = request.params as any;
       const body = request.body as any;
-      
+
       const existing = await prisma.scheduledReport.findFirst({ where: { id, tenantId }});
       if (!existing) return reply.status(404).send({ message: 'Not found' });
-      
+
       const updated = await prisma.scheduledReport.update({
         where: { id },
         data: { status: body.status }
@@ -162,10 +233,10 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request, reply) => {
       const { tenantId } = request.user as any;
       const { id } = request.params as any;
-      
+
       const existing = await prisma.scheduledReport.findFirst({ where: { id, tenantId }});
       if (!existing) return reply.status(404).send({ message: 'Not found' });
-      
+
       await prisma.scheduledReport.delete({ where: { id } });
       return { success: true };
     }
@@ -193,7 +264,7 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     const tenantId = request.user!.tenantId!;
     const start = new Date(date); start.setHours(0,0,0,0);
     const end = new Date(date); end.setHours(23,59,59,999);
-    
+
     const orders = await prisma.order.findMany({
       where: { tenantId, branchId, status: 'COMPLETED', createdAt: { gte: start, lte: end } },
       include: { payments: true, items: true }
@@ -206,12 +277,12 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
     const tenantId = request.user!.tenantId!;
     const start = new Date(from);
     const end = new Date(to);
-    
+
     const orders = await prisma.order.findMany({
       where: { tenantId, branchId, status: 'COMPLETED', createdAt: { gte: start, lte: end } },
       include: { payments: true }
     });
-    
+
     return reply.send({ from, to, ordersCount: orders.length, orders });
   });
 

@@ -1,97 +1,194 @@
 import ExcelJS from 'exceljs';
+import type { ReportData } from './reports.service';
 
-// Convert JSON Data to CSV string
-export function generateCSV(data: any): string {
-  if (!data) return '';
-  
-  if (data.shifts && Array.isArray(data.shifts)) {
-    // It's Shift Balance Report
-    const header = 'Date,Cashier,Branch,Opening Float,Cash Orders,Card Orders,Total Revenue,Closing Cash Entered,Expected Cash,Variance,Status,Notes\n';
-    const rows = data.shifts.map((s: any) => 
-      `${s.date},"${s.cashier}","${s.branch}",${s.openingFloat},${s.cashOrders},${s.cardOrders},${s.totalRevenue},${s.closingCashEntered},${s.expectedCash},${s.variance},${s.status},"${s.notes}"`
-    ).join('\n');
-    return header + rows;
-  }
-  
-  if (data.totalGrossRevenue !== undefined) {
-    // It's Tax Report
-    return `Period,Total Gross Revenue,Taxable Revenue,Non-Taxable Revenue,Cash Tax Collected,Card Tax Collected,Total Tax Collected,FBR Invoice Range\n` +
-           `"${data.period}",${data.totalGrossRevenue},${data.taxableRevenue},${data.nonTaxableRevenue},${data.cashTaxCollected},${data.cardTaxCollected},${data.totalTaxCollected},"${data.fbrInvoiceRange}"`;
-  }
-  
-  return JSON.stringify(data);
+type Branding = {
+  restaurantName: string;
+  logoUrl?: string | null;
+  primaryColor: string;
+};
+
+function fmtValue(v: any): string {
+  if (typeof v === 'number') return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return v ?? '-';
 }
 
-// Convert JSON Data to Excel Buffer
-export async function generateExcel(data: any, reportName: string): Promise<Buffer> {
+// Convert unified ReportData to a CSV string.
+export function generateCSV(data: ReportData): string {
+  const lines: string[] = [];
+  lines.push(`"${data.title}"`);
+  lines.push(`"${data.period}"`);
+  lines.push('');
+
+  if (data.summary?.length) {
+    for (const s of data.summary) lines.push(`"${s.label}",${JSON.stringify(fmtValue(s.value))}`);
+    lines.push('');
+  }
+
+  if (data.columns?.length && data.rows) {
+    lines.push(data.columns.map(c => `"${c.label}"`).join(','));
+    for (const row of data.rows) {
+      lines.push(data.columns.map(c => JSON.stringify(row[c.key] ?? '')).join(','));
+    }
+    if (data.totals) {
+      lines.push(data.columns.map(c => (c.key in data.totals! ? JSON.stringify(fmtValue(data.totals![c.key])) : '""')).join(','));
+    }
+  }
+
+  return lines.join('\n');
+}
+
+// Convert unified ReportData to an Excel workbook buffer.
+export async function generateExcel(data: ReportData, reportName: string): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Dineiz Reports Module';
   const worksheet = workbook.addWorksheet('Report Data');
 
-  if (data.shifts && Array.isArray(data.shifts)) {
-    worksheet.columns = [
-      { header: 'Date', key: 'date', width: 12 },
-      { header: 'Cashier', key: 'cashier', width: 20 },
-      { header: 'Branch', key: 'branch', width: 20 },
-      { header: 'Opening Float', key: 'openingFloat', width: 15 },
-      { header: 'Cash Orders', key: 'cashOrders', width: 15 },
-      { header: 'Card Orders', key: 'cardOrders', width: 15 },
-      { header: 'Total Revenue', key: 'totalRevenue', width: 15 },
-      { header: 'Closing Cash Entered', key: 'closingCashEntered', width: 20 },
-      { header: 'Expected Cash', key: 'expectedCash', width: 15 },
-      { header: 'Variance', key: 'variance', width: 15 },
-      { header: 'Status', key: 'status', width: 15 },
-      { header: 'Notes', key: 'notes', width: 30 }
-    ];
-    worksheet.addRows(data.shifts);
-    worksheet.addRow({
-      date: 'TOTAL',
-      openingFloat: data.totals.openingFloat,
-      cashOrders: data.totals.cashOrders,
-      cardOrders: data.totals.cardOrders,
-      totalRevenue: data.totals.totalRevenue,
-      closingCashEntered: data.totals.closingCashEntered,
-      expectedCash: data.totals.expectedCash,
-      variance: data.totals.variance
-    });
-  } else if (data.totalGrossRevenue !== undefined) {
-    worksheet.columns = [
-      { header: 'Metric', key: 'metric', width: 30 },
-      { header: 'Value', key: 'value', width: 40 }
-    ];
-    worksheet.addRows([
-      { metric: 'Period', value: data.period },
-      { metric: 'Total Gross Revenue', value: data.totalGrossRevenue },
-      { metric: 'Taxable Revenue', value: data.taxableRevenue },
-      { metric: 'Non-Taxable Revenue', value: data.nonTaxableRevenue },
-      { metric: 'Cash Tax Collected', value: data.cashTaxCollected },
-      { metric: 'Card Tax Collected', value: data.cardTaxCollected },
-      { metric: 'Total Tax Collected', value: data.totalTaxCollected },
-      { metric: 'FBR Invoice Range', value: data.fbrInvoiceRange }
-    ]);
-  } else {
-    worksheet.addRow(['No specific format defined for this report']);
+  const titleRow = worksheet.addRow([data.title]);
+  titleRow.font = { bold: true, size: 14 };
+  worksheet.addRow([data.period]).font = { italic: true, color: { argb: 'FF666666' } };
+  worksheet.addRow([]);
+
+  if (data.summary?.length) {
+    for (const s of data.summary) worksheet.addRow([s.label, s.value]);
+    worksheet.addRow([]);
   }
 
-  // Add bold styling to headers
-  worksheet.getRow(1).font = { bold: true };
-  
+  if (data.columns?.length && data.rows) {
+    const headerRow = worksheet.addRow(data.columns.map(c => c.label));
+    headerRow.font = { bold: true };
+    headerRow.eachCell(cell => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } }; });
+
+    for (const row of data.rows) {
+      worksheet.addRow(data.columns.map(c => row[c.key] ?? ''));
+    }
+
+    if (data.totals) {
+      const totalsRow = worksheet.addRow(data.columns.map(c => (c.key in data.totals! ? data.totals![c.key] : (c === data.columns![0] ? 'TOTAL' : ''))));
+      totalsRow.font = { bold: true };
+    }
+
+    worksheet.columns.forEach(col => { col.width = 20; });
+  } else if (!data.summary?.length) {
+    worksheet.addRow(['No data available for this period.']);
+  }
+
   const buffer = await workbook.xlsx.writeBuffer();
   return buffer as any as Buffer;
 }
 
-// Mock PDF Generation
-// In a real environment, this would HTTP POST to the pdf-worker microservice and upload to Cloudinary.
-export async function generatePDF(data: any, reportName: string): Promise<string> {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  // Return a mock Cloudinary URL
-  const randomId = Math.random().toString(36).substring(7);
-  return `https://res.cloudinary.com/demo/image/upload/v1234567890/dineiz/reports/${reportName.replace(/\\s+/g, '_')}_${randomId}.pdf`;
+// Renders the unified ReportData as a branded HTML document — restaurant
+// branding (from TenantBranding, via getTenantBranding) plus a "Powered by
+// Dineiz" footer, matching the pattern already used for shift reports.
+export function renderReportHtml(data: ReportData, branding: Branding): string {
+  const primaryColor = branding.primaryColor || '#6366F1';
+  const logoUrl = branding.logoUrl || 'https://dineiz.com/logo.png';
+
+  const summaryHtml = data.summary?.length ? `
+    <div class="section-title">Summary</div>
+    <div class="summary-grid">
+      ${data.summary.map(s => `
+        <div class="summary-item">
+          <div class="summary-label">${s.label}</div>
+          <div class="summary-value">${typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</div>
+        </div>
+      `).join('')}
+    </div>
+  ` : '';
+
+  const tableHtml = data.columns?.length ? `
+    <div class="section-title">Details</div>
+    <table>
+      <thead>
+        <tr>${data.columns.map(c => `<th class="${c.align === 'right' ? 'text-right' : ''}">${c.label}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${(data.rows || []).map(row => `
+          <tr>${data.columns!.map(c => `<td class="${c.align === 'right' ? 'text-right' : ''}">${fmtValue(row[c.key])}</td>`).join('')}</tr>
+        `).join('')}
+        ${data.totals ? `
+          <tr class="bold" style="border-top: 2px solid #ccc;">
+            ${data.columns.map((c, i) => `<td class="${c.align === 'right' ? 'text-right' : ''}">${c.key in data.totals! ? fmtValue(data.totals![c.key]) : (i === 0 ? 'TOTAL' : '')}</td>`).join('')}
+          </tr>
+        ` : ''}
+      </tbody>
+    </table>
+  ` : (!data.summary?.length ? '<p class="muted">No data available for this period.</p>' : '');
+
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 0; }
+        .header { display: flex; justify-content: space-between; padding: 20px 40px; height: 80px; align-items: center; }
+        .logo-container img { max-height: 40px; }
+        .restaurant-name { font-size: 18px; font-weight: bold; margin-top: 5px; }
+        .header-right { text-align: right; }
+        .report-title { font-size: 22px; font-weight: 700; color: ${primaryColor}; }
+        .powered-by { font-size: 11px; color: #999; margin-top: 4px; }
+        .period { font-size: 12px; color: #666; margin-top: 4px; }
+        .gradient-line { height: 4px; background: linear-gradient(90deg, ${primaryColor}, #10b981); margin-bottom: 20px; }
+        .content { padding: 0 40px 40px; }
+        .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; margin-top: 25px; text-transform: uppercase; color: #444; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .summary-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+        .summary-item { border: 1px solid #eee; border-radius: 6px; padding: 10px 14px; min-width: 160px; background: #fafafa; }
+        .summary-label { font-size: 11px; color: #888; text-transform: uppercase; }
+        .summary-value { font-size: 16px; font-weight: 700; color: ${primaryColor}; margin-top: 2px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+        th { text-align: left; padding: 8px; background-color: #f9f9f9; border-bottom: 2px solid #ddd; }
+        td { padding: 8px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) { background-color: #fafafa; }
+        .text-right { text-align: right; }
+        .bold { font-weight: bold; }
+        .muted { color: #999; font-style: italic; }
+        .footer { position: fixed; bottom: 0; left: 0; right: 0; height: 50px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; padding: 0 40px; font-size: 10px; color: #999; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-container">
+          <img src="${logoUrl}" alt="Logo" />
+          <div class="restaurant-name">${branding.restaurantName}</div>
+        </div>
+        <div class="header-right">
+          <div class="report-title">${data.title}</div>
+          <div class="powered-by">Powered by Dineiz</div>
+          <div class="period">${data.period} &middot; Generated: ${new Date().toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="gradient-line"></div>
+      <div class="content">
+        ${summaryHtml}
+        ${tableHtml}
+      </div>
+      <div class="footer">
+        <div>Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>
+        <div>${branding.restaurantName} &mdash; ${data.title}</div>
+        <div>Powered by Dineiz &mdash; dineiz.com</div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
-export async function generatePDFBuffer(reportType: string, data: any, branding?: any): Promise<Buffer> {
-  // Mock PDF buffer generation
-  return Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Title (${reportType}) >>\nendobj\n%%EOF`);
+const PDF_WORKER_URL = process.env.PDF_WORKER_URL || 'http://localhost:8091';
+
+// Renders a real PDF via the pdf-worker microservice (Puppeteer) — no
+// Cloudinary or any other cloud storage involved, just HTML in, PDF bytes out.
+export async function generatePDF(data: ReportData, branding: Branding): Promise<Buffer> {
+  const html = renderReportHtml(data, branding);
+
+  const res = await fetch(`${PDF_WORKER_URL}/render-invoice`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ html }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`PDF generation failed: pdf-worker responded ${res.status}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }

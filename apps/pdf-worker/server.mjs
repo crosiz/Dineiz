@@ -19,7 +19,10 @@ app.post("/render-invoice", async (req, res) => {
     await page.setContent(html, { waitUntil: "networkidle0" });
     const pdf = await page.pdf({ format: "A4", printBackground: true });
     res.setHeader("Content-Type", "application/pdf");
-    res.send(pdf);
+    // Puppeteer's page.pdf() returns a Uint8Array, not a Node Buffer. Express's
+    // res.send() only treats actual Buffer instances as binary — anything else
+    // falls through to JSON serialization, corrupting the response. Wrap it.
+    res.send(Buffer.from(pdf));
   } finally {
     await browser.close();
   }
