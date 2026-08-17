@@ -74,17 +74,26 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
 
   // Rendered inline (not absolutely positioned) next to each layout's price/options
   // row, so it never collides with the SPICY/POPULAR/cart-qty corner badges.
+  // Uses a div with role="button" rather than a real <button> because every
+  // layout's outer card is itself a <button> — nesting <button> inside <button>
+  // is invalid HTML and breaks hydration.
   const availabilityToggle = onToggleAvailable ? (
-    <button
-      onClick={(e) => { e.stopPropagation(); onToggleAvailable(item, unavailable); }}
-      disabled={isTogglingAvailable}
+    <div
+      role="button"
+      tabIndex={0}
+      aria-disabled={isTogglingAvailable}
+      onClick={(e) => { e.stopPropagation(); if (!isTogglingAvailable) onToggleAvailable(item, unavailable); }}
+      onKeyDown={(e) => {
+        if (isTogglingAvailable) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onToggleAvailable(item, unavailable); }
+      }}
       title={unavailable ? 'Mark available' : 'Mark sold out (86)'}
-      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border transition-colors disabled:opacity-50 ${unavailable ? 'bg-[#0F172A] border-[#0F172A] text-white hover:brightness-125' : 'bg-white border-[#E2E8F0] text-[#94A3B8] hover:text-[#DC2626] hover:border-[#F5C6C2]'}`}
+      className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${isTogglingAvailable ? 'opacity-50 pointer-events-none' : 'cursor-pointer'} ${unavailable ? 'bg-[#0F172A] border-[#0F172A] text-white hover:brightness-125' : 'bg-white border-[#E2E8F0] text-[#94A3B8] hover:text-[#DC2626] hover:border-[#F5C6C2]'}`}
     >
       <span className="material-symbols-outlined text-[13px]">
         {isTogglingAvailable ? 'hourglass_top' : unavailable ? 'restart_alt' : 'block'}
       </span>
-    </button>
+    </div>
   ) : null;
 
   // --- DETAILED (SHOWCASE) STYLE ---
