@@ -196,10 +196,13 @@ function OrderEntryPageContent() {
   const menuQueryClient = useQueryClient();
   const menuQueryKey = ['menu', session?.tenantId || 'DEFAULT_TENANT', session?.branchId];
   const [togglingItemId, setTogglingItemId] = useState<string | null>(null);
+  // The availability endpoint only authorizes BRANCH_MANAGER and above
+  // (see apps/api menu.routes.ts) — hide the toggle for cashiers so it
+  // doesn't render a control that always 403s.
+  const canToggleAvailability = ['BRANCH_MANAGER', 'TENANT_ADMIN', 'SUPER_ADMIN'].includes(session?.role || '');
 
-  // Lets a cashier 86 an item straight from the menu grid instead of routing
-  // through the dashboard — hits the same endpoint (ALL_STAFF-authorized)
-  // that BRANCH_MANAGER availability toggles use.
+  // Lets a manager 86 an item straight from the menu grid instead of routing
+  // through the dashboard.
   const handleToggleAvailability = async (item: CachedMenuItem, nextAvailable: boolean) => {
     setTogglingItemId(item.id);
     try {
@@ -944,7 +947,7 @@ function OrderEntryPageContent() {
                   cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                   onTap={handleItemTap}
                   viewMode={viewMode}
-                  onToggleAvailable={handleToggleAvailability}
+                  onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
                   isTogglingAvailable={togglingItemId === item.id}
                 />
               ))
