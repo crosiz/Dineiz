@@ -1,6 +1,7 @@
 import { prisma } from '@dineiz/db';
 import { AnomalyType, AnomalySeverity, AnomalyStatus } from '@prisma/client';
 import { subHours, subMinutes } from 'date-fns';
+import { sendAnomalyAlertEmail } from '../../lib/email.service';
 
 export async function scanAnomaliesForTenant(tenantId: string) {
   // Get tenant anomaly settings
@@ -80,6 +81,25 @@ async function notifyTenant(tenantId: string, event: any) {
     }
     if (settings?.notifyWhatsapp) {
       console.log(`[WHATSAPP NOTIFICATION] To Tenant Admin: ALERT - ${event.type}: ${event.description}`);
+    }
+    if (settings?.notifyEmail) {
+      const [tenant, owner, branch] = await Promise.all([
+        prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
+        prisma.user.findFirst({ where: { tenantId, role: 'TENANT_ADMIN' }, select: { name: true, email: true } }),
+        prisma.branch.findUnique({ where: { id: event.branchId }, select: { name: true } }),
+      ]);
+      if (owner?.email) {
+        await sendAnomalyAlertEmail({
+          to: owner.email,
+          ownerName: owner.name,
+          restaurantName: tenant?.name ?? 'your restaurant',
+          anomalyType: event.type,
+          description: event.description,
+          branchName: branch?.name ?? 'a branch',
+          detectedAt: new Date().toLocaleString('en-PK'),
+          reviewUrl: 'https://console.dineiz.com/anomalies',
+        });
+      }
     }
   }
 }

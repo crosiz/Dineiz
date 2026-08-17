@@ -55,6 +55,7 @@ import { processAbandonedShifts } from './jobs/abandonedShifts';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
 import { anomalyQueue, reportsQueue } from './lib/queue';
+import { sendManagerInviteEmail, sendPasswordResetEmail, sendAnomalyAlertEmail, sendScheduledReportEmail } from './lib/email.service';
 
 // Prevent transient network errors (like Redis ECONNRESET promise rejections) from crashing the server
 process.on('unhandledRejection', (reason, promise) => {
@@ -147,6 +148,53 @@ async function build() {
   await fastify.register(aggregatorsRoutes);
   await fastify.register(integrationsRoutes);
   await fastify.register(floorPlanRoutes);
+
+  // Dev-only smoke test for the four apps/api email templates. Not
+  // registered in production; not behind rbacMiddleware since it's for
+  // local testing without a logged-in session.
+  if (env.NODE_ENV === 'development') {
+    fastify.get('/api/debug/test-email/:type', async (request, reply) => {
+      const { type } = request.params as { type: string };
+      const testEmail = (request.query as any).to ?? 'your@email.com';
+
+      switch (type) {
+        case 'manager-invite':
+          await sendManagerInviteEmail({
+            to: testEmail, managerName: 'Ahmed', restaurantName: 'Test Restaurant',
+            branchName: 'Clifton Branch', loginUrl: 'https://console.dineiz.com/login',
+            temporaryPassword: 'Test@123456',
+          });
+          break;
+        case 'password-reset':
+          await sendPasswordResetEmail({
+            to: testEmail, name: 'Ahmed',
+            resetUrl: 'https://console.dineiz.com/reset-password?token=test-token',
+            expiresInMinutes: 60,
+          });
+          break;
+        case 'anomaly':
+          await sendAnomalyAlertEmail({
+            to: testEmail, ownerName: 'Ahmed', restaurantName: 'Test Restaurant',
+            anomalyType: 'EXCESSIVE_VOIDS', description: 'Cashier Ahmed voided 8 items in this shift',
+            branchName: 'Clifton Branch', detectedAt: new Date().toLocaleString('en-PK'),
+            reviewUrl: 'https://console.dineiz.com/anomalies',
+          });
+          break;
+        case 'scheduled-report':
+          await sendScheduledReportEmail({
+            to: testEmail, restaurantName: 'Test Restaurant', reportType: 'Sales Summary',
+            period: 'Aug 1 - Aug 17, 2026', fileBuffer: Buffer.from('%PDF-1.4 test'),
+            filename: 'sales-summary.pdf',
+            summaryStats: [{ label: 'Total Sales', value: 'PKR 245,000' }],
+          });
+          break;
+        default:
+          return reply.status(400).send({ error: 'Unknown type. Use: manager-invite, password-reset, anomaly, scheduled-report' });
+      }
+
+      return reply.send({ sent: true, type, to: testEmail });
+    });
+  }
 
   fastify.addHook('preHandler', rbacMiddleware);
 

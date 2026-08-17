@@ -2,6 +2,7 @@ import { prisma } from '@dineiz/db';
 import { CreateStaff, StaffQuery, UpdateStaff, ResetPin } from './staff.schema';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { sendManagerInviteEmail } from '../../lib/email.service';
 
 export class StaffService {
   static async getSummary(tenantId: string, branchId?: string) {
@@ -126,13 +127,10 @@ export class StaffService {
 
     const avatarColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
 
-    // If it's a manager, create with auth password logic
-    // Currently relying on basic user creation
-    // To handle passwords, we would integrate with the local auth provider mechanism
-    // But for this exercise, we will just create the user directly. Better Auth / NextAuth handles passwords separately in Accounts table typically
-    // We'll stub this based on the existing DB schema. `User` doesn't have a `password` field in `schema.prisma`. 
-    // Usually BetterAuth uses `Account` or a credential table. 
-    // We will just create the User record.
+    // Same bcrypt cost as better-auth's own password hashing (lib/auth.ts)
+    // so credentials created here verify correctly through the normal
+    // email/password login path.
+    const hashedPassword = data.password ? await bcrypt.hash(data.password, 12) : undefined;
 
     const user = await prisma.user.create({
       data: {
@@ -142,11 +140,25 @@ export class StaffService {
         role: data.role as any,
         tenantId,
         branchId: data.branchId,
+        password: hashedPassword,
         posPin: data.posPin, // Already hashed in handler
         status: 'ACTIVE',
         avatarColor,
-      }
+      },
+      include: { branch: true },
     });
+
+    if (data.email && data.password && ['BRANCH_MANAGER', 'TENANT_ADMIN'].includes(data.role)) {
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+      await sendManagerInviteEmail({
+        to: data.email,
+        managerName: data.name,
+        restaurantName: tenant?.name ?? 'your restaurant',
+        branchName: user.branch?.name ?? 'your branch',
+        loginUrl: 'https://console.dineiz.com/login',
+        temporaryPassword: data.password,
+      });
+    }
 
     return user;
   }

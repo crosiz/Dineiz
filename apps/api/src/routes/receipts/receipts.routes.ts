@@ -2,8 +2,8 @@ import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { prisma } from '@dineiz/db';
 import { requireTenant } from '../../middleware/auth';
 import { z } from 'zod';
-import { getResend, getTwilio } from '../../lib/messaging';
-import { env } from '../../env';
+import { getTwilio } from '../../lib/messaging';
+import { sendEmail } from '../../lib/email.service';
 import { sendWhatsAppMessage } from '../../lib/whatsapp';
 
 const SendReceiptSchema = z.object({
@@ -37,17 +37,12 @@ export const receiptsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const out: any = { email: null, sms: null };
 
     if (email) {
-      const resend = getResend();
-      if (!resend) out.email = { ok: false, error: 'Resend not configured' };
-      else {
-        await resend.emails.send({
-          from: env.EMAIL_FROM,
-          to: email,
-          subject: `Your receipt (${order.orderNumber})`,
-          text: summary,
-        });
-        out.email = { ok: true };
-      }
+      const result = await sendEmail({
+        to: email,
+        subject: `Your receipt (${order.orderNumber})`,
+        html: summary.replace(/\n/g, '<br>'),
+      });
+      out.email = result.success ? { ok: true } : { ok: false, error: result.error };
     }
 
     if (phone) {
