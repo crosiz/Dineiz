@@ -3,7 +3,7 @@ import { requireAuth } from '../../middleware/auth';
 import { prisma } from '@dineiz/db';
 import { z } from 'zod';
 import crypto from 'crypto';
-import { redis } from '../../lib/redis';
+import { upstash } from '../../lib/redis';
 
 /**
  * Simple SHA-256 hash for PIN storage (enough for a short numeric PIN,
@@ -51,9 +51,19 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
     const lockoutKey = `pos_pin_lockout:${staffId}`;
     const attemptsKey = `pos_pin_attempts:${staffId}`;
 
-    const isLockedOut = await redis.get(lockoutKey);
+    let isLockedOut: unknown = null;
+    try {
+      isLockedOut = await upstash.get(lockoutKey);
+    } catch (err: any) {
+      request.log?.warn?.({ err: err?.message }, '[pin-login] Redis lockout check error, proceeding');
+    }
+
     if (isLockedOut) {
-      const ttl = await redis.ttl(lockoutKey);
+      let ttl = 60;
+      try {
+        const remaining = await upstash.ttl(lockoutKey);
+        if (typeof remaining === 'number' && remaining > 0) ttl = remaining;
+      } catch {}
       return reply.status(429).send({ error: 'Too many failed attempts. Try again later.', retryAfter: ttl });
     }
 
@@ -76,22 +86,29 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     if (!user || user.posPin !== hashedPin) {
-      const attempts = await redis.incr(attemptsKey);
-      if (attempts === 1) {
-        await redis.expire(attemptsKey, 300); // 5 minutes window
+      let attempts = 1;
+      try {
+        attempts = await upstash.incr(attemptsKey);
+        if (attempts === 1) {
+          await upstash.expire(attemptsKey, 300); // 5 minutes window
+        }
+
+        if (attempts >= 5) {
+          await upstash.set(lockoutKey, '1', { ex: 60 }); // Lock out for 60 seconds
+          await upstash.del(attemptsKey);
+          return reply.status(429).send({ error: 'Too many failed attempts. Try again later.', retryAfter: 60 });
+        }
+      } catch (err: any) {
+        request.log?.warn?.({ err: err?.message }, '[pin-login] Redis attempt tracking error');
       }
 
-      if (attempts >= 5) {
-        await redis.setex(lockoutKey, 60, '1'); // Lock out for 60 seconds
-        await redis.del(attemptsKey);
-        return reply.status(429).send({ error: 'Too many failed attempts. Try again later.', retryAfter: 60 });
-      }
-
-      return reply.status(401).send({ error: 'Invalid PIN', attemptsLeft: 5 - attempts });
+      return reply.status(401).send({ error: 'Invalid PIN', attemptsLeft: Math.max(0, 5 - attempts) });
     }
 
     // Reset attempts on success
-    await redis.del(attemptsKey);
+    try {
+      await upstash.del(attemptsKey);
+    } catch {}
 
     // Fetch tenant branding (including dual-tax config)
     const tenant = await prisma.tenant.findUnique({
@@ -204,11 +221,7 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
 
     const { userId, pin } = parsed.data;
     
-    // For backwards compatibility and the admin panel, we keep server-side
-    // hashing here if they send raw pin. But wait, if client sends raw pin, 
-    // it won't match the new SHA-256(pin + staffId) salted logic.
-    // So we must hash it with the staffId.
-    const newHashedPin = crypto.createHash('sha256').update(pin + userId).digest('hex');
+    const newHashedPin = hashPin(pin);
 
     await prisma.user.update({
       where: { id: userId },

@@ -657,7 +657,7 @@ export default function SettingsPage() {
     setUploadingLogo(true);
     try {
       const fd = new FormData(); fd.append("file", file); fd.append("type", "logo");
-      const res = await fetch(`${API_URL}/api/settings/branding/upload`, { method: "POST", credentials: "include", body: fd });
+      const res = await fetch(`${API_URL}/api/settings/branding/upload-image`, { method: "POST", credentials: "include", body: fd });
       if (!res.ok) throw new Error();
       const data = await res.json(); setBranding(p => ({ ...p, logoUrl: data.url })); toast.success("Logo uploaded");
     } catch { toast.error("Upload failed"); } finally { setUploadingLogo(false); }
