@@ -1,34 +1,16 @@
 import { prisma } from '@dineiz/db';
-import { generateReportData, type ReportData } from '../routes/reports/reports.service';
+import { generateReportData } from '../routes/reports/reports.service';
 import { generateCSV, generateExcel, generatePDF } from '../routes/reports/generators';
 import { getTenantBranding } from '../routes/settings/settings.service';
 import { saveReportFile, buildReportDownloadUrl, cleanupOldReportFiles } from '../lib/reportStorage';
-import { Resend } from 'resend';
+import { sendScheduledReportEmail } from '../lib/email.service';
 import twilio from 'twilio';
 import { Worker, Job } from 'bullmq';
 import { reportsQueue } from '../lib/queue';
 
-import { env } from '../env';
-
-const resend = new Resend(env.RESEND_API_KEY);
-
 let twilioClient: twilio.Twilio | null = null;
 if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_ACCOUNT_SID.startsWith('AC') && process.env.TWILIO_AUTH_TOKEN) {
   twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-}
-
-function buildReportEmailHTML(data: ReportData, reportUrl: string, restaurantName: string) {
-  const summaryRows = (data.summary || [])
-    .map(s => `<tr><td style="padding:4px 12px 4px 0;color:#666;">${s.label}</td><td style="padding:4px 0;font-weight:600;">${typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</td></tr>`)
-    .join('');
-
-  return `
-    <h2>${data.title}</h2>
-    <p>Scheduled report for <b>${restaurantName}</b> — ${data.period}</p>
-    ${summaryRows ? `<table>${summaryRows}</table>` : ''}
-    <p>The full report is attached${reportUrl ? ` and can also be <a href="${reportUrl}">downloaded here</a>` : ''}.</p>
-    <p style="color:#999;font-size:11px;margin-top:24px;">Powered by Dineiz</p>
-  `;
 }
 
 async function sendWhatsAppMessage(phone: string, message: { document: { link: string; filename: string }; caption: string }) {
@@ -81,18 +63,18 @@ export async function sendScheduledReport(scheduledReport: any) {
 
   // Email — real attachment for every format, not just PDF.
   if (recipients?.length > 0) {
-    try {
-      await resend.emails.send({
-        from: env.EMAIL_FROM,
-        to: recipients,
-        subject: `${data.title} — ${restaurantName}`,
-        html: buildReportEmailHTML(data, reportUrl, restaurantName),
-        attachments: [{ filename: `${reportType}-report.${ext}`, content: buffer }]
-      });
-      console.log(`[ReportsWorker] Sent email to ${recipients.join(', ')}`);
-    } catch (e: any) {
-      console.error(`[ReportsWorker] Failed to send email to ${recipients.join(', ')}`, e.message);
-    }
+    await sendScheduledReportEmail({
+      to: recipients,
+      restaurantName,
+      reportType: data.title,
+      period: data.period,
+      fileBuffer: buffer,
+      filename: `${reportType}-report.${ext}`,
+      summaryStats: (data.summary || []).map(s => ({
+        label: s.label,
+        value: typeof s.value === 'number' ? s.value.toLocaleString() : String(s.value),
+      })),
+    });
   }
 
   // WhatsApp — media messages need a real document (PDF works reliably; a

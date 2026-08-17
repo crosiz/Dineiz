@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@dineiz/db";
 import { upstash } from "./redis";
+import { sendPasswordResetEmail } from "./email.service";
 
 // Build the list of trusted origins from env + sensible dev defaults.
 // TRUSTED_ORIGINS is a comma-separated list, e.g.:
@@ -33,7 +34,17 @@ export const auth = betterAuth({
                 const bcrypt = await import("bcrypt");
                 return bcrypt.compare(password, hash);
             }
-        }
+        },
+        // resetPasswordTokenExpiresIn defaults to 3600s (1hr) — keep the
+        // email's "expires in" copy in sync with that if this changes.
+        sendResetPassword: async ({ user, url }) => {
+            await sendPasswordResetEmail({
+                to: user.email,
+                name: user.name,
+                resetUrl: url,
+                expiresInMinutes: 60,
+            });
+        },
     },
     // Allow requests coming from any of our front-end apps.
     // Without this, Better Auth rejects sign-in from origins that don't
