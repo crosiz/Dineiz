@@ -8,6 +8,7 @@ import { erpSyncQueue, analyticsQueue } from '../../lib/queue';
 import { redeemLoyaltyForOrder, earnLoyaltyForOrder } from '../loyalty/loyalty.service';
 import { deductInventoryForOrder } from '../inventory/inventory.service';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { getTodayOrdersWhere } from '../../lib/date-utils';
 
 // ─── KDS routing helper ───────────────────────────────────────────────────────
 
@@ -524,6 +525,12 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
   todayStart.setHours(0, 0, 0, 0);
   const now = Date.now();
 
+  // Business-day scoping (shift-open date, not order-created date) — without
+  // this, an order left PENDING/IN_KITCHEN/READY under a shift that was
+  // never closed keeps showing up on the live board indefinitely, days
+  // later, mixed in with today's real orders.
+  const todayOrdersWhere = await getTodayOrdersWhere(tenantId, branchId);
+
   // Active orders and today's summary source data are independent — fetch
   // concurrently. (Previously this also re-fetched the last 20 completed
   // orders in full with all relations, but the result was never used.)
@@ -532,7 +539,8 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
       where: {
         tenantId,
         ...(branchId ? { branchId } : {}),
-        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] }
+        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+        ...todayOrdersWhere,
       },
       orderBy: { createdAt: 'asc' },
       include: {
