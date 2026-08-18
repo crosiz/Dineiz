@@ -1,6 +1,6 @@
 import { prisma } from '@dineiz/db';
 import { uploadImage } from '../../lib/cloudinary';
-import { getIO } from '../../lib/socket';
+import { getIO, emitBrandingUpdated } from '../../lib/socket';
 import { defaultQueue } from '../../lib/queue';
 import bcrypt from 'bcryptjs';
 
@@ -223,11 +223,21 @@ export async function updateTenantBranding(tenantId: string, data: any) {
     });
   }
 
-  // Broadcast branding update to all POS terminals
-  const io = getIO();
-  if (io) {
-    io.to(`tenant:${tenantId}`).emit('tenant:settings_updated', branding);
-  }
+  // Broadcast branding update to all POS terminals. Uses the dedicated
+  // 'tenant:branding_updated' event (see emitBrandingUpdated) rather than
+  // 'tenant:settings_updated' — that event is also used by
+  // updateTenantSettings() below for the unrelated general tenant.settings
+  // blob (kitchen/printing toggles etc.), and the POS's branding-aware
+  // listener (POSLayout's handleBrandingUpdated, which pushes tax-rate
+  // changes into the reactive branding store and cart session) was written
+  // against 'tenant:branding_updated' and never actually fired while this
+  // emitted the other event name — settings changes silently did not
+  // reach the live branding store until the next full page load.
+  // emitBrandingUpdated's declared param type is narrower (string | undefined
+  // fields) than the full TenantBranding row (nullable DB columns come back
+  // as string | null) — it just forwards whatever object it's given over
+  // the socket, so this is a real type shape gap, not a runtime concern.
+  emitBrandingUpdated(tenantId, branding as Record<string, any>);
 
   return branding;
 }
