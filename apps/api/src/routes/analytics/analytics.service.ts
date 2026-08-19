@@ -269,10 +269,11 @@ export async function getDashboardSummary(tenantId: string, branchId?: string, p
   }
 
   // 3. Recent Orders
-  // For recent orders, we still want purely chronological recent orders, so no join needed, 
-  // but if we want it shift-based we could join. Usually "recent" means chronologically recent.
+  // Purely chronological recent orders, not bound to "today" — a quiet
+  // start to the day shouldn't make this list go blank while there's
+  // order history to show.
   const recentOrdersRaw = await prisma.order.findMany({
-    where: { tenantId, createdAt: { gte: todayStart }, ...prismaBranchFilter },
+    where: { tenantId, ...prismaBranchFilter },
     orderBy: { createdAt: 'desc' },
     take: 10,
     select: {
