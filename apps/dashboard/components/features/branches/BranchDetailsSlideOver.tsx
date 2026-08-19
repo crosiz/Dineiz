@@ -128,17 +128,6 @@ export function BranchDetailsSlideOver({ branch, isOpen, onClose }: BranchDetail
             </div>
           </div>
 
-          {/* Last 5 Orders Placeholder */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden opacity-50">
-            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Recent Orders</h3>
-              <span className="text-[10px] bg-slate-200 text-slate-500 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Coming Soon</span>
-            </div>
-            <div className="p-8 text-center text-slate-400 text-sm">
-              Recent order feed will appear here.
-            </div>
-          </div>
-
         </div>
       </div>
     </div>

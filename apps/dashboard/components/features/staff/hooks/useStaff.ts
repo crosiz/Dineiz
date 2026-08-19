@@ -129,6 +129,19 @@ export function useStaff(initialFilters: Partial<StaffFilters> = {}) {
     }
   });
 
+  const resendInvite = useMutation({
+    mutationFn: (id: string) => apiFetch(`/api/staff/${id}/resend-invite`, {
+      method: 'PUT',
+      body: '{}'
+    }),
+    onSuccess: () => {
+      toast.success('Invite email resent');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to resend invite', { description: error.message });
+    }
+  });
+
   const resetPin = useMutation({
     mutationFn: ({ id, newPin }: { id: string, newPin: string }) => apiFetch(`/api/staff/${id}/reset-pin`, {
       method: 'PUT',
@@ -158,6 +171,7 @@ export function useStaff(initialFilters: Partial<StaffFilters> = {}) {
     updateStaff,
     toggleStatus,
     deleteStaff,
-    resetPin
+    resetPin,
+    resendInvite
   };
 }

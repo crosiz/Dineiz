@@ -3,7 +3,6 @@
 import React from 'react';
 import { useUser } from '@/contexts/user-context';
 import { TenantAdminDashboard } from './tenant-admin-dashboard';
-import { BranchManagerDashboard } from './branch-manager-dashboard';
 
 export default function DashboardPage() {
   const { role } = useUser();

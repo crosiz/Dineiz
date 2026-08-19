@@ -37,6 +37,10 @@ export const staffRoutes: FastifyPluginAsyncZod = async (fastify) => {
     preHandler: requireRole(STAFF_ADMIN_ROLES),
   }, StaffHandlers.resetPin);
 
+  fastify.put('/api/staff/:id/resend-invite', {
+    preHandler: requireRole(STAFF_ADMIN_ROLES),
+  }, StaffHandlers.resendInvite);
+
   fastify.delete('/api/staff/:id', {
     preHandler: requireRole(STAFF_ADMIN_ROLES),
   }, StaffHandlers.deleteStaff);

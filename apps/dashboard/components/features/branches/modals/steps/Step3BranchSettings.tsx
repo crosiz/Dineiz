@@ -83,6 +83,20 @@ export function Step3BranchSettings() {
           />
           {errors.timezone && <p className="text-red-500 text-xs mt-1">{errors.timezone.message}</p>}
         </div>
+
+        <div>
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">Tax Rate (%)</label>
+          <input
+            type="number"
+            step="0.01"
+            min={0}
+            max={100}
+            {...register('taxRate')}
+            placeholder="0"
+            className={`w-full border rounded-xl h-12 px-4 text-sm outline-none focus:ring-2 focus:ring-orange-500/20 bg-white transition-colors ${errors.taxRate ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-[#ff5722]'}`}
+          />
+          {errors.taxRate && <p className="text-red-500 text-xs mt-1">{errors.taxRate.message}</p>}
+        </div>
       </div>
 
       <div className="mt-8">

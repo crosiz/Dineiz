@@ -141,10 +141,12 @@ const DraggableTableWrapper = React.memo(function DraggableTableWrapper({
   table,
   isSelected,
   onClick,
+  showTableStatus,
 }: {
   table: TableElement;
   isSelected: boolean;
   onClick: (e: React.MouseEvent) => void;
+  showTableStatus: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: table.id,
@@ -176,8 +178,8 @@ const DraggableTableWrapper = React.memo(function DraggableTableWrapper({
         label={table.label}
         capacity={table.capacity}
         shape={table.shape}
-        status={table.status || 'FREE'}
-        occupiedSince={table.occupiedSince}
+        status={showTableStatus ? table.status || 'FREE' : 'FREE'}
+        occupiedSince={showTableStatus ? table.occupiedSince : undefined}
         isSelected={isSelected}
         onClick={onClick}
         dragHandleProps={{ ...listeners, ...attributes }}
@@ -195,6 +197,7 @@ export function FloorPlanCanvas({ disabled }: FloorPlanCanvasProps) {
     updateTable,
     pushUndoState,
     showGrid,
+    showTableStatus,
   } = useFloorPlanStore();
 
   const vGuideRef = useRef<HTMLDivElement>(null);
@@ -354,6 +357,7 @@ export function FloorPlanCanvas({ disabled }: FloorPlanCanvasProps) {
               key={table.id}
               table={table}
               isSelected={table.id === selectedTableId}
+              showTableStatus={showTableStatus}
               onClick={(e) => {
                 e.stopPropagation();
                 selectTable(table.id);

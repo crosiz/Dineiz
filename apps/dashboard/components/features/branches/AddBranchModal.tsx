@@ -17,7 +17,7 @@ interface AddBranchModalProps {
 
 export function AddBranchModal({ isOpen, onClose }: AddBranchModalProps) {
   const addBranchLogic = useAddBranch(onClose);
-  const { methods, currentStep, goNext, goBack, onSubmit, isSubmitting } = addBranchLogic;
+  const { methods, currentStep, goNext, goBack, goToStep, onSubmit, isSubmitting } = addBranchLogic;
 
   if (!isOpen) return null;
 
@@ -52,7 +52,7 @@ export function AddBranchModal({ isOpen, onClose }: AddBranchModalProps) {
               {currentStep === 1 && <Step1BasicInfo />}
               {currentStep === 2 && <Step2OperatingHours />}
               {currentStep === 3 && <Step3BranchSettings />}
-              {currentStep === 4 && <Step4Confirm />}
+              {currentStep === 4 && <Step4Confirm onEditStep={goToStep} />}
             </div>
 
             {/* Footer */}

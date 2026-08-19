@@ -189,6 +189,34 @@ export class StaffService {
     });
   }
 
+  static async resendInvite(tenantId: string, id: string) {
+    const user = await prisma.user.findFirst({ where: { id, tenantId }, include: { branch: true } });
+    if (!user) throw new Error('Staff member not found');
+    if (!user.email) throw new Error('This staff member has no email on file');
+    if (!['BRANCH_MANAGER', 'TENANT_ADMIN'].includes(user.role)) {
+      throw new Error('Invite emails are only available for branch managers and admins');
+    }
+
+    // Rotate the password since there's no separate invite-token flow —
+    // resending means issuing a fresh temporary password by email.
+    const temporaryPassword = randomBytes(6).toString('hex');
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+    await prisma.user.update({ where: { id }, data: { password: hashedPassword } });
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+
+    await sendManagerInviteEmail({
+      to: user.email,
+      managerName: user.name,
+      restaurantName: tenant?.name ?? 'your restaurant',
+      branchName: user.branch?.name ?? 'your branch',
+      loginUrl: 'https://console.dineiz.com/login',
+      temporaryPassword,
+    });
+
+    return { success: true };
+  }
+
   static async resetPin(tenantId: string, id: string, hashedPin: string) {
     const user = await prisma.user.findFirst({ where: { id, tenantId } });
     if (!user) throw new Error('Staff member not found');

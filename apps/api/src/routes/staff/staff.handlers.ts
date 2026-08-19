@@ -127,6 +127,28 @@ export class StaffHandlers {
     }
   }
 
+  static async resendInvite(req: FastifyRequest, reply: FastifyReply) {
+    const user = (req as any).user;
+    if (!user || !user.tenantId) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const parsedParams = z.object({ id: z.string() }).safeParse(req.params);
+    if (!parsedParams.success) return reply.status(400).send({ error: 'Bad Request' });
+
+    try {
+      const result = await StaffService.resendInvite(user.tenantId, parsedParams.data.id);
+      return reply.send(result);
+    } catch (error: any) {
+      req.log.error(error);
+      if (error.message === 'Staff member not found') {
+        return reply.status(404).send({ error: error.message });
+      }
+      if (error.message.includes('no email') || error.message.includes('only available')) {
+        return reply.status(400).send({ error: error.message });
+      }
+      return reply.status(500).send({ error: error.message });
+    }
+  }
+
   static async resetPin(req: FastifyRequest, reply: FastifyReply) {
     const user = (req as any).user;
     if (!user || !user.tenantId) return reply.status(401).send({ error: 'Unauthorized' });

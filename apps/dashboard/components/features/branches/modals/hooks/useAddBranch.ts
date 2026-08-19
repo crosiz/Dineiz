@@ -15,19 +15,13 @@ export const addBranchSchema = z.object({
   logo: z.any().optional(),
 
   // Step 2
-  operatingDays: z.array(z.string()).min(1, 'Select at least one operating day'),
-  hours: z.record(
-    z.string(), // Day
-    z.object({
-      open: z.string(),
-      close: z.string(),
-      lastOrder: z.string(),
-    })
-  ),
+  openingTime: z.string().min(1, 'Opening time is required'),
+  closingTime: z.string().min(1, 'Closing time is required'),
 
   // Step 3
   currency: z.string().min(1, 'Currency is required'),
   timezone: z.string().min(1, 'Timezone is required'),
+  taxRate: z.coerce.number().min(0, 'Tax rate cannot be negative').max(100, 'Tax rate cannot exceed 100%'),
   kdsEnabled: z.boolean(),
   kotAutoPrint: z.boolean(),
   acceptOnlineOrders: z.boolean(),
@@ -48,18 +42,11 @@ export function useAddBranch(onClose: () => void) {
       city: '',
       phone: '',
       email: '',
-      operatingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-      hours: {
-        Mon: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Tue: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Wed: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Thu: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Fri: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Sat: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-        Sun: { open: '09:00', close: '23:00', lastOrder: '22:30' },
-      },
+      openingTime: '09:00',
+      closingTime: '23:00',
       currency: 'PKR',
       timezone: 'Asia/Karachi',
+      taxRate: 0,
       kdsEnabled: true,
       kotAutoPrint: true,
       acceptOnlineOrders: true,
@@ -74,9 +61,9 @@ export function useAddBranch(onClose: () => void) {
     if (currentStep === 1) {
       fieldsToValidate = ['name', 'address', 'city', 'phone', 'email'];
     } else if (currentStep === 2) {
-      fieldsToValidate = ['operatingDays', 'hours'];
+      fieldsToValidate = ['openingTime', 'closingTime'];
     } else if (currentStep === 3) {
-      fieldsToValidate = ['currency', 'timezone', 'kdsEnabled', 'kotAutoPrint', 'acceptOnlineOrders', 'deliveryAvailable'];
+      fieldsToValidate = ['currency', 'timezone', 'taxRate', 'kdsEnabled', 'kotAutoPrint', 'acceptOnlineOrders', 'deliveryAvailable'];
     }
 
     const isValid = await methods.trigger(fieldsToValidate);
@@ -92,18 +79,12 @@ export function useAddBranch(onClose: () => void) {
     }
   };
 
+  const goToStep = (step: 1 | 2 | 3 | 4) => {
+    setCurrentStep(step);
+  };
+
   const onSubmit = async (data: AddBranchFormData) => {
     try {
-      // Pick the opening and closing time from the first selected operating day
-      const firstDay = data.operatingDays[0];
-      let openingTime = '09:00';
-      let closingTime = '23:00';
-      
-      if (firstDay && data.hours[firstDay]) {
-        openingTime = data.hours[firstDay].open;
-        closingTime = data.hours[firstDay].close;
-      }
-
       const payload = {
         name: data.name,
         address: data.address,
@@ -111,11 +92,11 @@ export function useAddBranch(onClose: () => void) {
         country: 'Pakistan',
         phone: data.phone,
         email: data.email,
-        openingTime,
-        closingTime,
+        openingTime: data.openingTime,
+        closingTime: data.closingTime,
         currency: data.currency,
         timezone: data.timezone,
-        taxRate: 15, // Default tax rate
+        taxRate: data.taxRate,
         kdsEnabled: data.kdsEnabled,
         kotAutoPrint: data.kotAutoPrint,
       };
@@ -139,6 +120,7 @@ export function useAddBranch(onClose: () => void) {
     currentStep,
     goNext,
     goBack,
+    goToStep,
     onSubmit: methods.handleSubmit(onSubmit),
     isSubmitting: addBranchMutation.isPending
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MoreHorizontal, Fingerprint, CalendarClock, Pencil, Key, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Fingerprint, CalendarClock, Pencil, Key, UserX, UserCheck, Trash2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useStaff } from './hooks/useStaff';
 import { useDashboardContext } from '../../../contexts/dashboard-context';
@@ -137,7 +137,7 @@ export function StaffTable({ staffList, pagination, filters, setFilters }: Staff
 function StaffRow({ staff, showBranchColumn, onResetPin, onEditStaff }: { staff: any, showBranchColumn: boolean, onResetPin: (staff: any) => void, onEditStaff: (staff: any) => void }) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const { toggleStatus, deleteStaff } = useStaff();
+  const { toggleStatus, deleteStaff, resendInvite } = useStaff();
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -284,11 +284,21 @@ function StaffRow({ staff, showBranchColumn, onResetPin, onEditStaff }: { staff:
             </button>
             
             {['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF', 'RIDER'].includes(staff.role) && (
-              <button 
+              <button
                 onClick={() => { setIsMenuOpen(false); onResetPin(staff); }}
                 className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
               >
                 <Key size={14} /> Reset PIN
+              </button>
+            )}
+
+            {['BRANCH_MANAGER', 'TENANT_ADMIN'].includes(staff.role) && (
+              <button
+                onClick={() => { setIsMenuOpen(false); resendInvite.mutate(staff.id); }}
+                disabled={resendInvite.isPending}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+              >
+                <Mail size={14} /> Resend Invite Email
               </button>
             )}
 
