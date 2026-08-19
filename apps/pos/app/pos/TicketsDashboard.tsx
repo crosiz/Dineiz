@@ -147,6 +147,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
   const [dataMode, setDataMode] = useState<'live' | 'history'>('live');
   const [filter, setFilter] = useState<string>('ALL');
+  const [sourceFilter, setSourceFilter] = useState<'ALL' | 'WHATSAPP'>('ALL');
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest' | 'table'>('oldest');
   const [historySearch, setHistorySearch] = useState('');
   const [waiterFilter, setWaiterFilter] = useState<string>('ALL');
@@ -255,7 +256,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   }) || [];
 
   const counts = useMemo(() => {
-    if (!orders || dataMode === 'history') return { ALL: 0, DINE_IN: 0, TAKEAWAY: 0, DELIVERY: 0, ON_HOLD: 0 };
+    if (!orders || dataMode === 'history') return { ALL: 0, DINE_IN: 0, TAKEAWAY: 0, DELIVERY: 0, ON_HOLD: 0, WHATSAPP: 0 };
     const nonCompleted = orders.filter((o: any) => o.status !== 'COMPLETED');
     return {
       ALL: nonCompleted.length,
@@ -263,25 +264,28 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       TAKEAWAY: nonCompleted.filter((o: any) => o.type === 'TAKEAWAY').length,
       DELIVERY: nonCompleted.filter((o: any) => o.type === 'DELIVERY').length,
       ON_HOLD: heldOrders.length,
+      WHATSAPP: nonCompleted.filter((o: any) => o.source === 'WHATSAPP').length,
     };
   }, [orders, heldOrders, dataMode]);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     if (dataMode === 'history') return orders;
-    
+
+    const bySource = (list: any[]) => (sourceFilter === 'ALL' ? list : list.filter((o: any) => o.source === sourceFilter));
+
     const nonCompleted = orders.filter((o: any) => o.status !== 'COMPLETED');
-    if (filter === 'ALL') return nonCompleted;
-    if (filter === 'ON_HOLD' || filter === 'HELD') return heldOrders;
-    
+    if (filter === 'ALL') return bySource(nonCompleted);
+    if (filter === 'ON_HOLD' || filter === 'HELD') return bySource(heldOrders);
+
     // Check if filter is an order status
     if (['PENDING', 'IN_KITCHEN', 'READY'].includes(filter)) {
-      return nonCompleted.filter((o: any) => o.status === filter);
+      return bySource(nonCompleted.filter((o: any) => o.status === filter));
     }
-    
+
     // Otherwise it's an order type (DINE_IN, TAKEAWAY, DELIVERY)
-    return nonCompleted.filter((o: any) => o.type === filter);
-  }, [orders, filter, heldOrders, dataMode]);
+    return bySource(nonCompleted.filter((o: any) => o.type === filter));
+  }, [orders, filter, heldOrders, dataMode, sourceFilter]);
 
   // Live tickets read fastest grouped by service type first — dine-in tables
   // in one lane, takeaway/delivery in another — status is a secondary filter
@@ -433,6 +437,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     const isInKitchen = order.status === 'IN_KITCHEN';
     const isUpdatingThis = isUpdating === order.id;
     const isQR = order.source === 'QR_CODE';
+    const isWhatsApp = order.source === 'WHATSAPP';
     
     // Check if paid online
     const hasPaidOnline = order.payments?.some((p: any) => p.method === 'ONLINE' && p.status === 'COMPLETED') 
@@ -488,7 +493,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     if (layout === 'list') {
       return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-[#E2E8F0] p-4 rounded-xl transition-all shadow-sm min-w-0 ${dataMode === 'history' ? 'opacity-80' : 'cursor-pointer hover:border-[#CBD5E1]'}`}>
+        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-[#E2E8F0] p-4 rounded-xl transition-all shadow-sm min-w-0 ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : 'cursor-pointer hover:border-[#CBD5E1]'}`}>
           <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
             <div className="w-16 shrink-0">
               <span className="text-xl font-bold text-[#0F172A]">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
@@ -554,6 +559,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   <span className="hidden md:inline">Bill</span>
                 </button>
               )}
+              {isWhatsApp && order.customerPhone && (
+                <a
+                  href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Message Customer"
+                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chat</span>
+                  <span className="hidden md:inline">Message</span>
+                </a>
+              )}
               <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] hover:bg-[#E2E8F0]'}`}>
                 {isUpdatingThis ? 'Updating...' : !!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
               </button>
@@ -581,6 +599,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <div className="flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
                   <span className="material-symbols-outlined text-[10px]">qr_code_2</span>
                   QR
+                </div>
+              )}
+              {isWhatsApp && (
+                <div className="flex items-center gap-1 bg-[#25D366]/10 text-[#128C7E] border border-[#25D366]/30 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[10px]">chat</span>
+                  WhatsApp
                 </div>
               )}
             </div>
@@ -641,6 +665,18 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                     <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
                   </button>
                 )}
+                {isWhatsApp && order.customerPhone && (
+                  <a
+                    href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Message Customer"
+                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">chat</span>
+                  </a>
+                )}
                 <button
                   disabled={isUpdatingThis || (isInKitchen && useKDS)}
                   onClick={onActionClick}
@@ -656,7 +692,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
 
     return (
-      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden transition-all group h-full ${dataMode === 'history' ? 'opacity-90' : 'cursor-pointer hover:border-[#CBD5E1] hover:shadow-md'}`}>
+      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden transition-all group h-full ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : 'cursor-pointer hover:border-[#CBD5E1] hover:shadow-md'}`}>
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -738,6 +774,18 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <span className="material-symbols-outlined text-[18px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
               </button>
             )}
+            {isWhatsApp && order.customerPhone && (
+              <a
+                href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Message Customer"
+                className="w-14 py-3.5 flex justify-center items-center text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors border-r border-[#E2E8F0]"
+              >
+                <span className="material-symbols-outlined text-[18px]">chat</span>
+              </a>
+            )}
             <button
               disabled={isUpdatingThis || (isInKitchen && useKDS)}
               onClick={onActionClick}
@@ -793,6 +841,20 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 {tab === 'ALL' ? 'All History' : tab}
               </button>
             ))
+          )}
+          {dataMode === 'live' && counts.WHATSAPP > 0 && (
+            <button
+              onClick={() => setSourceFilter(sourceFilter === 'WHATSAPP' ? 'ALL' : 'WHATSAPP')}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
+                sourceFilter === 'WHATSAPP'
+                  ? 'bg-[#25D366] text-white border-[#25D366] shadow-sm'
+                  : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">chat</span>
+              WhatsApp
+              <span className={`px-1.5 rounded-full text-[10px] ${sourceFilter === 'WHATSAPP' ? 'bg-white/20' : 'bg-[#F1F5F9]'}`}>{counts.WHATSAPP}</span>
+            </button>
           )}
         </div>
 

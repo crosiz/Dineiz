@@ -18,8 +18,8 @@ import {
   LayoutDashboard, Zap, ClipboardList, UtensilsCrossed, 
   LayoutTemplate, Monitor, Building2, Users, Package, 
   Clock, Tag, UserCheck, Star, BarChart3, FileText, 
-  TrendingUp, Globe, Truck, QrCode, Webhook, Palette, 
-  CreditCard, Settings 
+  TrendingUp, Globe, Truck, QrCode, Webhook, Palette,
+  CreditCard, Settings, MessageCircle
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -41,6 +41,7 @@ const iconMap: Record<string, React.ReactNode> = {
   AlertTriangle: <AlertTriangle size={17} />,
   TrendingUp: <TrendingUp size={17} />,
   Globe: <Globe size={17} />,
+  MessageCircle: <MessageCircle size={17} />,
   Truck: <Truck size={17} />,
   QrCode: <QrCode size={17} />,
   Webhook: <Webhook size={17} />,

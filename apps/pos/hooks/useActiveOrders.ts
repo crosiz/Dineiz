@@ -16,16 +16,20 @@ export interface OrderItem {
   quantity: number;
 }
 
+export type OrderSource = 'POS' | 'QR_CODE' | 'KIOSK' | 'FOODPANDA' | 'CAREEM' | 'TALABAT' | 'WHATSAPP';
+
 export interface POSOrder {
   id: string;
   orderNumber: string;
   tokenNumber: string;
   type: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   status: OrderStatus;
+  source?: OrderSource;
   createdAt: string;
   netAmount?: number;
   totalAmount?: number;
   total?: number;
+  customerPhone?: string | null;
   items: OrderItem[];
 }
 

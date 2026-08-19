@@ -417,7 +417,7 @@ export async function listOrderHistory(
   query: {
     page: number; limit: number; search?: string;
     dateFrom?: string; dateTo?: string; branchId?: string;
-    type?: string; status?: string; paymentMethod?: string;
+    type?: string; status?: string; paymentMethod?: string; source?: string;
     cashierId?: string;
     waiterId?: string;
   },
@@ -444,6 +444,7 @@ export async function listOrderHistory(
     ...(query.cashierId && { shift: { userId: query.cashierId } }),
     ...(query.waiterId && { assignedWaiterId: query.waiterId }),
     ...(query.paymentMethod && { payments: { some: { method: query.paymentMethod } } }),
+    ...(query.source && { source: query.source }),
     ...(dateFrom || dateTo ? { createdAt: { ...(dateFrom && { gte: dateFrom }), ...(dateTo && { lte: dateTo }) } } : {}),
     ...searchClause,
   };
@@ -458,6 +459,7 @@ export async function listOrderHistory(
         orderNumber: true,
         createdAt: true,
         type: true,
+        source: true,
         tokenNumber: true,
         totalAmount: true,
         taxAmount: true,
@@ -497,7 +499,7 @@ export async function listOrderHistory(
     orderNumber: String(o.orderNumber || o.id.slice(-4)).padStart(4, '0'),
     dateTime: o.createdAt.toISOString(),
     branchName: o.branch?.name ?? '',
-    type: o.type, customerName: null as string | null,
+    type: o.type, source: o.source, customerName: null as string | null,
     tableLabel: o.table?.label ?? null, token: o.tokenNumber ?? null,
     itemCount: o._count?.items ?? 0,
     subtotal: o.totalAmount ?? 0, tax: o.taxAmount ?? 0,
@@ -548,6 +550,8 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
         branch: { select: { name: true } },
         shift: { include: { user: { select: { name: true } } } },
         table: { select: { label: true } },
+        customer: { select: { name: true, phone: true } },
+        payments: { select: { method: true, status: true } },
       },
     }),
     prisma.order.findMany({
@@ -569,9 +573,12 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
     orderNumber: String(o.orderNumber || o.id.slice(-4)).padStart(3, '0'),
     status: o.status,
     type: o.type,
+    source: o.source,
     tableLabel: o.table?.label ?? null,
     token: o.tokenNumber ?? null,
-    customerName: null, // extend later from CRM
+    customerName: o.customer?.name ?? null,
+    customerPhone: o.customer?.phone ?? null,
+    payments: (o.payments || []).map((p: any) => ({ method: p.method, status: p.status })),
     items: (o.items || []).map((it: any) => ({
       name: it.item?.name ?? 'Item',
       qty: it.quantity,
