@@ -1,8 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { 
-  getTenantBranding, 
-  updateTenantBranding, 
+import { prisma } from '@dineiz/db';
+import {
+  getTenantBranding,
+  updateTenantBranding,
   uploadBrandingImage,
+  uploadUserAvatar,
   getTenantSettings,
   updateTenantSettings,
   getUserSettings,
@@ -14,6 +16,31 @@ import {
   revokeAllOtherSessions,
   queueExportDataJob
 } from './settings.service';
+
+export async function handleUploadUserAvatar(request: FastifyRequest, reply: FastifyReply) {
+  const userId = request.user!.id;
+
+  const data = await request.file();
+  if (!data) {
+    return reply.status(400).send({ error: 'No file uploaded' });
+  }
+
+  const buffer = await data.toBuffer();
+  const result = await uploadUserAvatar(userId, buffer, data.mimetype);
+  return reply.send(result);
+}
+
+export async function handleUpdateUserProfile(request: FastifyRequest, reply: FastifyReply) {
+  const userId = request.user!.id;
+  const { name } = request.body as { name?: string };
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { ...(name && { name }) },
+    select: { id: true, name: true, image: true },
+  });
+  return reply.send(updated);
+}
 
 export async function handleGetBranding(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = (request.user!.tenantId as string);

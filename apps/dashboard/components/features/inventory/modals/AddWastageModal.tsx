@@ -88,7 +88,7 @@ export function AddWastageModal({ isOpen, onClose }: AddWastageModalProps) {
 
             {/* Ingredient */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Ingredient</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Ingredient <span className="text-red-500">*</span></label>
               <select 
                 {...register('ingredientId')}
                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff5722]/20 focus:border-[#ff5722] transition-colors bg-white"
@@ -103,7 +103,7 @@ export function AddWastageModal({ isOpen, onClose }: AddWastageModalProps) {
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity Lost</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity Lost <span className="text-red-500">*</span></label>
               <input 
                 {...register('quantity', { valueAsNumber: true })}
                 type="number" 

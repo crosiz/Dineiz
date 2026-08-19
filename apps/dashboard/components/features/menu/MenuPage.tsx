@@ -93,7 +93,7 @@ export function MenuPage() {
   const isReadOnly = selectedBranchId === null;
 
   const { data: categories = [], isLoading: isCategoriesLoading } = useCategories(tenantId, selectedBranchId);
-  const { data: items = [], isLoading: isItemsLoading } = useMenuItems({
+  const { data: items = [], isLoading: isItemsLoading, isError: isItemsError, refetch: refetchItems } = useMenuItems({
     tenantId,
     categoryId: selectedCategoryId,
     search: debouncedSearch,
@@ -278,6 +278,8 @@ export function MenuPage() {
                 items={items}
                 categories={categories}
                 isLoading={isItemsLoading}
+                isError={isItemsError}
+                onRetry={refetchItems}
                 search={search}
                 setSearch={setSearch}
                 viewMode={viewMode}

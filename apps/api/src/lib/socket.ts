@@ -331,12 +331,13 @@ export function emitTableStatusChanged(
 }
 
 /** Broadcast branding update to POS terminals in a tenant */
-export function emitBrandingUpdated(tenantId: string, branding: { primaryColor?: string, restaurantName?: string, logoUrl?: string }): void {
+export function emitBrandingUpdated(tenantId: string, branding: Record<string, any>): void {
   const socket = getIO();
   if (!socket) { return; }
+  // /pos is the only namespace any client actually listens on for this
+  // event — the previous unscoped socket.emit() fallback landed on the
+  // default namespace, which nothing subscribes to, so it was dead code.
   socket.of('/pos').to(`tenant:${tenantId}`).emit('tenant:branding_updated', branding);
-  // Also emit to root namespace to be safe
-  socket.emit('tenant:branding_updated', branding);
 }
 
 /** Broadcast menu price changes to POS terminals */

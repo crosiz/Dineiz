@@ -10,10 +10,13 @@ import { AlertWidget } from './AlertWidget';
 import { AddBranchModal } from './AddBranchModal';
 import { BranchDetailsSlideOver } from './BranchDetailsSlideOver';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ui/ErrorState';
+import BranchModal from '@/app/dashboard/branches/components/BranchModal';
 
 export function BranchesPage() {
-  const { branches, summary, isLoading } = useBranches();
+  const { branches, summary, isLoading, error, refetch } = useBranches();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<any>(null);
   const [selectedBranchForDetails, setSelectedBranchForDetails] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -78,7 +81,9 @@ export function BranchesPage() {
           </div>
 
           {/* BRANCH CARDS GRID */}
-          {isLoading ? (
+          {error ? (
+            <ErrorState message="Couldn't load branches." onRetry={() => refetch()} />
+          ) : isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[0, 100, 200].map(delay => (
                 <div key={delay} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-4">
@@ -101,10 +106,7 @@ export function BranchesPage() {
                   key={branch.id} 
                   branch={branch} 
                   onViewDetails={() => setSelectedBranchForDetails(branch)}
-                  onEdit={() => {
-                    // For now, re-use AddBranchModal if it supports edit, or custom
-                    setIsAddModalOpen(true);
-                  }}
+                  onEdit={() => setEditingBranch(branch)}
                   onViewPlan={() => router.push(`/dashboard/floor-plan?branchId=${branch.id}`)}
                 />
               ))}
@@ -125,16 +127,23 @@ export function BranchesPage() {
 
           {/* BOTTOM WIDGETS */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
-            <NetworkStatusWidget />
-            <AlertWidget />
+            <NetworkStatusWidget branches={branches} />
+            <AlertWidget branches={branches} onViewBranch={(b) => setSelectedBranchForDetails(b)} />
           </div>
 
         </div>
       </div>
 
       <AddBranchModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
-      
-      <BranchDetailsSlideOver 
+
+      <BranchModal
+        isOpen={!!editingBranch}
+        branchToEdit={editingBranch}
+        onClose={() => setEditingBranch(null)}
+        onSuccess={() => refetch()}
+      />
+
+      <BranchDetailsSlideOver
         branch={selectedBranchForDetails} 
         isOpen={!!selectedBranchForDetails} 
         onClose={() => setSelectedBranchForDetails(null)} 

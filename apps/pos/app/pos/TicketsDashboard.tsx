@@ -97,15 +97,17 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const session = useCartStore(s => s.session);
   const [isMounted, setIsMounted] = useState(false);
 
-  // KDS setting — read from localStorage (populated when settings are fetched from API)
+  // KDS setting — the tenant-wide Kitchen tab toggle OR'd with this specific
+  // branch's own KDS-hardware flag (set in Add/Edit Branch), so a branch
+  // that has its own KDS screen configured uses it even if the tenant-wide
+  // toggle was never turned on, and existing tenants relying on the
+  // tenant-wide toggle alone keep working exactly as before.
   // When useKDS is false: PENDING orders get 'Mark Ready' button, not 'Send to Kitchen'
   const [useKDS, setUseKDS] = useState<boolean>(() => {
     try {
-      const stored = localStorage.getItem('pos_tenant_settings');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return parsed?.kitchen?.useKDS ?? false;
-      }
+      const tenantWide = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}')?.kitchen?.useKDS ?? false;
+      const branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
+      return tenantWide || branchLevel;
     } catch {}
     return false;
   });
@@ -307,7 +309,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     // Listen for tenant settings updates (e.g. useKDS toggled from admin)
     const handleSettingsUpdate = (settings: any) => {
       if (settings?.kitchen?.useKDS !== undefined) {
-        setUseKDS(settings.kitchen.useKDS);
+        // Keep OR'd with this branch's own KDS flag — a live tenant-wide
+        // toggle-off shouldn't turn off a branch that has its own KDS
+        // hardware configured.
+        let branchLevel = false;
+        try {
+          branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
+        } catch {}
+        setUseKDS(settings.kitchen.useKDS || branchLevel);
         try {
           const stored = localStorage.getItem('pos_tenant_settings');
           const parsed = stored ? JSON.parse(stored) : {};

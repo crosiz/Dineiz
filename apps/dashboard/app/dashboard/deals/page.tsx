@@ -90,6 +90,16 @@ export default function DealsPage() {
 
   const activeDeals = deals.filter(d => d.isActive).length;
   const totalRedemptions = deals.reduce((acc, d) => acc + (d.usedCount || 0), 0);
+  // Only FIXED_AMOUNT deals have a real currency value on the deal itself —
+  // PERCENT/HAPPY_HOUR discounts depend on the order total they were applied
+  // to, which isn't available here, so they're left out rather than guessed.
+  const fixedAmountDiscountsGiven = deals.reduce((acc, d) => {
+    if (d.type === 'FIXED_AMOUNT' && typeof d.config?.amount === 'number') {
+      return acc + d.config.amount * (d.usedCount || 0);
+    }
+    return acc;
+  }, 0);
+  const avgRedemptionsPerDeal = deals.length > 0 ? totalRedemptions / deals.length : 0;
 
   const displayedDeals = deals.filter(d => {
     if (tab === 'all') return true;
@@ -144,18 +154,18 @@ export default function DealsPage() {
           <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
           <div className="flex items-center gap-3 flex-1 min-w-[200px]">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Revenue Impact</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Fixed Discounts Given</p>
               <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">PKR 0</h3>
+                <h3 className="text-lg font-bold text-slate-900">PKR {fixedAmountDiscountsGiven.toLocaleString()}</h3>
               </div>
             </div>
           </div>
           <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
           <div className="flex items-center gap-3 flex-1 min-w-[200px]">
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Discount</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Redemptions / Deal</p>
               <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">PKR 0</h3>
+                <h3 className="text-lg font-bold text-slate-900">{avgRedemptionsPerDeal.toFixed(1)}</h3>
               </div>
             </div>
           </div>

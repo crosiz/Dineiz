@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { usePlan } from '@/contexts/plan-context';
 import { authClient } from '@/lib/auth-client';
 import { apiGet } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,6 +60,8 @@ export function Sidebar() {
   const { branch } = useUser();
   const branchName = branch?.name || 'My Branch';
   const branchId   = branch?.id;
+  const { plan } = usePlan();
+  const planLabel = plan?.displayName || plan?.name || 'Starter';
 
   const isBranchManager = user?.role === 'BRANCH_MANAGER';
   const isTenantAdmin   = user?.role === 'TENANT_ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -66,8 +69,8 @@ export function Sidebar() {
   const navConfig = isBranchManager ? BRANCH_MANAGER_NAV(branchName) : TENANT_ADMIN_NAV;
 
   const storeCollapsed    = useUIStore(s => s.sidebarCollapsed);
+  const hasHydrated       = useUIStore(s => s.hasHydrated);
   const toggleSidebar     = useUIStore(s => s.toggleSidebar);
-  const setSidebarCollapsed = useUIStore(s => s.setSidebarCollapsed);
   const router            = useRouter();
   const queryClient       = useQueryClient();
 
@@ -88,20 +91,11 @@ export function Sidebar() {
     if (href === '/dashboard/deals') prefetch(['deals', branchId], `/api/deals${branchId ? `?branchId=${branchId}` : ''}`);
   };
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('dineiz_sidebar_collapsed');
-    if (saved === 'true') setSidebarCollapsed(true);
-  }, [setSidebarCollapsed]);
-
-  const collapsed = mounted ? storeCollapsed : false;
-
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('dineiz_sidebar_collapsed', String(collapsed));
-    }
-  }, [collapsed, mounted]);
+  // Render expanded until the persisted value has actually loaded, then
+  // switch once — a single state transition instead of the previous
+  // multi-source race between a mount flag and two independent localStorage
+  // read/write paths.
+  const collapsed = hasHydrated ? storeCollapsed : false;
 
   const { errorCount, clearErrors } = useErrorStore();
   useEffect(() => {
@@ -146,7 +140,7 @@ export function Sidebar() {
 
       {/* ── Logo area ────────────────────────────────────────────────────────── */}
       <div
-        className="shrink-0 flex items-center overflow-hidden"
+        className="shrink-0 flex items-center overflow-hidden transition-[padding] duration-300 ease-in-out"
         style={{
           height: 68,
           paddingLeft: collapsed ? 14 : 20,
@@ -154,11 +148,23 @@ export function Sidebar() {
           borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}
       >
-        <DineizLogo
-          size="md"
-          variant="dark"
-          showWordmark={!collapsed}
-        />
+        {/* Both variants stay mounted and crossfade via opacity — swapping
+            the logo outright mid-way through the sidebar's 300ms width
+            animation is what produced the visible flash/snap. */}
+        <div className="relative flex items-center" style={{ height: 32 }}>
+          <div
+            className="transition-opacity duration-200 ease-in-out"
+            style={{ opacity: collapsed ? 1 : 0, position: collapsed ? 'static' : 'absolute' }}
+          >
+            <DineizLogo size="md" variant="dark" showWordmark={false} />
+          </div>
+          <div
+            className="transition-opacity duration-200 ease-in-out"
+            style={{ opacity: collapsed ? 0 : 1, position: collapsed ? 'absolute' : 'static' }}
+          >
+            <DineizLogo size="md" variant="dark" showWordmark={true} />
+          </div>
+        </div>
       </div>
 
       {/* ── Role / context pill ──────────────────────────────────────────────── */}
@@ -181,7 +187,7 @@ export function Sidebar() {
             className="text-[10px] font-semibold uppercase tracking-widest truncate"
             style={{ color: '#64748B', letterSpacing: '0.1em' }}
           >
-            {isTenantAdmin ? 'Enterprise' : branchName}
+            {isTenantAdmin ? planLabel : branchName}
           </span>
         </div>
       )}

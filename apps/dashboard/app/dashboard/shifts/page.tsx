@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/contexts/user-context";
 import { useDashboardContext } from "@/contexts/dashboard-context";
 import { apiGet } from "@/lib/api-client";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { formatPKR, formatVariance } from "@/lib/formatters";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -257,20 +257,24 @@ export default function ShiftManagementPage() {
   const allHistory: any[] = historyData?.data ?? [];
 
   useEffect(() => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const socket = io(`${API}/kds`, { withCredentials: true, transports: ['websocket', 'polling'] });
+    const socket = io(`${API_URL}/kds`, { withCredentials: true, transports: ['websocket', 'polling'] });
     
     socket.on('connect', () => { 
       if (userBranchId) socket.emit('join_branch', userBranchId); 
       else if (isTenantAdmin && tenantId) socket.emit('join_tenant', tenantId);
     });
     
-    socket.on('dashboard:stats_updated', () => {
-      console.log('Socket event received: dashboard:stats_updated');
+    const refetchShifts = () => {
       queryClient.refetchQueries({ queryKey: ["shift-stats-active"] });
       queryClient.refetchQueries({ queryKey: ["shift-history"] });
-    });
-    
+    };
+
+    socket.on('dashboard:stats_updated', refetchShifts);
+    // Automatic ZKTeco clock-in/out also opens/closes shifts — refresh the
+    // same queries so biometric attendance shows up here live too.
+    socket.on('shift:opened', refetchShifts);
+    socket.on('shift:closed', refetchShifts);
+
     return () => { socket.disconnect(); };
   }, [userBranchId, tenantId, isTenantAdmin, queryClient]);
 

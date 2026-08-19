@@ -56,7 +56,7 @@ export function useStaff(initialFilters: Partial<StaffFilters> = {}) {
     }
   });
 
-  const { data: staffData, isLoading: isStaffLoading } = useQuery({
+  const { data: staffData, isLoading: isStaffLoading, isError: isStaffError, refetch: refetchStaff } = useQuery({
     queryKey: ['staff', 'list', selectedBranchId, filters],
     queryFn: async () => {
       const q = new URLSearchParams();
@@ -148,6 +148,8 @@ export function useStaff(initialFilters: Partial<StaffFilters> = {}) {
     pagination: staffData?.pagination || { total: 0, page: 1, limit: 10, totalPages: 1 },
     stats: stats || { total: 0, activeNow: 0, managers: 0, pendingInvites: 0 },
     isLoading: isStatsLoading || isStaffLoading,
+    isError: isStaffError,
+    refetch: refetchStaff,
     filters,
     setFilters,
     isAddModalOpen,

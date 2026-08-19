@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { getCustomer, addCustomerNote } from '@/lib/api/customers';
+import { getCustomer, addCustomerNote, updateCustomer } from '@/lib/api/customers';
+import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
+import { CreateCustomerSlideOver } from './CreateCustomerSlideOver';
+
+type LoyaltyTier = { id: string; name: string; minPoints: number; badgeColor: string };
 
 type CustomerDetailSlideOverProps = {
   customerId: string;
@@ -15,12 +19,18 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'PROFILE' | 'ORDERS' | 'LOYALTY' | 'NOTES'>('PROFILE');
   const [newNote, setNewNote] = useState('');
-  
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+
   React.useEffect(() => {
     async function load() {
       try {
-        const res = await getCustomer(customerId);
+        const [res, tiersRes] = await Promise.all([
+          getCustomer(customerId),
+          apiFetch<LoyaltyTier[]>('/api/loyalty/tiers').catch(() => []),
+        ]);
         setCustomer(res);
+        setTiers([...tiersRes].sort((a, b) => a.minPoints - b.minPoints));
       } catch (e) {
         console.error(e);
         toast.error('Failed to load customer details');
@@ -59,6 +69,18 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
   
   if (!customer) return null;
 
+  // Real tier progress from the tenant's actual configured tiers — the
+  // customer's own currentTier plus whichever tier is next by point
+  // threshold, instead of a hardcoded "Bronze"/40%/240-points placeholder.
+  const points = customer.loyaltyPoints ?? 0;
+  const currentTier: LoyaltyTier | null = customer.currentTier
+    ?? [...tiers].reverse().find(t => points >= t.minPoints)
+    ?? null;
+  const nextTier = tiers.find(t => t.minPoints > points) ?? null;
+  const tierProgressPercent = nextTier && currentTier
+    ? Math.min(100, Math.max(0, ((points - currentTier.minPoints) / (nextTier.minPoints - currentTier.minPoints)) * 100))
+    : 100;
+
   return (
     <>
       <div className="fixed inset-0 bg-gray-900/20 backdrop-blur-[2px] z-40 transition-opacity" onClick={onClose} />
@@ -82,9 +104,14 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                 <span className="material-symbols-outlined text-[16px]">mail</span> {customer.email || 'No email'}
               </p>
               <div className="mt-3 flex gap-2">
-                <span className="px-3 py-1 text-[11px] font-bold rounded-lg bg-amber-100 text-amber-700 uppercase tracking-wider flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">workspace_premium</span> Bronze Tier
-                </span>
+                {currentTier && (
+                  <span
+                    className="px-3 py-1 text-[11px] font-bold rounded-lg uppercase tracking-wider flex items-center gap-1"
+                    style={{ background: `${currentTier.badgeColor}1A`, color: currentTier.badgeColor }}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">workspace_premium</span> {currentTier.name} Tier
+                  </span>
+                )}
                 {customer.segment && (
                   <span className="px-3 py-1 text-[11px] font-bold rounded-lg bg-gray-100 text-gray-700 uppercase tracking-wider">
                     {customer.segment.replace('_', ' ')}
@@ -114,13 +141,20 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
           </div>
           
           <div className="flex gap-3 mt-6">
-            <button className="flex-1 py-2.5 bg-green-50 hover:bg-green-100 text-green-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+            <button
+              onClick={() => {
+                if (!customer.phone) { toast.error('This customer has no phone number on file'); return; }
+                const digits = customer.phone.replace(/[^\d]/g, '');
+                window.open(`https://wa.me/${digits}`, '_blank', 'noopener,noreferrer');
+              }}
+              className="flex-1 py-2.5 bg-green-50 hover:bg-green-100 text-green-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
               <span className="material-symbols-outlined text-[18px]">chat</span> WhatsApp
             </button>
             <button onClick={() => setActiveTab('NOTES')} className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200">
               <span className="material-symbols-outlined text-[18px]">note_add</span> Add Note
             </button>
-            <button className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200">
+            <button onClick={() => setIsEditOpen(true)} className="flex-1 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 border border-gray-200">
               <span className="material-symbols-outlined text-[18px]">edit</span> Edit Profile
             </button>
           </div>
@@ -240,18 +274,22 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                 <span className="material-symbols-outlined absolute -right-6 -bottom-6 text-[120px] text-white opacity-10 transform -rotate-12">stars</span>
                 <div className="relative z-10">
                   <div className="text-[11px] font-bold uppercase tracking-widest opacity-80 mb-2">Available Points</div>
-                  <div className="text-5xl font-black mb-6">{customer.loyaltyPoints}</div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span>Bronze</span>
-                      <span>Silver</span>
+                  <div className="text-5xl font-black mb-6">{points}</div>
+
+                  {tiers.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span>{currentTier?.name ?? 'No tier yet'}</span>
+                        {nextTier && <span>{nextTier.name}</span>}
+                      </div>
+                      <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                        <div className="h-full bg-white rounded-full" style={{ width: `${tierProgressPercent}%` }}></div>
+                      </div>
+                      <div className="text-xs font-medium opacity-90 text-right">
+                        {nextTier ? `${nextTier.minPoints - points} points to ${nextTier.name}` : 'Highest tier reached'}
+                      </div>
                     </div>
-                    <div className="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-white rounded-full" style={{ width: '40%' }}></div>
-                    </div>
-                    <div className="text-xs font-medium opacity-90 text-right">240 points to next tier</div>
-                  </div>
+                  )}
                 </div>
               </div>
               
@@ -340,6 +378,24 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
           )}
         </div>
       </div>
+
+      <CreateCustomerSlideOver
+        isOpen={isEditOpen}
+        initialData={customer}
+        onClose={() => setIsEditOpen(false)}
+        onSubmit={async (data) => {
+          try {
+            await updateCustomer(customerId, data);
+            toast.success('Customer updated');
+            const res = await getCustomer(customerId);
+            setCustomer(res);
+            onUpdate();
+          } catch (e: any) {
+            toast.error(e?.message || 'Failed to update customer');
+            throw e;
+          }
+        }}
+      />
     </>
   );
 }

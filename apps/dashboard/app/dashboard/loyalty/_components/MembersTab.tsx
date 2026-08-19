@@ -6,18 +6,21 @@ import { Pagination } from '@/components/ui/Pagination';
 
 export function MembersTab() {
   const [loading, setLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [data, setData] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
   const fetchMembers = async () => {
     setLoading(true);
+    setIsError(false);
     try {
       // Sort by loyalty points to get members
       const res = await apiFetch<any>(`/api/customers?page=${currentPage}&limit=${pageSize}&sortBy=loyaltyPoints&sortOrder=desc`);
       setData(res);
     } catch (e) {
       console.error(e);
+      setIsError(true);
     } finally {
       setLoading(false);
     }
@@ -48,7 +51,18 @@ export function MembersTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? (
+              {isError ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="bg-white p-12 text-center flex flex-col items-center">
+                      <h3 className="text-[13px] font-bold text-red-500 mb-2">Couldn't load loyalty members.</h3>
+                      <button onClick={fetchMembers} className="text-[13px] font-semibold text-[#ff5722] hover:underline">
+                        Try again
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : loading ? (
                 <tr>
                   <td colSpan={4}>
                     <div className="bg-white p-12 text-center flex flex-col items-center justify-center">

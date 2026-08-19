@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api-client';
 import { X, Save, RefreshCw, Check, Link as LinkIcon, Search } from 'lucide-react';
 import { useDashboardContext } from '@/contexts/dashboard-context';
+import { toast } from 'sonner';
 
 const FoodpandaIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full p-1 text-[#D70F64]">
@@ -382,7 +383,13 @@ function WebhookTab({ provider }: { provider: string }) {
             value={webhookUrl}
             className="flex-1 px-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-600 font-mono outline-none"
           />
-          <button className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-orange-600 transition-colors">
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(webhookUrl);
+              toast.success('Webhook URL copied');
+            }}
+            className="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-orange-600 transition-colors"
+          >
             Copy
           </button>
         </div>

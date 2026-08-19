@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { DineizLogo } from "@/components/ui/DineizLogo";
 
@@ -21,6 +22,29 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "forgot">("login");
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setForgotLoading(true);
+    try {
+      await authClient.requestPasswordReset({
+        email: forgotEmail.trim(),
+        redirectTo: "/reset-password",
+      });
+      // Always show the same confirmation regardless of whether the email
+      // matched an account — don't leak which emails are registered.
+      setForgotSent(true);
+    } catch {
+      toast.error("Couldn't send reset email. Please try again.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const {
     register,
@@ -64,6 +88,72 @@ export function LoginForm() {
       setIsLoading(false);
     }
   };
+
+  if (mode === "forgot") {
+    return (
+      <div className="w-full max-w-[420px] mx-auto">
+        <div className="lg:hidden flex justify-center mb-8">
+          <DineizLogo size="md" variant="light" />
+        </div>
+
+        <div className="mb-8 text-center lg:text-left">
+          <h2 className="text-2xl lg:text-3xl font-extrabold text-[#0D1117] tracking-tight mb-2">
+            Reset your password
+          </h2>
+          <p className="text-sm text-slate-500 font-normal leading-relaxed">
+            {forgotSent
+              ? "If that email matches an account, a reset link is on its way."
+              : "Enter the email on your account and we'll send you a reset link."}
+          </p>
+        </div>
+
+        {forgotSent ? (
+          <button
+            type="button"
+            onClick={() => { setMode("login"); setForgotSent(false); setForgotEmail(""); }}
+            className="w-full h-11 rounded-lg text-sm font-semibold text-[#0D1117] bg-slate-50 border border-slate-200 hover:bg-slate-100 transition-colors"
+          >
+            Back to sign in
+          </button>
+        ) : (
+          <form onSubmit={handleForgotPassword} className="space-y-5" noValidate>
+            <div className="space-y-1.5">
+              <label htmlFor="forgotEmail" className="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Email Address
+              </label>
+              <input
+                id="forgotEmail"
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="admin@dineiz.com"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="w-full h-11 px-4 rounded-lg text-sm text-[#0D1117] bg-slate-50 border border-slate-200 focus:border-[#FF6B35] focus:bg-white focus:ring-2 focus:ring-[#FF6B35]/20 transition-all duration-150 outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={forgotLoading}
+              className="w-full h-11 rounded-lg text-sm font-semibold text-white transition-all duration-150 flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #FF6B35 0%, #E63946 100%)" }}
+            >
+              {forgotLoading ? "Sending…" : "Send reset link"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className="w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-[420px] mx-auto">
@@ -130,6 +220,7 @@ export function LoginForm() {
             </label>
             <button
               type="button"
+              onClick={() => setMode("forgot")}
               className="text-xs font-medium text-[#FF6B35] hover:text-[#E63946] transition-colors"
             >
               Forgot password?
@@ -232,6 +323,7 @@ export function LoginForm() {
           Need assistance or onboarding help?{" "}
           <button
             type="button"
+            onClick={() => toast.info("Support contact is coming soon — reach out to your account manager in the meantime")}
             className="font-semibold text-[#FF6B35] hover:underline"
           >
             Contact Dineiz Support

@@ -2,14 +2,18 @@
 import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Utensils, ShoppingBag, Bike, Loader2 } from 'lucide-react';
+import { MoreVertical, Utensils, ShoppingBag, Bike, Loader2, User } from 'lucide-react';
 import type { HistoryOrder } from './hooks/useOrders';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Pagination } from '../../ui/Pagination';
+import { toast } from 'sonner';
+import { API_URL } from '@/lib/api';
 
 interface OrdersTableProps {
   orders: HistoryOrder[];
   isLoading: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   onOrderClick: (id: string) => void;
   page: number;
   totalPages: number;
@@ -119,7 +123,7 @@ function ActionsMenu({ order, onView, onCancel }: {
             View Details
           </button>
           <button
-            onClick={e => { e.stopPropagation(); setOpen(false); }}
+            onClick={e => { e.stopPropagation(); setOpen(false); toast.info('Printing from the dashboard is coming soon — use the POS terminal for now'); }}
             className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Reprint KOT
@@ -140,7 +144,7 @@ function ActionsMenu({ order, onView, onCancel }: {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export function OrdersTable({
-  orders, isLoading, onOrderClick, page, totalPages, limit, totalOrders, setPage, setLimit, isBranchManager, selectedBranchId
+  orders, isLoading, isError, onRetry, onOrderClick, page, totalPages, limit, totalOrders, setPage, setLimit, isBranchManager, selectedBranchId
 }: OrdersTableProps) {
   const [cancelTarget, setCancelTarget] = useState<HistoryOrder | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
@@ -182,7 +186,18 @@ export function OrdersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
+              {isError ? (
+                <tr>
+                  <td colSpan={13} className="py-16 text-center">
+                    <p className="text-sm font-medium text-red-500">Couldn't load orders.</p>
+                    {onRetry && (
+                      <button onClick={onRetry} className="mt-2 text-sm font-semibold text-[#ff5722] hover:underline">
+                        Try again
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ) : isLoading ? (
                 <tr>
                   <td colSpan={13} className="py-16 text-center">
                     <Loader2 size={28} className="animate-spin text-[#ff5722] mx-auto" />
@@ -245,7 +260,7 @@ export function OrdersTable({
                         <td className="px-5 text-xs text-slate-600 whitespace-nowrap">
                           {order.waiterName ? (
                             <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 w-fit px-2 py-0.5 rounded border border-blue-100">
-                              <span className="material-symbols-outlined text-[12px]">person</span>
+                              <User size={11} />
                               {order.waiterName.split(' ')[0]}
                             </div>
                           ) : '-'}
@@ -304,7 +319,7 @@ export function OrdersTable({
               <button
                 onClick={async () => {
                   try {
-                    await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${cancelTarget.id}`, {
+                    await fetch(`${API_URL}/api/orders/${cancelTarget.id}`, {
                       method: 'PUT', credentials: 'include',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ status: 'CANCELLED' }),

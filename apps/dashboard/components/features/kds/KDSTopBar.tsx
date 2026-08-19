@@ -6,6 +6,7 @@ import { useUser } from '@/contexts/user-context';
 import { Bell, Maximize, Minimize, Settings, Moon, Sun, ArrowLeft } from 'lucide-react';
 import { BranchSelector } from '@/components/layout/header/BranchSelector';
 import { SocketStatus } from './hooks/useKDS';
+import { toast } from 'sonner';
 
 interface KDSTopBarProps {
   branchName: string;
@@ -97,7 +98,11 @@ export function KDSTopBar({ branchName, socketStatus, isFullscreen, onFullscreen
             <button onClick={onToggleTheme} className={`transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`} title="Toggle Theme">
               {isDark ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className={`transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`} title="Notifications">
+            <button
+              onClick={() => toast.info('Notification center is coming soon')}
+              className={`transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Notifications"
+            >
               <Bell size={20} />
             </button>
             <button onClick={onOpenSettings} className={`transition-colors ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-500 hover:text-slate-700'}`} title="Settings">

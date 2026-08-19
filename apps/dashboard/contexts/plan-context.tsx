@@ -2,6 +2,7 @@
 
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
 import { useUser } from "./user-context";
+import { API_URL } from "@/lib/api";
 
 export interface PlanContextType {
   plan: any; // PlanDefinition
@@ -14,8 +15,6 @@ const PlanContext = createContext<PlanContextType>({
   overrides: [],
   loading: true,
 });
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export function PlanProviderWrapper({ children }: { children: ReactNode }) {
   const [data, setData] = useState<{ plan: any; overrides: any[] }>({ plan: null, overrides: [] });

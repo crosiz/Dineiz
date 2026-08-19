@@ -412,7 +412,11 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const { getIO } = await import('../../lib/socket.js');
     const io = getIO();
     if (io) {
-      io.to(`branch:${table.branchId}`).emit('table:status_changed', { tableId, status });
+      // Must target the /pos namespace specifically — both the admin Floor
+      // Plan editor and the POS Tables screen connect to /pos, not the
+      // default namespace. Emitting on the raw `io` here silently dropped
+      // this event for both listeners.
+      io.of('/pos').to(`branch:${table.branchId}`).emit('table:status_changed', { tableId, status });
     }
 
     return table;

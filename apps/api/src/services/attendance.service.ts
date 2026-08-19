@@ -73,15 +73,21 @@ export async function processPunch(punch: AttendancePunchData, method: 'ZKTECO' 
       data: { shiftId: shift.id, isLate, lateMinutes }
     })
 
-    // Notify dashboard via Socket.IO
+    // Notify dashboard via Socket.IO. Scoped like emitDashboardStatsUpdated —
+    // the Shift Management dashboard connects to /kds and joins branch/tenant
+    // rooms there, not on the default namespace, which is where this
+    // previously landed with nobody listening.
     if (getIO()) {
-      getIO()!.to(`tenant:${punch.tenantId}`).emit('shift:opened', {
+      const io = getIO()!.of('/kds');
+      const payload = {
         shiftId: shift.id,
         staffName: staff.name,
         branchId: punch.branchId,
         openedAt: punch.punchTime,
         method
-      })
+      };
+      io.to(`branch:${punch.branchId}`).emit('shift:opened', payload);
+      io.to(`tenant:${punch.tenantId}`).emit('shift:opened', payload);
     }
 
   } else if (punch.punchType === 'CLOCK_OUT') {
@@ -100,14 +106,17 @@ export async function processPunch(punch: AttendancePunchData, method: 'ZKTECO' 
       }
     })
 
-    // Notify dashboard
+    // Notify dashboard — same /kds scoping as the clock-in path above.
     if (getIO()) {
-      getIO()!.to(`tenant:${punch.tenantId}`).emit('shift:closed', {
+      const io = getIO()!.of('/kds');
+      const payload = {
         shiftId: openShift.id,
         staffName: staff.name,
         branchId: punch.branchId,
         closedAt: punch.punchTime
-      })
+      };
+      io.to(`branch:${punch.branchId}`).emit('shift:closed', payload);
+      io.to(`tenant:${punch.tenantId}`).emit('shift:closed', payload);
     }
   }
 }

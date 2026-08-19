@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { useUser } from '@/contexts/user-context';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { io, Socket } from 'socket.io-client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const SOUND_PREF_KEY = 'dineiz_sound_pref';
 
 export interface LiveOrder {

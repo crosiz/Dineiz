@@ -8,7 +8,6 @@ import { apiGet } from "@/lib/api-client";
 import { useQuery } from "@tanstack/react-query";
 import { Clock, Users, TrendingUp, RefreshCw, Eye } from "lucide-react";
 
-function formatPKR(n: number) { return `${formatPKR(Math.round(n))}`; }
 function formatDuration(startMs: number) {
   const ms = Date.now() - startMs;
   const h = Math.floor(ms / 3_600_000);

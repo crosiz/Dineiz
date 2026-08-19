@@ -82,7 +82,7 @@ export function useInventory() {
   };
 
   // ── Ingredients list ──────────────────────────────────────────────────────────
-  const { data: ingredientsData, isLoading: isIngredientsLoading } = useQuery({
+  const { data: ingredientsData, isLoading: isIngredientsLoading, isError: isIngredientsError, refetch: refetchIngredients } = useQuery({
     queryKey: ['inventory', 'ingredients', selectedBranchId],
     queryFn: async () => {
       const q = new URLSearchParams();
@@ -169,13 +169,14 @@ export function useInventory() {
 
   const receivePO = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/inventory/purchase-orders/${id}/receive`, {
+      // Was a bare relative fetch() referencing an undefined `branchId` —
+      // threw a ReferenceError and crashed on every call (no API host, no
+      // credentials, and the variable itself doesn't exist in this scope;
+      // only `selectedBranchId` does).
+      return apiFetch(`/api/inventory/purchase-orders/${id}/receive`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branchId })
+        body: JSON.stringify({ branchId: selectedBranchId }),
       });
-      if (!res.ok) throw new Error('Failed to receive PO');
-      return res.json();
     },
     onSuccess: () => {
       toast.success('Purchase order received');
@@ -187,14 +188,13 @@ export function useInventory() {
 
   const autoGeneratePO = useMutation({
     mutationFn: async () => {
-      const res = await fetch('/api/inventory/purchase-orders/auto', {
+      // Was a bare relative fetch() with no API host and no credentials —
+      // hit the dashboard's own Next.js server instead of the API, and
+      // would have failed auth even if it had reached the right host.
+      return apiFetch('/api/inventory/purchase-orders/auto', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branchId })
+        body: JSON.stringify({ branchId: selectedBranchId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to auto-generate PO');
-      return data;
     },
     onSuccess: () => {
       toast.success('Auto-generated PO created');
@@ -228,6 +228,8 @@ export function useInventory() {
     isLoading: isStatsLoading || isIngredientsLoading || isPOsLoading || isWastageLoading,
     isStatsLoading,
     isIngredientsLoading,
+    isIngredientsError,
+    refetchIngredients,
     isAddModalOpen,
     setIsAddModalOpen,
     activeTab,

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Edit2, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { InventoryItem } from './hooks/useInventory';
 import { AdjustStockModal } from './modals/AdjustStockModal';
 import { Pagination } from '../../ui/Pagination';
@@ -90,11 +91,18 @@ export function InventoryTable({ inventoryList }: InventoryTableProps) {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                    <button
+                      onClick={() => toast.info('Editing ingredient details is coming soon')}
+                      aria-label={`Edit ${item.name}`}
+                      title="Edit"
+                      className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                    >
                       <Edit2 size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setAdjustItem(item)}
+                      aria-label={`Adjust stock for ${item.name}`}
+                      title="Adjust stock"
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-slate-400 hover:bg-slate-100 hover:text-[#ff5722]`}
                     >
                       <ArrowRightLeft size={16} />

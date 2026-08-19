@@ -9,6 +9,7 @@ import { AddStaffModal } from './modals/AddStaffModal';
 import { Plus } from 'lucide-react';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { AllBranchesBanner } from '@/components/AllBranchesBanner';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ─── Skeleton that exactly matches the real StaffTable columns ────────────────
 function StaffTableSkeleton({ showBranchColumn }: { showBranchColumn: boolean }) {
@@ -117,7 +118,7 @@ function StaffTableSkeleton({ showBranchColumn }: { showBranchColumn: boolean })
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function StaffPage() {
   const {
-    staffList, pagination, stats, isLoading,
+    staffList, pagination, stats, isLoading, isError, refetch,
     isAddModalOpen, setIsAddModalOpen,
     filters, setFilters,
   } = useStaff();
@@ -146,7 +147,9 @@ export function StaffPage() {
       <StaffFilters filters={filters} setFilters={setFilters} totalResults={pagination.total} />
 
       <div className="min-h-[500px]">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState message="Couldn't load staff." onRetry={refetch} />
+        ) : isLoading ? (
           <StaffTableSkeleton showBranchColumn={isAllBranches} />
         ) : (
           <StaffTable

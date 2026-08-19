@@ -14,7 +14,9 @@ import {
   handleGetSessions,
   handleRevokeSession,
   handleRevokeAllOtherSessions,
-  handleExportData
+  handleExportData,
+  handleUploadUserAvatar,
+  handleUpdateUserProfile
 } from './settings.handlers';
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'TENANT_ADMIN'];
@@ -33,7 +35,9 @@ export const settingsRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
   // User Level Settings (Branch Manager + Admin)
   fastify.get('/api/settings/user', { preHandler: requireRole(MANAGER_ROLES) }, handleGetUserSettings);
-  
+  fastify.put('/api/settings/user/profile', { preHandler: requireRole(MANAGER_ROLES) }, handleUpdateUserProfile);
+  fastify.post('/api/settings/user/avatar', { preHandler: requireRole(MANAGER_ROLES) }, handleUploadUserAvatar);
+
   fastify.put('/api/settings/notifications', { preHandler: requireRole(MANAGER_ROLES) }, handleUpdateNotifications);
   
   fastify.put('/api/settings/change-password', { preHandler: requireRole(MANAGER_ROLES) }, handleChangePassword);

@@ -36,7 +36,7 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
       ref={linkRef}
       href={href}
       title={collapsed ? label : undefined}
-      className={`group relative flex items-center transition-all duration-200 rounded-lg text-[13px] mb-0.5 focus:outline-none ${
+      className={`group relative flex items-center transition-all duration-200 rounded-lg text-[13px] mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/60 ${
         collapsed ? 'justify-center w-10 h-10 mx-auto p-0' : 'px-3 py-2.5 justify-between'
       }`}
       style={

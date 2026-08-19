@@ -69,7 +69,12 @@ export function FloorPlanEditor() {
           allowReservations: t.allowReservations ?? true,
           joinable: t.joinable ?? false,
           isActive: t.isActive,
-          status: 'available' as const,
+          // The API already computes real status from active orders
+          // (floor-plan.routes.ts) — this used to be discarded and
+          // hardcoded to 'available' on every load.
+          status: t.status ?? 'FREE',
+          occupiedSince: t.occupiedSince ?? undefined,
+          activeOrderId: t.activeOrderId ?? undefined,
         })) || [];
 
       setTables(apiTables);
@@ -123,7 +128,7 @@ export function FloorPlanEditor() {
                 <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Store className="w-8 h-8 text-amber-600" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">plz select branch first</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">Select a branch first</h3>
                 <p className="text-sm text-slate-500 mb-6">
                   Choose a branch from the global dropdown above to start editing its floor plan.
                 </p>

@@ -223,21 +223,11 @@ export async function updateTenantBranding(tenantId: string, data: any) {
     });
   }
 
-  // Broadcast branding update to all POS terminals. Uses the dedicated
-  // 'tenant:branding_updated' event (see emitBrandingUpdated) rather than
-  // 'tenant:settings_updated' — that event is also used by
-  // updateTenantSettings() below for the unrelated general tenant.settings
-  // blob (kitchen/printing toggles etc.), and the POS's branding-aware
-  // listener (POSLayout's handleBrandingUpdated, which pushes tax-rate
-  // changes into the reactive branding store and cart session) was written
-  // against 'tenant:branding_updated' and never actually fired while this
-  // emitted the other event name — settings changes silently did not
-  // reach the live branding store until the next full page load.
-  // emitBrandingUpdated's declared param type is narrower (string | undefined
-  // fields) than the full TenantBranding row (nullable DB columns come back
-  // as string | null) — it just forwards whatever object it's given over
-  // the socket, so this is a real type shape gap, not a runtime concern.
-  emitBrandingUpdated(tenantId, branding as Record<string, any>);
+  // Broadcast branding update to all POS terminals for this tenant, via the
+  // dedicated 'tenant:branding_updated' event (distinct from
+  // 'tenant:settings_updated', used by updateTenantSettings() below for the
+  // unrelated kitchen/printing settings blob).
+  emitBrandingUpdated(tenantId, branding);
 
   return branding;
 }
@@ -260,6 +250,27 @@ export async function uploadBrandingImage(tenantId: string, type: string, buffer
   });
 
   return { url: result.secure_url };
+}
+
+export async function uploadUserAvatar(userId: string, buffer: Buffer, mimeType: string = 'image/png') {
+  const base64 = buffer.toString('base64');
+  const dataURI = `data:${mimeType};base64,${base64}`;
+
+  const { v2: cloudinary } = require('cloudinary');
+
+  const result = await cloudinary.uploader.upload(dataURI, {
+    folder: `dineiz/users/${userId}`,
+    public_id: 'avatar',
+    overwrite: true,
+    transformation: [{ width: 256, height: 256, crop: 'fill', gravity: 'face' }],
+  });
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { image: result.secure_url },
+  });
+
+  return { url: user.image };
 }
 
 // General Settings
@@ -301,7 +312,10 @@ export async function updateTenantSettings(tenantId: string, data: any) {
   
   const io = getIO();
   if (io) {
-    io.of('/pos').emit('tenant:settings_updated', updated.settings);
+    // Scoped to this tenant's own room — previously this was an unscoped
+    // io.of('/pos').emit(...), which broadcast every tenant's kitchen/POS
+    // settings to every POS terminal on the platform, not just this tenant's.
+    io.of('/pos').to(`tenant:${tenantId}`).emit('tenant:settings_updated', updated.settings);
   }
 
   return updated.settings;

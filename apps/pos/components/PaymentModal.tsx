@@ -230,7 +230,18 @@ export default function PaymentModal({
   };
 
   const handlePaymentSuccess = async (methodLabel: string, tendered: number = totalWithTip, change: number = 0) => {
-    await handlePrintReceipt(methodLabel, tendered, change);
+    // Settings → Point of Sale → "Auto-print receipt on payment" was never
+    // actually consulted here — a receipt printed on every successful
+    // payment regardless of the toggle. The manual "Print Receipt" button
+    // elsewhere in this modal is unaffected by this check, as it should be.
+    let autoPrintReceipt = false;
+    try {
+      const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+      autoPrintReceipt = settings?.pos?.autoPrintReceipt === true;
+    } catch {}
+    if (autoPrintReceipt) {
+      await handlePrintReceipt(methodLabel, tendered, change);
+    }
 
     setShowSuccess(true);
     clearCart();

@@ -10,7 +10,7 @@ export function SidebarSection({ label, children, collapsed }: SidebarSectionPro
       {!collapsed && (
         <p
           className="uppercase text-[9.5px] font-black tracking-[0.14em] px-3 pt-4 pb-1.5 truncate"
-          style={{ color: '#334155', letterSpacing: '0.14em' }}
+          style={{ color: '#64748B', letterSpacing: '0.14em' }}
         >
           {label}
         </p>

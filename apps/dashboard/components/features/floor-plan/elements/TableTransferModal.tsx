@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import { X, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { apiFetch } from '@/lib/api';
 import { useFloorPlanStore } from '../../../../store/useFloorPlanStore';
 
 interface TableTransferModalProps {
@@ -12,29 +14,58 @@ interface TableTransferModalProps {
 export function TableTransferModal({ sourceTableId, onClose }: TableTransferModalProps) {
   const { tables, updateTable } = useFloorPlanStore();
   const [targetTableId, setTargetTableId] = useState<string>('');
+  const [transferring, setTransferring] = useState(false);
 
   const sourceTable = tables.find(t => t.id === sourceTableId);
   const availableTables = tables.filter(t => t.id !== sourceTableId && t.status !== 'occupied');
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!targetTableId || !sourceTable) return;
-    
-    // Transfer logic: move activeOrderId and guestCount to target, reset source
-    updateTable(targetTableId, {
-      status: 'occupied',
-      activeOrderId: sourceTable.activeOrderId,
-      guestCount: sourceTable.guestCount,
-      occupiedSince: sourceTable.occupiedSince
-    });
+    if (!sourceTable.activeOrderId) {
+      toast.error('This table has no active order to transfer');
+      return;
+    }
 
-    updateTable(sourceTable.id, {
-      status: 'dirty',
-      activeOrderId: undefined,
-      guestCount: undefined,
-      occupiedSince: undefined
-    });
+    setTransferring(true);
+    try {
+      // Move the order itself, then flip both tables' real status server-side
+      // — this used to only update local Zustand state, so a transfer was
+      // silently lost on refresh and invisible to any other device.
+      await apiFetch(`/api/orders/${sourceTable.activeOrderId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ tableId: targetTableId }),
+      });
+      await Promise.all([
+        apiFetch(`/api/tables/${targetTableId}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'occupied' }),
+        }),
+        apiFetch(`/api/tables/${sourceTable.id}/status`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'dirty' }),
+        }),
+      ]);
 
-    onClose();
+      updateTable(targetTableId, {
+        status: 'occupied',
+        activeOrderId: sourceTable.activeOrderId,
+        guestCount: sourceTable.guestCount,
+        occupiedSince: sourceTable.occupiedSince,
+      });
+      updateTable(sourceTable.id, {
+        status: 'dirty',
+        activeOrderId: undefined,
+        guestCount: undefined,
+        occupiedSince: undefined,
+      });
+
+      toast.success('Table transferred');
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to transfer table');
+    } finally {
+      setTransferring(false);
+    }
   };
 
   return (
@@ -86,12 +117,12 @@ export function TableTransferModal({ sourceTableId, onClose }: TableTransferModa
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleTransfer}
-            disabled={!targetTableId}
+            disabled={!targetTableId || transferring}
             className="px-4 py-2 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-lg disabled:opacity-50 transition-colors"
           >
-            Confirm Transfer
+            {transferring ? 'Transferring…' : 'Confirm Transfer'}
           </button>
         </div>
       </div>

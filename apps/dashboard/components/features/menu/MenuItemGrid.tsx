@@ -6,6 +6,7 @@ import { Search, List, Grid, MoreHorizontal, Pencil, Trash2, Copy, Loader2, Uten
 import { MenuItemCard } from './MenuItemCard';
 import { useToggleAvailability, useDeleteItem, useDuplicateItem } from './hooks/useMenuQueries';
 import { useDashboardContext } from '@/contexts/dashboard-context';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 interface MenuItemGridProps {
   items: any[];
@@ -22,6 +23,8 @@ interface MenuItemGridProps {
   isAdmin: boolean;
   onMutate?: () => void;
   isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
   panelOpen?: boolean;
   isReadOnly?: boolean;
 }
@@ -179,6 +182,8 @@ export function MenuItemGrid({
   isAdmin,
   onMutate,
   isLoading,
+  isError,
+  onRetry,
   panelOpen,
   isReadOnly,
 }: MenuItemGridProps) {
@@ -238,7 +243,9 @@ export function MenuItemGrid({
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {isLoading ? (
+        {isError ? (
+          <ErrorState message="Couldn't load menu items." onRetry={onRetry} />
+        ) : isLoading ? (
           <div className={`p-5 grid gap-3 ${viewMode === 'grid' ? cols : 'grid-cols-1'}`}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               viewMode === 'grid' ? (

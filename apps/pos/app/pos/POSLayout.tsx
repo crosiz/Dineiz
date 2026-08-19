@@ -67,8 +67,17 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       return; // Fully exempt from shift check below
     }
 
-    // 3. Shift Check: All other roles MUST have a shift opened
-    if (!shiftObj && !skip.some(p => pathname.startsWith(p))) {
+    // 3. Shift Check: All other roles MUST have a shift opened, unless the
+    // tenant has turned off Settings → Point of Sale → "Require shift
+    // opening" — previously this redirect fired unconditionally regardless
+    // of that setting, so turning it off in the admin panel had no effect.
+    let requireShiftOpening = true;
+    try {
+      const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+      if (settings?.pos?.requireShiftOpening === false) requireShiftOpening = false;
+    } catch {}
+
+    if (!shiftObj && requireShiftOpening && !skip.some(p => pathname.startsWith(p))) {
       router.replace('/pos/shift/open');
       return;
     }
@@ -117,6 +126,16 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
           serviceChargeEnabled: branding.serviceChargeEnabled ?? false,
           serviceChargeRate: branding.serviceChargeRate ?? 10,
         });
+      }
+
+      // This branch's own currency — previously the session always kept
+      // its hardcoded 'PKR' default no matter what the branch was actually
+      // configured with in Add/Edit Branch. (Timezone isn't wired the same
+      // way: nothing in the POS UI currently reads a session-level
+      // timezone at all — every date/time display uses the browser's own
+      // local time — so storing one here wouldn't change any behavior yet.)
+      if (branding.currency) {
+        useCartStore.getState().setSession({ currency: branding.currency });
       }
     };
     applyBranding();

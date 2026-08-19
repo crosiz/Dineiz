@@ -36,7 +36,7 @@ const createDestinationIcon = () => {
     className: 'custom-dest-icon',
     html: `
       <div style="background-color: #131b2e; color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 2px solid white;">
-        <span class="material-symbols-outlined" style="font-size: 16px;">home</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       </div>
     `,
     iconSize: [32, 32],

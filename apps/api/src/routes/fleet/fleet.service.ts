@@ -112,7 +112,10 @@ export async function assignRider(tenantId: string, orderId: string, riderId: st
   const { getIO } = await import('../../lib/socket.js');
   const io = getIO();
   if (io) {
-    io.to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
+    // /fleet is the namespace the dashboard's Fleet page and rider clients
+    // actually connect to (matching emitRiderLocationUpdated etc.) — this
+    // was landing on the default namespace, where nothing listens.
+    io.of('/fleet').to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
   }
 
   return assignment;
@@ -149,7 +152,10 @@ export async function updateDeliveryStatus(tenantId: string, orderId: string, st
   const { getIO } = await import('../../lib/socket.js');
   const io = getIO();
   if (io) {
-    io.to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
+    // /fleet is the namespace the dashboard's Fleet page and rider clients
+    // actually connect to (matching emitRiderLocationUpdated etc.) — this
+    // was landing on the default namespace, where nothing listens.
+    io.of('/fleet').to(`branch:${assignment.order.branchId}`).emit('delivery:status_changed', { orderId, assignment });
   }
 
   return assignment;

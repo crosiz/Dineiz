@@ -5,7 +5,14 @@ import { X, User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronD
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { ReceiptPreview } from './ReceiptPreview';
+
+// Printing/PDF export from the admin dashboard needs a real print/PDF
+// pipeline that doesn't exist yet (the POS terminal has one, scoped to its
+// own attached printer — the dashboard isn't near a printer at all). Until
+// that's built, these actions say so honestly instead of doing nothing.
+const notImplemented = () => toast.info('Printing from the dashboard is coming soon — use the POS terminal for now');
 
 interface OrderDetailPanelProps {
   orderId: string;
@@ -108,7 +115,7 @@ function KOTHistorySection({ order }: { order: any }) {
               <p className="text-sm font-bold text-slate-900">Initial KOT</p>
               <p className="text-xs text-slate-500">{fmtDateTime(order.createdAt)}</p>
             </div>
-            <button className="text-xs font-bold text-[#ff5722] hover:underline">Download PDF</button>
+            <button onClick={notImplemented} className="text-xs font-bold text-[#ff5722] hover:underline">Download PDF</button>
           </div>
           {order.VoidRequest?.length > 0 && (
             <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
@@ -116,7 +123,7 @@ function KOTHistorySection({ order }: { order: any }) {
                 <p className="text-sm font-bold text-slate-900">Cancellation KOT</p>
                 <p className="text-xs text-slate-500">{fmtDateTime(order.VoidRequest[0].createdAt)}</p>
               </div>
-              <button className="text-xs font-bold text-[#ff5722] hover:underline">Download PDF</button>
+              <button onClick={notImplemented} className="text-xs font-bold text-[#ff5722] hover:underline">Download PDF</button>
             </div>
           )}
         </div>
@@ -205,20 +212,20 @@ export function OrderDetailPanel({ orderId, onClose, onReverse }: OrderDetailPan
             {/* Action Bar */}
             <div className="px-6 py-4 border-b border-slate-100 flex gap-2 overflow-x-auto shrink-0 bg-white">
               {!['COMPLETED', 'DELIVERED', 'CANCELLED'].includes(order.status) && (
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <button onClick={notImplemented} className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   <Receipt size={15} /> Print Bill
                 </button>
               )}
               {['COMPLETED', 'DELIVERED'].includes(order.status) && (
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <button onClick={notImplemented} className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   <Receipt size={15} /> Print Receipt
                 </button>
               )}
-              <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <button onClick={notImplemented} className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
                 <Printer size={15} /> Reprint KOT
               </button>
               {!['COMPLETED', 'DELIVERED', 'CANCELLED'].includes(order.status) && (
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <button onClick={() => toast.info('Adding items from the dashboard is coming soon — use the POS terminal for now')} className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
                   <Plus size={15} /> Add Items
                 </button>
               )}
@@ -276,7 +283,7 @@ export function OrderDetailPanel({ orderId, onClose, onReverse }: OrderDetailPan
                     <div>
                       <p className="text-slate-500 text-xs mb-1">Customer</p>
                       {order.customer ? (
-                        <Link href={`/dashboard/crm/${order.customer.id}`} className="font-semibold text-[#ff5722] hover:underline">
+                        <Link href={`/dashboard/customers?customerId=${order.customer.id}`} className="font-semibold text-[#ff5722] hover:underline">
                           {order.customer.name}
                         </Link>
                       ) : (

@@ -15,6 +15,9 @@ export const authClient = createAuthClient({
         branchId: {
           type: "string",
         },
+        avatarColor: {
+          type: "string",
+        },
       },
     }),
   ],

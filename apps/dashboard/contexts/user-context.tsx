@@ -2,6 +2,7 @@
 
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_URL } from "@/lib/api";
 
 export interface UserContextType {
   userId: string;
@@ -12,11 +13,12 @@ export interface UserContextType {
   branchId: string | null;
   tenant: { name: string; colorPrimary: string } | null;
   branch: { name: string } | null;
+  image: string | null;
+  avatarColor: string | null;
+  refreshUser: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | null>(null);
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export function UserProviderWrapper({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserContextType | null>(null);
@@ -24,7 +26,10 @@ export function UserProviderWrapper({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    async function loadUser() {
+    loadUser();
+  }, [router]);
+
+  async function loadUser() {
       try {
         // Call the Better Auth session endpoint directly — returns full user with additionalFields
         const res = await fetch(`${API_URL}/api/auth/get-session`, {
@@ -49,7 +54,11 @@ export function UserProviderWrapper({ children }: { children: ReactNode }) {
         // If role isn't in the session (shouldn't happen after fix, but guard anyway)
         if (!u.role || u.role === 'CASHIER') {
           if (u.role === 'CASHIER') {
-            router.push("http://localhost:3001");
+            // router.push() only handles internal routes — passing a full
+            // external URL just navigated to a literal (and broken)
+            // "/http://localhost:3001" path within the dashboard app instead
+            // of actually sending POS staff to the POS app.
+            window.location.href = process.env.NEXT_PUBLIC_POS_URL || "http://localhost:3001";
           } else {
             router.push("/login");
           }
@@ -65,6 +74,9 @@ export function UserProviderWrapper({ children }: { children: ReactNode }) {
           branchId: u.branchId || null,
           tenant: u.tenant || null,
           branch: u.branch || null,
+          image: u.image || null,
+          avatarColor: u.avatarColor || null,
+          refreshUser: loadUser,
         });
       } catch (err) {
         console.error("Failed to load user session:", err);
@@ -72,9 +84,7 @@ export function UserProviderWrapper({ children }: { children: ReactNode }) {
       } finally {
         setLoading(false);
       }
-    }
-    loadUser();
-  }, [router]);
+  }
 
   if (loading) {
     return (

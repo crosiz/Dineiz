@@ -87,7 +87,8 @@ export class CustomersService {
         points: {
           orderBy: { createdAt: 'desc' },
           take: 10
-        }
+        },
+        currentTier: true
       },
     });
 

@@ -29,7 +29,7 @@ export function Step1BasicInfo() {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1.5">Branch Name</label>
+        <label className="block text-xs font-medium text-slate-700 mb-1.5">Branch Name <span className="text-red-500">*</span></label>
         <input 
           {...register('name')}
           className={`w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all ${errors.name ? '!border-red-300 !focus:border-red-500 !focus:ring-red-100' : ''}`}
@@ -39,7 +39,7 @@ export function Step1BasicInfo() {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1.5">Address Line</label>
+        <label className="block text-xs font-medium text-slate-700 mb-1.5">Address Line <span className="text-red-500">*</span></label>
         <div className="relative">
           <MapPinIcon size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input 
@@ -53,7 +53,7 @@ export function Step1BasicInfo() {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1.5">City</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">City <span className="text-red-500">*</span></label>
           <input 
             {...register('city')}
             className={`w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all ${errors.city ? '!border-red-300 !focus:border-red-500 !focus:ring-red-100' : ''}`}
@@ -62,7 +62,7 @@ export function Step1BasicInfo() {
           {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city.message}</p>}
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1.5">Phone</label>
+          <label className="block text-xs font-medium text-slate-700 mb-1.5">Phone <span className="text-red-500">*</span></label>
           <input 
             {...register('phone')}
             className={`w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all ${errors.phone ? '!border-red-300 !focus:border-red-500 !focus:ring-red-100' : ''}`}
@@ -73,7 +73,7 @@ export function Step1BasicInfo() {
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1.5">Branch Contact Email</label>
+        <label className="block text-xs font-medium text-slate-700 mb-1.5">Branch Contact Email <span className="text-slate-400 font-normal">(Optional)</span></label>
         <input 
           {...register('email')}
           className={`w-full h-10 px-4 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all ${errors.email ? '!border-red-300 !focus:border-red-500 !focus:ring-red-100' : ''}`}

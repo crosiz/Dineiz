@@ -16,7 +16,7 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, MoreHorizontal, Pencil, Trash2, Check, X } from 'lucide-react';
+import { GripVertical, Plus, MoreHorizontal, Pencil, Trash2, Check, X, EyeOff } from 'lucide-react';
 import {
   useCreateCategory,
   useUpdateCategory,

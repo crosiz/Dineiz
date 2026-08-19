@@ -335,6 +335,8 @@ export function OrdersPage() {
       <OrdersTable
         orders={hook.orders}
         isLoading={hook.isLoading}
+        isError={hook.isError}
+        onRetry={hook.refetch}
         onOrderClick={id => setSelectedOrderId(id)}
         page={hook.pagination.page}
         totalOrders={hook.pagination.total}

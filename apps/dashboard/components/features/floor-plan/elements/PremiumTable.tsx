@@ -213,7 +213,9 @@ export function PremiumTable({
 
     const computeTimer = () => {
       if (!occupiedSince) {
-        setElapsedTime('15m');
+        // No real start time to compute from — show nothing rather than a
+        // made-up duration.
+        setElapsedTime('');
         return;
       }
       const startTime = typeof occupiedSince === 'string' ? new Date(occupiedSince).getTime() : new Date(occupiedSince).getTime();

@@ -1,9 +1,12 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { ShoppingCart, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useInventory } from '@/components/features/inventory/hooks/useInventory';
 
 export function InventoryForecastTable({ data }: { data: any[] }) {
-  const [generating, setGenerating] = useState(false);
+  const { autoGeneratePO } = useInventory();
+  const generating = autoGeneratePO.isPending;
 
   if (!data || data.length === 0) {
     return (
@@ -26,11 +29,10 @@ export function InventoryForecastTable({ data }: { data: any[] }) {
   });
 
   const handleGeneratePO = () => {
-    setGenerating(true);
-    setTimeout(() => {
-      alert("Draft Purchase Order created for items running low.");
-      setGenerating(false);
-    }, 1000);
+    autoGeneratePO.mutate(undefined, {
+      onSuccess: () => toast.success('Draft purchase order created for items running low'),
+      onError: (err: any) => toast.error(err?.message || 'Failed to generate purchase order'),
+    });
   };
 
   return (

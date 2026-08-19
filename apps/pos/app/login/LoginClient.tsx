@@ -320,6 +320,21 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         if (branding.primaryColor) {
           document.documentElement.style.setProperty('--pos-primary', branding.primaryColor);
         }
+        // Seed pos_tenant_settings from the login response too, so the POS
+        // config/Kitchen toggles (require-shift-opening, block-out-of-stock,
+        // auto-print, useKDS) are correct from a cashier's very first
+        // session instead of only arriving later via a live admin edit.
+        if (branding.pos || branding.kitchen) {
+          try {
+            const existingStr = localStorage.getItem('pos_tenant_settings');
+            const existing = existingStr ? JSON.parse(existingStr) : {};
+            localStorage.setItem('pos_tenant_settings', JSON.stringify({
+              ...existing,
+              pos: { ...existing.pos, ...branding.pos },
+              kitchen: { ...existing.kitchen, ...branding.kitchen },
+            }));
+          } catch {}
+        }
       }
 
       setPinStatus('success');

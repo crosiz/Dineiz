@@ -8,8 +8,7 @@ import { RidersList } from './_components/RidersList';
 import { AddRiderModal } from './_components/AddRiderModal';
 import { Clock, Users, Package, AlertCircle, Plus } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+import { API_URL } from '@/lib/api';
 
 export default function FleetPage() {
   const { branchId } = useBranchFilter();
@@ -21,7 +20,11 @@ export default function FleetPage() {
   useEffect(() => {
     if (!branchId) return;
     
-    const socket = io(API_URL, {
+    // /fleet is where emitRiderLocationUpdated / emitRiderStatusChanged /
+    // emitDeliveryStageUpdated actually emit — connecting to the default
+    // namespace here meant rider:status_changed and the correctly-scoped
+    // delivery events never reached this page in real time.
+    const socket = io(`${API_URL}/fleet`, {
       path: '/socket.io/',
       transports: ['websocket'],
     });
@@ -102,8 +105,8 @@ export default function FleetPage() {
       </div>
 
       {isAddModalOpen && (
-        <AddRiderModal 
-          branchId={selectedBranchId || ''} 
+        <AddRiderModal
+          branchId={branchId || ''}
           onClose={() => setIsAddModalOpen(false)} 
           onSuccess={() => { setIsAddModalOpen(false); mutateRiders(); }} 
         />

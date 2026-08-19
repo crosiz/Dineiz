@@ -18,11 +18,10 @@ import { useUser } from '@/contexts/user-context';
 import { useTick } from '@/lib/hooks';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { apiGet } from '@/lib/api-client';
+import { API_URL } from '@/lib/api';
 import {
   KpiCardSkeleton, TableRowSkeleton, ChartSkeleton, Skeleton, InlineError,
 } from '@/components/ui/skeleton';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const ORDER_TABLE_COLS = [
   { w: 'w-14' },
@@ -88,7 +87,7 @@ export function TenantAdminDashboard() {
 
   // Socket.IO live active orders and dashboard metrics refresh
   useEffect(() => {
-    const socket = io(`${API}/kds`, { withCredentials: true, transports: ['websocket', 'polling'] });
+    const socket = io(`${API_URL}/kds`, { withCredentials: true, transports: ['websocket', 'polling'] });
     socket.on('connect', () => { 
       if (branchId) socket.emit('join_branch', branchId); 
       else if (role === 'TENANT_ADMIN' && tenantId) socket.emit('join_tenant', tenantId);

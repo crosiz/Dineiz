@@ -226,25 +226,6 @@ function SaveStatus({ saving, saved }: { saving: boolean; saved: boolean }) {
   return null;
 }
 
-/** Primary action button */
-function SaveButton({ onClick, saving, saved, label = "Save changes" }: {
-  onClick: () => void; saving: boolean; saved: boolean; label?: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={saving}
-      className="h-8 px-4 bg-[#0F172A] text-white text-[12.5px] font-semibold rounded-md hover:bg-[#1E293B] disabled:opacity-50 transition-colors flex items-center gap-1.5"
-    >
-      {saving ? (
-        <><div className="w-3.5 h-3.5 border border-white/40 border-t-white rounded-full animate-spin" /> Saving…</>
-      ) : saved ? (
-        <><Check className="w-3.5 h-3.5" /> Saved</>
-      ) : label}
-    </button>
-  );
-}
-
 /** Number input (compact, right-aligned value) */
 function NumberInput({ value, onChange, min = 0, max = 100, step = 1, suffix }: {
   value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; suffix?: string;
@@ -452,6 +433,8 @@ export default function SettingsPage() {
   const [savedGeneral, setSavedGeneral] = useState(false);
   const debouncedGeneral = useDebounce(generalForm, 1800);
   const isInitialMount = useRef(true);
+  const isInitialReceiptMount = useRef(true);
+  const isInitialBrandingMount = useRef(true);
 
   const [posConfig, setPosConfig] = useState<PosConfig>({
     autoPrintKOT: true, autoPrintReceipt: false,
@@ -478,6 +461,7 @@ export default function SettingsPage() {
   });
   const [savingReceipt, setSavingReceipt] = useState(false);
   const [savedReceipt, setSavedReceipt] = useState(false);
+  const debouncedReceipt = useDebounce(receipt, 1500);
 
   const [branding, setBranding] = useState({
     restaurantName: "", primaryColor: "#6366F1", secondaryColor: "#0F172A",
@@ -485,6 +469,7 @@ export default function SettingsPage() {
   });
   const [savingBranding, setSavingBranding] = useState(false);
   const [savedBranding, setSavedBranding] = useState(false);
+  const debouncedBranding = useDebounce(branding, 1500);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
 
@@ -576,7 +561,25 @@ export default function SettingsPage() {
       .then(() => { setSavedGeneral(true); setTimeout(() => setSavedGeneral(false), 3000); })
       .catch(() => toast.error("Failed to save"))
       .finally(() => setSavingGeneral(false));
-  }, [debouncedGeneral, isBranchManager]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedGeneral]);
+
+  // ── Auto-save receipt & branding — same debounced pattern as General, so
+  // every Settings section behaves the same way instead of Receipts/Branding
+  // being the only two that required an explicit "Save changes" click.
+  useEffect(() => {
+    if (isInitialReceiptMount.current) { isInitialReceiptMount.current = false; return; }
+    if (isBranchManager) return;
+    saveReceipt();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedReceipt]);
+
+  useEffect(() => {
+    if (isInitialBrandingMount.current) { isInitialBrandingMount.current = false; return; }
+    if (isBranchManager) return;
+    saveBranding();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedBranding]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -584,7 +587,7 @@ export default function SettingsPage() {
     const prev = posConfig;
     const next = { ...posConfig, [key]: val };
     setPosConfig(next);
-    try { await apiFetch("/api/settings", { method: "PUT", body: JSON.stringify({ pos: next }) }); }
+    try { await apiFetch("/api/settings", { method: "PUT", body: JSON.stringify({ pos: next }) }); toast.success("Saved"); }
     catch { setPosConfig(prev); toast.error("Failed to save"); }
   };
 
@@ -635,7 +638,6 @@ export default function SettingsPage() {
       });
       setSavedReceipt(true);
       setTimeout(() => setSavedReceipt(false), 3000);
-      toast.success("Receipt settings saved");
     } catch {
       toast.error("Failed to save receipt settings");
     } finally {
@@ -667,8 +669,8 @@ export default function SettingsPage() {
     const prev = notifications;
     const next = { ...notifications, [topic]: { ...(notifications as any)[topic], [channel]: val } };
     setNotifications(next as any);
-    try { await apiFetch("/api/settings/notifications", { method: "PUT", body: JSON.stringify({ preferences: next }) }); }
-    catch { setNotifications(prev); }
+    try { await apiFetch("/api/settings/notifications", { method: "PUT", body: JSON.stringify({ preferences: next }) }); toast.success("Saved"); }
+    catch { setNotifications(prev); toast.error("Failed to save"); }
   };
 
   const handlePassword = async (e: React.FormEvent) => {
@@ -785,7 +787,7 @@ export default function SettingsPage() {
             <Section
               title="Receipts"
               description="How printed and digital receipts look for your customers."
-              action={<SaveButton onClick={saveReceipt} saving={savingReceipt} saved={savedReceipt} />}
+              action={<SaveStatus saving={savingReceipt} saved={savedReceipt} />}
             >
               {/* Two-column layout: settings left, preview right */}
               <div className="flex min-h-0">
@@ -1010,7 +1012,7 @@ export default function SettingsPage() {
             <Section
               title="Branding"
               description="Visual identity across POS, receipts, and QR menus."
-              action={<SaveButton onClick={saveBranding} saving={savingBranding} saved={savedBranding} />}
+              action={<SaveStatus saving={savingBranding} saved={savedBranding} />}
             >
               <div className="p-6 space-y-6">
                 <Input label="Display name" value={branding.restaurantName} onChange={v => setBranding(p => ({ ...p, restaurantName: v }))} placeholder={generalForm.businessName || "e.g. The Karahi House"} hint="Shown on POS screen, receipts, and QR menu." />

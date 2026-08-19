@@ -501,7 +501,19 @@ function OrderEntryPageContent() {
         try {
           const { useBrandingStore } = await import('@/lib/branding-store');
           const branding = useBrandingStore.getState().branding;
-          if (branding.autoKotPrint !== false) {
+          // This used to check branding.autoKotPrint, a field nothing ever
+          // actually set (branding never carried it) — undefined !== false
+          // is always true, so KOT auto-print silently ran unconditionally
+          // regardless of Settings → Point of Sale → "Auto-print KOT". Also
+          // OR'd with this branch's own KOT-printer flag from Add/Edit
+          // Branch, same reasoning as the KDS toggle above.
+          let autoPrintKOT = true;
+          try {
+            const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+            const branchLevel = branding?.branchKotAutoPrint ?? false;
+            if (settings?.pos?.autoPrintKOT === false && !branchLevel) autoPrintKOT = false;
+          } catch {}
+          if (autoPrintKOT) {
             const { printDocument } = await import('@/lib/print.service');
             await printDocument('KOT', {
               orderNumber: order.orderNumber || order.id?.slice(-6),
@@ -552,7 +564,19 @@ function OrderEntryPageContent() {
       router.push('/pos/home');
     } catch (err) {
       const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-      if (isOffline && !isAppending) {
+      // "Offline mode" in Settings → Point of Sale was previously not
+      // consulted at all — every terminal silently queued orders locally on
+      // any network failure regardless of the toggle. Default to true (the
+      // existing behavior) if the setting was never fetched yet, so a
+      // terminal that hasn't synced settings doesn't suddenly stop
+      // tolerating drops.
+      let offlineModeEnabled = true;
+      try {
+        const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+        if (settings?.pos?.offlineMode === false) offlineModeEnabled = false;
+      } catch {}
+
+      if (isOffline && !isAppending && offlineModeEnabled) {
         try {
           await queueOfflineOrder({
             tenantId: sessionObj.tenantId,
@@ -586,6 +610,8 @@ function OrderEntryPageContent() {
           console.error('Failed to queue offline order', queueErr);
           toast.error('Failed to save order offline. Please retry.');
         }
+      } else if (isOffline && !offlineModeEnabled) {
+        toast.error('No connection, and offline mode is turned off for this branch — order was not saved. Check connection and try again.');
       } else {
         toast.error('Failed to send order. Check connection.');
       }

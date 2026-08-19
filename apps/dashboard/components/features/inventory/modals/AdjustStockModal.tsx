@@ -123,7 +123,7 @@ export function AdjustStockModal({ item, isOpen, onClose }: AdjustStockModalProp
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Quantity <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input 
                   {...register('quantity', { valueAsNumber: true })}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@dineiz/ui/src/components/button';
 import { getCustomers, createCustomer } from '@/lib/api/customers';
 import { AdminOnly } from '@/components/admin-only';
@@ -10,17 +11,24 @@ import { CreateCustomerSlideOver } from './_components/CreateCustomerSlideOver';
 import { Pagination } from '@/components/ui/Pagination';
 
 export default function CRMCustomersPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [segment, setSegment] = useState('ALL');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  // Deep-links (e.g. a customer name clicked from an order) pass ?customerId=
+  // so this list can open straight to that customer's detail slide-over.
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
+    () => searchParams.get('customerId')
+  );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isError, setIsError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
   const fetchCustomers = async () => {
     setLoading(true);
+    setIsError(false);
     try {
       const res = await getCustomers({
         page: currentPage,
@@ -31,6 +39,7 @@ export default function CRMCustomersPage() {
       setData(res);
     } catch (e) {
       console.error(e);
+      setIsError(true);
       toast.error('Failed to load customers');
     } finally {
       setLoading(false);
@@ -46,6 +55,38 @@ export default function CRMCustomersPage() {
   const pagination = data?.meta || { total: 0, page: 1, limit: 25, totalPages: 1 };
 
   const segmentPills = ['ALL', 'VIP', 'REGULAR', 'NEW', 'AT_RISK', 'LOST'];
+
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const res = await getCustomers({ page: 1, limit: 10000, ...(segment !== 'ALL' && { segment }) });
+      const rows: any[] = (res as any)?.data || [];
+      const header = ['Name', 'Phone', 'Email', 'Segment', 'Total Orders', 'Total Spend', 'Loyalty Points', 'Last Visit'];
+      const csvEscape = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+      const lines = [
+        header.join(','),
+        ...rows.map(c => [
+          c.name, c.phone, c.email, c.segment, c.totalOrders, c.totalSpend, c.loyaltyPoints,
+          c.lastVisitAt ? new Date(c.lastVisitAt).toLocaleDateString() : '',
+        ].map(csvEscape).join(',')),
+      ];
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `customers-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${rows.length} customers`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to export customers');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleCreateCustomer = async (formData: any) => {
     try {
@@ -69,11 +110,18 @@ export default function CRMCustomersPage() {
             <p className="text-gray-500 mt-1.5 text-sm font-medium">Your restaurant's most valuable asset.</p>
           </div>
           <div className="flex gap-3">
-            <button className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2">
+            <button
+              onClick={() => toast.info('Bulk import is coming soon — use Add Customer for now')}
+              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2"
+            >
               <span className="material-symbols-outlined text-[18px]">upload</span> Import
             </button>
-            <button className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">download</span> Export
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2 disabled:opacity-60"
+            >
+              <span className="material-symbols-outlined text-[18px]">{isExporting ? 'progress_activity' : 'download'}</span> {isExporting ? 'Exporting…' : 'Export'}
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
@@ -165,7 +213,18 @@ export default function CRMCustomersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {loading ? (
+                {isError ? (
+                  <tr>
+                    <td colSpan={4}>
+                      <div className="bg-white p-12 text-center flex flex-col items-center">
+                        <h3 className="text-[13px] font-bold text-red-500 mb-2">Couldn't load customers.</h3>
+                        <button onClick={fetchCustomers} className="text-[13px] font-semibold text-[#ff5722] hover:underline">
+                          Try again
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : loading ? (
                   <tr>
                     <td colSpan={4}>
                       <div className="bg-white p-12 text-center flex flex-col items-center justify-center">

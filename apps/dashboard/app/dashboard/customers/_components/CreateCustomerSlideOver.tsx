@@ -6,17 +6,32 @@ type CreateCustomerSlideOverProps = {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
+  /** Pass an existing customer to edit it in place instead of creating a new one. */
+  initialData?: { name?: string; phone?: string; email?: string; birthday?: string } | null;
 };
 
-export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit }: CreateCustomerSlideOverProps) {
+export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData }: CreateCustomerSlideOverProps) {
+  const isEditing = !!initialData;
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    birthday: '',
+    name: initialData?.name ?? '',
+    phone: initialData?.phone ?? '',
+    email: initialData?.email ?? '',
+    birthday: initialData?.birthday ?? '',
     notes: '',
   });
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: initialData?.name ?? '',
+        phone: initialData?.phone ?? '',
+        email: initialData?.email ?? '',
+        birthday: initialData?.birthday ?? '',
+        notes: '',
+      });
+    }
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -42,8 +57,8 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit }: CreateCus
       <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
         <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Add Customer</h2>
-            <p className="text-sm text-gray-500 mt-1">Create a new customer profile manually.</p>
+            <h2 className="text-xl font-bold text-gray-900">{isEditing ? 'Edit Customer' : 'Add Customer'}</h2>
+            <p className="text-sm text-gray-500 mt-1">{isEditing ? "Update this customer's profile." : 'Create a new customer profile manually.'}</p>
           </div>
           <button 
             onClick={onClose} 
@@ -100,15 +115,17 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit }: CreateCus
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Initial Notes (Optional)</label>
-              <textarea
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all h-24 resize-none"
-                placeholder="Any special preferences or allergies..."
-                value={formData.notes}
-                onChange={e => setFormData({ ...formData, notes: e.target.value })}
-              />
-            </div>
+            {!isEditing && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Initial Notes (Optional)</label>
+                <textarea
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all h-24 resize-none"
+                  placeholder="Any special preferences or allergies..."
+                  value={formData.notes}
+                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+            )}
           </div>
         </form>
 
@@ -126,7 +143,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit }: CreateCus
             disabled={loading}
             className="px-6 py-2.5 bg-[#FF5722] hover:bg-[#E64A19] text-white font-semibold rounded-xl shadow-[0_4px_12px_rgba(255,87,34,0.3)] transition-all flex items-center justify-center min-w-[120px] text-sm disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {loading ? <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> : 'Create Customer'}
+            {loading ? <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> : isEditing ? 'Save Changes' : 'Create Customer'}
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { X, Loader2, ChevronLeft, ChevronRight, ArrowUpCircle } from 'lucide-rea
 import { Button } from '@dineiz/ui';
 import { Input } from '@dineiz/ui';
 import { toast } from 'sonner';
+import { useBranches } from '@/components/features/branches/hooks/useBranches';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -54,6 +55,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: BranchModalProps) {
+  const { addBranchMutation, updateBranchMutation } = useBranches();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -100,11 +102,6 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const url = branchToEdit
-        ? `http://localhost:8080/api/branches/${branchToEdit.id}`
-        : 'http://localhost:8080/api/branches';
-      const method = branchToEdit ? 'PUT' : 'POST';
-
       const body = {
         name, address, city, phone, email,
         operatingHours: hours,
@@ -113,29 +110,21 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
         kdsEnabled, kotPrinter,
       };
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.error === 'PLAN_LIMIT') {
-          setShowUpgrade(true);
-          return;
-        }
-        toast.error(data.error || 'Failed to save branch');
-        return;
+      if (branchToEdit) {
+        await updateBranchMutation.mutateAsync({ id: branchToEdit.id, data: body });
+      } else {
+        await addBranchMutation.mutateAsync(body);
       }
 
       toast.success(branchToEdit ? 'Branch updated' : 'Branch created');
       onSuccess();
       onClose();
-    } catch {
-      toast.error('An error occurred');
+    } catch (e: any) {
+      if (e?.message === 'PLAN_LIMIT_REACHED') {
+        setShowUpgrade(true);
+        return;
+      }
+      toast.error(e?.message || 'Failed to save branch');
     } finally {
       setLoading(false);
     }

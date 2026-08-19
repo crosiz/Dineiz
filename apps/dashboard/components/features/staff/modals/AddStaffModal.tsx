@@ -114,6 +114,7 @@ function DashboardPasswordField() {
           type="button"
           tabIndex={-1}
           onClick={() => setShowPw((v) => !v)}
+          aria-label={showPw ? 'Hide password' : 'Show password'}
           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
         >
           {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -282,6 +283,7 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
           >
             <X size={20} />

@@ -11,6 +11,7 @@ import { QuickWastageLog } from './QuickWastageLog';
 import { RecipesTab } from './RecipesTab';
 import { AddIngredientPanel } from './panels/AddIngredientPanel';
 import { Package, Plus } from 'lucide-react';
+import { ErrorState } from '@/components/ui/ErrorState';
 
 // ─── Stat card skeleton ───────────────────────────────────────────────────────
 function StatsSkeleton() {
@@ -132,6 +133,8 @@ export function InventoryPage() {
     isLoading,
     isStatsLoading,
     isIngredientsLoading,
+    isIngredientsError,
+    refetchIngredients,
     isAddModalOpen,
     setIsAddModalOpen,
     activeTab,
@@ -199,7 +202,9 @@ export function InventoryPage() {
           <InventoryFilters />
 
           {/* Ingredients table */}
-          {isIngredientsLoading ? (
+          {isIngredientsError ? (
+            <ErrorState message="Couldn't load inventory." onRetry={refetchIngredients} />
+          ) : isIngredientsLoading ? (
             <InventoryTableSkeleton />
           ) : inventoryList.length === 0 ? (
             <EmptyIngredientsState onAdd={() => setIsAddModalOpen(true)} />

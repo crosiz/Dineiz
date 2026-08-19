@@ -113,7 +113,22 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
     // Fetch tenant branding (including dual-tax config)
     const tenant = await prisma.tenant.findUnique({
       where: { id: user.tenantId! },
-      select: { name: true, colorPrimary: true, logoUrl: true }
+      select: { name: true, colorPrimary: true, logoUrl: true, settings: true }
+    });
+
+    // Branch-level operational config — previously never reached the
+    // terminal at all, so every branch silently behaved like a PKR/Asia
+    // Karachi branch with only the tenant-wide Kitchen toggle in effect.
+    const branch = await prisma.branch.findUnique({
+      where: { id: branchId },
+      select: {
+        currency: true,
+        timezone: true,
+        kdsEnabled: true,
+        kotAutoPrint: true,
+        openingTime: true,
+        closingTime: true,
+      }
     });
 
     const tenantBranding = await prisma.tenantBranding.findUnique({
@@ -169,6 +184,21 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
       taxRoundingMethod: tenantBranding?.taxRoundingMethod ?? 'ROUND',
       serviceChargeEnabled: tenantBranding?.serviceChargeEnabled ?? false,
       serviceChargeRate: tenantBranding?.serviceChargeRate ?? 10,
+      // Branch-level operational config — this branch's own currency/timezone
+      // and KDS/auto-print hardware presence, previously never sent to the
+      // terminal at all (it silently assumed PKR/Asia-Karachi and only the
+      // tenant-wide Kitchen tab for every branch).
+      currency: branch?.currency ?? 'PKR',
+      timezone: branch?.timezone ?? 'Asia/Karachi',
+      branchKdsEnabled: branch?.kdsEnabled ?? false,
+      branchKotAutoPrint: branch?.kotAutoPrint ?? false,
+      openingTime: branch?.openingTime ?? null,
+      closingTime: branch?.closingTime ?? null,
+      // Tenant-wide POS/Kitchen settings blob (Settings → Point of Sale /
+      // Kitchen tabs) — same gap: configurable in the admin UI, never read
+      // by the terminal.
+      pos: (tenant?.settings as any)?.pos ?? {},
+      kitchen: (tenant?.settings as any)?.kitchen ?? {},
     };
 
     // â”€â”€ Create a Better Auth-compatible session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

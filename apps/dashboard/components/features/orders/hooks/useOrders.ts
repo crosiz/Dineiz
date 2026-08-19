@@ -105,7 +105,7 @@ export function useOrders() {
 
   const queryKey = ['order-history', page, limit, searchDebounced, dateFrom, dateTo, selectedBranchId, typeFilter, statusFilter, paymentFilter, sourceFilter, cashierId, waiterId];
 
-  const { data, isLoading, isFetching } = useQuery<HistoryResponse>({
+  const { data, isLoading, isFetching, isError, refetch } = useQuery<HistoryResponse>({
     queryKey,
     queryFn: () => apiFetch<HistoryResponse>(`/api/orders/history?${params.toString()}`),
     staleTime: 1000 * 60 * 2, // 2 minutes (respect global default or explicit here)
@@ -137,6 +137,8 @@ export function useOrders() {
     summary: data?.summary ?? { totalRevenue: 0, totalOrders: 0 },
     isLoading,
     isFetching,
+    isError,
+    refetch,
     page,
     setPage,
     limit,

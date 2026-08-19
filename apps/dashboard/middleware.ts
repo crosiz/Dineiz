@@ -17,6 +17,18 @@ const TENANT_ADMIN_ROUTES = [
   '/dashboard/qr',
 ];
 
+// These bases also have legitimate branch-manager sub-routes
+// (/dashboard/menu/availability, /dashboard/staff/shift,
+// /dashboard/reports/today, /dashboard/reports/shift), so they can't go in
+// the prefix-matched list above without also blocking those — only the
+// bare page itself is restricted.
+const TENANT_ADMIN_EXACT_ROUTES = [
+  '/dashboard/menu',
+  '/dashboard/staff',
+  '/dashboard/reports',
+  '/dashboard/settings',
+];
+
 export async function middleware(request: NextRequest) {
   // Only check dashboard routes
   if (!request.nextUrl.pathname.startsWith('/dashboard')) {
@@ -43,9 +55,9 @@ export async function middleware(request: NextRequest) {
     
     // Check if BRANCH_MANAGER is trying to access a TENANT_ADMIN route
     if (role === 'BRANCH_MANAGER') {
-      const isRestricted = TENANT_ADMIN_ROUTES.some(route => 
+      const isRestricted = TENANT_ADMIN_ROUTES.some(route =>
         request.nextUrl.pathname.startsWith(route)
-      );
+      ) || TENANT_ADMIN_EXACT_ROUTES.includes(request.nextUrl.pathname);
 
       if (isRestricted) {
         return NextResponse.redirect(new URL("/dashboard?error=unauthorized", request.url));

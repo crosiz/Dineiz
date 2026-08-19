@@ -95,7 +95,10 @@ export default function BillingSettingsPage() {
                   Upgrade to Enterprise
                 </button>
               )}
-              <button className="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-lg font-bold text-sm transition-all active:scale-95">
+              <button
+                onClick={() => document.getElementById('available-plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="border border-white/30 hover:bg-white/10 text-white px-6 py-3 rounded-lg font-bold text-sm transition-all active:scale-95"
+              >
                 Manage Plan
               </button>
             </div>
@@ -164,7 +167,7 @@ export default function BillingSettingsPage() {
         </section>
 
         {/* Plans Header & Toggle */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+        <div id="available-plans" className="flex flex-col sm:flex-row justify-between items-center mb-6 scroll-mt-6">
           <h3 className="text-lg font-bold text-text-main font-headline-lg">Available Plans</h3>
           <div className="flex items-center gap-2 mt-4 sm:mt-0 p-1 bg-surface-container-low rounded-lg border border-border-subtle">
             <button 
@@ -261,7 +264,7 @@ export default function BillingSettingsPage() {
           <div className="lg:col-span-2 bg-surface-card border border-border-subtle rounded-xl shadow-sm overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-border-subtle flex justify-between items-center">
               <h3 className="font-bold text-text-main font-headline-lg">Billing History</h3>
-              <button className="text-primary-container text-xs font-bold hover:underline">View All</button>
+              <button onClick={() => toast.info('Full billing history export is coming soon')} className="text-primary-container text-xs font-bold hover:underline">View All</button>
             </div>
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left">
@@ -306,10 +309,13 @@ export default function BillingSettingsPage() {
           <div className="bg-surface-card border border-border-subtle rounded-xl shadow-sm p-6 flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-text-main font-headline-lg">Payment Method</h3>
-              <button className="text-primary-container text-xs font-bold hover:underline">+ Add Method</button>
+              <button onClick={() => toast.info('Adding a payment method is coming soon — contact billing support for now')} className="text-primary-container text-xs font-bold hover:underline">+ Add Method</button>
             </div>
-            
-            <div className="border border-border-subtle rounded-lg p-4 mb-6 hover:border-primary-container transition-colors cursor-pointer relative overflow-hidden group">
+
+            {/* Read-only summary of the card on file — not interactive, since
+                changing it requires a real payment-processor flow that
+                doesn't exist yet (see "+ Add Method" above). */}
+            <div className="border border-border-subtle rounded-lg p-4 mb-6 relative overflow-hidden">
               <div className="flex justify-between items-start mb-4">
                 <span className="material-symbols-outlined text-blue-600 text-3xl">credit_card</span>
                 <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Primary</span>
@@ -320,24 +326,27 @@ export default function BillingSettingsPage() {
                 <span className="text-xs font-bold uppercase text-text-muted">Visa</span>
               </div>
             </div>
-            
+
             <p className="text-[11px] font-bold uppercase tracking-wider text-text-muted mb-4">Also Accepted</p>
             <div className="flex gap-3 mb-auto">
-              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale hover:grayscale-0 transition-all cursor-pointer bg-surface-container-low">
+              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale bg-surface-container-low">
                 <span className="text-xs font-bold text-text-muted">JazzCash</span>
               </div>
-              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale hover:grayscale-0 transition-all cursor-pointer bg-surface-container-low">
+              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale bg-surface-container-low">
                 <span className="text-xs font-bold text-text-muted">EasyPaisa</span>
               </div>
-              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale hover:grayscale-0 transition-all cursor-pointer bg-surface-container-low">
+              <div className="h-9 px-3 rounded border border-border-subtle flex items-center justify-center grayscale bg-surface-container-low">
                 <span className="text-xs font-bold text-text-muted">Bank Transfer</span>
               </div>
             </div>
-            
+
             <div className="mt-6 p-4 bg-surface-container-low rounded-lg border border-dashed border-border-subtle text-center">
               <p className="text-xs text-text-muted">Next billing date is <span className="font-bold text-text-main">{new Date(sub.nextRenewalDate).toLocaleDateString()}</span></p>
             </div>
-            <button className="mt-4 w-full border border-error text-error py-2 rounded-lg text-xs font-bold hover:bg-error/5 transition-colors">
+            <button
+              onClick={() => toast.info('To cancel your subscription, contact billing support — this keeps a human in the loop on account changes')}
+              className="mt-4 w-full border border-error text-error py-2 rounded-lg text-xs font-bold hover:bg-error/5 transition-colors"
+            >
               Cancel Subscription
             </button>
           </div>
