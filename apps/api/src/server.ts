@@ -29,6 +29,7 @@ import { riderRoutes } from './routes/rider/index';
 import { paymentsRoutes } from './routes/payments/index';
 import { receiptsRoutes } from './routes/receipts/index';
 import { aggregatorsRoutes } from './routes/aggregators/index';
+import { whatsappRoutes } from './routes/whatsapp/index';
 import { integrationsRoutes } from './routes/integrations/index';
 import { floorPlanRoutes } from './routes/floor-plan/index';
 import { tenantDashboardRoutes } from './routes/tenant-dashboard/index';
@@ -146,6 +147,7 @@ async function build() {
   await fastify.register(paymentsRoutes);
   await fastify.register(receiptsRoutes);
   await fastify.register(aggregatorsRoutes);
+  await fastify.register(whatsappRoutes);
   await fastify.register(integrationsRoutes);
   await fastify.register(floorPlanRoutes);
 

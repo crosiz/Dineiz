@@ -60,6 +60,7 @@ export const anomalyQueue = catchError(new Queue('anomalies', { connection }), '
 export const forecastQueue = catchError(new Queue('forecast', { connection }), 'forecastQueue');
 export const aggregatorsQueue = catchError(new Queue('aggregators', { connection }), 'aggregatorsQueue');
 export const customersQueue = catchError(new Queue('customers', { connection }), 'customersQueue');
+export const whatsappQueue = catchError(new Queue('whatsapp', { connection }), 'whatsappQueue');
 
 // Each Worker needs its own dedicated (duplicated) blocking Redis connection,
 // so running all of them locally opens ~10 extra connections on top of the
@@ -178,4 +179,12 @@ createWorker('aggregators', async (job: any) => {
     });
     throw new Error(`Failed to process webhook: ${error.message}`);
   }
+});
+
+// WhatsApp Bot Message Worker
+import { processInboundMessage } from '../routes/whatsapp/whatsapp.service';
+
+createWorker('whatsapp', async (job: any) => {
+  const { messageId } = job.data;
+  await processInboundMessage(messageId);
 });

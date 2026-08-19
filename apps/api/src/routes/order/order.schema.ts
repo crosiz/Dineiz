@@ -19,6 +19,7 @@ export const OrderHistoryQuerySchema = z.object({
   type: z.enum(['DINE_IN', 'TAKEAWAY', 'DELIVERY']).optional(),
   status: z.enum(['PENDING', 'IN_KITCHEN', 'READY', 'DELIVERED', 'CANCELLED']).optional(),
   paymentMethod: z.enum(['CASH', 'CARD', 'ONLINE', 'SPLIT']).optional(),
+  source: z.enum(['POS', 'QR_CODE', 'KIOSK', 'FOODPANDA', 'CAREEM', 'TALABAT', 'WHATSAPP']).optional(),
   cashierId: z.string().optional(),
   waiterId: z.string().optional(),
 });

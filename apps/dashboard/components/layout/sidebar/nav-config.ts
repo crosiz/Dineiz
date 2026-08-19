@@ -56,6 +56,7 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
   {
     section: 'INTEGRATIONS',
     items: [
+      { label: 'WhatsApp Bot', href: '/dashboard/whatsapp', icon: 'MessageCircle' },
       { label: 'Aggregators', href: '/dashboard/integrations/aggregators', icon: 'Globe' },
       { label: 'Fleet / Delivery', href: '/dashboard/fleet', icon: 'Truck' },
       { label: 'QR Ordering', href: '/dashboard/qr', icon: 'QrCode' },

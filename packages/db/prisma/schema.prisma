@@ -97,6 +97,11 @@ model Tenant {
   webhookEndpoints           WebhookEndpoint[]
   erpIntegration             ErpIntegration?
 
+  // WhatsApp bot
+  whatsappConfig        WhatsAppConfig?
+  whatsappConversations WhatsAppConversation[]
+  whatsappBlocklist     WhatsAppBlocklist[]
+
   // Branding
   branding TenantBranding?
 
@@ -172,6 +177,7 @@ model Branch {
   ScheduledReport      ScheduledReport[]
   aggregatorIntegrations AggregatorIntegration[]
   AnomalyEvents        AnomalyEvent[]
+  whatsappConversations  WhatsAppConversation[]
 }
 
 // -----------------------------------------------------------------------------
@@ -419,6 +425,7 @@ enum OrderSource {
   FOODPANDA
   CAREEM
   TALABAT
+  WHATSAPP
 }
 
 enum PaymentMethod {
@@ -588,6 +595,116 @@ model Payment {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
+}
+
+// -----------------------------------------------------------------------------
+// WHATSAPP AI ORDERING BOT
+// -----------------------------------------------------------------------------
+
+enum WhatsAppConversationStage {
+  GREETING
+  BROWSING_MENU
+  BUILDING_ORDER
+  COLLECTING_ORDER_TYPE
+  COLLECTING_ADDRESS
+  SELECTING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  ABANDONED
+}
+
+model WhatsAppConfig {
+  id       String @id @default(cuid())
+  tenantId String @unique
+
+  isEnabled       Boolean @default(false)
+  botName         String  @default("Assistant")
+  botPersona      String?
+  defaultBranchId String?
+
+  // Meta WhatsApp Cloud API credentials
+  metaPhoneNumberId String? // Used to route an inbound webhook to this tenant
+  metaAccessToken   String? // Meta Graph API access token
+
+  allowedOrderTypes String[] // subset of ["TAKEAWAY", "DELIVERY"]
+  minOrderAmount    Float    @default(0)
+
+  operatingHours     Json? // { monday: { open: "11:00", close: "23:00", isOpen: true }, ... }
+  visibleCategoryIds String[] // empty = all categories visible
+
+  // Stubbed for a future pass — no gateway integration yet, COD only
+  jazzCashEnabled  Boolean @default(false)
+  easyPaisaEnabled Boolean @default(false)
+
+  awayMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model WhatsAppConversation {
+  id       String @id @default(cuid())
+  tenantId String
+  branchId String
+
+  customerId   String?
+  phoneNumber  String
+  customerName String?
+
+  stage WhatsAppConversationStage @default(GREETING)
+
+  cartJson  Json? // working cart before the real Order is created
+  orderType OrderType?
+
+  deliveryAddress String?
+  deliveryLat     Float?
+  deliveryLng     Float?
+
+  orderId String? // set once the real Order is created
+
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch   Branch                @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  customer Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  messages WhatsAppMessage[]
+
+  @@index([tenantId, phoneNumber])
+  @@index([tenantId, stage])
+}
+
+model WhatsAppMessage {
+  id             String   @id @default(cuid())
+  tenantId       String
+  conversationId String
+  direction      String // IN or OUT
+  body           String?
+  rawPayload     Json
+  aiIntent       Json? // parsed intent, null when fallbackParse was used
+  processedAt    DateTime?
+  processError   String?
+  createdAt      DateTime @default(now())
+
+  conversation WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([conversationId, createdAt])
+}
+
+model WhatsAppBlocklist {
+  id          String   @id @default(cuid())
+  tenantId    String
+  phoneNumber String
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, phoneNumber])
 }
 
 // -----------------------------------------------------------------------------
@@ -1027,6 +1144,7 @@ model Customer {
   orders      Order[]
   staffNotes  CustomerNote[]
   points      LoyaltyPointLedger[]
+  whatsappConversations WhatsAppConversation[]
 
   @@unique([tenantId, phone])
   @@unique([tenantId, email])
