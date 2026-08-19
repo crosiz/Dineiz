@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api-client';
 import { formatPKR } from '@/lib/formatters';
 import { Receipt } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function ShiftReportPage() {
   const { data: currentShift, isLoading: shiftLoading } = useQuery({
@@ -31,7 +32,7 @@ export default function ShiftReportPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-slate-400 py-12 text-center">Loading…</div>
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-12"><Spinner size={16} />Loading…</div>
       ) : !shiftId ? (
         <div className="text-sm text-slate-400 py-12 text-center">No shift is currently open — open a shift to see its report here.</div>
       ) : isError ? (

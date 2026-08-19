@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { PageLoader } from '@/components/ui/Spinner';
+import { PieChart, Users, Sparkles, TrendingUp } from 'lucide-react';
 
 export function MetricsTab() {
   const [metrics, setMetrics] = useState<any>(null);
@@ -21,69 +23,56 @@ export function MetricsTab() {
     fetchMetrics();
   }, []);
 
-  if (loading) return <div>Loading metrics...</div>;
+  if (loading) return <PageLoader label="Loading metrics..." />;
   if (!metrics) return null;
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-center gap-y-6 gap-x-8 mb-6 bg-white py-4 px-6 rounded-xl border border-slate-100 shadow-sm mt-6">
-        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active Members</p>
-            <div className="flex items-baseline gap-1.5">
-              <h3 className="text-lg font-bold text-slate-900">{metrics.activeMembers.toLocaleString()}</h3>
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 mb-1">Active Members</p>
+          <h3 className="text-xl font-bold text-slate-900 font-mono">{metrics.activeMembers.toLocaleString()}</h3>
         </div>
-        <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
-        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Points Outstanding</p>
-            <div className="flex items-baseline gap-1.5">
-              <h3 className="text-lg font-bold text-[#ff5722]">{metrics.totalPoints.toLocaleString()}</h3>
-            </div>
-          </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 mb-1">Points Outstanding</p>
+          <h3 className="text-xl font-bold text-[#FF5722] font-mono">{metrics.totalPoints.toLocaleString()}</h3>
         </div>
-        <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
-        <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Points / Member</p>
-            <div className="flex items-baseline gap-1.5">
-              <h3 className="text-lg font-bold text-slate-900">{Math.round(metrics.avgPointsPerMember).toLocaleString()}</h3>
-            </div>
-          </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+          <p className="text-xs font-semibold text-slate-500 mb-1">Avg Points / Member</p>
+          <h3 className="text-xl font-bold text-slate-900 font-mono">{Math.round(metrics.avgPointsPerMember).toLocaleString()}</h3>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Top Loyal Customers</h3>
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+          <h3 className="text-xs font-bold text-slate-900 mb-3">Top Loyalty Customers</h3>
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-100 bg-slate-50 text-slate-500 font-semibold">
                 <tr>
-                  <th className="py-4 px-6">Customer</th>
-                  <th className="py-4 px-6">Tier</th>
-                  <th className="py-4 px-6 text-right">Points</th>
+                  <th className="py-2.5 px-4">Customer</th>
+                  <th className="py-2.5 px-4">Tier</th>
+                  <th className="py-2.5 px-4 text-right">Points</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {metrics.topCustomers?.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-4 px-6 font-bold text-[13px] text-slate-900">{c.name}</td>
-                    <td className="py-4 px-6 text-[13px]">
+                  <tr key={c.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-2.5 px-4 font-semibold text-slate-900">{c.name}</td>
+                    <td className="py-2.5 px-4">
                       {c.currentTier ? (
-                        <span className="px-1.5 py-0.5 font-bold rounded uppercase tracking-wide text-[9px]" style={{ backgroundColor: c.currentTier.badgeColor + '20', color: c.currentTier.badgeColor }}>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded uppercase" style={{ backgroundColor: `${c.currentTier.badgeColor}15`, color: c.currentTier.badgeColor }}>
                           {c.currentTier.name}
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="py-4 px-6 text-right text-[13px] font-bold text-[#ff5722]">{c.loyaltyPoints}</td>
+                    <td className="py-2.5 px-4 text-right font-bold font-mono text-[#FF5722]">{c.loyaltyPoints}</td>
                   </tr>
                 ))}
                 {metrics.topCustomers?.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="py-4 text-center text-gray-500">No customers yet</td>
+                    <td colSpan={3} className="py-8 text-center text-slate-400 text-xs">No customer data yet</td>
                   </tr>
                 )}
               </tbody>
@@ -92,12 +81,11 @@ export function MetricsTab() {
         </div>
         
         <div>
-           {/* Placeholder for members by tier donut chart */}
-           <h3 className="text-lg font-bold text-gray-900 mb-4">Tier Distribution</h3>
-           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center min-h-[300px]">
-              <span className="material-symbols-outlined text-gray-300 text-5xl mb-2">pie_chart</span>
-              <p className="text-gray-500 text-sm text-center max-w-xs">Chart visualization for tier distribution will appear here.</p>
-           </div>
+          <h3 className="text-xs font-bold text-slate-900 mb-3">Tier Distribution</h3>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-6 flex flex-col items-center justify-center min-h-[220px]">
+            <PieChart size={32} className="text-slate-300 mb-2" />
+            <p className="text-slate-500 text-xs text-center max-w-xs">Tier distribution analytics will update as members earn points.</p>
+          </div>
         </div>
       </div>
     </div>

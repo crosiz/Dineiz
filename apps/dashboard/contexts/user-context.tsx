@@ -3,6 +3,7 @@
 import { createContext, useContext, ReactNode, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
+import { FullScreenLoader } from "@/components/ui/Spinner";
 
 export interface UserContextType {
   userId: string;
@@ -87,14 +88,7 @@ export function UserProviderWrapper({ children }: { children: ReactNode }) {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-full">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-primary border-t-transparent" />
-          <p className="text-sm text-text-secondary">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader label="Loading your dashboard" />;
   }
 
   if (!user) return null;

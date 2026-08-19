@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/compone
 import { Input } from '@dineiz/ui/src/components/input';
 import { Button } from '@dineiz/ui/src/components/button';
 import { apiFetch } from '../../../../lib/api';
+import { Spinner } from '@/components/ui/Spinner';
 
 type ZapierSub = {
   id: string;
@@ -123,7 +124,7 @@ export default function ZapierIntegrationsPage() {
       <Card>
         <CardHeader><CardTitle>Subscriptions</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {loading && <div className="text-sm text-text-secondary">Loading…</div>}
+          {loading && <div className="flex items-center gap-2 text-sm text-text-secondary"><Spinner size={14} />Loading…</div>}
           {!loading && subs.length === 0 && <div className="text-sm text-text-secondary">No subscriptions yet.</div>}
           {subs.map((s) => (
             <div key={s.id} className="rounded-lg border border-border p-3 space-y-2">

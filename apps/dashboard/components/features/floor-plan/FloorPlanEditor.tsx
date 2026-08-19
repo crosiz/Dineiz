@@ -11,6 +11,7 @@ import { authClient } from '../../../lib/auth-client';
 import { useFloorPlanSocket } from './hooks/useFloorPlanSocket';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { Store } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export function FloorPlanEditor() {
   const {
@@ -98,16 +99,16 @@ export function FloorPlanEditor() {
 
   if (!selectedBranchId && !user) {
     return (
-      <div className="h-[calc(100vh-4rem)] w-full flex items-center justify-center bg-slate-50 font-medium text-slate-500">
-        Authenticating...
+      <div className="h-[calc(100vh-4rem)] w-full bg-slate-50">
+        <PageLoader label="Authenticating..." />
       </div>
     );
   }
 
   if (isLoading && !!selectedBranchId) {
     return (
-      <div className="h-[calc(100vh-4rem)] w-full flex items-center justify-center bg-slate-50 font-medium text-slate-500">
-        Loading Editor...
+      <div className="h-[calc(100vh-4rem)] w-full bg-slate-50">
+        <PageLoader label="Loading floor plan editor..." />
       </div>
     );
   }

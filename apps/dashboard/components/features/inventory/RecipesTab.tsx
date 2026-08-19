@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { ChefHat, CheckCircle2, AlertCircle, Plus, Trash2, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export function RecipesTab() {
   const queryClient = useQueryClient();
@@ -81,7 +82,7 @@ export function RecipesTab() {
   };
 
   if (isLoading) {
-    return <div className="h-64 flex items-center justify-center">Loading recipes...</div>;
+    return <PageLoader label="Loading recipes..." className="min-h-[240px]" />;
   }
 
   if (error) {

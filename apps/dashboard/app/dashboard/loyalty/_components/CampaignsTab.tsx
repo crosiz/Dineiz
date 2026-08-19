@@ -5,6 +5,8 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
+import { PageLoader } from '@/components/ui/Spinner';
+import { Trash2, Megaphone, Plus } from 'lucide-react';
 
 export function CampaignsTab() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -53,70 +55,105 @@ export function CampaignsTab() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <PageLoader label="Loading campaigns..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-900">Special Campaigns</h2>
-        <Button onClick={() => setIsCreating(true)}>Add Campaign</Button>
+        <div>
+          <h2 className="text-sm font-bold text-slate-900">Promotional Campaigns</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Run limited-time bonus point multipliers or flat reward drops</p>
+        </div>
+        {!isCreating && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="h-9 px-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Plus size={15} /> Create Campaign
+          </button>
+        )}
       </div>
 
       {isCreating && (
-        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4">
-          <h3 className="font-bold text-gray-900">Create New Campaign</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+          <h3 className="text-xs font-bold text-slate-900">New Campaign Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Campaign Name</label>
-              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Campaign Name</label>
+              <Input 
+                value={formData.name} 
+                onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                placeholder="e.g. Double Points Weekend" 
+                className="bg-white text-xs h-8"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Type</label>
-              <select className="w-full border border-gray-200 rounded-lg p-2.5 text-sm" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                <option value="MULTIPLIER">Points Multiplier</option>
-                <option value="BONUS">Flat Bonus Points</option>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Campaign Type</label>
+              <select 
+                value={formData.type} 
+                onChange={e => setFormData({ ...formData, type: e.target.value })}
+                className="w-full h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 outline-none focus:ring-1 focus:ring-[#FF5722]"
+              >
+                <option value="MULTIPLIER">Points Multiplier (e.g. 2x)</option>
+                <option value="FLAT_POINTS">Flat Bonus Points (e.g. 50 pts)</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Value ({formData.type === 'MULTIPLIER' ? 'e.g. 2 for 2x' : 'points'})</label>
-              <Input type="number" step="any" value={formData.value} onChange={e => setFormData({ ...formData, value: Number(e.target.value) })} />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Value ({formData.type === 'MULTIPLIER' ? 'Multiplier Factor' : 'Bonus Points'})</label>
+              <Input 
+                type="number" 
+                step={formData.type === 'MULTIPLIER' ? '0.1' : '1'}
+                value={formData.value} 
+                onChange={e => setFormData({ ...formData, value: Number(e.target.value) })} 
+                className="bg-white text-xs h-8"
+              />
             </div>
           </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save Campaign</Button>
+            <button 
+              onClick={() => setIsCreating(false)}
+              className="h-8 px-3 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSave}
+              className="h-8 px-4 text-xs font-semibold rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white shadow-xs"
+            >
+              Save Campaign
+            </button>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-slate-100 bg-slate-50 text-slate-500 font-semibold">
               <tr>
-                <th className="py-4 px-6">Name</th>
-                <th className="py-4 px-6">Type</th>
-                <th className="py-4 px-6">Value</th>
-                <th className="py-4 px-6">Status</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-3 px-5">Campaign</th>
+                <th className="py-3 px-5">Type</th>
+                <th className="py-3 px-5">Value</th>
+                <th className="py-3 px-5">Status</th>
+                <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {campaigns.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((camp) => (
-                <tr key={camp.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-6 font-bold text-slate-900">{camp.name}</td>
-                  <td className="py-4 px-6 text-[13px] text-slate-600 font-medium">{camp.type.replace('_', ' ')}</td>
-                  <td className="py-4 px-6 text-[13px] font-bold text-[#FF5722]">
+                <tr key={camp.id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="py-3 px-5 font-semibold text-slate-900">{camp.name}</td>
+                  <td className="py-3 px-5 text-slate-600">{camp.type.replace('_', ' ')}</td>
+                  <td className="py-3 px-5 font-mono font-bold text-[#FF5722]">
                     {camp.type === 'MULTIPLIER' ? `${camp.value}x` : `+${camp.value} pts`}
                   </td>
-                  <td className="py-4 px-6">
-                    <span className={`px-2 py-1 text-[10px] uppercase tracking-wide font-bold rounded ${camp.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                      {camp.isActive ? 'ACTIVE' : 'INACTIVE'}
+                  <td className="py-3 px-5">
+                    <span className={`px-2 py-0.5 text-[10px] uppercase font-semibold rounded ${camp.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      {camp.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-right">
-                    <button onClick={() => handleDelete(camp.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors">
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                  <td className="py-3 px-5 text-right">
+                    <button onClick={() => handleDelete(camp.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors">
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
@@ -124,10 +161,10 @@ export function CampaignsTab() {
               {campaigns.length === 0 && !isCreating && (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-500">
-                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <span className="material-symbols-outlined text-slate-300 text-3xl">campaign</span>
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-2 text-slate-400">
+                      <Megaphone size={22} />
                     </div>
-                    <h3 className="text-[13px] font-bold text-slate-900">No campaigns found</h3>
+                    <h3 className="text-xs font-bold text-slate-900">No campaigns found</h3>
                   </td>
                 </tr>
               )}
@@ -137,13 +174,13 @@ export function CampaignsTab() {
 
         {/* Pagination Footer */}
         {campaigns.length > 0 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-[13px] text-slate-500 bg-white">
+          <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-white">
             <div>
-              Showing <span className="font-bold text-slate-900">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, campaigns.length)}</span> of <span className="font-bold text-slate-900">{campaigns.length}</span> campaigns
+              Showing <span className="font-bold text-slate-900 font-mono">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, campaigns.length)}</span> of <span className="font-bold text-slate-900 font-mono">{campaigns.length}</span> campaigns
             </div>
             <Pagination 
               currentPage={currentPage} 
-              totalPages={Math.max(1, Math.ceil(campaigns.length / pageSize))} 
+              totalPages={Math.ceil(campaigns.length / pageSize)} 
               onPageChange={setCurrentPage} 
               pageSize={pageSize}
               onPageSizeChange={(size) => {

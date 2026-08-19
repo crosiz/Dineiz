@@ -8,6 +8,7 @@ import { InventoryForecastTable } from './_components/InventoryForecastTable';
 import { MenuItemForecastList } from './_components/MenuItemForecastList';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { AllBranchesBanner } from '@/components/AllBranchesBanner';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export default function ForecastPage() {
   const [revenueData, setRevenueData] = useState<any>(null);
@@ -60,90 +61,95 @@ export default function ForecastPage() {
   const generatedAt = revenueData?.generatedAt || new Date().toISOString();
 
   if (loading && !revenueData) {
-    return <div className="p-12 text-center text-slate-500 font-medium">Loading AI forecasts...</div>;
+    return <PageLoader label="Loading forecast models..." />;
   }
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-8">
+    <div className="space-y-6">
       <AllBranchesBanner isAllBranches={isAllBranches} />
+      
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <LineChart className="text-brand-primary shrink-0" size={28} />
-            AI Forecast & Planning
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <LineChart className="text-[#FF5722]" size={22} />
+            Demand & Inventory Forecast
           </h1>
-          <p className="text-slate-500 mt-2">AI-powered predictions for smarter planning.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Statistical projections for sales volume, peak hours, and ingredient restock</p>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <p className="text-xs text-slate-400">
-            Last updated: {new Date(generatedAt).toLocaleString()}
+            Updated: <span className="font-mono">{new Date(generatedAt).toLocaleDateString()}</span>
           </p>
           <button 
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="h-9 px-3.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-50"
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            Refresh Forecast
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            Recalculate
           </button>
         </div>
       </div>
 
       {hasNotEnoughData ? (
-        <div className="bg-white border border-slate-200 rounded-2xl p-12 text-center max-w-2xl mx-auto shadow-sm">
-          <AlertCircle size={48} className="mx-auto text-amber-500 mb-4" />
-          <h3 className="text-xl font-bold text-slate-800">Not enough data yet</h3>
-          <p className="text-slate-500 mt-2 mb-6">
-            Our AI needs at least 14 days of historical order data to generate accurate forecasts. 
-            Currently, you have {revenueData.daysAvailable} days of data.
-          </p>
-          <div className="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
-            <div 
-              className="bg-brand-primary h-3 rounded-full transition-all duration-1000" 
-              style={{ width: `${Math.min(100, (revenueData.daysAvailable / 14) * 100)}%` }}
-            ></div>
+        <div className="bg-white border border-slate-200 rounded-xl p-8 text-center max-w-xl mx-auto shadow-xs space-y-4">
+          <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mx-auto text-amber-500">
+            <AlertCircle size={24} />
           </div>
-          <p className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">14-Day Baseline Required</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Forecast models require at least 14 continuous days of historical order history. 
+              Currently {revenueData.daysAvailable} days are recorded.
+            </p>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div 
+              className="bg-[#FF5722] h-2 rounded-full transition-all duration-700" 
+              style={{ width: `${Math.min(100, (revenueData.daysAvailable / 14) * 100)}%` }}
+            />
+          </div>
+          <p className="text-[11px] font-semibold text-slate-500 font-mono">
             {revenueData.daysAvailable} / 14 Days Collected
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Section 1 - Revenue */}
-          <section className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <LineChart className="text-slate-400" size={20} />
-                Revenue Forecast
+          <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="mb-4">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <LineChart className="text-slate-400" size={16} />
+                30-Day Revenue Projection
               </h2>
-              <p className="text-sm text-slate-500">Predicted daily revenue for the next 30 days based on historical patterns.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Estimated daily sales based on historical seasonality and day-of-week trends</p>
             </div>
             {revenueData && <RevenueForecastChart data={revenueData} />}
           </section>
 
           {/* Section 2 - Busy Periods */}
-          <section className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300">
-            <div className="mb-6">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Calendar className="text-slate-400" size={20} />
-                Busy Period Prediction
+          <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
+            <div className="mb-4">
+              <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Calendar className="text-slate-400" size={16} />
+                Peak Hour & Staffing Heatmap
               </h2>
-              <p className="text-sm text-slate-500">Expect these busy periods over the next 7 days. Use this for staff scheduling.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Projected hourly rush periods across the upcoming 7 days</p>
             </div>
             {busyPeriods && !busyPeriods.error && <BusyPeriodCalendar data={busyPeriods.grid} />}
           </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Section 3 - Inventory Planning */}
-            <section className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <Package className="text-slate-400" size={20} />
-                  Inventory Planning
+            <section className="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Package className="text-slate-400" size={16} />
+                  Predicted Ingredient Demand
                 </h2>
-                <p className="text-sm text-slate-500">Based on the next 7 days forecast, you will need approximately:</p>
+                <p className="text-xs text-slate-500 mt-0.5">Estimated 7-day raw material requirements based on forecast orders</p>
               </div>
               <div className="flex-1 overflow-auto">
                 {inventoryData && !inventoryData.error && <InventoryForecastTable data={inventoryData.inventory} />}
@@ -151,12 +157,12 @@ export default function ForecastPage() {
             </section>
 
             {/* Section 4 - Menu Item Forecast */}
-            <section className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow duration-300 flex flex-col">
-              <div className="mb-6">
-                <h2 className="text-xl font-bold text-slate-800">Top Selling Items</h2>
-                <p className="text-sm text-slate-500">Predicted quantities for the next 7 days.</p>
+            <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold text-slate-900">Top Predicted Items</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Most in-demand recipes for the upcoming week</p>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 overflow-auto">
                 {itemsData && !itemsData.error && <MenuItemForecastList data={itemsData.items} />}
               </div>
             </section>

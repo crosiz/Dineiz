@@ -5,6 +5,8 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
+import { PageLoader } from '@/components/ui/Spinner';
+import { Trash2, Award, Plus } from 'lucide-react';
 
 export function TiersTab() {
   const [tiers, setTiers] = useState<any[]>([]);
@@ -29,91 +31,142 @@ export function TiersTab() {
     fetchTiers();
   }, []);
 
-  const handleSave = async () => {
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       await apiFetch('/api/loyalty/tiers', {
         method: 'POST',
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
       setIsCreating(false);
       setFormData({ name: '', minPoints: 0, multiplier: 1, badgeColor: '#FF5722' });
       fetchTiers();
-    } catch (e: any) {
-      alert(e?.message || 'Failed to create tier');
+    } catch (e) {
+      alert('Failed to create tier');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this tier?')) return;
+    if (!confirm('Are you sure?')) return;
     try {
-      await apiFetch(`/api/loyalty/tiers/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/loyalty/tiers/${id}`, {
+        method: 'DELETE',
+      });
       fetchTiers();
-    } catch (e: any) {
-      alert(e?.message || 'Failed to delete tier');
+    } catch (e) {
+      alert('Failed to delete tier');
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <PageLoader label="Loading tiers..." />;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-900">Loyalty Tiers</h2>
-        <Button onClick={() => setIsCreating(true)}>Add Tier</Button>
+        <div>
+          <h2 className="text-sm font-bold text-slate-900">Membership Tiers</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Define progression milestones and point multipliers</p>
+        </div>
+        {!isCreating && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="h-9 px-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Plus size={15} /> Add Tier
+          </button>
+        )}
       </div>
 
       {isCreating && (
-        <div className="bg-gray-50 p-6 rounded-xl border border-gray-200 space-y-4">
-          <h3 className="font-bold text-gray-900">Create New Tier</h3>
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleCreate} className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+          <h3 className="text-xs font-bold text-slate-900">New Tier Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Tier Name</label>
-              <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Tier Name</label>
+              <Input
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Gold"
+                className="bg-white text-xs h-8"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Minimum Points</label>
-              <Input type="number" value={formData.minPoints} onChange={e => setFormData({ ...formData, minPoints: Number(e.target.value) })} />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Min Points</label>
+              <Input
+                type="number"
+                required
+                value={formData.minPoints}
+                onChange={(e) => setFormData({ ...formData, minPoints: Number(e.target.value) })}
+                className="bg-white text-xs h-8"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Point Multiplier (e.g. 1.5)</label>
-              <Input type="number" step="0.1" value={formData.multiplier} onChange={e => setFormData({ ...formData, multiplier: Number(e.target.value) })} />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Multiplier (e.g. 1.5x)</label>
+              <Input
+                type="number"
+                step="0.1"
+                required
+                value={formData.multiplier}
+                onChange={(e) => setFormData({ ...formData, multiplier: Number(e.target.value) })}
+                className="bg-white text-xs h-8"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Badge Color</label>
-              <input type="color" value={formData.badgeColor} onChange={e => setFormData({ ...formData, badgeColor: e.target.value })} className="w-full h-10 rounded border border-gray-200" />
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Badge Color</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={formData.badgeColor}
+                  onChange={(e) => setFormData({ ...formData, badgeColor: e.target.value })}
+                  className="h-8 w-12 rounded border border-slate-200 cursor-pointer p-0.5"
+                />
+                <span className="text-xs font-mono text-slate-600 uppercase">{formData.badgeColor}</span>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setIsCreating(false)}>Cancel</Button>
-            <Button onClick={handleSave}>Save Tier</Button>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsCreating(false)}
+              className="h-8 px-3 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-xs"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="h-8 px-4 text-xs font-semibold rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white shadow-xs"
+            >
+              Save Tier
+            </button>
           </div>
-        </div>
+        </form>
       )}
 
-      <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-slate-100 bg-slate-50 text-slate-500 font-semibold">
               <tr>
-                <th className="py-4 px-6">Tier Name</th>
-                <th className="py-4 px-6">Minimum Points</th>
-                <th className="py-4 px-6">Multiplier</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-3 px-5">Tier</th>
+                <th className="py-3 px-5">Minimum Points</th>
+                <th className="py-3 px-5">Multiplier</th>
+                <th className="py-3 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {tiers.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((tier) => (
-                <tr key={tier.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
-                  <td className="py-4 px-6">
-                    <span className="px-2.5 py-1 text-[12px] font-bold uppercase rounded" style={{ backgroundColor: `${tier.badgeColor}15`, color: tier.badgeColor }}>
+                <tr key={tier.id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="py-3 px-5">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded" style={{ backgroundColor: `${tier.badgeColor}15`, color: tier.badgeColor }}>
                       {tier.name}
                     </span>
                   </td>
-                  <td className="py-4 px-6 text-[13px] font-bold text-slate-900">{tier.minPoints} pts</td>
-                  <td className="py-4 px-6 text-[13px] font-bold text-[#FF5722]">{tier.multiplier}x</td>
-                  <td className="py-4 px-6 text-right">
-                    <button onClick={() => handleDelete(tier.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors">
-                      <span className="material-symbols-outlined text-[20px]">delete</span>
+                  <td className="py-3 px-5 font-mono font-bold text-slate-900">{tier.minPoints} pts</td>
+                  <td className="py-3 px-5 font-mono font-bold text-[#FF5722]">{tier.multiplier}x</td>
+                  <td className="py-3 px-5 text-right">
+                    <button onClick={() => handleDelete(tier.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors">
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
@@ -121,10 +174,10 @@ export function TiersTab() {
               {tiers.length === 0 && !isCreating && (
                 <tr>
                   <td colSpan={4} className="py-12 text-center text-slate-500">
-                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <span className="material-symbols-outlined text-slate-300 text-3xl">military_tech</span>
+                    <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-2 text-slate-400">
+                      <Award size={22} />
                     </div>
-                    <h3 className="text-[13px] font-bold text-slate-900">No tiers configured</h3>
+                    <h3 className="text-xs font-bold text-slate-900">No tiers configured</h3>
                   </td>
                 </tr>
               )}
@@ -134,13 +187,13 @@ export function TiersTab() {
 
         {/* Pagination Footer */}
         {tiers.length > 0 && (
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between text-[13px] text-slate-500 bg-white">
+          <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-white">
             <div>
-              Showing <span className="font-bold text-slate-900">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, tiers.length)}</span> of <span className="font-bold text-slate-900">{tiers.length}</span> tiers
+              Showing <span className="font-bold text-slate-900 font-mono">{(currentPage - 1) * pageSize + 1}-{Math.min(currentPage * pageSize, tiers.length)}</span> of <span className="font-bold text-slate-900 font-mono">{tiers.length}</span> tiers
             </div>
             <Pagination 
               currentPage={currentPage} 
-              totalPages={Math.max(1, Math.ceil(tiers.length / pageSize))} 
+              totalPages={Math.ceil(tiers.length / pageSize)} 
               onPageChange={setCurrentPage} 
               pageSize={pageSize}
               onPageSizeChange={(size) => {

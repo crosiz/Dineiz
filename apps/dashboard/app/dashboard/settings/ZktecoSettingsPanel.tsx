@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { PageLoader } from "@/components/ui/Spinner";
 
 interface Device {
   id: string;
@@ -101,7 +102,7 @@ export function ZktecoSettingsPanel() {
     }
   }
 
-  if (loading) return <div>Loading devices...</div>;
+  if (loading) return <PageLoader label="Loading devices..." />;
 
   return (
     <div className="space-y-6">

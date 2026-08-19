@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Trash2, AlertTriangle, ChevronRight } from 'lucide-react';
 import { WastageLog } from './hooks/useInventory';
 import { AddWastageModal } from './modals/AddWastageModal';
+import { Spinner } from '@/components/ui/Spinner';
 
 interface QuickWastageLogProps {
   logs: WastageLog[];
@@ -41,7 +42,7 @@ export function QuickWastageLog({ logs, isLoading }: QuickWastageLogProps) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
-              <tr><td colSpan={5} className="text-center py-10 text-slate-500">Loading...</td></tr>
+              <tr><td colSpan={5} className="text-center py-10"><div className="flex items-center justify-center gap-2 text-slate-400"><Spinner size={16} />Loading...</div></td></tr>
             ) : logs.length === 0 ? (
               <tr><td colSpan={5} className="text-center py-10 text-slate-500">No wastage logs found.</td></tr>
             ) : (

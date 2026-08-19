@@ -3,6 +3,7 @@
 import React from 'react';
 import { Send, CheckCircle2, FileText, XCircle, PackagePlus } from 'lucide-react';
 import { PurchaseOrder, useInventory } from './hooks/useInventory';
+import { Spinner } from '@/components/ui/Spinner';
 
 interface RecentPurchaseOrdersProps {
   orders: PurchaseOrder[];
@@ -77,7 +78,7 @@ export function RecentPurchaseOrders({ orders, isLoading }: RecentPurchaseOrders
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
-              <tr><td colSpan={6} className="text-center py-10 text-slate-500">Loading...</td></tr>
+              <tr><td colSpan={6} className="text-center py-10"><div className="flex items-center justify-center gap-2 text-slate-400"><Spinner size={16} />Loading...</div></td></tr>
             ) : orders.length === 0 ? (
               <tr><td colSpan={6} className="text-center py-10 text-slate-500">No purchase orders found.</td></tr>
             ) : (

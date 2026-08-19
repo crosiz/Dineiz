@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ShieldAlert, AlertTriangle, Info, CheckCircle2, MoreVertical, X } from 'lucide-react';
 import { apiPost } from '@/lib/api-client';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export function AnomalyList({ anomalies, loading, onRefresh }: { anomalies: any[], loading: boolean, onRefresh: () => void }) {
   const [selectedAnomaly, setSelectedAnomaly] = useState<any>(null);
 
   if (loading) {
-    return <div className="p-12 text-center text-slate-500 font-medium">Loading anomalies...</div>;
+    return <PageLoader label="Loading anomalies..." />;
   }
 
   if (anomalies.length === 0) {

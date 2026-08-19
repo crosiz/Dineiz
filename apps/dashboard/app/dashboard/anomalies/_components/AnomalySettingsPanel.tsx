@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Bell, AlertTriangle } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api-client';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export function AnomalySettingsPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
@@ -71,8 +72,8 @@ export function AnomalySettingsPanel({ onClose }: { onClose: () => void }) {
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
-        <div className="w-[500px] bg-white h-full shadow-2xl p-6 flex items-center justify-center">
-          Loading settings...
+        <div className="w-[500px] bg-white h-full shadow-2xl flex items-center justify-center">
+          <PageLoader label="Loading settings..." />
         </div>
       </div>
     );

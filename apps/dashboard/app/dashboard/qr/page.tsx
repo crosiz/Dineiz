@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Settings, Phone, CheckCircle, QrCode as QrCodeIcon, Monitor, Copy, ExternalLink, Printer } from 'lucide-react';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export default function QrOrderingPage() {
   const { currentTenant, currentBranch } = useDashboardContext() as any; // Type workaround if currentTenant exists in JS
@@ -60,7 +61,7 @@ export default function QrOrderingPage() {
     window.print();
   };
 
-  if (!settingsData) return <div className="p-8">Loading...</div>;
+  if (!settingsData) return <PageLoader label="Loading QR ordering settings..." />;
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8">
@@ -210,77 +211,78 @@ export default function QrOrderingPage() {
 
           {/* Sidebar / Live Preview */}
           <div className="space-y-6 print:hidden">
-            <div className="bg-slate-900 rounded-3xl p-4 shadow-2xl relative border-4 border-slate-800 h-[600px] flex flex-col overflow-hidden">
-              {/* Phone Notch */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-10"></div>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Monitor size={14} className="text-slate-400" /> Guest Menu Preview
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500 uppercase">Live View</span>
+              </div>
               
-              {/* App UI Preview */}
-              <div className="bg-white flex-1 rounded-xl overflow-hidden flex flex-col">
-                {form.heroImage ? (
-                  <div className="h-32 bg-slate-200 w-full" style={{ backgroundImage: `url(${form.heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-                ) : (
-                  <div className="h-32 bg-gradient-to-br from-brand-primary to-brand-primary/80 w-full flex items-center justify-center">
-                     <span className="text-white/50 text-sm">Hero Image</span>
+              <div className="p-4 space-y-4">
+                {/* Simulated Header */}
+                <div className="rounded-lg bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 text-center">
+                  <h3 className="font-bold text-sm text-white">{currentTenant?.name || 'Restaurant Name'}</h3>
+                  <p className="text-xs text-slate-300 mt-1">{form.welcomeMessage || 'Welcome to our digital menu.'}</p>
+                </div>
+
+                {/* Simulated Item List */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900">Featured Items</span>
+                    <span className="text-[10px] text-slate-400">2 items</span>
                   </div>
-                )}
-                
-                <div className="p-4 -mt-8 relative z-10">
-                  <div className="bg-white rounded-xl shadow-md p-4 text-center">
-                    <h2 className="font-black text-lg text-slate-900">{currentTenant?.name || 'Your Restaurant'}</h2>
-                    <p className="text-xs text-slate-500 mt-1">{form.welcomeMessage || 'Welcome to our digital menu.'}</p>
+                  
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                    {form.showImages && <div className="w-12 h-12 bg-slate-200 rounded-md shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 truncate">Signature Burger</p>
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">PKR 850</p>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-3">
+                    {form.showImages && <div className="w-12 h-12 bg-slate-200 rounded-md shrink-0" />}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-900 truncate">Crispy Fries</p>
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">PKR 350</p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex-1 p-4 space-y-4 bg-slate-50">
-                   <div className="h-4 w-24 bg-slate-200 rounded"></div>
-                   <div className="flex gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                     {form.showImages && <div className="w-16 h-16 bg-slate-200 rounded-lg"></div>}
-                     <div className="flex-1">
-                        <div className="h-3 w-3/4 bg-slate-200 rounded mb-2"></div>
-                        <div className="h-2 w-1/2 bg-slate-100 rounded mb-4"></div>
-                        <div className="h-3 w-12 bg-slate-200 rounded"></div>
-                     </div>
-                   </div>
-                   <div className="flex gap-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                     {form.showImages && <div className="w-16 h-16 bg-slate-200 rounded-lg"></div>}
-                     <div className="flex-1">
-                        <div className="h-3 w-2/3 bg-slate-200 rounded mb-2"></div>
-                        <div className="h-2 w-1/2 bg-slate-100 rounded mb-4"></div>
-                        <div className="h-3 w-12 bg-slate-200 rounded"></div>
-                     </div>
-                   </div>
-                </div>
-                
                 {/* Checkout Bar Preview */}
-                <div className="bg-white border-t border-slate-100 p-4">
-                  <div className="bg-brand-primary text-white rounded-xl py-3 px-4 font-bold flex justify-between text-sm">
+                <div className="pt-2">
+                  <div className="bg-[#FF5722] text-white rounded-lg py-2 px-3 font-semibold flex justify-between text-xs items-center shadow-xs">
                     <span>View Cart (2)</span>
-                    <span>Rs. 1,450</span>
+                    <span className="font-mono">PKR 1,200</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-              <h3 className="font-bold text-sm text-slate-900">Appearance Settings</h3>
+            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
+              <h3 className="font-bold text-xs uppercase tracking-wider text-slate-500">Appearance Settings</h3>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Welcome Message</label>
+                <label className="block text-xs font-medium text-slate-700 mb-1">Welcome Message</label>
                 <input 
                   type="text" 
                   value={form.welcomeMessage || ''}
                   onChange={e => handleChange('welcomeMessage', e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-md text-sm outline-none focus:border-brand-primary"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#FF5722]"
                   placeholder="Welcome to our digital menu."
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">QR Code Color</label>
-                <input 
-                  type="color" 
-                  value={form.qrColor || '#000000'}
-                  onChange={e => handleChange('qrColor', e.target.value)}
-                  className="w-full h-10 px-1 py-1 bg-white border border-slate-200 rounded-md cursor-pointer"
-                />
+                <label className="block text-xs font-medium text-slate-700 mb-1">QR Code Color</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="color" 
+                    value={form.qrColor || '#000000'}
+                    onChange={e => handleChange('qrColor', e.target.value)}
+                    className="w-8 h-8 rounded border border-slate-200 cursor-pointer p-0.5"
+                  />
+                  <span className="text-xs font-mono text-slate-600 uppercase">{form.qrColor || '#000000'}</span>
+                </div>
               </div>
             </div>
           </div>

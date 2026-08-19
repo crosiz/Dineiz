@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api-client';
 import { Clock, ShoppingBag } from 'lucide-react';
+import { Spinner } from '@/components/ui/Spinner';
 
 function formatSince(openedAt: string) {
   const ms = Date.now() - new Date(openedAt).getTime();
@@ -30,7 +31,7 @@ export default function StaffOnShiftPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-slate-400 py-12 text-center">Loading…</div>
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-12"><Spinner size={16} />Loading…</div>
       ) : isError ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-red-500">Couldn't load active shifts.</p>
