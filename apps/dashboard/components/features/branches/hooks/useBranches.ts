@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api';
 export interface BranchStats {
   todayRevenue: number;
   todayOrders: number;
+  activeOrders: number;
   isCurrentlyOpen: boolean;
 }
 

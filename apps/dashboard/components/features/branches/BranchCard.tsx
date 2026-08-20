@@ -1,5 +1,5 @@
 'use client';
-import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
+import { formatPKR } from '@/lib/formatters';
 
 import React, { useState } from 'react';
 import { MoreHorizontal, MapPin, Phone, Clock, Eye, Pencil, Trash, Power, Terminal, LayoutTemplate, PauseCircle, PlayCircle } from 'lucide-react';
@@ -17,12 +17,6 @@ export function BranchCard({ branch, onViewDetails, onEdit, onViewPlan }: Branch
   const { toggleStatusMutation, deleteBranchMutation } = useBranches();
   const [isDeleting, setIsDeleting] = useState(false);
   const isActive = branch.isActive;
-  
-  const getHeaderStyle = () => {
-    if (!isActive) return 'bg-slate-400';
-    if (branch.colorHex) return `bg-[${branch.colorHex}]`;
-    return 'bg-[#ff5722]'; // fallback
-  };
 
   const initialLetter = branch.initial || branch.name.charAt(0).toUpperCase();
 

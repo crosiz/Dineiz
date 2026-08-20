@@ -1,21 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useFormContext } from 'react-hook-form';
-import { MapPin, UploadCloud, MapPinIcon, Lightbulb } from 'lucide-react';
+import { MapPinIcon, Lightbulb } from 'lucide-react';
 import { AddBranchFormData } from '../hooks/useAddBranch';
 
 export function Step1BasicInfo() {
   const { register, formState: { errors } } = useFormContext<AddBranchFormData>();
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setLogoPreview(url);
-    }
-  };
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -80,30 +71,6 @@ export function Step1BasicInfo() {
           placeholder="manager@swiftserv.com"
         />
         {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-slate-700 mb-1.5">Upload Branch Logo</label>
-        <div className="relative min-h-[120px] border-2 border-dashed border-slate-200 rounded-xl p-8 bg-white hover:bg-slate-50 transition-colors cursor-pointer group flex flex-col items-center justify-center">
-          <input 
-            type="file" 
-            accept="image/png, image/jpeg, image/svg+xml" 
-            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-            onChange={handleLogoUpload}
-          />
-          
-          {logoPreview ? (
-            <img src={logoPreview} alt="Logo preview" className="w-full h-32 object-contain p-2" />
-          ) : (
-            <>
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <UploadCloud size={24} className="text-[#ff5722]" />
-              </div>
-              <span className="text-sm font-medium text-slate-700">Upload Branch Logo</span>
-              <span className="text-xs text-slate-400 mt-1">PNG, JPG or SVG up to 5MB</span>
-            </>
-          )}
-        </div>
       </div>
 
     </div>

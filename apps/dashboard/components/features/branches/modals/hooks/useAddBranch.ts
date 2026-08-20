@@ -12,7 +12,6 @@ export const addBranchSchema = z.object({
   city: z.string().min(2, 'City is required'),
   phone: z.string().min(8, 'Valid phone number is required'),
   email: z.string().email('Valid email is required').optional().or(z.literal('')),
-  logo: z.any().optional(),
 
   // Step 2
   openingTime: z.string().min(1, 'Opening time is required'),
@@ -24,8 +23,6 @@ export const addBranchSchema = z.object({
   taxRate: z.coerce.number().min(0, 'Tax rate cannot be negative').max(100, 'Tax rate cannot exceed 100%'),
   kdsEnabled: z.boolean(),
   kotAutoPrint: z.boolean(),
-  acceptOnlineOrders: z.boolean(),
-  deliveryAvailable: z.boolean(),
 });
 
 export type AddBranchFormData = z.infer<typeof addBranchSchema>;
@@ -49,8 +46,6 @@ export function useAddBranch(onClose: () => void) {
       taxRate: 0,
       kdsEnabled: true,
       kotAutoPrint: true,
-      acceptOnlineOrders: true,
-      deliveryAvailable: false,
     },
     mode: 'onTouched'
   });
@@ -63,7 +58,7 @@ export function useAddBranch(onClose: () => void) {
     } else if (currentStep === 2) {
       fieldsToValidate = ['openingTime', 'closingTime'];
     } else if (currentStep === 3) {
-      fieldsToValidate = ['currency', 'timezone', 'taxRate', 'kdsEnabled', 'kotAutoPrint', 'acceptOnlineOrders', 'deliveryAvailable'];
+      fieldsToValidate = ['currency', 'timezone', 'taxRate', 'kdsEnabled', 'kotAutoPrint'];
     }
 
     const isValid = await methods.trigger(fieldsToValidate);

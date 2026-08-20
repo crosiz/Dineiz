@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import { Monitor, Printer, ShoppingCart, Truck } from 'lucide-react';
+import { Monitor, Printer } from 'lucide-react';
 import { AddBranchFormData } from '../hooks/useAddBranch';
 import Select from 'react-select';
 
@@ -19,8 +19,6 @@ export function Step3BranchSettings() {
   const toggles = [
     { id: 'kdsEnabled', icon: Monitor, title: 'KDS Enabled', desc: 'Route orders to kitchen displays', color: 'orange' },
     { id: 'kotAutoPrint', icon: Printer, title: 'KOT Auto-print', desc: 'Print tickets immediately on order', color: 'orange' },
-    { id: 'acceptOnlineOrders', icon: ShoppingCart, title: 'Accept Online Orders', desc: 'Integration with delivery apps', color: 'orange' },
-    { id: 'deliveryAvailable', icon: Truck, title: 'Delivery Available', desc: 'Allow in-house delivery dispatch', color: 'slate' }
   ];
 
   return (

@@ -81,8 +81,6 @@ export function Step4Confirm({ onEditStep }: Step4ConfirmProps) {
         <div className="flex flex-wrap gap-2">
           {data.kdsEnabled && <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2 py-1 rounded-md"><Check size={12}/> KDS</span>}
           {data.kotAutoPrint && <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2 py-1 rounded-md"><Check size={12}/> KOT Auto-print</span>}
-          {data.acceptOnlineOrders && <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2 py-1 rounded-md"><Check size={12}/> Online Orders</span>}
-          {data.deliveryAvailable && <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 text-xs font-bold px-2 py-1 rounded-md"><Check size={12}/> Delivery</span>}
         </div>
       </div>
 

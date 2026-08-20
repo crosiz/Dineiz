@@ -7,15 +7,6 @@ import { Input } from '@dineiz/ui';
 import { toast } from 'sonner';
 import { useBranches } from '@/components/features/branches/hooks/useBranches';
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-type HoursDay = { open: boolean; openTime: string; closeTime: string };
-type HoursMap = Record<string, HoursDay>;
-
-const DEFAULT_HOURS: HoursMap = Object.fromEntries(
-  DAYS.map(d => [d, { open: true, openTime: '09:00', closeTime: '22:00' }])
-);
-
 type BranchModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -67,15 +58,17 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
 
-  // Step 2 — Operating Hours
-  const [hours, setHours] = useState<HoursMap>(DEFAULT_HOURS);
+  // Step 2 — Operating Hours (single daily window — the backend only
+  // stores one openingTime/closingTime pair per branch, not per-day hours)
+  const [openingTime, setOpeningTime] = useState('09:00');
+  const [closingTime, setClosingTime] = useState('22:00');
 
   // Step 3 — Settings
   const [currency, setCurrency] = useState('PKR');
   const [timezone, setTimezone] = useState('Asia/Karachi');
   const [taxRate, setTaxRate] = useState('0');
   const [kdsEnabled, setKdsEnabled] = useState(false);
-  const [kotPrinter, setKotPrinter] = useState(false);
+  const [kotAutoPrint, setKotAutoPrint] = useState(false);
 
   useEffect(() => {
     if (branchToEdit) {
@@ -84,30 +77,31 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
       setCity(branchToEdit.city || '');
       setPhone(branchToEdit.phone || '');
       setEmail(branchToEdit.email || '');
+      setOpeningTime(branchToEdit.openingTime || '09:00');
+      setClosingTime(branchToEdit.closingTime || '22:00');
+      setCurrency(branchToEdit.currency || 'PKR');
+      setTimezone(branchToEdit.timezone || 'Asia/Karachi');
+      setTaxRate(String(branchToEdit.taxRate ?? 0));
+      setKdsEnabled(!!branchToEdit.kdsEnabled);
+      setKotAutoPrint(!!branchToEdit.kotAutoPrint);
     } else {
       setName(''); setAddress(''); setCity(''); setPhone(''); setEmail('');
-      setHours(DEFAULT_HOURS);
+      setOpeningTime('09:00'); setClosingTime('22:00');
       setCurrency('PKR'); setTimezone('Asia/Karachi'); setTaxRate('0');
-      setKdsEnabled(false); setKotPrinter(false);
+      setKdsEnabled(false); setKotAutoPrint(false);
     }
     setStep(1);
   }, [isOpen, branchToEdit]);
-
-  const copyMondayToAll = () => {
-    const mon = hours['Monday'];
-    setHours(Object.fromEntries(DAYS.map(d => [d, { ...mon }])));
-    toast.success('Monday hours copied to all days');
-  };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
       const body = {
         name, address, city, phone, email,
-        operatingHours: hours,
+        openingTime, closingTime,
         currency, timezone,
         taxRate: parseFloat(taxRate) || 0,
-        kdsEnabled, kotPrinter,
+        kdsEnabled, kotAutoPrint,
       };
 
       if (branchToEdit) {
@@ -131,16 +125,6 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
   };
 
   if (!isOpen) return null;
-
-  const toggleLabel = (val: boolean) => (
-    <button
-      type="button"
-      onClick={() => val}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${val ? 'bg-brand-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-    >
-      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${val ? 'translate-x-6' : 'translate-x-1'}`} />
-    </button>
-  );
 
   return (
     <>
@@ -205,35 +189,17 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
             {/* Step 2 */}
             {step === 2 && (
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-neutral-500">Set operating hours for each day</p>
-                  <Button variant="outline" size="sm" type="button" onClick={copyMondayToAll}>
-                    Copy Monday to all
-                  </Button>
-                </div>
-                {DAYS.map(day => (
-                  <div key={day} className="flex items-center gap-4 p-3 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                    <div className="w-24 shrink-0">
-                      <p className="text-sm font-medium">{day.slice(0, 3)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setHours(h => ({ ...h, [day]: { ...h[day], open: !h[day].open } }))}
-                      className={`relative inline-flex h-5 w-10 items-center rounded-full shrink-0 transition-colors ${hours[day].open ? 'bg-brand-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-                    >
-                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${hours[day].open ? 'translate-x-5' : 'translate-x-1'}`} />
-                    </button>
-                    {hours[day].open ? (
-                      <>
-                        <Input type="time" value={hours[day].openTime} className="flex-1" onChange={e => setHours(h => ({ ...h, [day]: { ...h[day], openTime: e.target.value } }))} />
-                        <span className="text-neutral-400 text-sm shrink-0">to</span>
-                        <Input type="time" value={hours[day].closeTime} className="flex-1" onChange={e => setHours(h => ({ ...h, [day]: { ...h[day], closeTime: e.target.value } }))} />
-                      </>
-                    ) : (
-                      <span className="text-sm text-neutral-400 italic">Closed</span>
-                    )}
+                <p className="text-sm text-neutral-500">These hours apply every day the branch is open.</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Opening Time</label>
+                    <Input type="time" value={openingTime} onChange={e => setOpeningTime(e.target.value)} />
                   </div>
-                ))}
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Closing Time</label>
+                    <Input type="time" value={closingTime} onChange={e => setClosingTime(e.target.value)} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -286,15 +252,15 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg border border-neutral-200 dark:border-neutral-800">
                     <div>
-                      <p className="text-sm font-medium">KOT Printer</p>
-                      <p className="text-xs text-neutral-500">Print kitchen order tickets</p>
+                      <p className="text-sm font-medium">KOT Auto-Print</p>
+                      <p className="text-xs text-neutral-500">Print kitchen order tickets automatically on order</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setKotPrinter(!kotPrinter)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${kotPrinter ? 'bg-brand-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+                      onClick={() => setKotAutoPrint(!kotAutoPrint)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${kotAutoPrint ? 'bg-brand-primary' : 'bg-neutral-300 dark:bg-neutral-700'}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${kotPrinter ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${kotAutoPrint ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </div>

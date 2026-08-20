@@ -1,4 +1,4 @@
-import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
+import { formatPKR } from '@/lib/formatters';
 import React from 'react';
 import { X, MapPin, Phone, Mail, Clock, Activity, Store } from 'lucide-react';
 import { Branch } from './hooks/useBranches';
