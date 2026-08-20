@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { PageLoader } from '@/components/ui/Spinner';
 
 const STAGE_LABELS: Record<string, string> = {
   GREETING: 'Just started',
@@ -47,7 +48,7 @@ export function OverviewTab() {
   }, []);
 
   if (loading) {
-    return <div className="text-sm text-gray-400">Loading...</div>;
+    return <PageLoader label="Loading conversations..." className="min-h-[160px]" />;
   }
 
   return (

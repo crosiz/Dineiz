@@ -1,7 +1,8 @@
 'use client';
 import { formatPKR } from '@/lib/formatters';
 import React, { useState, useEffect } from 'react';
-import { User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, Loader2, FileText, Plus, ArrowLeft } from 'lucide-react';
+import { User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, FileText, Plus, ArrowLeft } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Spinner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -148,7 +149,7 @@ export default function OrderDetailPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 size={32} className="animate-spin text-[#ff5722]" />
+        <PageLoader label="Loading order..." />
       </div>
     );
   }

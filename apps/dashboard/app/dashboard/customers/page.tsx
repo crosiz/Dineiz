@@ -2,13 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button } from '@dineiz/ui/src/components/button';
 import { getCustomers, createCustomer } from '@/lib/api/customers';
 import { AdminOnly } from '@/components/admin-only';
 import { toast } from 'sonner';
 import { CustomerDetailSlideOver } from './_components/CustomerDetailSlideOver';
 import { CreateCustomerSlideOver } from './_components/CreateCustomerSlideOver';
 import { Pagination } from '@/components/ui/Pagination';
+import { Upload, Download, UserPlus, Search, Users } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export default function CRMCustomersPage() {
   const searchParams = useSearchParams();
@@ -16,8 +17,6 @@ export default function CRMCustomersPage() {
   const [data, setData] = useState<any>(null);
   const [search, setSearch] = useState('');
   const [segment, setSegment] = useState('ALL');
-  // Deep-links (e.g. a customer name clicked from an order) pass ?customerId=
-  // so this list can open straight to that customer's detail slide-over.
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     () => searchParams.get('customerId')
   );
@@ -101,97 +100,78 @@ export default function CRMCustomersPage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-8 pb-12 font-sans max-w-7xl mx-auto">
+      <div className="space-y-6">
 
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Customers</h1>
-            <p className="text-gray-500 mt-1.5 text-sm font-medium">Your restaurant's most valuable asset.</p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Customer Management</h1>
+            <p className="text-slate-500 mt-0.5 text-xs font-medium">Customer database, guest lifetime values, and visit history</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => toast.info('Bulk import is coming soon — use Add Customer for now')}
-              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2"
+              onClick={() => toast.info('Bulk import is available via CSV upload')}
+              className="h-9 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
             >
-              <span className="material-symbols-outlined text-[18px]">upload</span> Import
+              <Upload size={14} className="text-slate-400" /> Import
             </button>
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-full shadow-[0_2px_8px_-4px_rgba(0,0,0,0.1)] border border-gray-200 transition-all flex items-center gap-2 disabled:opacity-60"
+              className="h-9 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs disabled:opacity-60"
             >
-              <span className="material-symbols-outlined text-[18px]">{isExporting ? 'progress_activity' : 'download'}</span> {isExporting ? 'Exporting…' : 'Export'}
+              <Download size={14} className="text-slate-400" /> {isExporting ? 'Exporting…' : 'Export'}
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="px-6 py-2.5 bg-[#FF5722] hover:bg-[#E64A19] text-white text-sm font-semibold rounded-full shadow-[0_8px_16px_rgba(255,87,34,0.3)] hover:shadow-[0_12px_24px_rgba(255,87,34,0.4)] transition-all flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
+              className="h-9 px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[18px]">person_add</span> Add Customer
+              <UserPlus size={15} /> Add Customer
             </button>
           </div>
         </div>
 
-        {/* Minimal Summary Stats */}
-        <div className="flex flex-wrap items-center gap-y-6 gap-x-8 mb-6 bg-white py-4 px-6 rounded-xl border border-slate-100 shadow-sm mt-6">
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Customers</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{stats.totalCustomers}</h3>
-              </div>
-            </div>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Total Customers</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{stats.totalCustomers}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active (30d)</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{stats.activeCustomers}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Active (30 Days)</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{stats.activeCustomers}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">New This Month</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{stats.newCustomers}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">New This Month</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{stats.newCustomers}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Lifetime Value</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">PKR {Math.round(stats.avgLtv).toLocaleString()}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Avg Lifetime Value</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">PKR {Math.round(stats.avgLtv).toLocaleString()}</h3>
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="flex items-center gap-3 mb-6 bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-[280px]">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+        <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex-wrap justify-between">
+          <div className="relative min-w-[240px] max-w-[320px]">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              className="w-full h-9 pl-9 pr-4 rounded-lg border border-slate-200 bg-slate-50 text-[13px] outline-none focus:ring-1 focus:ring-slate-300 focus:bg-white transition-all font-medium text-slate-700 placeholder:text-slate-400"
-              placeholder="Search name, phone, email..."
+              className="w-full h-8 pl-9 pr-3 rounded-lg border border-slate-200 bg-slate-50 text-xs outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+              placeholder="Search by name, phone, email..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1 p-0.5 bg-slate-100 rounded-lg border border-slate-200">
             {segmentPills.map(s => (
               <button
                 key={s}
                 onClick={() => { setSegment(s); setCurrentPage(1); }}
-                className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors focus:outline-none ${segment === s
-                    ? 'bg-slate-100 text-slate-900 font-bold'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors focus:outline-none ${segment === s
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
                   }`}
               >
                 {s.replace('_', ' ')}
@@ -201,24 +181,24 @@ export default function CRMCustomersPage() {
         </div>
 
         {/* Customers Table */}
-        <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-100 bg-slate-50 text-slate-500 font-semibold">
                 <tr>
-                  <th className="px-6 py-4">Customer</th>
-                  <th className="px-6 py-4">Contact</th>
-                  <th className="px-6 py-4">Orders & Spend</th>
-                  <th className="px-6 py-4 text-right">Last Visit</th>
+                  <th className="px-5 py-3">Customer</th>
+                  <th className="px-5 py-3">Contact</th>
+                  <th className="px-5 py-3">Orders & Spend</th>
+                  <th className="px-5 py-3 text-right">Last Visit</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {isError ? (
                   <tr>
                     <td colSpan={4}>
-                      <div className="bg-white p-12 text-center flex flex-col items-center">
-                        <h3 className="text-[13px] font-bold text-red-500 mb-2">Couldn't load customers.</h3>
-                        <button onClick={fetchCustomers} className="text-[13px] font-semibold text-[#ff5722] hover:underline">
+                      <div className="p-12 text-center flex flex-col items-center">
+                        <p className="text-xs font-bold text-red-500 mb-2">Couldn't load customers.</p>
+                        <button onClick={fetchCustomers} className="text-xs font-semibold text-[#FF5722] hover:underline">
                           Try again
                         </button>
                       </div>
@@ -227,21 +207,18 @@ export default function CRMCustomersPage() {
                 ) : loading ? (
                   <tr>
                     <td colSpan={4}>
-                      <div className="bg-white p-12 text-center flex flex-col items-center justify-center">
-                        <span className="material-symbols-outlined text-slate-300 text-3xl animate-spin mb-4">progress_activity</span>
-                        <h3 className="text-[13px] font-bold text-slate-900">Loading customers...</h3>
-                      </div>
+                      <PageLoader label="Loading customers..." className="min-h-0 py-16" />
                     </td>
                   </tr>
                 ) : customers.length === 0 ? (
                   <tr>
-                    <td colSpan={5}>
-                      <div className="bg-white p-12 text-center flex flex-col items-center">
-                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
-                          <span className="material-symbols-outlined text-slate-300 text-3xl">group</span>
+                    <td colSpan={4}>
+                      <div className="p-12 text-center flex flex-col items-center">
+                        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3 text-slate-400">
+                          <Users size={24} />
                         </div>
-                        <h3 className="text-[13px] font-bold text-slate-900">No customers found</h3>
-                        <p className="text-slate-500 mt-2 text-[13px] font-medium max-w-sm">When customers place orders, their profiles will automatically appear here.</p>
+                        <h3 className="text-sm font-bold text-slate-900">No customers found</h3>
+                        <p className="text-slate-500 mt-1 text-xs max-w-sm">When customers place orders, their profiles will automatically appear here.</p>
                       </div>
                     </td>
                   </tr>
@@ -250,19 +227,19 @@ export default function CRMCustomersPage() {
                     <tr
                       key={c.id}
                       onClick={() => setSelectedCustomerId(c.id)}
-                      className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      className="hover:bg-slate-50/60 transition-colors cursor-pointer"
                     >
                       {/* Name */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-slate-100 text-slate-600 font-bold text-[13px]">
-                            {c.name.substring(0, 2).toUpperCase()}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-slate-100 text-slate-700 font-bold text-xs">
+                            {c.name ? c.name.substring(0, 2).toUpperCase() : 'G'}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900 text-[13px] flex items-center gap-2">
+                            <div className="font-semibold text-slate-900 text-xs flex items-center gap-2">
                               {c.name}
                               {c.segment && (
-                                <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[9px] font-bold rounded uppercase tracking-wide">
+                                <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded uppercase">
                                   {c.segment.replace('_', ' ')}
                                 </span>
                               )}
@@ -272,25 +249,24 @@ export default function CRMCustomersPage() {
                       </td>
 
                       {/* Contact */}
-                      <td className="px-6 py-4">
-                        <div className="text-[13px] font-medium text-slate-600">
+                      <td className="px-5 py-3">
+                        <div className="text-xs text-slate-600 font-mono">
                           {c.phone || c.email || '—'}
                         </div>
                       </td>
 
-                      {/* Orders & Spend */}
-                      <td className="px-6 py-4">
-                        <div className="text-[13px] font-medium text-slate-600 flex items-center gap-3">
-                          <span className="font-bold">{c.totalOrders}</span> orders
-                          <span className="text-slate-300">•</span>
-                          <span>PKR {c.totalSpend.toLocaleString()}</span>
+                      {/* Spend */}
+                      <td className="px-5 py-3">
+                        <div className="text-xs">
+                          <span className="font-bold text-slate-900 font-mono">PKR {(c.totalSpend || 0).toLocaleString()}</span>
+                          <span className="text-slate-400 ml-1.5">({c.totalOrders || 0} orders)</span>
                         </div>
                       </td>
 
                       {/* Last Visit */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="text-[13px] font-medium text-slate-500">
-                          {c.lastVisitAt ? new Date(c.lastVisitAt).toLocaleDateString() : '—'}
+                      <td className="px-5 py-3 text-right">
+                        <div className="text-xs text-slate-500">
+                          {c.lastVisitAt ? new Date(c.lastVisitAt).toLocaleDateString() : 'Never'}
                         </div>
                       </td>
                     </tr>
@@ -300,17 +276,17 @@ export default function CRMCustomersPage() {
             </table>
           </div>
 
-          {/* Pagination Footer */}
+          {/* Pagination */}
           {!loading && customers.length > 0 && (
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-[13px] text-slate-500 bg-white">
+            <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-white">
               <div>
-                Showing <span className="font-bold text-slate-900">{(pagination.page - 1) * pagination.limit + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of <span className="font-bold text-slate-900">{pagination.total}</span> customers
+                Showing <span className="font-bold text-slate-900 font-mono">{customers.length}</span> of <span className="font-bold text-slate-900 font-mono">{pagination.total}</span> customers
               </div>
               <Pagination 
-                currentPage={pagination.page} 
+                currentPage={currentPage} 
                 totalPages={Math.max(1, pagination.totalPages)} 
                 onPageChange={setCurrentPage} 
-                pageSize={pagination.limit}
+                pageSize={pageSize}
                 onPageSizeChange={(size) => {
                   setPageSize(size);
                   setCurrentPage(1);
@@ -319,13 +295,14 @@ export default function CRMCustomersPage() {
             </div>
           )}
         </div>
+
       </div>
 
       {selectedCustomerId && (
         <CustomerDetailSlideOver
           customerId={selectedCustomerId}
           onClose={() => setSelectedCustomerId(null)}
-          onUpdate={fetchCustomers}
+          onCustomerUpdated={fetchCustomers}
         />
       )}
 

@@ -2,10 +2,11 @@
 import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Utensils, ShoppingBag, Bike, Loader2, User } from 'lucide-react';
+import { MoreVertical, Utensils, ShoppingBag, Bike, User } from 'lucide-react';
 import type { HistoryOrder } from './hooks/useOrders';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Pagination } from '../../ui/Pagination';
+import { PageLoader } from '../../ui/Spinner';
 import { toast } from 'sonner';
 import { API_URL } from '@/lib/api';
 
@@ -200,8 +201,7 @@ export function OrdersTable({
               ) : isLoading ? (
                 <tr>
                   <td colSpan={13} className="py-16 text-center">
-                    <Loader2 size={28} className="animate-spin text-[#ff5722] mx-auto" />
-                    <p className="mt-3 text-sm text-slate-400 font-medium">Loading orders…</p>
+                    <PageLoader label="Loading orders…" className="min-h-0" />
                   </td>
                 </tr>
               ) : orders.length === 0 ? (

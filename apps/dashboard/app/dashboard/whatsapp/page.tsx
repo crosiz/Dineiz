@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { AdminOnly } from '@/components/admin-only';
 import { WhatsAppTabs } from './_components/WhatsAppTabs';
+import { PageLoader } from '@/components/ui/Spinner';
 
 export default function WhatsAppBotPage() {
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ export default function WhatsAppBotPage() {
   }, []);
 
   if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
+    return <PageLoader label="Loading WhatsApp bot settings..." />;
   }
 
   return (

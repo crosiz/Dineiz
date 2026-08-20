@@ -6,6 +6,8 @@ import { AdminOnly } from '@/components/admin-only';
 import { CreateDealSlideOver } from './_components/CreateDealSlideOver';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { Pagination } from '@/components/ui/Pagination';
+import { Plus, Tag, Ticket, Utensils, Trash2, ShoppingBag } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Spinner';
 
 type Item = { id: string; name: string; basePrice: number };
 type Category = { id: string; name: string; items: Item[] };
@@ -90,9 +92,6 @@ export default function DealsPage() {
 
   const activeDeals = deals.filter(d => d.isActive).length;
   const totalRedemptions = deals.reduce((acc, d) => acc + (d.usedCount || 0), 0);
-  // Only FIXED_AMOUNT deals have a real currency value on the deal itself —
-  // PERCENT/HAPPY_HOUR discounts depend on the order total they were applied
-  // to, which isn't available here, so they're left out rather than guessed.
   const fixedAmountDiscountsGiven = deals.reduce((acc, d) => {
     if (d.type === 'FIXED_AMOUNT' && typeof d.config?.amount === 'number') {
       return acc + d.config.amount * (d.usedCount || 0);
@@ -105,7 +104,7 @@ export default function DealsPage() {
     if (tab === 'all') return true;
     if (tab === 'promo') return d.requiresPromoCode;
     if (tab === 'combo') return d.type === 'COMBO_PRICE';
-    if (tab === 'scheduled') return d.type === 'HAPPY_HOUR'; // Approximation for demo
+    if (tab === 'scheduled') return d.type === 'HAPPY_HOUR';
     return true;
   });
 
@@ -115,64 +114,45 @@ export default function DealsPage() {
 
   return (
     <AdminOnly>
-      <div className="space-y-8 pb-12 font-sans">
+      <div className="space-y-6">
         
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Deals & Promotions</h1>
-            <p className="text-gray-500 mt-1.5 text-sm font-medium">Create and manage discounts, promo codes, and time-based offers.</p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">Deals & Promotions</h1>
+            <p className="text-slate-500 mt-0.5 text-xs font-medium">Create and manage discounts, promo codes, and time-based offers</p>
           </div>
           <button 
             onClick={() => setSlideOverOpen(true)}
-            className="px-6 py-3 bg-[#FF5722] hover:bg-[#E64A19] text-white font-medium rounded-full shadow-[0_8px_16px_rgba(255,87,34,0.3)] hover:shadow-[0_12px_24px_rgba(255,87,34,0.4)] transition-all flex items-center gap-2 transform hover:-translate-y-0.5 active:translate-y-0"
+            className="h-9 px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
           >
-            <span className="material-symbols-outlined text-[20px]">add</span>
+            <Plus size={16} />
             Create Deal
           </button>
         </div>
 
-        {/* Premium Summary Cards */}
-        <div className="flex flex-wrap items-center gap-y-6 gap-x-8 mb-6 bg-white py-4 px-6 rounded-xl border border-slate-100 shadow-sm mt-6">
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Active Deals</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{activeDeals}</h3>
-              </div>
-            </div>
+        {/* Summary Metrics Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Active Deals</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{activeDeals}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden md:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Redemptions</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{totalRedemptions}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Total Redemptions</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{totalRedemptions}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Fixed Discounts Given</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">PKR {fixedAmountDiscountsGiven.toLocaleString()}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Fixed Discounts Given</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">PKR {fixedAmountDiscountsGiven.toLocaleString()}</h3>
           </div>
-          <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
-          <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avg Redemptions / Deal</p>
-              <div className="flex items-baseline gap-1.5">
-                <h3 className="text-lg font-bold text-slate-900">{avgRedemptionsPerDeal.toFixed(1)}</h3>
-              </div>
-            </div>
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <p className="text-xs font-medium text-slate-500 mb-1">Avg Redemptions / Deal</p>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{avgRedemptionsPerDeal.toFixed(1)}</h3>
           </div>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-2 p-2 bg-white rounded-xl shadow-sm border border-slate-100 w-fit mb-6">
+        <div className="flex gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200 w-fit">
           {[
             { id: 'all', label: 'All Deals' },
             { id: 'promo', label: 'Promo Codes' },
@@ -182,10 +162,10 @@ export default function DealsPage() {
             <button
               key={t.id}
               onClick={() => { setTab(t.id as Tab); setCurrentPage(1); }}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors focus:outline-none ${
+              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors focus:outline-none ${
                 tab === t.id 
-                  ? 'bg-slate-100 text-slate-900 font-bold' 
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                  ? 'bg-white shadow-xs text-slate-900' 
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               {t.label}
@@ -194,52 +174,43 @@ export default function DealsPage() {
         </div>
 
         {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-2xl text-sm font-medium">
+          <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-medium border border-red-200">
             {error}
           </div>
         )}
 
         {/* Deal Cards Listing */}
-        <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm mt-6">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-100 bg-slate-50 text-slate-500 font-semibold">
                 <tr>
-                  <th className="w-[300px] px-6 py-4">Deal Details</th>
-                  <th className="px-6 py-4">Conditions</th>
-                  <th className="w-64 px-6 py-4">Usage Limit</th>
-                  <th className="w-32 px-6 py-4">Status</th>
-                  <th className="w-20 px-6 py-4 text-right">Actions</th>
+                  <th className="w-[300px] px-5 py-3">Deal Details</th>
+                  <th className="px-5 py-3">Conditions</th>
+                  <th className="w-64 px-5 py-3">Usage Limit</th>
+                  <th className="w-32 px-5 py-3">Status</th>
+                  <th className="w-20 px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
                     <td colSpan={5}>
-                      <div className="bg-white py-24 text-center flex flex-col items-center justify-center">
-                        <div className="relative flex items-center justify-center">
-                          {/* Outer pulse */}
-                          <div className="absolute w-16 h-16 rounded-full border-4 border-[#ff5722]/20 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-                          {/* Inner spinner */}
-                          <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-[#ff5722] border-r-[#ff5722]/50 animate-spin relative z-10 shadow-[0_0_15px_rgba(255,87,34,0.2)]"></div>
-                        </div>
-                        <h3 className="mt-8 text-[14px] font-bold text-slate-900 tracking-wide">Loading Deals</h3>
-                        <p className="text-slate-500 mt-1 text-[13px] font-medium">Fetching your latest promotions...</p>
-                      </div>
+                      <PageLoader label="Fetching promotions..." className="min-h-0 py-16" />
                     </td>
                   </tr>
                 ) : paginatedDeals.length === 0 ? (
                   <tr>
                     <td colSpan={5}>
-                      <div className="bg-white p-12 text-center flex flex-col items-center">
-                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
-                          <span className="material-symbols-outlined text-slate-300 text-3xl">local_offer</span>
+                      <div className="p-12 text-center flex flex-col items-center">
+                        <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3 text-slate-400">
+                          <Tag size={24} />
                         </div>
-                        <h3 className="text-[13px] font-bold text-slate-900">No deals found</h3>
-                        <p className="text-slate-500 mt-2 text-[13px] font-medium max-w-sm">Create your first deal to offer discounts, happy hours, or promo codes to your customers.</p>
+                        <h3 className="text-sm font-bold text-slate-900">No deals found</h3>
+                        <p className="text-slate-500 mt-1 text-xs max-w-sm">Create your first deal to offer discounts, happy hours, or promo codes.</p>
                         <button 
                           onClick={() => setSlideOverOpen(true)}
-                          className="mt-6 text-[#ff5722] text-[13px] font-bold hover:text-[#e64a19]"
+                          className="mt-4 text-[#FF5722] text-xs font-bold hover:underline"
                         >
                           + Create a new deal
                         </button>
@@ -248,25 +219,23 @@ export default function DealsPage() {
                   </tr>
                 ) : (
                   paginatedDeals.map(d => (
-                    <tr key={d.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+                    <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
                       {/* Name & Type */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${d.isActive ? 'bg-[#ff5722]/10 text-[#ff5722]' : 'bg-slate-100 text-slate-400'}`}>
-                            <span className="material-symbols-outlined text-[16px]">
-                              {d.requiresPromoCode ? 'confirmation_number' : d.type === 'COMBO_PRICE' ? 'fastfood' : 'sell'}
-                            </span>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${d.isActive ? 'bg-[#FF5722]/10 text-[#FF5722]' : 'bg-slate-100 text-slate-400'}`}>
+                            {d.requiresPromoCode ? <Ticket size={14} /> : d.type === 'COMBO_PRICE' ? <Utensils size={14} /> : <Tag size={14} />}
                           </div>
                           <div>
-                            <p className="text-[13px] font-bold text-slate-900 leading-tight flex items-center gap-2">
+                            <p className="text-xs font-bold text-slate-900 leading-tight flex items-center gap-2">
                               {d.name}
                               {d.requiresPromoCode && (
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded uppercase tracking-wider">
+                                <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[10px] font-mono font-semibold rounded uppercase">
                                   {d.promoCode}
                                 </span>
                               )}
                             </p>
-                            <span className="text-[9px] font-bold bg-slate-50 text-slate-400 rounded px-1.5 uppercase tracking-wide mt-1 inline-block">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase mt-0.5 inline-block">
                               {d.type.replace(/_/g, ' ')}
                             </span>
                           </div>
@@ -274,51 +243,51 @@ export default function DealsPage() {
                       </td>
 
                       {/* Conditions */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         {d.minOrderValue ? (
-                          <span className="text-[13px] font-medium text-slate-700 flex items-center gap-1.5">
-                            <span className="material-symbols-outlined text-[14px] text-slate-400">shopping_cart</span> Min PKR {d.minOrderValue}
+                          <span className="text-xs text-slate-700 flex items-center gap-1.5">
+                            <ShoppingBag size={13} className="text-slate-400" /> Min PKR {d.minOrderValue}
                           </span>
                         ) : (
-                          <span className="text-[13px] font-medium text-slate-400">No minimum</span>
+                          <span className="text-xs text-slate-400">No minimum</span>
                         )}
                       </td>
 
                       {/* Usage */}
-                      <td className="px-6 py-4">
-                        <div className="w-full max-w-[200px]">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[13px] font-bold text-slate-700">{d.usedCount}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{d.maxUsesTotal ? `of ${d.maxUsesTotal}` : 'uses'}</span>
+                      <td className="px-5 py-3">
+                        <div className="w-full max-w-[180px]">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-slate-700 font-mono">{d.usedCount}</span>
+                            <span className="text-[10px] text-slate-400 uppercase">{d.maxUsesTotal ? `of ${d.maxUsesTotal}` : 'uses'}</span>
                           </div>
                           {d.maxUsesTotal ? (
                             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-[#ff5722] rounded-full transition-all" style={{ width: `${(d.usedCount / d.maxUsesTotal) * 100}%` }}></div>
+                              <div className="h-full bg-[#FF5722] rounded-full" style={{ width: `${(d.usedCount / d.maxUsesTotal) * 100}%` }} />
                             </div>
                           ) : (
                             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full w-1/4 bg-slate-300 rounded-full"></div>
+                              <div className="h-full w-1/4 bg-slate-300 rounded-full" />
                             </div>
                           )}
                         </div>
                       </td>
 
                       {/* Status Toggle */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-3">
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input type="checkbox" className="sr-only peer" checked={d.isActive} onChange={() => toggleDealStatus(d.id, d.isActive)} />
-                          <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff5722]"></div>
+                          <div className="w-8 h-4.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-[#FF5722]" />
                         </label>
                       </td>
                       
                       {/* Actions */}
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-5 py-3 text-right">
                         <button 
                           onClick={() => handleDeleteDeal(d.id)}
-                          className="w-8 h-8 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center focus:outline-none ml-auto"
+                          className="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors flex items-center justify-center ml-auto"
                           title="Delete deal"
                         >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                          <Trash2 size={14} />
                         </button>
                       </td>
                     </tr>
@@ -330,9 +299,9 @@ export default function DealsPage() {
           
           {/* Pagination Footer */}
           {!loading && displayedDeals.length > 0 && (
-            <div className="p-4 border-t border-slate-100 flex items-center justify-between text-[13px] text-slate-500 bg-white">
+            <div className="p-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-white">
               <div>
-                Showing <span className="font-bold text-slate-900">{Math.min(startIndex + 1, displayedDeals.length)}-{Math.min(startIndex + pageSize, displayedDeals.length)}</span> of <span className="font-bold text-slate-900">{displayedDeals.length}</span> deals
+                Showing <span className="font-bold text-slate-900 font-mono">{Math.min(startIndex + 1, displayedDeals.length)}-{Math.min(startIndex + pageSize, displayedDeals.length)}</span> of <span className="font-bold text-slate-900 font-mono">{displayedDeals.length}</span>
               </div>
               <Pagination 
                 currentPage={currentPage} 
@@ -360,3 +329,4 @@ export default function DealsPage() {
     </AdminOnly>
   );
 }
+

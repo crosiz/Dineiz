@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
+import { PageLoader } from '@/components/ui/Spinner';
 
 interface Category {
   id: string;
@@ -68,7 +69,7 @@ export function MenuVisibilityTab({ config, onRefresh }: { config: any; onRefres
 
         {!showFullMenu && (
           loadingMenu ? (
-            <div className="text-sm text-gray-400">Loading categories...</div>
+            <PageLoader label="Loading categories..." className="min-h-0 py-8" />
           ) : categories.length === 0 ? (
             <div className="text-sm text-gray-400">No categories found. Add menu categories first.</div>
           ) : (

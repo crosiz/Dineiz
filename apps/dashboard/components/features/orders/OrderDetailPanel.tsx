@@ -1,7 +1,8 @@
 'use client';
 import { formatPKR } from '@/lib/formatters';
 import React, { useState } from 'react';
-import { X, User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, Loader2, CheckCircle2, ChevronRight, Maximize2, FileText, Plus } from 'lucide-react';
+import { X, User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, CheckCircle2, ChevronRight, Maximize2, FileText, Plus } from 'lucide-react';
+import { PageLoader } from '@/components/ui/Spinner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -182,7 +183,7 @@ export function OrderDetailPanel({ orderId, onClose, onReverse }: OrderDetailPan
       >
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 size={32} className="animate-spin text-[#ff5722]" />
+            <PageLoader label="Loading order..." />
           </div>
         ) : !order ? (
           <div className="flex-1 flex items-center justify-center text-slate-400">Order not found</div>
