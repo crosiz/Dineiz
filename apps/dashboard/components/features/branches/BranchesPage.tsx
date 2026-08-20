@@ -86,15 +86,23 @@ export function BranchesPage() {
           ) : isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[0, 100, 200].map(delay => (
-                <div key={delay} className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-4">
-                  <div className="flex justify-between items-start">
-                    <Skeleton className="h-5 w-32" style={{ animationDelay: `${delay}ms` }} />
-                    <Skeleton className="h-6 w-16 rounded-full" style={{ animationDelay: `${delay}ms` }} />
+                <div key={delay} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                  {/* Matches BranchCard's h-24 colour header: badge + logo + name */}
+                  <div className="h-24 relative flex items-end p-4 bg-slate-100">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Skeleton className="w-11 h-11 rounded-xl shrink-0" style={{ animationDelay: `${delay}ms` }} />
+                      <Skeleton className="h-4 w-28" style={{ animationDelay: `${delay}ms` }} />
+                    </div>
                   </div>
-                  <Skeleton className="h-3 w-48" style={{ animationDelay: `${delay}ms` }} />
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <Skeleton className="h-10 w-full" style={{ animationDelay: `${delay}ms` }} />
-                    <Skeleton className="h-10 w-full" style={{ animationDelay: `${delay}ms` }} />
+                  <div className="p-4 flex flex-col gap-3">
+                    <Skeleton className="h-3 w-40" style={{ animationDelay: `${delay}ms` }} />
+                    <Skeleton className="h-3 w-32" style={{ animationDelay: `${delay}ms` }} />
+                    <Skeleton className="h-3 w-36" style={{ animationDelay: `${delay}ms` }} />
+                    <div className="grid grid-cols-3 gap-3 pt-3 mt-1 border-t border-slate-100">
+                      <Skeleton className="h-8 w-full" style={{ animationDelay: `${delay}ms` }} />
+                      <Skeleton className="h-8 w-full" style={{ animationDelay: `${delay}ms` }} />
+                      <Skeleton className="h-8 w-full" style={{ animationDelay: `${delay}ms` }} />
+                    </div>
                   </div>
                 </div>
               ))}
@@ -119,17 +127,21 @@ export function BranchesPage() {
                 <div className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Plus className="text-slate-400 group-hover:text-orange-500 transition-colors" size={24} />
                 </div>
-                <h3 className="text-slate-500 font-bold group-hover:text-orange-600 transition-colors mb-1">Expand Network</h3>
-                <p className="text-xs text-slate-400">Configure a new kitchen or outlet</p>
+                <h3 className="text-slate-500 font-bold group-hover:text-orange-600 transition-colors mb-1">Add Branch</h3>
+                <p className="text-xs text-slate-400">Create a new branch location</p>
               </div>
             </div>
           )}
 
-          {/* BOTTOM WIDGETS */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
-            <NetworkStatusWidget branches={branches} />
-            <AlertWidget branches={branches} onViewBranch={(b) => setSelectedBranchForDetails(b)} />
-          </div>
+          {/* BOTTOM WIDGETS — gated on isLoading so they don't briefly claim
+              "0 branches" / "All Clear" off the empty-array default while
+              the real branch list is still in flight. */}
+          {!isLoading && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
+              <NetworkStatusWidget branches={branches} />
+              <AlertWidget branches={branches} onViewBranch={(b) => setSelectedBranchForDetails(b)} />
+            </div>
+          )}
 
         </div>
       </div>

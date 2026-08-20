@@ -39,6 +39,11 @@ export interface BranchesResponse {
   summary: BranchesSummary;
 }
 
+// The richer hook for the Branches feature itself (summary + mutations).
+// Shares the ['branches'] query key with the lightweight @/hooks/useBranches
+// used elsewhere for simple dropdowns — same endpoint/cache entry, just a
+// different `select`. See the comment there for why the cache timings are
+// kept aligned between the two.
 export function useBranches() {
   const queryClient = useQueryClient();
 

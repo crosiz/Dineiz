@@ -6,20 +6,25 @@ export function Skeleton({ className = '', style }: { className?: string; style?
 }
 
 // ─── KPI Card Skeleton ────────────────────────────────────────────────────────
+// Mirrors the real KPI card exactly: p-5 / rounded-xl / border-slate-200 /
+// shadow-xs shell, label+value+trend stacked on the left, a 10x10 icon
+// box pinned to the right at the same height as the whole text block.
 export function KpiCardSkeleton() {
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col gap-3">
-      <div className="flex justify-between items-start">
+    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs flex items-start justify-between">
+      <div className="space-y-2">
         <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-8 w-8 rounded-lg" />
+        <Skeleton className="h-7 w-24 mt-1" />
+        <Skeleton className="h-3 w-28 mt-1.5" />
       </div>
-      <Skeleton className="h-8 w-28 mt-1" />
-      <Skeleton className="h-3 w-24" />
+      <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
     </div>
   );
 }
 
 // ─── Table Row Skeleton ───────────────────────────────────────────────────────
+// Fixed at h-[52px] with px-5 cells to match the real order rows exactly —
+// otherwise the table visibly grows/shifts columns the moment data lands.
 export function TableRowSkeleton({
   cols,
   delay = 0,
@@ -28,9 +33,9 @@ export function TableRowSkeleton({
   delay?: number;
 }) {
   return (
-    <tr>
+    <tr className="h-[52px]">
       {cols.map((col, i) => (
-        <td key={i} className="px-4 py-3.5">
+        <td key={i} className="px-5">
           <div
             className={`skeleton-shimmer ${col.pill ? 'rounded-full h-6' : 'rounded h-3.5'} ${col.w}`}
             style={{ animationDelay: `${delay}ms` }}
@@ -42,24 +47,35 @@ export function TableRowSkeleton({
 }
 
 // ─── Chart / Bar Skeleton ─────────────────────────────────────────────────────
+// Reserves the same left/bottom gutter Recharts' YAxis/XAxis actually take up
+// (~32px tick-label column, ~20px tick-label row) so the plot area doesn't
+// visibly narrow and shift down the instant the real chart mounts.
 export function ChartSkeleton({ height = 200 }: { height?: number }) {
   const bars = [55, 80, 40, 95, 60, 75, 50];
+  const plotHeight = height - 20;
   return (
-    <div className="w-full relative flex items-end gap-[5%] px-2 pb-4" style={{ height }}>
-      {[20, 40, 60, 80].map((pct) => (
-        <div
-          key={pct}
-          className="absolute left-0 right-0 border-t border-slate-100"
-          style={{ bottom: `${pct}%` }}
-        />
-      ))}
-      {bars.map((h, i) => (
-        <div
-          key={i}
-          className="flex-1 skeleton-shimmer rounded-t"
-          style={{ height: `${h}%`, animationDelay: `${i * 80}ms` }}
-        />
-      ))}
+    <div className="w-full flex items-stretch gap-2" style={{ height }}>
+      <div className="flex flex-col justify-between shrink-0 w-8 pb-5" style={{ height: plotHeight }}>
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-2 w-6" />
+        ))}
+      </div>
+      <div className="relative flex-1 flex items-end gap-[5%] pb-5" style={{ height: plotHeight }}>
+        {[20, 40, 60, 80].map((pct) => (
+          <div
+            key={pct}
+            className="absolute left-0 right-0 border-t border-slate-100"
+            style={{ bottom: `${pct}%` }}
+          />
+        ))}
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 skeleton-shimmer rounded-t"
+            style={{ height: `${h}%`, animationDelay: `${i * 80}ms` }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

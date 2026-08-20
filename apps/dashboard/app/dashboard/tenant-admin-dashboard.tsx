@@ -7,8 +7,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
 } from 'recharts';
 import {
-  TrendingUp, TrendingDown, Activity,
-  AlertTriangle, Package, MonitorPlay,
+  TrendingUp, TrendingDown, Minus, Activity,
+  AlertTriangle, Package, MonitorPlay, BarChart3,
   UtensilsCrossed, ShoppingBag, Bike, Wallet, Receipt, Coins,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -30,8 +30,8 @@ const ORDER_TABLE_COLS = [
 ];
 
 // Shared visual language for every card on this page.
-const CARD = 'bg-white rounded-2xl border border-slate-200 shadow-sm';
-const SECTION_LABEL = 'text-xs font-bold uppercase tracking-wider text-slate-500';
+const CARD = 'bg-white rounded-xl border border-slate-200 shadow-xs';
+const SECTION_LABEL = 'text-xs font-semibold uppercase tracking-wider text-slate-500';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function TenantAdminDashboard() {
@@ -153,6 +153,25 @@ export function TenantAdminDashboard() {
     );
   };
 
+  // Flat (0%) is not growth — render it neutral instead of a green "up" arrow.
+  const TrendIndicator = ({ changePct }: { changePct: number }) => {
+    if (changePct === 0) {
+      return (
+        <div className="flex items-center gap-1 text-xs font-medium text-slate-400">
+          <Minus className="w-3.5 h-3.5" />
+          <span>No change vs yesterday</span>
+        </div>
+      );
+    }
+    const isUp = changePct > 0;
+    return (
+      <div className={`flex items-center gap-1 text-xs font-medium ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
+        {isUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+        <span>{Math.abs(changePct).toFixed(1)}% vs yesterday</span>
+      </div>
+    );
+  };
+
   const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('period', e.target.value);
@@ -247,13 +266,10 @@ export function TenantAdminDashboard() {
             <div className={`${CARD} p-5 flex items-start justify-between`}>
               <div>
                 <span className={SECTION_LABEL}>Revenue</span>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5">{formatPKR((summary?.revenue?.today || 0))}</h3>
-                <div className={`flex items-center gap-1 text-xs font-medium ${(summary?.revenue?.yesterdayChange ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {(summary?.revenue?.yesterdayChange ?? 0) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  <span>{Math.abs(summary?.revenue?.yesterdayChange || 0).toFixed(1)}% vs yesterday</span>
-                </div>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5 font-mono">{formatPKR((summary?.revenue?.today || 0))}</h3>
+                <TrendIndicator changePct={summary?.revenue?.yesterdayChange ?? 0} />
               </div>
-              <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
                 <Wallet className="w-5 h-5" />
               </div>
             </div>
@@ -262,13 +278,10 @@ export function TenantAdminDashboard() {
             <div className={`${CARD} p-5 flex items-start justify-between`}>
               <div>
                 <span className={SECTION_LABEL}>Total Orders</span>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5">{summary?.totalOrders?.today || 0}</h3>
-                <div className={`flex items-center gap-1 text-xs font-medium ${(summary?.totalOrders?.yesterdayChange ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {(summary?.totalOrders?.yesterdayChange ?? 0) >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                  <span>{Math.abs(summary?.totalOrders?.yesterdayChange || 0).toFixed(1)}% vs yesterday</span>
-                </div>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5 font-mono">{summary?.totalOrders?.today || 0}</h3>
+                <TrendIndicator changePct={summary?.totalOrders?.yesterdayChange ?? 0} />
               </div>
-              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
                 <Receipt className="w-5 h-5" />
               </div>
             </div>
@@ -277,13 +290,13 @@ export function TenantAdminDashboard() {
             <div className={`${CARD} p-5 flex items-start justify-between`}>
               <div>
                 <span className={SECTION_LABEL}>Avg Order Value</span>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5">{formatPKR((summary?.avgOrderValue?.today || 0))}</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5 font-mono">{formatPKR((summary?.avgOrderValue?.today || 0))}</h3>
                 <div className={`flex items-center gap-1 text-xs font-medium ${summary?.avgOrderValue?.trend === 'up' ? 'text-emerald-600' : summary?.avgOrderValue?.trend === 'down' ? 'text-rose-500' : 'text-slate-400'}`}>
-                  {summary?.avgOrderValue?.trend === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : summary?.avgOrderValue?.trend === 'down' ? <TrendingDown className="w-3.5 h-3.5" /> : null}
+                  {summary?.avgOrderValue?.trend === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : summary?.avgOrderValue?.trend === 'down' ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
                   <span className="capitalize">{summary?.avgOrderValue?.trend || 'Stable'}</span>
                 </div>
               </div>
-              <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
                 <Coins className="w-5 h-5" />
               </div>
             </div>
@@ -293,14 +306,14 @@ export function TenantAdminDashboard() {
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className={SECTION_LABEL}>Active Orders</span>
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  {activeOrdersCount > 0 && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />}
                 </div>
-                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5">{activeOrdersCount}</h3>
-                <div className="flex items-center gap-1 text-emerald-600 text-xs font-medium">
-                  <span>Live processing</span>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900 mt-2 mb-1.5 font-mono">{activeOrdersCount}</h3>
+                <div className={`flex items-center gap-1 text-xs font-medium ${activeOrdersCount > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                  <span>{activeOrdersCount > 0 ? 'Live processing' : 'No orders in progress'}</span>
                 </div>
               </div>
-              <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shrink-0 border border-slate-200">
                 <Activity className="w-5 h-5" />
               </div>
             </div>
@@ -316,12 +329,12 @@ export function TenantAdminDashboard() {
           <div className={`${CARD} p-5`}>
             <div className="flex items-center justify-between mb-4">
               <span className={SECTION_LABEL}>Today's Shifts</span>
-              <button onClick={() => router.push('/dashboard/shifts')} className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors">View all →</button>
+              <button onClick={() => router.push('/dashboard/shifts')} className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">View all →</button>
             </div>
 
             {!shiftStats ? (
               <div className="space-y-2">
-                {[1, 2].map(i => <div key={i} className="h-10 bg-slate-50 rounded-xl animate-pulse" />)}
+                {[1, 2].map(i => <div key={i} className="h-10 bg-slate-50 rounded-lg animate-pulse" />)}
               </div>
             ) : (shiftStats.count ?? 0) === 0 ? (
               <div className="flex items-center gap-3 py-3 text-slate-400">
@@ -337,15 +350,15 @@ export function TenantAdminDashboard() {
                   const m = Math.floor((ms % 3_600_000) / 60_000);
                   const dur = h > 0 ? `${h}h ${m}m` : `${m}m`;
                   return (
-                    <div key={s.id} onClick={() => router.push(`/dashboard/shifts/${s.id}`)} className="flex items-center justify-between py-3 px-4 bg-slate-50 border border-slate-100 rounded-xl hover:bg-white hover:border-slate-300 hover:shadow-sm transition-all cursor-pointer group">
-                      <div className="flex items-center gap-3">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <div key={s.id} onClick={() => router.push(`/dashboard/shifts/${s.id}`)} className="flex items-center justify-between py-2.5 px-3.5 bg-slate-50 border border-slate-200/60 rounded-lg hover:bg-white hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                         <div>
-                          <p className="text-sm font-medium text-slate-900">{s.user?.name ?? 'Cashier'}</p>
-                          <p className="text-xs text-slate-500">{dur} · {s.branchId?.slice(0, 8)}</p>
+                          <p className="text-xs font-semibold text-slate-900">{s.user?.name ?? 'Cashier'}</p>
+                          <p className="text-[11px] text-slate-500">{dur} · {s.branchId?.slice(0, 8)}</p>
                         </div>
                       </div>
-                      <p className="text-sm font-semibold text-slate-900">{formatPKR(Math.round(stats.totalSales ?? 0))}</p>
+                      <p className="text-xs font-mono font-bold text-slate-900">{formatPKR(Math.round(stats.totalSales ?? 0))}</p>
                     </div>
                   );
                 })}
@@ -475,10 +488,17 @@ export function TenantAdminDashboard() {
                 return null;
               };
 
+              const hasRevenue = (trendData || []).some((d: any) => (d.revenue ?? 0) > 0);
+
               return isTrendLoading ? (
                 <ChartSkeleton height={220} />
               ) : isTrendError ? (
                 <div className="flex-1"><InlineError onRetry={refetchTrend} /></div>
+              ) : !hasRevenue ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
+                  <BarChart3 className="w-6 h-6 text-slate-300" />
+                  <p className="text-sm text-slate-400">No revenue recorded {period === 'today' ? 'today' : 'in this period'} yet</p>
+                </div>
               ) : (
                 <div className="flex-1">
                   <ResponsiveContainer width="100%" height="100%">

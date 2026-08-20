@@ -2,7 +2,7 @@
 import { formatPKR } from '@/lib/formatters';
 
 import React, { useState } from 'react';
-import { MoreHorizontal, MapPin, Phone, Clock, Eye, Pencil, Trash, Power, Terminal, LayoutTemplate, PauseCircle, PlayCircle } from 'lucide-react';
+import { MoreHorizontal, MapPin, Phone, Clock, Eye, Pencil, Trash, Terminal, LayoutTemplate, PauseCircle, PlayCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Branch, useBranches } from './hooks/useBranches';
 
@@ -165,19 +165,15 @@ export function BranchCard({ branch, onViewDetails, onEdit, onViewPlan }: Branch
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* FOOTER — Edit/status/delete live in the "..." menu above; these
+            are just the two most frequent actions, kept one click away. */}
         <div className="mt-3 flex items-center justify-between">
-          <div className="flex gap-1">
-            <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors" title="View Details" onClick={onViewDetails}>
-              <Eye size={16} />
-            </button>
-            <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors" onClick={onEdit} title="Edit Branch">
-              <Pencil size={16} />
-            </button>
-          </div>
-          
+          <button className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded transition-colors" title="View Details" onClick={onViewDetails}>
+            <Eye size={16} />
+          </button>
+
           {isActive ? (
-            <button 
+            <button
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
               onClick={onViewPlan}
             >
@@ -185,7 +181,7 @@ export function BranchCard({ branch, onViewDetails, onEdit, onViewPlan }: Branch
             </button>
           ) : (
             <span className="bg-slate-100 text-slate-500 rounded-lg px-3 py-1.5 text-xs font-bold border border-slate-200/50">
-              Under Reno
+              Inactive
             </span>
           )}
         </div>
