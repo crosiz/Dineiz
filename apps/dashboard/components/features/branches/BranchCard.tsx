@@ -43,15 +43,15 @@ export function BranchCard({ branch, onViewDetails, onEdit, onViewPlan }: Branch
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full group hover:shadow-md transition-all">
       {/* HEADER */}
-      <div 
-        className="h-32 relative flex items-center justify-center" 
+      <div
+        className="h-24 relative flex items-end p-4"
         style={{ backgroundColor: isActive ? (branch.colorHex || '#ff5722') : '#94a3b8' }}
       >
         {/* Status Badge */}
         <div className="absolute top-3 left-3 bg-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase rounded px-2 py-0.5 tracking-wider">
           {isActive ? 'ACTIVE' : 'INACTIVE'}
         </div>
-        
+
         {/* Actions Menu */}
         <div className="absolute top-3 right-3">
           <DropdownMenu.Root>
@@ -98,18 +98,24 @@ export function BranchCard({ branch, onViewDetails, onEdit, onViewPlan }: Branch
           </DropdownMenu.Root>
         </div>
 
-        {/* Initial */}
-        {isActive ? (
-          <span className="text-5xl font-black text-white/80 select-none">{initialLetter}</span>
-        ) : (
-          <span className="text-xs text-white/70 font-medium bg-black/10 px-3 py-1.5 rounded-full">Temporarily Closed</span>
-        )}
+        {/* Logo / Initial + Name */}
+        <div className="flex items-center gap-3 text-white min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+            {branch.imageUrl ? (
+              <img src={branch.imageUrl} alt={branch.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg font-black text-white/90 select-none">{initialLetter}</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold leading-tight line-clamp-1 drop-shadow-sm">{branch.name}</h3>
+            {!isActive && <span className="text-[11px] text-white/75">Temporarily Closed</span>}
+          </div>
+        </div>
       </div>
 
       {/* BODY */}
       <div className={`p-4 flex-1 flex flex-col ${!isActive ? 'opacity-70' : ''}`}>
-        <h3 className="text-base font-bold text-slate-900 mb-2 line-clamp-1">{branch.name}</h3>
-        
         <div className="space-y-1.5 mb-4 flex-1">
           <div className="flex items-start gap-2">
             <MapPin size={14} className="text-slate-400 mt-0.5 shrink-0" />

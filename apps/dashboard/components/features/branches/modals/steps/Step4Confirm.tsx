@@ -16,17 +16,8 @@ export function Step4Confirm({ onEditStep }: Step4ConfirmProps) {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div>
-        <div className="flex items-center gap-1 mb-2">
-          <span className="text-xs text-[#ff5722] font-semibold">Step 4 of 4</span>
-          <div className="flex gap-1 ml-3">
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Confirm Branch Setup</h2>
-        <p className="text-sm text-slate-500">Review your configuration before creating the branch.</p>
+        <h2 className="text-lg font-bold text-slate-900">Confirm Branch Setup</h2>
+        <p className="text-sm text-slate-500 mt-0.5">Review your configuration before creating the branch.</p>
       </div>
 
       {/* Card 1 - Basic Info */}

@@ -10,7 +10,10 @@ export function Step2OperatingHours() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      <p className="text-xs text-slate-500 -mt-2">Step 2 of 4: Operating Hours</p>
+      <div>
+        <h2 className="text-lg font-bold text-slate-900">Operating Hours</h2>
+        <p className="text-sm text-slate-500 mt-0.5">When this branch opens and stops taking orders.</p>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>

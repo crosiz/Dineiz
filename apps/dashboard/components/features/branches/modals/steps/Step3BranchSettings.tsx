@@ -25,17 +25,8 @@ export function Step3BranchSettings() {
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 pb-8">
       
       <div>
-        <div className="flex items-center gap-1 mb-2">
-          <span className="text-xs text-[#ff5722] font-semibold">Step 3 of 4</span>
-          <div className="flex gap-1 ml-3">
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-[#ff5722]"></span>
-            <span className="w-4 h-1.5 rounded-full bg-slate-200"></span>
-          </div>
-        </div>
-        <h2 className="text-2xl font-bold text-slate-900">Branch Settings</h2>
-        <p className="text-sm text-slate-500">Configure operational behaviors and localization.</p>
+        <h2 className="text-lg font-bold text-slate-900">Branch Settings</h2>
+        <p className="text-sm text-slate-500 mt-0.5">Configure operational behaviors and localization.</p>
       </div>
 
       <div className="space-y-4">

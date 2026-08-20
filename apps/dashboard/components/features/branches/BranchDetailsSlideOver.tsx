@@ -43,8 +43,12 @@ export function BranchDetailsSlideOver({ branch, isOpen, onClose }: BranchDetail
           </div>
 
           <div className="flex items-center gap-4 text-white">
-            <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-black shadow-inner">
-              {initialLetter}
+            <div className="w-16 h-16 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center overflow-hidden shadow-inner shrink-0">
+              {branch.imageUrl ? (
+                <img src={branch.imageUrl} alt={branch.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-3xl font-black select-none">{initialLetter}</span>
+              )}
             </div>
             <div>
               <h2 className="text-xl font-bold leading-tight drop-shadow-sm">{branch.name}</h2>
