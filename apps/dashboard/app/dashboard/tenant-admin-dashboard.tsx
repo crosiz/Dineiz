@@ -2,16 +2,16 @@
 import { formatPKR, formatAxisPKR } from '@/lib/formatters';
 
 import React, { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer, LabelList,
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Minus, Activity,
   AlertTriangle, Package, MonitorPlay, BarChart3,
   UtensilsCrossed, ShoppingBag, Bike, Wallet, Receipt, Coins,
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
 import { useUser } from '@/contexts/user-context';
 import { useTick } from '@/lib/hooks';
@@ -35,7 +35,6 @@ const SECTION_LABEL = 'text-xs font-semibold uppercase tracking-wider text-slate
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function TenantAdminDashboard() {
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { role, name, branch, tenantId } = useUser();
   const { selectedBranchId } = useDashboardContext();
@@ -45,31 +44,36 @@ export function TenantAdminDashboard() {
   useTick(60_000);
 
   const branchId = selectedBranchId;
-  const period = searchParams.get('period') || 'today';
 
-  const fetchSummary = async () => {
-    return apiGet<any>('/api/analytics/dashboard-summary', {
-      ...(branchId ? { branchId } : {}),
-      period
-    });
-  };
-
+  // The KPI strip, shifts, recent orders and top items are always "today" —
+  // the Revenue Trends range selector below scopes only that one chart, via
+  // its own query key, so switching it never reloads the rest of the page.
   const { data: summary, isLoading, isError, refetch } = useQuery({
-    queryKey: ['dashboardSummary', branchId, period],
-    queryFn: fetchSummary,
+    queryKey: ['dashboardSummary', branchId],
+    queryFn: () => apiGet<any>('/api/analytics/dashboard-summary', {
+      ...(branchId ? { branchId } : {}),
+      period: 'today',
+    }),
     retry: 2,
     retryDelay: 1000,
     staleTime: 30000,
     refetchInterval: 60000,
   });
 
-  const { data: trendData, isLoading: isTrendLoading, isError: isTrendError, refetch: refetchTrend } = useQuery({
-    queryKey: ['revenue-trend', branchId, period],
+  const [trendPeriod, setTrendPeriod] = useState<'today' | '7d' | '30d'>('today');
+
+  const {
+    data: trendData, isLoading: isTrendLoading, isFetching: isTrendFetching, isError: isTrendError, refetch: refetchTrend,
+  } = useQuery({
+    queryKey: ['revenue-trend', branchId, trendPeriod],
     queryFn: () => apiGet<any>('/api/analytics/revenue-trend', {
       ...(branchId ? { branchId } : {}),
-      period
+      period: trendPeriod,
     }),
     staleTime: 60000,
+    // Hold the previous bars on screen (dimmed) while a new range loads,
+    // instead of flashing back to a skeleton every time.
+    placeholderData: keepPreviousData,
   });
 
   // Live shift stats for Today's Shifts widget
@@ -172,10 +176,8 @@ export function TenantAdminDashboard() {
     );
   };
 
-  const handlePeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('period', e.target.value);
-    router.push(`?${params.toString()}`);
+  const handleTrendPeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTrendPeriod(e.target.value as 'today' | '7d' | '30d');
   };
 
   const invHealth = summary?.inventoryHealth;
@@ -394,7 +396,7 @@ export function TenantAdminDashboard() {
                   ) : isError ? (
                     <tr><td colSpan={4}><InlineError onRetry={refetch} /></td></tr>
                   ) : !summary?.recentOrders?.length ? (
-                    <tr><td colSpan={4} className="py-16 text-center text-slate-400 font-medium text-sm">No recent orders</td></tr>
+                    <tr><td colSpan={4} className="py-16 text-center text-slate-400 font-medium text-sm">No orders yet today</td></tr>
                   ) : (
                     summary.recentOrders.map((order: any) => (
                       <tr
@@ -456,14 +458,17 @@ export function TenantAdminDashboard() {
         {/* ── Right Column: Revenue Trends + Branch Performance ── */}
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-4">
 
-          {/* Revenue Trends Chart */}
+          {/* Revenue Trends Chart — the only element on this page that isn't
+              fixed to "today", so its range selector lives here rather than
+              as a page-level filter; it drives only this chart's own query
+              key (see revenue-trend above), never the rest of the page. */}
           <div className={`${CARD} p-5 flex flex-col h-[320px]`}>
             <div className="flex justify-between items-center mb-4">
               <span className={SECTION_LABEL}>Revenue Trends</span>
               <select
-                value={period}
-                onChange={handlePeriodChange}
-                className="text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 p-1 outline-none"
+                value={trendPeriod}
+                onChange={handleTrendPeriodChange}
+                className="text-[10px] font-medium border border-slate-200 rounded-lg bg-slate-50 px-2 py-1 outline-none focus:border-primary/40"
               >
                 <option value="today">Today</option>
                 <option value="7d">Last 7 Days</option>
@@ -471,43 +476,66 @@ export function TenantAdminDashboard() {
               </select>
             </div>
 
-            {/* Custom Tooltip matching Forecast styling */}
             {(() => {
               const CustomBarTooltip = ({ active, payload, label }: any) => {
                 if (active && payload && payload.length) {
                   return (
-                    <div className="bg-white p-4 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 text-sm min-w-[200px]">
-                      <p className="font-bold text-slate-800 mb-3 pb-2 border-b border-slate-100">{label}</p>
-                      <p className="text-primary font-bold flex justify-between items-center gap-4 text-base">
-                        <span className="text-slate-500 font-medium text-sm">Revenue</span>
-                        <span>{formatPKR(payload[0].value)}</span>
-                      </p>
+                    <div className="bg-white p-3.5 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-100 text-sm min-w-[160px]">
+                      <p className="font-semibold text-slate-400 text-[11px] uppercase tracking-wide mb-2 pb-2 border-b border-slate-100">{label}</p>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <span className="text-slate-500 text-xs font-medium">Revenue</span>
+                        <span className="text-slate-900 font-bold text-base tabular-nums">{formatPKR(payload[0].value)}</span>
+                      </div>
                     </div>
                   );
                 }
                 return null;
               };
 
-              const hasRevenue = (trendData || []).some((d: any) => (d.revenue ?? 0) > 0);
+              const trend = trendData || [];
+              const hasRevenue = trend.some((d: any) => (d.revenue ?? 0) > 0);
+              const peakIndex = trend.reduce(
+                (maxI: number, d: any, i: number) => (d.revenue > (trend[maxI]?.revenue ?? -Infinity) ? i : maxI),
+                0
+              );
 
-              return isTrendLoading ? (
-                <ChartSkeleton height={220} />
-              ) : isTrendError ? (
-                <div className="flex-1"><InlineError onRetry={refetchTrend} /></div>
-              ) : !hasRevenue ? (
+              // Direct-labels only the peak bar (the "extreme") — every
+              // other value stays reachable via the axis and the tooltip.
+              const PeakLabel = (labelProps: any) => {
+                const { x, y, width, value, index } = labelProps;
+                if (index !== peakIndex || !value) return null;
+                return (
+                  <text x={x + width / 2} y={y - 8} textAnchor="middle" fontSize={11} fontWeight={700} fill="#0F172A">
+                    {formatAxisPKR(value)}
+                  </text>
+                );
+              };
+
+              if (isTrendLoading) return <ChartSkeleton height={220} />;
+              if (isTrendError) return <div className="flex-1"><InlineError onRetry={refetchTrend} /></div>;
+              if (!hasRevenue) return (
                 <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
                   <BarChart3 className="w-6 h-6 text-slate-300" />
-                  <p className="text-sm text-slate-400">No revenue recorded {period === 'today' ? 'today' : 'in this period'} yet</p>
+                  <p className="text-sm text-slate-400">No revenue recorded {trendPeriod === 'today' ? 'today' : 'in this period'} yet</p>
                 </div>
-              ) : (
-                <div className="flex-1">
+              );
+              return (
+                <div className={`flex-1 transition-opacity duration-200 ${isTrendFetching ? 'opacity-40' : 'opacity-100'}`}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={trendData || []}>
-                      <CartesianGrid strokeDasharray="0" vertical={false} horizontal={false} stroke="none" />
+                    <BarChart data={trend} margin={{ top: 18, right: 4, left: -16, bottom: 0 }}>
+                      <CartesianGrid horizontal vertical={false} stroke="#F1F5F9" strokeDasharray="0" />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatAxisPKR} />
-                      <RTooltip content={<CustomBarTooltip />} cursor={{ fill: '#f8fafc' }} />
-                      <Bar dataKey="revenue" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickFormatter={formatAxisPKR} width={44} />
+                      <RTooltip content={<CustomBarTooltip />} cursor={{ fill: '#F8FAFC' }} />
+                      <Bar
+                        dataKey="revenue"
+                        fill="var(--color-primary)"
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={22}
+                        activeBar={{ fill: 'var(--color-primary)', stroke: '#fff', strokeWidth: 2 }}
+                      >
+                        <LabelList dataKey="revenue" content={PeakLabel} />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

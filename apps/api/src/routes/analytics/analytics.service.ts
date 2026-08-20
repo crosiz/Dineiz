@@ -268,12 +268,11 @@ export async function getDashboardSummary(tenantId: string, branchId?: string, p
     inventoryMessage = `${lowStockCount} items low on stock`;
   }
 
-  // 3. Recent Orders
-  // Purely chronological recent orders, not bound to "today" — a quiet
-  // start to the day shouldn't make this list go blank while there's
-  // order history to show.
+  // 3. Recent Orders — scoped to today, matching every other card on this
+  // "Today" dashboard. A quiet start to the day means an honest empty
+  // state here, not yesterday's (or last week's) orders standing in.
   const recentOrdersRaw = await prisma.order.findMany({
-    where: { tenantId, ...prismaBranchFilter },
+    where: { tenantId, createdAt: { gte: todayStart, lt: tomorrowStart }, ...prismaBranchFilter },
     orderBy: { createdAt: 'desc' },
     take: 10,
     select: {
