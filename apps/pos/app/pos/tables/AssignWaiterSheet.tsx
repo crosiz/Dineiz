@@ -43,31 +43,45 @@ export function AssignWaiterSheet({
   const fetchWaiters = async () => {
     setLoading(true);
     try {
-      // API call to fetch active waiters
       const token = getToken();
       const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-      const response = await fetch(`${API_URL}/api/pos/waiters?branchId=${branchId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const res = await response.json();
+
+      // Real per-waiter table load — the floor plan already carries
+      // assignedWaiterId per table (same field ClientTableMap.tsx reads),
+      // so we can derive a real count instead of a random placeholder.
+      const [waitersRes, floorPlanRes] = await Promise.all([
+        fetch(`${API_URL}/api/pos/waiters?branchId=${branchId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }),
+        fetch(`${API_URL}/api/floor-plan/${branchId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => (r.ok ? r.json() : null)).catch(() => null),
+      ]);
+
+      if (waitersRes.ok) {
+        const res = await waitersRes.json();
         // Handle paginated or direct array responses safely
         const dataArray = Array.isArray(res) ? res : (res.waiters || res.data || []);
-        
-        // Mock assigned tables count and shift status for now since backend doesn't strictly return it yet
-        // In a real scenario, this would come from the API payload
+
+        const floorTables: any[] = Array.isArray(floorPlanRes) ? floorPlanRes : (floorPlanRes?.tables || []);
+        const tableCountByWaiter = new Map<string, number>();
+        for (const t of floorTables) {
+          if (!t.assignedWaiterId) continue;
+          tableCountByWaiter.set(t.assignedWaiterId, (tableCountByWaiter.get(t.assignedWaiterId) || 0) + 1);
+        }
+
         const w = dataArray.map((u: any) => {
           const name = u.name || 'Unknown';
           const parts = name.trim().split(' ');
-          const avatarInitials = parts.length >= 2 
-            ? (parts[0][0] + parts[1][0]).toUpperCase() 
+          const avatarInitials = parts.length >= 2
+            ? (parts[0][0] + parts[1][0]).toUpperCase()
             : name.substring(0, 2).toUpperCase();
 
           return {
             ...u,
             avatarInitials,
             isOnShift: u.lastActiveAt ? (new Date().getTime() - new Date(u.lastActiveAt).getTime()) < 15 * 60 * 1000 : false,
-            assignedTablesCount: Math.floor(Math.random() * 4) // Temporary mock for visual
+            assignedTablesCount: tableCountByWaiter.get(u.id) || 0,
           };
         });
         setWaiters(w);

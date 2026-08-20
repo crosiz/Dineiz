@@ -554,10 +554,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                 )
               )}
             </div>
-            <div className="text-right text-[12px] text-[#64748B] leading-relaxed font-medium">
-              <p>v4.83.0</p>
-              <p>Terminal ID: TB-04</p>
-            </div>
+            {activeBranchId && (
+              <div className="text-right text-[12px] text-[#64748B] leading-relaxed font-medium font-mono" title={activeBranchId}>
+                <p>Branch Ref: {activeBranchId.slice(-8).toUpperCase()}</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

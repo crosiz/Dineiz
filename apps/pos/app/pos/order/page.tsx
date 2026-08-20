@@ -18,6 +18,7 @@ import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import { queueOfflineOrder } from '@/lib/offlineHelpers';
 import { registerOrderSync } from '@/lib/syncRegistration';
+import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -139,6 +140,11 @@ function OrderEntryPageContent() {
   const [promptContinueOpen, setPromptContinueOpen] = useState(false);
   const [voidSheetState, setVoidSheetState] = useState<{ isOpen: boolean; item: any }>({ isOpen: false, item: null });
 
+  const customerId = useCartStore(s => s.customerId);
+  const customerName = useCartStore(s => s.customerName);
+  const setCustomer = useCartStore(s => s.setCustomer);
+  const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+
   const setExistingOrderData = useCartStore(s => s.setExistingOrderData);
   const setExistingItems = useCartStore(s => s.setExistingItems);
 
@@ -230,7 +236,6 @@ function OrderEntryPageContent() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
 
   const [cartWidthPercent, setCartWidthPercent] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
@@ -356,6 +361,11 @@ function OrderEntryPageContent() {
           setPaymentOrderId(order.id);
           setPaymentOrderNumber(order.orderNumber);
           setOrderStatus(order.status);
+          if (order.customer) {
+            useCartStore.getState().setCustomer({ id: order.customer.id, name: order.customer.name });
+          } else if (order.customerId) {
+            useCartStore.getState().setCustomer({ id: order.customerId, name: 'Customer' });
+          }
           if (searchParams.get('checkout') === 'true') {
             setIsPaymentOpen(true);
           }
@@ -431,6 +441,10 @@ function OrderEntryPageContent() {
 
   const sendToKitchen = async () => {
     if (cart.length === 0) return;
+    if (!canSubmitOrder) {
+      toast.error(needsTable ? 'Select a table before sending this order to the kitchen.' : 'Select an order type before sending this order to the kitchen.');
+      return;
+    }
     setKitchenLoading(true);
 
     const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
@@ -682,6 +696,10 @@ function OrderEntryPageContent() {
     if (cart.length === 0) return;
     // Fix #4: mutex — prevent double-create
     if (chargeLoading) return;
+    if (!canSubmitOrder) {
+      toast.error(needsTable ? 'Select a table before charging this order.' : 'Select an order type before charging this order.');
+      return;
+    }
 
     if (!paymentOrderId) {
       setChargeLoading(true);
@@ -788,14 +806,40 @@ function OrderEntryPageContent() {
   const orderTypeDisplay = orderType ? (orderType === 'DINE_IN' ? 'Dine-in' : orderType === 'TAKEAWAY' ? 'Takeaway' : 'Delivery') : 'No order type';
   const orderIdDisplay = paymentOrderId ? `Order #${paymentOrderId.slice(-6)}` : 'New Order';
 
+  // A dine-in order must be tied to a table before it can be sent to the
+  // kitchen or charged — this is the one rule every order-entry point
+  // (Home's New Order/Takeaway cards, BottomNav's Menu tab) has to funnel
+  // through, so it's enforced here once rather than per entry point.
+  const needsTable = orderType === 'DINE_IN' && !selectedTableId;
+  const canSubmitOrder = !!orderType && !needsTable;
+
   useTopBar({
     pageTitle: paymentOrderId ? `Edit Order` : (selectedTableLabel ? `New Order — ${selectedTableLabel}` : 'New Order — No table selected'),
-    breadcrumb: `${orderIdDisplay} · ${tableDisplay} · ${orderTypeDisplay} · ${guestCount} ${parseInt(guestCount) === 1 ? 'guest' : 'guests'}`,
+    breadcrumb: (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderIdDisplay}</span>
+        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${selectedTableLabel ? 'bg-[#F1F5F9] border-[#E2E8F0] text-[#475569]' : 'bg-amber-50 border-amber-200 text-[#B45309]'}`}>{tableDisplay}</span>
+        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderTypeDisplay}</span>
+        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{guestCount} {parseInt(guestCount) === 1 ? 'guest' : 'guests'}</span>
+      </div>
+    ),
     showBackButton: true,
     backPath: '/pos/tables',
     centerSlot: (
       <div className="flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
-        <button onClick={() => setOrderType('DINE_IN')} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Dine-in</button>
+        <button
+          onClick={() => {
+            setOrderType('DINE_IN');
+            // Nothing to lose yet — send straight to table selection, same
+            // as Home's "New Order" card. If items are already in the cart
+            // (order type changed mid-build), stay put and let the inline
+            // banner below prompt for a table instead of risking losing them.
+            if (!selectedTableId && cart.length === 0) {
+              router.push('/pos/tables');
+            }
+          }}
+          className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+        >Dine-in</button>
         <button onClick={() => setOrderType('TAKEAWAY')} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Takeaway</button>
         <button onClick={() => setOrderType('DELIVERY')} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Delivery</button>
       </div>
@@ -909,36 +953,6 @@ function OrderEntryPageContent() {
               >
                 <span className="material-symbols-outlined text-[18px]">web_stories</span>
               </button>
-
-              <div className="w-[1px] h-4 bg-[#CBD5E1] mx-1"></div>
-
-              <button
-                onClick={() => setThemeDropdownOpen(!themeDropdownOpen)}
-                className={`w-8 h-full rounded flex items-center justify-center transition-colors ${['detailed', 'minimal'].includes(viewMode) || themeDropdownOpen ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
-                title="More Styles"
-              >
-                <span className="material-symbols-outlined text-[18px]">more_vert</span>
-              </button>
-
-              {themeDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setThemeDropdownOpen(false)}></div>
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-[#CBD5E1] rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200">
-                    <button
-                      onClick={() => { handleViewChange('detailed'); setThemeDropdownOpen(false); }}
-                      className={`w-full px-4 py-3 flex items-center gap-3 text-[13px] font-medium transition-colors ${viewMode === 'detailed' ? 'bg-amber-50 text-[#D97706]' : 'text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">view_agenda</span> Detailed Showcase
-                    </button>
-                    <button
-                      onClick={() => { handleViewChange('minimal'); setThemeDropdownOpen(false); }}
-                      className={`w-full px-4 py-3 flex items-center gap-3 text-[13px] font-medium transition-colors ${viewMode === 'minimal' ? 'bg-amber-50 text-[#D97706]' : 'text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">menu</span> Minimal Dense
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
 
@@ -1050,8 +1064,58 @@ function OrderEntryPageContent() {
               </h2>
               <button onClick={startNewOrder} className="bg-white text-[#475569] text-[12px] font-bold px-2.5 py-1 rounded border border-[#CBD5E1] uppercase tracking-wider hover:bg-[#F1F5F9] transition-colors shadow-sm">New Order</button>
             </div>
-            <p className="text-[#64748B] text-[12px] font-medium">{cart.length === 0 && existingItems.length === 0 ? 'No items added yet' : `${cart.length + existingItems.length} items total`}</p>
+            <p className="text-[#64748B] text-[12px] font-medium mb-3">{cart.length === 0 && existingItems.length === 0 ? 'No items added yet' : `${cart.length + existingItems.length} items total`}</p>
+
+            {/* Customer attach — real customer search/create backed by
+                /api/customers, wired to the same customerId PaymentModal
+                already reads for loyalty point redemption. Previously
+                there was no way to attach a customer to a walk-in order at
+                all, so loyalty redemption only ever worked for orders that
+                arrived pre-tagged (e.g. from WhatsApp/QR). */}
+            {customerId ? (
+              <div className="flex items-center justify-between gap-2 bg-white border border-[#E2E8F0] rounded-xl px-3 py-2">
+                <button onClick={() => setCustomerPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
+                  <div className="w-6 h-6 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 flex items-center justify-center text-[var(--pos-primary,#F59E0B)] font-bold text-[10px] shrink-0">
+                    {(customerName || 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-[13px] font-bold text-[#0F172A] truncate">{customerName || 'Customer'}</span>
+                </button>
+                <button onClick={() => setCustomer(null)} className="text-[#94A3B8] hover:text-[#DC2626] transition-colors shrink-0" title="Remove customer">
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setCustomerPickerOpen(true)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-white text-[12px] font-bold transition-all"
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                Attach Customer
+              </button>
+            )}
           </div>
+
+          {/* Order-context warning — blocks Kitchen/Charge until resolved */}
+          {!orderType && (
+            <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 shrink-0">
+              <span className="material-symbols-outlined text-amber-600 text-[20px]">info</span>
+              <p className="text-[13px] font-semibold text-[#92400E]">Select Dine-in, Takeaway, or Delivery above to continue.</p>
+            </div>
+          )}
+          {needsTable && (
+            <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2.5 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-amber-600 text-[20px]">table_restaurant</span>
+                <p className="text-[13px] font-semibold text-[#92400E]">This dine-in order needs a table.</p>
+              </div>
+              <button
+                onClick={() => router.push('/pos/tables')}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-bold transition-colors"
+              >
+                Select Table
+              </button>
+            </div>
+          )}
 
           {/* Cart Items */}
           <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
@@ -1180,8 +1244,9 @@ function OrderEntryPageContent() {
               <div className="flex gap-2 h-14 mt-2">
                 <button
                   onClick={sendToKitchen}
-                  disabled={cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !orderType}
-                  className={`flex-1 h-[52px] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm ${cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !orderType
+                  title={needsTable ? 'Select a table first' : !orderType ? 'Select an order type first' : undefined}
+                  disabled={cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder}
+                  className={`flex-1 h-[52px] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm ${cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder
                       ? 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
                       : paymentOrderId
                         ? 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] cursor-pointer hover:bg-[#E2E8F0]'
@@ -1196,19 +1261,20 @@ function OrderEntryPageContent() {
                 </button>
                 <button
                   onClick={handleCharge}
-                  disabled={cart.length === 0 || chargeLoading}
+                  title={needsTable ? 'Select a table first' : !orderType ? 'Select an order type first' : undefined}
+                  disabled={cart.length === 0 || chargeLoading || !canSubmitOrder}
                   style={{
                     flex: 1,
                     height: '52px',
                     borderRadius: '12px',
                     border: 'none',
-                    cursor: (cart.length > 0 && !chargeLoading) ? 'pointer' : 'not-allowed',
-                    backgroundColor: (cart.length > 0 && !chargeLoading) ? 'var(--pos-primary, #F59E0B)' : '#E2E8F0',
-                    color: (cart.length > 0 && !chargeLoading) ? 'white' : '#94A3B8',
+                    cursor: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'pointer' : 'not-allowed',
+                    backgroundColor: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'var(--pos-primary, #F59E0B)' : '#E2E8F0',
+                    color: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'white' : '#94A3B8',
                     fontSize: '14px',
                     fontWeight: 700,
-                    opacity: (cart.length > 0 && !chargeLoading) ? 1 : 0.5,
-                    boxShadow: (cart.length > 0 && !chargeLoading) ? '0 4px 14px rgba(245,158,11,0.35)' : 'none',
+                    opacity: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 1 : 0.5,
+                    boxShadow: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? '0 4px 14px rgba(245,158,11,0.35)' : 'none',
                     transition: 'all 0.15s ease',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                   }}
@@ -1258,6 +1324,12 @@ function OrderEntryPageContent() {
           voidRequiresManagerApproval={(session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true}
         />
       )}
+
+      <CustomerPickerSheet
+        isOpen={customerPickerOpen}
+        onClose={() => setCustomerPickerOpen(false)}
+        onSelect={(c: PickedCustomer) => setCustomer({ id: c.id, name: c.name })}
+      />
     </div>
   );
 }

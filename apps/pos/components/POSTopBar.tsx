@@ -8,6 +8,7 @@ import { getPosSession, getPosShift, clearPosSession, setPosBreak } from '@/lib/
 import { toast } from 'sonner';
 import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DineizLogo } from './ui/DineizLogo';
 
 export function POSTopBar() {
@@ -28,6 +29,7 @@ export function POSTopBar() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showTakeBreakConfirm, setShowTakeBreakConfirm] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
+  const [pendingBackConfirm, setPendingBackConfirm] = useState(false);
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
   const [isValidatingClose, setIsValidatingClose] = useState(false);
@@ -167,10 +169,7 @@ export function POSTopBar() {
                 const pathname = window.location.pathname;
                 const cart = useCartStore.getState().cart;
                 if (pathname.startsWith('/pos/order') && cart.length > 0) {
-                  if (window.confirm("Leave order? Items will be lost.")) {
-                    useCartStore.getState().clearCart();
-                    router.push(config.backPath!);
-                  }
+                  setPendingBackConfirm(true);
                 } else {
                   router.push(config.backPath!);
                 }
@@ -185,7 +184,6 @@ export function POSTopBar() {
           <DineizLogo
             size="md"
             variant="light"
-            showBadge={true}
             onClick={() => router.push('/pos/home')}
           />
 
@@ -212,33 +210,20 @@ export function POSTopBar() {
           {/* Separator if rightActions exist */}
           {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-2"></div>}
 
-          {/* Permanent Info: Clock, Status, Avatar */}
+          {/* Permanent Info — deliberately minimal: only surface the
+              exception (offline), not the default (online); the clock is
+              plain text, not a bordered widget; fullscreen and identity
+              details live one tap away in the avatar menu instead of
+              sitting in the bar permanently. */}
           <div className="flex items-center gap-4">
-            {/* Fullscreen Toggle */}
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen (Kiosk Mode)'}
-              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#F1F5F9] border border-[#CBD5E1] text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] active:scale-95 transition-all shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-              </span>
-            </button>
-            <span className="font-mono text-[20px] font-bold text-[#0F172A]">{clockStr}</span>
-
-            <div className="flex items-center gap-2 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-rose-500'} ${isOnline ? 'pulse-green' : 'pulse-red'}`}></span>
-              <span className={`text-[10px] font-bold uppercase tracking-wider ${isOnline ? 'text-emerald-700' : 'text-rose-700'}`}>{isOnline ? 'Online' : 'Offline'}</span>
-            </div>
-
-            {posSession?.role !== 'KITCHEN_STAFF' && (
-              <div className="flex flex-col items-end justify-center mr-1 hidden sm:flex">
-                <span className="text-[13px] font-bold text-[#0F172A] leading-tight">{avatarTitle}</span>
-                <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 rounded-sm mt-0.5 ${roleBadgeStyle}`}>
-                  {cashierRole}
-                </span>
+            {!isOnline && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 pulse-red"></span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Offline</span>
               </div>
             )}
+
+            <span className="hidden md:inline font-mono text-[13px] font-semibold text-[#64748B] tabular-nums">{clockStr}</span>
 
             <div className="relative" ref={dropdownRef}>
               <button
@@ -258,7 +243,7 @@ export function POSTopBar() {
                     <p className="font-bold text-[#0F172A] text-[15px] truncate">{avatarTitle}</p>
                     <p className="text-[#64748B] text-[12px] font-medium mt-0.5">{cashierRole}</p>
                   </div>
-                  
+
                   <div className="px-5 py-2.5 bg-white border-b border-[#E2E8F0] flex items-center justify-between">
                     <span className="text-[#64748B] text-[12px] uppercase tracking-wider font-semibold">Active Shift</span>
                     <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[12px] font-bold">
@@ -268,6 +253,15 @@ export function POSTopBar() {
                   </div>
 
                   <div className="p-2 flex flex-col gap-1">
+                    <button
+                      className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-[#F8FAFC] active:scale-[0.98] transition-all group"
+                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                    >
+                      <span className="material-symbols-outlined text-[#64748B] group-hover:text-[#0F172A] transition-colors text-[20px]">
+                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                      </span>
+                      <span className="font-semibold text-[13px] text-[#0F172A]">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+                    </button>
                     <button
                       className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-[#F8FAFC] active:scale-[0.98] transition-all group disabled:opacity-50"
                       onClick={handleCloseShiftClick}
@@ -410,6 +404,21 @@ export function POSTopBar() {
           localStorage.setItem('shift_override_reason', reason);
           setIsCloseShiftOpen(true);
         }}
+      />
+
+      <ConfirmModal
+        isOpen={pendingBackConfirm}
+        title="Leave Order?"
+        message="Items in this order haven't been sent yet and will be lost if you leave."
+        confirmText="Leave Order"
+        cancelText="Stay"
+        variant="danger"
+        onConfirm={() => {
+          useCartStore.getState().clearCart();
+          setPendingBackConfirm(false);
+          router.push(config.backPath!);
+        }}
+        onCancel={() => setPendingBackConfirm(false)}
       />
     </>
   );

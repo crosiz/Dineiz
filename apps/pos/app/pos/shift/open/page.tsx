@@ -66,8 +66,6 @@ export default function ShiftOpenGate() {
         openingFloat: floatAmount
       };
       
-      console.log('Opening shift for branch:', payload.branchId);
-
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/open`, {
         method: 'POST',
         headers: {

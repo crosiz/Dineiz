@@ -1,14 +1,24 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import QRCode from 'qrcode';
+import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { usePrinter } from '@/hooks/usePrinter';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
+
+// JazzCash/EasyPaisa are recognized payment-method values throughout the
+// system (tax categorization, receipts) but the actual gateway integration
+// is an unconfigured server scaffold (apps/api/.../payments.routes.ts
+// returns 501 without JAZZCASH_MERCHANT_ID). Previously this modal still
+// let a cashier "select" them and showed a live-looking QR code polling a
+// /payment-status endpoint that doesn't exist anywhere in the API — a
+// customer could scan a QR that goes nowhere while the screen sat on
+// "Waiting for payment confirmation..." forever. Gate them here so the UI
+// is honest about what's actually wired up.
+const UNCONFIGURED_METHODS: PaymentMethod[] = ['JAZZCASH', 'EASYPAISA'];
 
 interface PaymentModalProps {
   orderId: string;
@@ -36,7 +46,6 @@ export default function PaymentModal({
   customerId,
   onSuccess,
 }: PaymentModalProps) {
-  const router = useRouter();
   const { printReceipt, status: printerStatus, connect: connectPrinter } = usePrinter();
 
   const cart = useCartStore((s) => s.cart);
@@ -67,7 +76,6 @@ export default function PaymentModal({
   const [activeMethod, setActiveMethod] = useState<PaymentMethod>('CASH');
   const [amountEntered, setAmountEntered] = useState<string>('');
   const [authCode, setAuthCode] = useState<string>('');
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
 
   const [splitMethod1, setSplitMethod1] = useState<'CASH' | 'CARD'>('CASH');
   const [splitAmount1, setSplitAmount1] = useState<string>('');
@@ -158,37 +166,6 @@ export default function PaymentModal({
       setAmountEntered(Math.ceil(totalWithTip).toString());
     }
   }, [isOpen, totalWithTip]);
-
-  useEffect(() => {
-    if ((activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && isOpen) {
-      const qrData = `dineiz://pay?method=${activeMethod}&orderId=${orderId}&amount=${totalWithTip}`;
-      QRCode.toDataURL(qrData, { width: 256, margin: 2, color: { dark: '#b02f00', light: '#ffffff' } })
-        .then(url => setQrCodeDataUrl(url))
-        .catch(console.error);
-    }
-  }, [activeMethod, orderId, totalWithTip, isOpen]);
-
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-    if ((activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && isOpen) {
-      intervalId = setInterval(async () => {
-        try {
-          const res = await fetch(`${API_URL}/api/orders/${orderId}/payment-status`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status === 'COMPLETED') {
-              clearInterval(intervalId);
-              handlePaymentSuccess(activeMethod);
-            }
-          }
-        } catch {
-        }
-      }, 3000);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [activeMethod, isOpen, orderId]);
 
   const handlePrintReceipt = async (method: string, tendered: number, change: number) => {
     if (printerStatus !== 'ready') {
@@ -295,20 +272,22 @@ export default function PaymentModal({
       const tendered = isCash ? (payload.amount + (payload.change || 0)) : totalWithTip;
       await handlePaymentSuccess(payload.method || 'SPLIT', tendered, payload.change || 0);
     } catch (e) {
-      alert('Payment submission failed. Please try again.');
+      toast.error('Payment submission failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleConfirm = () => {
+    if (UNCONFIGURED_METHODS.includes(activeMethod)) {
+      toast.error(`${activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} isn't connected yet — ask a manager to configure it, or choose Cash or Card.`);
+      return;
+    }
     if (activeMethod === 'CASH') {
       submitPayment({ method: 'CASH', amount: totalWithTip, change: changeDue, tip: tipAmount });
     } else if (activeMethod === 'CARD') {
-      if (!authCode) return alert('Enter authorization code');
+      if (!authCode) { toast.error('Enter the authorization code from the card terminal.'); return; }
       submitPayment({ method: 'CARD', amount: totalWithTip, transactionRef: authCode, tip: tipAmount });
-    } else if (activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') {
-      submitPayment({ method: activeMethod, amount: totalWithTip, tip: tipAmount });
     } else if (activeMethod === 'SPLIT') {
       submitPayment({
         method: 'SPLIT',
@@ -512,16 +491,23 @@ export default function PaymentModal({
                 { method: 'JAZZCASH' as PaymentMethod, icon: 'qr_code_2', label: 'JazzCash' },
                 { method: 'EASYPAISA' as PaymentMethod, icon: 'qr_code_2', label: 'EasyPaisa' },
                 { method: 'SPLIT' as PaymentMethod, icon: 'call_split', label: 'Split' },
-              ].map(({ method, icon, label }) => (
-                <button
-                  key={method}
-                  onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-[#F8FAFC] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-[#F1F5F9] text-[#0F172A]'}`}
-                >
-                  <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{icon}</span>
-                  <span className="font-bold text-xs">{label}</span>
-                </button>
-              ))}
+              ].map(({ method, icon, label }) => {
+                const isUnconfigured = UNCONFIGURED_METHODS.includes(method);
+                return (
+                  <button
+                    key={method}
+                    onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
+                    title={isUnconfigured ? `${label} isn't connected yet` : undefined}
+                    className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-[#F8FAFC] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-[#F1F5F9] text-[#0F172A]'} ${isUnconfigured ? 'opacity-60' : ''}`}
+                  >
+                    {isUnconfigured && (
+                      <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[13px] text-[#94A3B8]">lock</span>
+                    )}
+                    <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{icon}</span>
+                    <span className="font-bold text-xs">{label}</span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Cash Panel */}
@@ -586,23 +572,17 @@ export default function PaymentModal({
               </div>
             )}
 
-            {/* QR Panel — JazzCash & EasyPaisa */}
+            {/* JazzCash & EasyPaisa — gateway isn't configured yet; be
+                honest about it instead of showing a QR that goes nowhere. */}
             {(activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && (
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="w-32 h-32 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center mb-6 shadow-sm">
-                  <span className="material-symbols-outlined text-6xl text-[#D97706]">qr_code_2</span>
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
+                <div className="w-32 h-32 rounded-full border-2 border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center mb-6">
+                  <span className="material-symbols-outlined text-6xl text-[#94A3B8]">lock</span>
                 </div>
-                <h3 className="text-2xl font-bold font-clash text-[#0F172A]">Scan to Pay via {activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'}</h3>
-                <p className="text-[#64748B] font-medium mt-2">Amount Due: PKR {totalWithTip.toFixed(2)}</p>
-                <span className="bg-amber-50 text-[#D97706] border border-amber-200 text-xs font-bold px-3 py-1 rounded-full mt-2">MOCK INTEGRATION</span>
-                <div className="bg-white p-4 rounded-xl mt-4 border border-[#E2E8F0] shadow-sm">
-                  {qrCodeDataUrl ? (
-                    <img src={qrCodeDataUrl} alt={`${activeMethod} QR Code`} className="w-48 h-48" />
-                  ) : (
-                    <div className="w-48 h-48 flex items-center justify-center text-[#94A3B8]">Loading QR...</div>
-                  )}
-                </div>
-                <p className="text-xs text-[#64748B] mt-4 animate-pulse font-semibold">Waiting for payment confirmation...</p>
+                <h3 className="text-2xl font-bold font-clash text-[#0F172A]">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} Isn't Connected</h3>
+                <p className="text-[#64748B] font-medium mt-2 max-w-sm">
+                  This payment gateway hasn't been configured for this branch yet. Ask a manager to set it up, or take payment as Cash or Card instead.
+                </p>
               </div>
             )}
 
@@ -643,8 +623,8 @@ export default function PaymentModal({
           <div className="flex gap-4">
             <button
               onClick={handleConfirm}
-              disabled={isProcessing || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
-              className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${((activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
+              disabled={isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
+              className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
               {isProcessing ? (

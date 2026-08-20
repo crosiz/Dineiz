@@ -434,9 +434,39 @@ function playLoudRing() {
 }
 
 function OrderCard({ order, rushThreshold, onReady }: { order: KdsOrder, rushThreshold: number, onReady: (id: string) => void }) {
+  const session = useCartStore((s) => s.session);
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [elapsedSecs, setElapsedSecs] = useState(0);
   const [isSlidingOut, setIsSlidingOut] = useState(false);
+  const [isReprinting, setIsReprinting] = useState(false);
+
+  const handleReprintKOT = async () => {
+    setIsReprinting(true);
+    try {
+      const { printDocument } = await import('@/lib/print.service');
+      await printDocument('KOT', {
+        orderNumber: order.orderNumber,
+        tokenNumber: order.takeawayToken || order.orderNumber,
+        type: order.type,
+        tableLabel: order.table?.name,
+        cashierName: session.cashierName ?? undefined,
+        tenantName: session.restaurantName || 'Dineiz',
+        branchName: session?.branchName || 'Main Branch',
+        createdAt: order.createdAt,
+        items: order.items.map((oi) => ({
+          name: oi.name,
+          quantity: oi.quantity,
+          variationName: oi.variation ?? undefined,
+          addOnNames: oi.addons,
+        })),
+      } as any);
+      toast.success(`KOT reprinted for #${order.orderNumber}`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to reprint KOT. Check printer connection.');
+    } finally {
+      setIsReprinting(false);
+    }
+  };
 
   const toggleItem = (id: string) => {
     setToggledItems(prev => ({ ...prev, [id]: !prev[id] }));
@@ -558,8 +588,12 @@ function OrderCard({ order, rushThreshold, onReady }: { order: KdsOrder, rushThr
 
       {/* Footer Buttons */}
       <div className="p-3 bg-[#F8FAFC] flex flex-row gap-2 shrink-0 border-t border-[#E2E8F0]">
-        <button className="flex-[0.8] py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors">
-          <span className="material-symbols-outlined text-[16px]">print</span>
+        <button
+          onClick={handleReprintKOT}
+          disabled={isReprinting}
+          className="flex-[0.8] py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined text-[16px]">{isReprinting ? 'hourglass_top' : 'print'}</span>
           KOT
         </button>
         <button

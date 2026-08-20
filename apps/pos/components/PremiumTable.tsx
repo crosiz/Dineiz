@@ -201,7 +201,11 @@ export function PremiumTable({
 
     const computeTimer = () => {
       if (!occupiedSince) {
-        setElapsedTime('24m');
+        // No real timestamp to compute from — show nothing rather than a
+        // fabricated duration (this used to hardcode "24m" for every table
+        // missing occupiedSince, which is actively misleading on a screen
+        // staff use to judge how long a table has been sitting).
+        setElapsedTime('');
         return;
       }
       const startTime = typeof occupiedSince === 'string' ? new Date(occupiedSince).getTime() : new Date(occupiedSince).getTime();

@@ -163,7 +163,10 @@ function ReceiptPageContent() {
         )}
       </div>
 
-      {/* Action buttons */}
+      {/* Action buttons — WhatsApp only shows when we actually have a
+          number to send to (e.g. WhatsApp-sourced orders); previously this
+          button rendered unconditionally with an empty onClick and did
+          nothing when tapped. */}
       <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button
           onClick={() => window.print()}
@@ -171,12 +174,16 @@ function ReceiptPageContent() {
         >
           🖨 Print
         </button>
-        <button
-          onClick={() => {/* WhatsApp flow */}}
-          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#0F7A55', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
-        >
-          📱 WhatsApp
-        </button>
+        {order?.customerPhone && (
+          <a
+            href={`https://wa.me/${String(order.customerPhone).replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#0F7A55', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+          >
+            📱 WhatsApp
+          </a>
+        )}
       </div>
 
       {tableId && (
