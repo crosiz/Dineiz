@@ -12,6 +12,7 @@ export const addBranchSchema = z.object({
   city: z.string().min(2, 'City is required'),
   phone: z.string().min(8, 'Valid phone number is required'),
   email: z.string().email('Valid email is required').optional().or(z.literal('')),
+  logo: z.any().optional(),
 
   // Step 2
   openingTime: z.string().min(1, 'Opening time is required'),
@@ -29,7 +30,7 @@ export type AddBranchFormData = z.infer<typeof addBranchSchema>;
 
 export function useAddBranch(onClose: () => void) {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
-  const { addBranchMutation } = useBranches();
+  const { addBranchMutation, uploadImageMutation } = useBranches();
 
   const methods = useForm<AddBranchFormData>({
     resolver: zodResolver(addBranchSchema),
@@ -96,7 +97,17 @@ export function useAddBranch(onClose: () => void) {
         kotAutoPrint: data.kotAutoPrint,
       };
 
-      await addBranchMutation.mutateAsync(payload);
+      const result: any = await addBranchMutation.mutateAsync(payload);
+
+      const logoFile: File | undefined = (data.logo as FileList | undefined)?.[0];
+      if (logoFile && result?.branch?.id) {
+        try {
+          await uploadImageMutation.mutateAsync({ id: result.branch.id, file: logoFile });
+        } catch {
+          toast.error('Branch created, but the logo failed to upload — you can add it later from Edit Branch.');
+        }
+      }
+
       toast.success('Branch created successfully');
       onClose();
     } catch (e: any) {

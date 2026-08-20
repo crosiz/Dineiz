@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, ChevronLeft, ChevronRight, ArrowUpCircle } from 'lucide-react';
+import { X, Loader2, ChevronLeft, ChevronRight, ArrowUpCircle, UploadCloud } from 'lucide-react';
 import { Button } from '@dineiz/ui';
 import { Input } from '@dineiz/ui';
 import { toast } from 'sonner';
@@ -46,7 +46,7 @@ function UpgradeModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }: BranchModalProps) {
-  const { addBranchMutation, updateBranchMutation } = useBranches();
+  const { addBranchMutation, updateBranchMutation, uploadImageMutation } = useBranches();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -57,6 +57,8 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
   const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // Step 2 — Operating Hours (single daily window — the backend only
   // stores one openingTime/closingTime pair per branch, not per-day hours)
@@ -84,14 +86,24 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
       setTaxRate(String(branchToEdit.taxRate ?? 0));
       setKdsEnabled(!!branchToEdit.kdsEnabled);
       setKotAutoPrint(!!branchToEdit.kotAutoPrint);
+      setLogoPreview(branchToEdit.imageUrl || null);
     } else {
       setName(''); setAddress(''); setCity(''); setPhone(''); setEmail('');
       setOpeningTime('09:00'); setClosingTime('22:00');
       setCurrency('PKR'); setTimezone('Asia/Karachi'); setTaxRate('0');
       setKdsEnabled(false); setKotAutoPrint(false);
+      setLogoPreview(null);
     }
+    setLogoFile(null);
     setStep(1);
   }, [isOpen, branchToEdit]);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -104,10 +116,20 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
         kdsEnabled, kotAutoPrint,
       };
 
+      let branchId = branchToEdit?.id;
       if (branchToEdit) {
         await updateBranchMutation.mutateAsync({ id: branchToEdit.id, data: body });
       } else {
-        await addBranchMutation.mutateAsync(body);
+        const result: any = await addBranchMutation.mutateAsync(body);
+        branchId = result?.branch?.id;
+      }
+
+      if (logoFile && branchId) {
+        try {
+          await uploadImageMutation.mutateAsync({ id: branchId, file: logoFile });
+        } catch {
+          toast.error('Saved, but the logo failed to upload — try again from Edit Branch.');
+        }
       }
 
       toast.success(branchToEdit ? 'Branch updated' : 'Branch created');
@@ -182,6 +204,26 @@ export default function BranchModal({ isOpen, onClose, onSuccess, branchToEdit }
                 <div>
                   <label className="block text-sm font-medium mb-1.5">Email</label>
                   <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="branch@restaurant.com" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5">Branch Logo</label>
+                  <div className="relative min-h-[100px] border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl p-6 bg-transparent hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer flex flex-col items-center justify-center">
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/svg+xml"
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      onChange={handleLogoChange}
+                    />
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo preview" className="h-20 object-contain" />
+                    ) : (
+                      <>
+                        <UploadCloud className="w-6 h-6 text-brand-primary mb-2" />
+                        <span className="text-sm font-medium">Upload Branch Logo</span>
+                        <span className="text-xs text-neutral-400 mt-0.5">PNG, JPG or SVG up to 5MB</span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { prisma } from '@dineiz/db';
 import { createBranchSchema, updateBranchSchema } from '@dineiz/schemas';
-import { listBranches, createBranch, updateBranch, toggleBranchStatus, deleteBranch } from './branches.service';
+import { listBranches, createBranch, updateBranch, toggleBranchStatus, deleteBranch, uploadBranchImage } from './branches.service';
 
 export async function handleListBranches(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user!.tenantId!;
@@ -72,6 +72,23 @@ export async function handleUpdateBranch(request: FastifyRequest, reply: Fastify
 
   const branch = await updateBranch(tenantId, id, body);
   return reply.send({ branch });
+}
+
+export async function handleUploadBranchImage(request: FastifyRequest, reply: FastifyReply) {
+  const tenantId = request.user!.tenantId!;
+  const { id } = request.params as { id: string };
+
+  const data = await request.file();
+  if (!data) return reply.status(400).send({ error: 'No file uploaded' });
+
+  try {
+    const buffer = await data.toBuffer();
+    const result = await uploadBranchImage(tenantId, id, buffer);
+    return reply.send({ imageUrl: result.url, branch: result.branch });
+  } catch (err) {
+    request.log.error(err);
+    return reply.status(500).send({ error: 'Failed to upload image' });
+  }
 }
 
 export async function handleToggleBranchStatus(request: FastifyRequest, reply: FastifyReply) {

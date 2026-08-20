@@ -6,6 +6,7 @@ import {
   handleListBranches,
   handleCreateBranch,
   handleUpdateBranch,
+  handleUploadBranchImage,
   handleToggleBranchStatus,
   handleDeleteBranch
 } from './branches.handlers';
@@ -24,6 +25,10 @@ export const branchesRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.put('/api/branches/:id', {
     preHandler: requireRole(['SUPER_ADMIN', 'TENANT_ADMIN'])
   }, handleUpdateBranch);
+
+  fastify.post('/api/branches/:id/upload-image', {
+    preHandler: requireRole(['SUPER_ADMIN', 'TENANT_ADMIN'])
+  }, handleUploadBranchImage);
 
   fastify.put('/api/branches/:id/toggle-status', {
     preHandler: requireRole(['SUPER_ADMIN', 'TENANT_ADMIN'])

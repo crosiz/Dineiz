@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 
 
 export interface BranchStats {
@@ -98,6 +98,26 @@ export function useBranches() {
     }
   });
 
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ id, file }: { id: string, file: File }) => {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await fetch(`${API_URL}/api/branches/${id}/upload-image`, {
+        method: 'POST',
+        body: form,
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to upload logo');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+    }
+  });
+
   return {
     branches: data?.branches || [],
     summary: data?.summary || { total: 0, active: 0, inactive: 0, primaryCity: 'N/A' },
@@ -107,6 +127,7 @@ export function useBranches() {
     toggleStatusMutation,
     deleteBranchMutation,
     addBranchMutation,
-    updateBranchMutation
+    updateBranchMutation,
+    uploadImageMutation
   };
 }

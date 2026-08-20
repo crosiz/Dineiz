@@ -3,6 +3,7 @@ import { CreateBranchInput, UpdateBranchInput } from '@dineiz/schemas';
 import crypto from 'crypto';
 import { startOfDay, endOfDay } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
+import { uploadImage } from '../../lib/cloudinary';
 
 const BRANCH_COLORS = [
   '#FF5722', '#3B82F6', '#10B981', '#8B5CF6', 
@@ -173,6 +174,15 @@ export async function updateBranch(tenantId: string, branchId: string, data: Upd
     data
   });
   return branch;
+}
+
+export async function uploadBranchImage(tenantId: string, branchId: string, buffer: Buffer) {
+  const result = await uploadImage(buffer, tenantId, 'logos');
+  const branch = await prisma.branch.update({
+    where: { id: branchId, tenantId },
+    data: { imageUrl: result.url }
+  });
+  return { url: result.url, branch };
 }
 
 export async function toggleBranchStatus(tenantId: string, branchId: string) {
