@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Home, UtensilsCrossed, ClipboardList, LayoutGrid, ShieldCheck, Package } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
 import { useState, useEffect } from 'react'
+import { ConfirmModal } from '@/components/ui/ConfirmModal'
 
 const NAV_ITEMS = [
   { id: 'home',    label: 'HOME',    icon: Home,            path: '/pos/home' },
@@ -18,6 +19,7 @@ export function BottomNav() {
   const router = useRouter()
   const session = useCartStore(s => s.session)
   const [mounted, setMounted] = useState(false)
+  const [pendingNavPath, setPendingNavPath] = useState<string | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -58,10 +60,7 @@ export function BottomNav() {
                 e.preventDefault()
                 const cart = useCartStore.getState().cart
                 if (pathname.startsWith('/pos/order') && !path.startsWith('/pos/order') && cart.length > 0) {
-                  if (window.confirm('Leave order? Items will be lost.')) {
-                    useCartStore.getState().clearCart()
-                    router.push(path)
-                  }
+                  setPendingNavPath(path)
                 } else {
                   router.push(path)
                 }
@@ -76,6 +75,20 @@ export function BottomNav() {
           )
         })}
       </nav>
+      <ConfirmModal
+        isOpen={!!pendingNavPath}
+        title="Leave Order?"
+        message="Items in this order haven't been sent yet and will be lost if you leave."
+        confirmText="Leave Order"
+        cancelText="Stay"
+        variant="danger"
+        onConfirm={() => {
+          useCartStore.getState().clearCart()
+          if (pendingNavPath) router.push(pendingNavPath)
+          setPendingNavPath(null)
+        }}
+        onCancel={() => setPendingNavPath(null)}
+      />
     </>
   )
 }

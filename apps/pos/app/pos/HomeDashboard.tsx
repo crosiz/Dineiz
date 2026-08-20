@@ -8,6 +8,7 @@ import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
+import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -352,34 +353,37 @@ export default function HomeDashboard() {
                     return <div className="text-[#64748B] italic p-4">No orders match your search</div>;
                   }
 
-                  return filtered.map((order) => (
-                    <div
-                      key={order.id}
-                      onClick={() => router.push(`/pos/order?orderId=${order.id}`)}
-                      className={`active-order-chip shrink-0 w-[160px] p-4 bg-white rounded-xl cursor-pointer shadow-sm hover:shadow-md transition-all ${
-                        order.status === 'BILL_REQUESTED' ? 'border-2 border-rose-500' : 'border border-[#E2E8F0]'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={order.status === 'BILL_REQUESTED' ? 'text-rose-600 font-bold' : 'text-[#0F172A] font-bold'}>
-                          #{order.orderNumber}
-                        </span>
-                        {order.status === 'BILL_REQUESTED' ? (
-                          <span className="material-symbols-outlined text-rose-500 text-sm">payments</span>
-                        ) : (
-                          <span className="text-xs text-[#64748B] font-mono">{order.timeAgo || '0m'}</span>
-                        )}
-                      </div>
+                  return filtered.map((order: any) => {
+                    const itemCount = Array.isArray(order.items)
+                      ? order.items.reduce((acc: number, i: any) => acc + (i.quantity || 1), 0)
+                      : (order.itemCount || order.itemsCount || 1);
+                    const amount = order.netAmount ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0;
+                    const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';
+
+                    return (
                       <div
-                        className={`text-xs ${
-                          order.status === 'BILL_REQUESTED' ? 'text-rose-600 font-medium' : 'text-[#64748B]'
-                        } mb-2 truncate`}
+                        key={order.id}
+                        onClick={() => router.push(`/pos/order?orderId=${order.id}&edit=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${(order.type || 'dine_in').toLowerCase().replace('_', '-')}`)}
+                        className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-[#CBD5E1] transition-all border border-[#E2E8F0] flex flex-col gap-2.5"
                       >
-                        {order.tableLabel || order.type} • {order.itemsCount || 1} Items
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="text-[#0F172A] font-bold clash-display text-lg leading-none">#{order.tokenNumber || order.orderNumber}</span>
+                          <StatusBadge status={order.status} />
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
+                          {order.tableLabel && (
+                            <span className="text-[10px] font-bold text-[#475569] bg-[#F8FAFC] border border-[#E2E8F0] px-1.5 py-0.5 rounded">T-{order.tableLabel}</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-[#64748B] font-medium truncate">{itemCount} item{itemCount === 1 ? '' : 's'}</div>
+                        <div className="flex justify-between items-end pt-1 mt-auto border-t border-[#F1F5F9]">
+                          <span className="text-[#0F172A] font-bold clash-display">{formatPKR(Math.round(amount))}</span>
+                          {order.createdAt && <TicketTimer createdAt={order.createdAt} />}
+                        </div>
                       </div>
-                      <div className="text-[#0F172A] font-bold clash-display">PKR {order.total?.toLocaleString() || 0}</div>
-                    </div>
-                  ));
+                    );
+                  });
                 })()
               )}
             </div>

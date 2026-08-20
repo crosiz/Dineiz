@@ -90,7 +90,9 @@ interface CartStore {
   selectedTableLabel: string | null;
   paymentOrderId: string | null;
   customerId: string | null;
+  customerName: string | null;
   setCustomerId: (id: string | null) => void;
+  setCustomer: (customer: { id: string; name: string } | null) => void;
   isEditing: boolean;
   existingOrderData: any | null;
   setExistingOrderData: (data: any | null) => void;
@@ -232,7 +234,9 @@ export const useCartStore = create<CartStore>()(
         selectedTableLabel: null,
         paymentOrderId: null,
         customerId: null,
+        customerName: null,
         setCustomerId: (id) => set({ customerId: id }),
+        setCustomer: (customer) => set({ customerId: customer?.id ?? null, customerName: customer?.name ?? null }, false, 'setCustomer'),
         isEditing: false,
         existingOrderData: null,
         existingItems: [],
@@ -357,7 +361,7 @@ export const useCartStore = create<CartStore>()(
           ),
 
         clearCart: () =>
-          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [], eligible: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null }, false, 'clearCart'),
+          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [], eligible: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null, customerId: null, customerName: null }, false, 'clearCart'),
         setOrderType: (type) => set({ orderType: type }, false, 'setOrderType'),
         setOrderContext: (ctx) => set((s) => ({
           selectedTableId: ctx.tableId !== undefined ? ctx.tableId : s.selectedTableId,

@@ -34,11 +34,18 @@ export const getPosShift = (): PosShift | null => {
   }
 };
 
+// Signing out ends the login session only — it does not close the shift.
+// The Sign Out confirmation dialog (POSTopBar.tsx) tells the cashier
+// exactly that ("your shift will remain active for when you return"), but
+// this used to remove 'pos_shift' too, so logging back in found no local
+// shift record and got sent through Shift Open again even though the
+// shift was still open on the server. A shift is only ever meant to be
+// cleared by actually closing it (see CloseShiftModal.tsx, which clears it
+// explicitly as part of a successful close).
 export const clearPosSession = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('pos_session');
   localStorage.removeItem('pos_token');
-  localStorage.removeItem('pos_shift');
   localStorage.removeItem('pos_branding');
   localStorage.removeItem('pos_assigned_tables');
 };

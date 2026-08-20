@@ -28,13 +28,16 @@ export default function AdminPage() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
 
-  const [stats, setStats] = useState({ revenue: 0, orders: 0, activeCashiers: 2, openTables: 5 });
+  const [stats, setStats] = useState({ revenue: 0, orders: 0 });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeShifts, setActiveShifts] = useState<any[]>([
-    { id: '1', cashierName: 'Ali Khan', duration: '4h 12m', earned: 45000 },
-    { id: '2', cashierName: 'Sara Ahmed', duration: '2h 45m', earned: 21500 }
-  ]);
+  const [activeShifts, setActiveShifts] = useState<any[]>([]);
+  const [shiftsLoading, setShiftsLoading] = useState(true);
+  const [openTables, setOpenTables] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+
+  const [forceCloseTarget, setForceCloseTarget] = useState<{ id: string; name: string } | null>(null);
+  const [forceCloseReason, setForceCloseReason] = useState('');
+  const [isForceClosing, setIsForceClosing] = useState(false);
   
   const [pdfMode, setPdfMode] = useState(true);
 
@@ -94,9 +97,51 @@ export default function AdminPage() {
     }
   };
 
+  // Real active shifts for this branch — was previously a hardcoded demo
+  // array that never reflected who was actually clocked in.
+  const fetchActiveShifts = async () => {
+    if (!session?.branchId) return;
+    try {
+      const res = await fetch(`${API_URL}/api/shifts/active`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveShifts(Array.isArray(data) ? data.filter((s: any) => s.branchId === session.branchId) : []);
+      }
+    } catch (e) {
+      // Keep showing the last known list on transient failures
+    } finally {
+      setShiftsLoading(false);
+    }
+  };
+
+  // Real open-table count — was previously hardcoded to 5 forever.
+  const fetchOpenTables = async () => {
+    if (!session?.branchId) return;
+    try {
+      const [tablesRes, statusesRes] = await Promise.all([
+        fetch(`${API_URL}/api/floor-plan/${session.branchId}/tables`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
+        }).then(r => (r.ok ? r.json() : [])).catch(() => []),
+        fetch(`${API_URL}/api/floor-plan/${session.branchId}/table-orders`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
+        }).then(r => (r.ok ? r.json() : [])).catch(() => []),
+      ]);
+      const occupiedIds = new Set(Array.isArray(statusesRes) ? statusesRes.map((s: any) => s.tableId) : []);
+      const occupied = Array.isArray(tablesRes)
+        ? tablesRes.filter((t: any) => occupiedIds.has(t.id) || t.status === 'OCCUPIED').length
+        : 0;
+      setOpenTables(occupied);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchStats();
+    fetchActiveShifts();
+    fetchOpenTables();
     let interval: NodeJS.Timeout;
+    let shiftsInterval: NodeJS.Timeout;
     if (session?.branchId) {
       const fetchVoids = async () => {
         try {
@@ -111,24 +156,47 @@ export default function AdminPage() {
       };
       fetchVoids();
       interval = setInterval(fetchVoids, 3000);
+      shiftsInterval = setInterval(() => { fetchActiveShifts(); fetchOpenTables(); }, 20000);
     }
-    return () => clearInterval(interval);
+    return () => { clearInterval(interval); clearInterval(shiftsInterval); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.branchId]);
 
-  // Long Press Logic for Force Close Shift
-  const handleTouchStart = (shiftId: string) => {
+  // Long Press Logic for Force Close Shift — opens a real confirm modal that
+  // calls the (already-existing, manager-only) force-close endpoint instead
+  // of a native prompt() that only ever touched local state.
+  const handleTouchStart = (shift: any) => {
     longPressTimer.current = setTimeout(() => {
-      const reason = prompt('FORCE CLOSE SHIFT: Enter reason for closing this shift remotely:');
-      if (reason) {
-        toast.success(`Shift force closed with reason: ${reason}`);
-        setActiveShifts(prev => prev.filter(s => s.id !== shiftId));
-      }
-    }, 1000);
+      setForceCloseReason('');
+      setForceCloseTarget({ id: shift.id, name: shift.user?.name || shift.cashierName || 'this cashier' });
+    }, 700);
   };
-  
+
   const handleTouchEnd = () => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+
+  const confirmForceClose = async () => {
+    if (!forceCloseTarget) return;
+    setIsForceClosing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/shifts/${forceCloseTarget.id}/force-close`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('pos_token')}`,
+        },
+        body: JSON.stringify({ notes: forceCloseReason || undefined }),
+      });
+      if (!res.ok) throw new Error('Failed to force close shift');
+      toast.success(`${forceCloseTarget.name}'s shift was force closed`);
+      setActiveShifts(prev => prev.filter(s => s.id !== forceCloseTarget.id));
+      setForceCloseTarget(null);
+    } catch (e) {
+      toast.error('Could not force close this shift. Check connection and try again.');
+    } finally {
+      setIsForceClosing(false);
+    }
   };
 
   const handleApprove = async (id: string) => {
@@ -199,12 +267,12 @@ export default function AdminPage() {
               <p className="text-[12px] text-[#64748B] font-semibold mb-1">Active Cashiers</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-[20px] font-bold">{stats.activeCashiers}</p>
+                <p className="text-[20px] font-bold">{activeShifts.length}</p>
               </div>
             </div>
             <div>
               <p className="text-[12px] text-[#64748B] font-semibold mb-1">Open Tables</p>
-              <p className="text-[20px] font-bold">{stats.openTables}</p>
+              <p className="text-[20px] font-bold">{openTables}</p>
             </div>
           </div>
         </section>
@@ -216,43 +284,47 @@ export default function AdminPage() {
             <span className="bg-[#E2E8F0] text-[#475569] text-[11px] font-bold px-2 py-0.5 rounded-full">{activeShifts.length}</span>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
-            {activeShifts.map(shift => (
-              <div 
-                key={shift.id}
-                onMouseDown={() => handleTouchStart(shift.id)}
-                onMouseUp={handleTouchEnd}
-                onMouseLeave={handleTouchEnd}
-                onTouchStart={() => handleTouchStart(shift.id)}
-                onTouchEnd={handleTouchEnd}
-                className="p-4 flex justify-between items-center bg-white hover:bg-[#F8FAFC] transition-colors cursor-pointer select-none active:bg-[#F1F5F9]"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
-                    <User size={20} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                      <p className="font-bold text-[15px]">{shift.cashierName}</p>
+            {shiftsLoading ? (
+              <div className="p-6 text-center text-[#94A3B8] text-[13px] font-medium">Loading active shifts...</div>
+            ) : activeShifts.length === 0 ? (
+              <div className="p-6 text-center text-[#94A3B8] text-[13px] font-medium">No cashiers are currently clocked in.</div>
+            ) : (
+              activeShifts.map(shift => {
+                const ms = Date.now() - new Date(shift.openedAt).getTime();
+                const h = Math.max(0, Math.floor(ms / 3600000));
+                const m = Math.max(0, Math.floor((ms % 3600000) / 60000));
+                return (
+                  <div
+                    key={shift.id}
+                    onMouseDown={() => handleTouchStart(shift)}
+                    onMouseUp={handleTouchEnd}
+                    onMouseLeave={handleTouchEnd}
+                    onTouchStart={() => handleTouchStart(shift)}
+                    onTouchEnd={handleTouchEnd}
+                    className="p-4 flex justify-between items-center bg-white hover:bg-[#F8FAFC] transition-colors cursor-pointer select-none active:bg-[#F1F5F9]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                          <p className="font-bold text-[15px]">{shift.user?.name || 'Cashier'}</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-[12px] text-[#64748B] mt-0.5">
+                          <Clock size={12} />
+                          <span>{h}h {m}m</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[12px] text-[#64748B] mt-0.5">
-                      <Clock size={12} />
-                      <span>{shift.duration}</span>
+                    <div className="text-right">
+                      <p className="text-[14px] font-bold text-[#0F172A]">{shift._count?.orders ?? 0} orders</p>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[14px] font-bold text-[#0F172A]">PKR {shift.earned.toLocaleString()}</p>
-                </div>
-              </div>
-            ))}
-            <div 
-              className="p-4 flex justify-between items-center bg-[#F8FAFC] text-[var(--pos-primary)] hover:bg-[#F1F5F9] transition-colors cursor-pointer font-bold"
-              onClick={() => toast.info('Navigating to full shift list...')}
-            >
-              <span>View All Shifts</span>
-              <ChevronRight size={20} />
-            </div>
+                );
+              })
+            )}
           </div>
           <p className="text-[11px] text-[#94A3B8] mt-2 px-2 text-center">Long-press a shift to force close remotely.</p>
         </section>
@@ -310,25 +382,25 @@ export default function AdminPage() {
         <section>
           <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Quick Actions</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
-            <ActionRow 
-              icon={<Receipt size={20} className="text-blue-500" />} 
-              label="Reprint Last Receipt" 
-              onClick={() => toast.info('Opening recent orders...')} 
+            <ActionRow
+              icon={<Receipt size={20} className="text-blue-500" />}
+              label="Reprint Last Receipt"
+              onClick={() => { sessionStorage.setItem('pos_tickets_initial_mode', 'history'); router.push('/pos/tickets'); }}
             />
-            <ActionRow 
-              icon={<Ban size={20} className="text-red-500" />} 
-              label="Void an Order" 
-              onClick={() => toast.info('Opening void terminal...')} 
+            <ActionRow
+              icon={<Ban size={20} className="text-red-500" />}
+              label="Void an Order"
+              onClick={() => router.push('/pos/tickets')}
             />
-            <ActionRow 
-              icon={<Percent size={20} className="text-amber-500" />} 
-              label="Apply Discount to Order" 
-              onClick={() => toast.info('Opening discount terminal...')} 
+            <ActionRow
+              icon={<Percent size={20} className="text-amber-500" />}
+              label="Apply Discount to Order"
+              onClick={() => router.push('/pos/tickets')}
             />
-            <ActionRow 
-              icon={<LayoutGrid size={20} className="text-purple-500" />} 
-              label="Override Table Status" 
-              onClick={() => toast.info('Opening table manager...')} 
+            <ActionRow
+              icon={<LayoutGrid size={20} className="text-purple-500" />}
+              label="Override Table Status"
+              onClick={() => router.push('/pos/tables')}
             />
             <ActionRow 
               icon={<Lock size={20} className="text-[#64748B]" />} 
@@ -342,15 +414,10 @@ export default function AdminPage() {
         <section>
           <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Shift Report</h2>
           <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
-            <ActionRow 
-              icon={<FileText size={20} className="text-indigo-500" />} 
-              label="Generate Shift Report" 
-              onClick={() => router.push('/pos/admin/reports/shift')} 
-            />
-            <ActionRow 
-              icon={<FileText size={20} className="text-teal-500" />} 
-              label="Today's Summary" 
-              onClick={() => toast.info('Loading summary...')} 
+            <ActionRow
+              icon={<FileText size={20} className="text-indigo-500" />}
+              label="Generate Shift Report"
+              onClick={() => router.push('/pos/admin/reports/shift')}
             />
           </div>
         </section>
@@ -391,9 +458,47 @@ export default function AdminPage() {
             )}
           </div>
         </section>
-        
-        
       </main>
+
+      {/* Force Close Shift modal — replaces the old native prompt() that only
+          ever touched local state and never called the backend. */}
+      {forceCloseTarget && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
+            <div className="p-7">
+              <div className="w-12 h-12 rounded-full bg-[#FDECEC] text-[#DC2626] flex items-center justify-center mb-4">
+                <ShieldAlert size={24} />
+              </div>
+              <h2 className="text-[19px] font-bold text-[#0F172A] mb-2">Force Close {forceCloseTarget.name}'s Shift?</h2>
+              <p className="text-[14px] text-[#64748B] leading-relaxed mb-4">
+                This closes their shift remotely with no cash count. Use this only when the terminal is unreachable.
+              </p>
+              <textarea
+                value={forceCloseReason}
+                onChange={(e) => setForceCloseReason(e.target.value)}
+                placeholder="Reason for force closing this shift..."
+                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[var(--pos-primary,#F59E0B)] transition-colors resize-none h-20 mb-6"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setForceCloseTarget(null)}
+                  disabled={isForceClosing}
+                  className="flex-1 h-[46px] bg-white text-[#475569] font-bold text-[14px] rounded-xl border border-[#E2E8F0] hover:bg-[#F1F5F9] active:scale-95 transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmForceClose}
+                  disabled={isForceClosing}
+                  className="flex-1 h-[46px] bg-[#DC2626] hover:bg-[#C4362E] text-white font-bold text-[14px] rounded-xl active:scale-95 transition-all shadow-lg shadow-[#DC2626]/25 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isForceClosing ? 'Closing...' : 'Force Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

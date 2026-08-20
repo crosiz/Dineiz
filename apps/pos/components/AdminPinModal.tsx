@@ -73,145 +73,59 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [pin])
 
-  const NUMPAD = ['1','2','3','4','5','6','7','8','9','DEL','0','GO']
+  const NUMPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'DEL', '0', 'GO']
 
   return (
-    // Full screen overlay
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.85)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 9999,
-      }}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      {/* Modal card — FIXED WIDTH, never narrow */}
       <div
-        style={{
-          width: '360px',          // FIXED width — never changes
-          minWidth: '360px',       // cannot shrink
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          border: '1px solid #E2E8F0',
-          padding: '32px 28px',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-          animation: shake ? 'shake 0.5s ease' : 'none',
-        }}
+        className={`w-[360px] min-w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-[#E2E8F0] shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
       >
         {/* Lock icon */}
-        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <div style={{
-            width: '52px', height: '52px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255,87,34,0.12)',
-            border: '1.5px solid rgba(255,87,34,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 12px',
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--pos-primary, #FF5722)" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
+        <div className="text-center mb-2">
+          <div className="w-13 h-13 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 border border-[var(--pos-primary,#F59E0B)]/30 flex items-center justify-center mx-auto mb-3">
+            <span className="material-symbols-outlined text-[var(--pos-primary,#F59E0B)] text-[26px]">lock</span>
           </div>
-          <h2 style={{ color: '#1E293B', fontSize: '18px', fontWeight: 700, margin: 0 }}>
-            Manager Access
-          </h2>
-          <p style={{ color: '#64748B', fontSize: '13px', marginTop: '6px' }}>
-            Enter your 4-digit manager PIN
-          </p>
+          <h2 className="text-[#0F172A] text-[18px] font-bold clash-display">Manager Access</h2>
+          <p className="text-[#64748B] text-[13px] mt-1.5">Enter your 4-digit manager PIN</p>
         </div>
 
         {/* PIN dots */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '14px',
-          margin: '24px 0',
-          animation: shake ? 'shake 0.5s ease' : 'none',
-        }}>
-          {[0,1,2,3].map(i => (
-            <div key={i} style={{
-              width: '18px', height: '18px',
-              borderRadius: '50%',
-              backgroundColor: i < pin.length
-                ? (error ? '#EF4444' : 'var(--pos-primary, #FF5722)')
-                : 'transparent',
-              border: `2px solid ${i < pin.length
-                ? (error ? '#EF4444' : 'var(--pos-primary, #FF5722)')
-                : '#CBD5E1'}`,
-              transition: 'all 0.15s ease',
-              boxShadow: i < pin.length && !error
-                ? '0 0 8px rgba(255,87,34,0.5)'
-                : i < pin.length && error
-                ? '0 0 8px rgba(239,68,68,0.5)'
-                : 'none',
-            }} />
+        <div className="flex justify-center gap-3.5 my-6">
+          {[0, 1, 2, 3].map(i => (
+            <div
+              key={i}
+              className={`w-[18px] h-[18px] rounded-full border-2 transition-all duration-150 ${
+                i < pin.length
+                  ? (error ? 'bg-rose-500 border-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-[var(--pos-primary,#F59E0B)] border-[var(--pos-primary,#F59E0B)] shadow-[0_0_8px_rgba(245,158,11,0.5)]')
+                  : 'bg-transparent border-[#CBD5E1]'
+              }`}
+            />
           ))}
         </div>
 
         {/* Error message */}
         {error && (
-          <p style={{ textAlign: 'center', color: '#EF4444', fontSize: '12px', marginBottom: '12px' }}>
+          <p className="text-center text-rose-600 text-[12px] font-semibold mb-3">
             Incorrect PIN. Try again.
           </p>
         )}
 
         {/* Numpad — 3x4 grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '10px',
-        }}>
+        <div className="grid grid-cols-3 gap-2.5">
           {NUMPAD.map(key => {
             const isGo = key === 'GO'
             const isDel = key === 'DEL'
+            if (isGo) return <div key={key} className="h-[58px]" />
             return (
               <button
                 key={key}
-                onClick={() => handleKey(isDel ? 'DEL' : isGo ? '' : key)}
-                disabled={isGo}  // GO is disabled — auto-submits at 4 digits
-                style={{
-                  height: '58px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: isGo
-                    ? '#F8FAFC'
-                    : isDel
-                    ? '#F8FAFC'
-                    : '#F1F5F9',
-                  color: '#1E293B',
-                  fontSize: isGo ? '13px' : '20px',
-                  fontWeight: isGo ? 600 : 700,
-                  cursor: isGo ? 'default' : 'pointer',
-                  transition: 'all 0.1s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: isGo ? 0.4 : 1,
-                }}
-                onMouseDown={e => {
-                  if (!isGo) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--pos-primary, #FF5722)'
-                }}
-                onMouseUp={e => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = '#F1F5F9'
-                }}
-                onTouchStart={e => {
-                  if (!isGo) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--pos-primary, #FF5722)'
-                }}
-                onTouchEnd={e => {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = '#F1F5F9'
-                }}
+                onClick={() => handleKey(isDel ? 'DEL' : key)}
+                className="h-[58px] rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[#0F172A] font-bold text-[20px] flex items-center justify-center hover:bg-[#E2E8F0] active:scale-95 transition-all"
               >
-                {isDel ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2">
-                    <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
-                    <line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/>
-                  </svg>
-                ) : key}
+                {isDel ? <span className="material-symbols-outlined text-[#64748B] text-[20px]">backspace</span> : key}
               </button>
             )
           })}
@@ -220,27 +134,16 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
         {/* Cancel button */}
         <button
           onClick={onClose}
-          style={{
-            width: '100%',
-            marginTop: '16px',
-            padding: '12px',
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: '#64748B',
-            fontSize: '14px',
-            cursor: 'pointer',
-            borderRadius: '10px',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#94A3B8')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#64748B')}
+          className="w-full mt-4 py-3 rounded-xl bg-transparent text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] text-[14px] font-semibold transition-colors"
         >
           Cancel
         </button>
       </div>
 
-      {/* Shake animation */}
-      <style>{`
-        @keyframes shake {
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .shake { animation: pin-shake 0.5s ease; }
+        @keyframes pin-shake {
           0%, 100% { transform: translateX(0); }
           15% { transform: translateX(-8px); }
           30% { transform: translateX(8px); }
@@ -249,7 +152,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
           75% { transform: translateX(-3px); }
           90% { transform: translateX(3px); }
         }
-      `}</style>
+      `}} />
     </div>
   )
 }

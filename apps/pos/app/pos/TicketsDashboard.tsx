@@ -12,85 +12,12 @@ import { getToken, getPosSession } from '@/lib/pos-session';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
 import { toast } from 'sonner';
+import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Props {
   onViewChange?: (view: 'home' | 'menu' | 'tickets') => void;
 }
-
-const TicketTimer = ({ createdAt }: { createdAt: string }) => {
-  const [timeStr, setTimeStr] = useState('');
-  const [colorClass, setColorClass] = useState('text-green-500 bg-green-500/10 border-green-500/20');
-  const [pulse, setPulse] = useState(false);
-  
-  useEffect(() => {
-    const update = () => {
-      const ms = Date.now() - new Date(createdAt).getTime();
-      const totalMins = Math.max(0, Math.floor(ms / 60000));
-      if (totalMins < 60) {
-        setTimeStr(`${totalMins}m`);
-      } else {
-        const h = Math.floor(totalMins / 60);
-        const m = totalMins % 60;
-        setTimeStr(`${h}h ${m}m`);
-      }
-
-      if (totalMins < 15) {
-        setColorClass('text-green-500 bg-green-500/10 border-green-500/20');
-        setPulse(false);
-      } else if (totalMins < 30) {
-        setColorClass('text-orange-500 bg-orange-500/10 border-orange-500/20');
-        setPulse(false);
-      } else {
-        setColorClass('text-red-500 bg-red-500/10 border-red-500/20');
-        setPulse(true);
-      }
-    };
-    update();
-    const interval = setInterval(update, 60000);
-    return () => clearInterval(interval);
-  }, [createdAt]);
-  
-  return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide shrink-0 ${colorClass} ${pulse ? 'animate-pulse' : ''}`}>
-      <span className="material-symbols-outlined text-[14px]">schedule</span>
-      {timeStr}
-    </div>
-  );
-};
-
-const StatusBadge = ({ status }: { status: string }) => {
-  let color = 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-  let label = status;
-  let icon = '';
-
-  switch (status) {
-    case 'PENDING':
-      color = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      icon = 'pending_actions';
-      break;
-    case 'IN_KITCHEN':
-      color = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-      icon = 'local_fire_department';
-      label = 'IN KITCHEN';
-      break;
-    case 'READY':
-      color = 'bg-green-500/10 text-green-500 border-green-500/20';
-      icon = 'check_circle';
-      break;
-    case 'BILL_REQUESTED':
-      color = 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      icon = 'receipt_long';
-      label = 'BILL REQUESTED';
-      break;
-  }
-
-  return (
-    <div className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-bold tracking-wider shrink-0 ${color}`}>
-      {icon && <span className="material-symbols-outlined text-[12px]">{icon}</span>}
-      {label}
-    </div>
-  );
-};
 
 export default function TicketsDashboard({ onViewChange }: Props) {
   const router = useRouter();
@@ -148,6 +75,16 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   };
 
   const [dataMode, setDataMode] = useState<'live' | 'history'>('live');
+
+  // One-shot cross-page signal — lets another screen (e.g. Manager Panel's
+  // "Reprint Last Receipt") land here already in History mode without
+  // needing URL query params (which would require a Suspense boundary here).
+  useEffect(() => {
+    if (sessionStorage.getItem('pos_tickets_initial_mode') === 'history') {
+      sessionStorage.removeItem('pos_tickets_initial_mode');
+      setDataMode('history');
+    }
+  }, []);
   const [filter, setFilter] = useState<string>('ALL');
   const [sourceFilter, setSourceFilter] = useState<'ALL' | 'WHATSAPP'>('ALL');
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest' | 'table'>('oldest');
@@ -361,12 +298,16 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   };
 
-  const deleteHeldOrder = async (orderId: string, e: React.MouseEvent) => {
+  const [deleteHeldTarget, setDeleteHeldTarget] = useState<string | null>(null);
+  const deleteHeldOrder = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this held order?')) {
-      const db = getDB();
-      await db.heldOrders.delete(orderId);
-    }
+    setDeleteHeldTarget(orderId);
+  };
+  const confirmDeleteHeldOrder = async () => {
+    if (!deleteHeldTarget) return;
+    const db = getDB();
+    await db.heldOrders.delete(deleteHeldTarget);
+    setDeleteHeldTarget(null);
   };
 
   // Prints the same customer bill produced by the "Print Bill" action on the
@@ -531,9 +472,15 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </div>
             <div className="flex justify-end shrink-0 gap-2">
               {dataMode === 'history' ? (
-                <div className="px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]">
-                  <span className="material-symbols-outlined text-[14px]">history</span>
-                </div>
+                <button
+                  onClick={(e) => handlePrintBill(order, e)}
+                  disabled={printingId === order.id}
+                  title="Reprint Receipt"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                  Reprint
+                </button>
               ) : (
                 <>
                   {hasPaidOnline && (
@@ -696,6 +643,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               </div>
             </div>
           )}
+          {dataMode === 'history' && (
+            <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
+              <span className="text-[#0F172A] font-bold text-[12px]">{formatPKR(totalAmount)}</span>
+              <button
+                onClick={(e) => handlePrintBill(order, e)}
+                disabled={printingId === order.id}
+                title="Reprint Receipt"
+                className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -710,9 +670,15 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
               {dataMode === 'history' ? (
-                <div className="px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]">
-                  <span className="material-symbols-outlined text-[14px]">history</span>
-                </div>
+                <button
+                  onClick={(e) => handlePrintBill(order, e)}
+                  disabled={printingId === order.id}
+                  title="Reprint Receipt"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                  Reprint
+                </button>
               ) : (
                 <>
                   <StatusBadge status={order.status} />
@@ -1194,6 +1160,16 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteHeldTarget}
+        title="Delete Held Order?"
+        message="This held order will be permanently removed and can't be resumed."
+        confirmText="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteHeldOrder}
+        onCancel={() => setDeleteHeldTarget(null)}
+      />
     </main>
   );
 }

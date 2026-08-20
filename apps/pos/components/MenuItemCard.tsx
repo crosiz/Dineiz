@@ -122,8 +122,6 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
                 {cartQty}
               </div>
             )}
-            {item.name.toLowerCase().includes('popular') && <span className="bg-emerald-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide shadow-sm">POPULAR</span>}
-            {item.name.toLowerCase().includes('spicy') && <span className="bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide shadow-sm">SPICY</span>}
           </div>
 
           <div className="pr-10">
@@ -221,11 +219,7 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
         <div className="absolute inset-0 z-10 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent"></div>
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 z-20 flex justify-between items-start">
-          <div className="flex gap-2">
-            {item.name.toLowerCase().includes('popular') && <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm tracking-wider">POPULAR</span>}
-            {item.name.toLowerCase().includes('spicy') && <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-sm tracking-wider">SPICY</span>}
-          </div>
+        <div className="absolute top-3 left-3 right-3 z-20 flex justify-end items-start">
           {cartQty > 0 && (
             <div className="w-7 h-7 bg-[var(--pos-primary,#F59E0B)] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">
               {cartQty}
@@ -302,7 +296,6 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
               PKR {item.basePrice.toLocaleString('en-PK')}
             </p>
             <div className="flex items-center gap-1.5 shrink-0">
-              {item.name.toLowerCase().includes('popular') && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide">POP</span>}
               {hasOptions && !unavailable && (
                 <span className="bg-[#F1F5F9] text-[#475569] border border-[#CBD5E1] text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide">
                   OPTIONS
@@ -324,19 +317,11 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
       className={`bg-white border rounded-xl overflow-hidden group transition flex flex-col h-[220px] sm:h-[240px] relative w-full text-left focus:outline-none hover:shadow-lg hover:-translate-y-1 ${cartQty > 0 ? 'border-[var(--pos-primary,#F59E0B)] ring-1 ring-[var(--pos-primary,#F59E0B)]' : 'border-[#E2E8F0]'} ${unavailable ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       {/* Badge Area */}
-      {!unavailable && cartQty > 0 ? (
+      {!unavailable && cartQty > 0 && (
         <div className="absolute top-2 right-2 z-10 w-7 h-7 bg-[var(--pos-primary,#F59E0B)] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
           {cartQty}
         </div>
-      ) : !unavailable && item.name.toLowerCase().includes('spicy') ? (
-        <div className="absolute top-2 left-2 z-10">
-          <span className="bg-rose-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm tracking-wider">SPICY</span>
-        </div>
-      ) : !unavailable && item.name.toLowerCase().includes('popular') ? (
-        <div className="absolute top-2 left-2 z-10">
-          <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm tracking-wider">POPULAR</span>
-        </div>
-      ) : null}
+      )}
 
       {/* SOLD OUT overlay */}
       {unavailable && (
