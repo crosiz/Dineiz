@@ -290,7 +290,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       const branding = data.branding;
       const activeShift = data.activeShift;
 
-      // Update Session
+      // Update Session — must include the token itself: this Zustand store is
+      // a long-lived in-memory singleton, so several call sites read
+      // session.token directly (not the localStorage-backed getToken()
+      // helper). Omitting it here meant every one of those requests silently
+      // sent no Authorization header (401) until the next full page reload
+      // re-hydrated the store from localStorage.
       setSession({
         cashierId: user.id,
         cashierName: user.name,
@@ -299,6 +304,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         branchName: activeBranchName,
         shiftId: activeShift?.id || undefined,
         role: user.role,
+        token: data.token,
       });
 
       const posSession = {
