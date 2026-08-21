@@ -535,14 +535,25 @@ export async function getShiftReport(tenantId: string, shiftId: string, format: 
     };
   }
 
-  const pdfRes = await fetch(`${PDF_WORKER_URL}/render-invoice`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ html: renderHtml(data) }),
-  });
+  // A connection refused here throws a bare "fetch failed", which tells whoever
+  // clicked Download nothing at all. Name the service and the URL instead —
+  // the pdf-worker not being up is by far the most common cause.
+  let pdfRes: Response;
+  try {
+    pdfRes = await fetch(`${PDF_WORKER_URL}/render-invoice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html: renderHtml(data) }),
+    });
+  } catch (err: any) {
+    throw new Error(
+      `Could not reach the PDF service at ${PDF_WORKER_URL}. Start it with \`pnpm --filter @dineiz/pdf-worker dev\` (or bring up the pdf-worker container). Underlying error: ${err?.message ?? err}`,
+    );
+  }
 
   if (!pdfRes.ok) {
-    throw new Error(`PDF worker returned ${pdfRes.status} — is the pdf-worker service reachable at ${PDF_WORKER_URL}?`);
+    const detail = await pdfRes.text().catch(() => '');
+    throw new Error(`PDF service at ${PDF_WORKER_URL} returned ${pdfRes.status}${detail ? ` — ${detail.slice(0, 300)}` : ''}`);
   }
 
   return {

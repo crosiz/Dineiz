@@ -172,7 +172,10 @@ export async function handleGetShiftReport(request: FastifyRequest, reply: Fasti
     reply.header('Content-Disposition', `attachment; filename="${filename}"`);
     return reply.send(buffer);
   } catch (err: any) {
-    console.error('Error generating shift report:', err);
-    return reply.status(500).send({ error: 'Failed to generate report', details: err.message });
+    request.log.error({ err }, 'Failed to generate shift report');
+    // The message names the actual cause (usually the PDF service being down)
+    // and the clients surface `error` verbatim, so put it there rather than
+    // burying it in `details` behind a generic string.
+    return reply.status(500).send({ error: err?.message || 'Failed to generate report' });
   }
 }
