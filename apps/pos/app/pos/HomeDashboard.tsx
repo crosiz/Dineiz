@@ -13,6 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
 import { syncOfflineOrders } from '@/lib/sync';
 import { toast } from 'sonner';
+import { OrderDetailsModal } from './OrderDetailsModal';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
@@ -30,6 +31,18 @@ export default function HomeDashboard() {
 
   // Search input on home screen
   const [homeSearch, setHomeSearch] = useState('');
+
+  const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
+  // Same master-switch semantics as TicketsDashboard: the tenant-wide toggle
+  // must be able to turn KDS off everywhere on its own.
+  const [useKDS] = useState<boolean>(() => {
+    try {
+      const tenantWide = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}')?.kitchen?.useKDS ?? false;
+      const branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
+      return tenantWide && branchLevel;
+    } catch {}
+    return false;
+  });
 
   // Local state for dashboard stats & orders
   const [stats, setStats] = useState({
@@ -383,7 +396,7 @@ export default function HomeDashboard() {
                     return (
                       <div
                         key={order.id}
-                        onClick={() => router.push(`/pos/order?orderId=${order.id}&edit=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${(order.type || 'dine_in').toLowerCase().replace('_', '-')}`)}
+                        onClick={() => setDetailsOrderId(order.id)}
                         style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
                         className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-[#CBD5E1] transition-all border border-[#E2E8F0] flex flex-col gap-2.5"
                       >
@@ -429,7 +442,7 @@ export default function HomeDashboard() {
                   return (
                     <div
                       key={`aging-${order.id}`}
-                      onClick={() => router.push(`/pos/order?orderId=${order.id}&edit=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${(order.type || 'dine_in').toLowerCase().replace('_', '-')}`)}
+                      onClick={() => setDetailsOrderId(order.id)}
                       className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-amber-300 transition-colors"
                     >
                       <div className="flex items-center gap-4">
@@ -616,6 +629,12 @@ export default function HomeDashboard() {
           </section>
         </div>
       </main>
+
+      <OrderDetailsModal
+        orderId={detailsOrderId}
+        onClose={() => setDetailsOrderId(null)}
+        useKDS={useKDS}
+      />
     </div>
   );
 }

@@ -157,6 +157,16 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
         taxRoundingMethod: true,
         serviceChargeEnabled: true,
         serviceChargeRate: true,
+        // Receipt rendering fields — print.service.ts on the POS already
+        // reads these (logo gate, paper size, layout, PDF-vs-printer mode,
+        // "powered by" footer); previously omitted here, so a freshly
+        // logged-in terminal fell back to receipt defaults until a live
+        // tenant:branding_updated socket event happened to arrive later.
+        showLogoOnReceipt: true,
+        receiptPaperSize: true,
+        receiptLayout: true,
+        downloadPdfReceipt: true,
+        showPoweredBy: true,
       }
     });
 
@@ -184,6 +194,15 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
       taxRoundingMethod: tenantBranding?.taxRoundingMethod ?? 'ROUND',
       serviceChargeEnabled: tenantBranding?.serviceChargeEnabled ?? false,
       serviceChargeRate: tenantBranding?.serviceChargeRate ?? 10,
+      // Receipt rendering config — print.service.ts reads these directly;
+      // without them a fresh login silently fell back to 80mm/CLASSIC/PDF
+      // defaults and never showed the tenant's logo until a live socket
+      // update happened to arrive.
+      showLogoOnReceipt: tenantBranding?.showLogoOnReceipt ?? true,
+      receiptPaperSize: tenantBranding?.receiptPaperSize ?? '80mm',
+      receiptLayout: tenantBranding?.receiptLayout ?? 'CLASSIC',
+      downloadPdfReceipt: tenantBranding?.downloadPdfReceipt ?? false,
+      showPoweredBy: tenantBranding?.showPoweredBy ?? true,
       // Branch-level operational config — this branch's own currency/timezone
       // and KDS/auto-print hardware presence, previously never sent to the
       // terminal at all (it silently assumed PKR/Asia-Karachi and only the

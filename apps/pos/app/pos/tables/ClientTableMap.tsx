@@ -353,7 +353,10 @@ export default function ClientTableMap() {
            calculatedTax = (calculatedSubtotal - calculatedDiscount) * session.cashTaxRate;
         }
         
-        const calculatedTotal = popupOrder.totalAmount || popupOrder.total || (calculatedSubtotal - calculatedDiscount + calculatedTax);
+        // netAmount is the real post-tax grand total; totalAmount is only the
+        // pre-tax subtotal (order.service.ts) — checking totalAmount first
+        // meant this always printed the subtotal, since it's almost always truthy.
+        const calculatedTotal = popupOrder.netAmount || popupOrder.totalAmount || popupOrder.total || (calculatedSubtotal - calculatedDiscount + calculatedTax);
 
         const printData = {
           orderNumber: popupOrder.orderNumber || popupOrder.id?.slice(-4) || 'N/A',

@@ -105,6 +105,23 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
   );
 }
 
+// OrderItem.options is a free-form JSON snapshot (packages/db/prisma/schema.prisma)
+// deliberately taken at order time so a later menu price/name edit never
+// changes a historical order. It previously only stored the variation ID
+// (no name) and dropped addons entirely, so receipts/KOTs had nothing to
+// render for them. This is the single shape every order-item payload in this
+// file should use — matches what ClientTableMap.tsx / receipt/page.tsx / the
+// print templates already read from a fetched order.
+function buildItemOptions(item: { selectedVariation?: { id: string; name: string }; selectedAddOns?: { id: string; name: string; price: number }[] }) {
+  const hasVariation = !!item.selectedVariation;
+  const hasAddOns = !!item.selectedAddOns?.length;
+  if (!hasVariation && !hasAddOns) return undefined;
+  return {
+    variation: hasVariation ? { id: item.selectedVariation!.id, name: item.selectedVariation!.name } : undefined,
+    addOns: hasAddOns ? item.selectedAddOns!.map(a => ({ id: a.id, name: a.name, price: a.price })) : undefined,
+  };
+}
+
 function OrderEntryPageContent() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
@@ -476,7 +493,7 @@ function OrderEntryPageContent() {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             subtotal: item.unitPrice * item.quantity,
-            options: item.selectedVariation ? { variationId: item.selectedVariation.id } : undefined,
+            options: buildItemOptions(item),
             notes: item.notes ?? undefined,
           }))
         } : {
@@ -491,7 +508,7 @@ function OrderEntryPageContent() {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             subtotal: item.unitPrice * item.quantity,
-            options: item.selectedVariation ? { variationId: item.selectedVariation.id } : undefined,
+            options: buildItemOptions(item),
             notes: item.notes ?? undefined,
           })),
           totalAmount: subtotal,
@@ -733,7 +750,7 @@ function OrderEntryPageContent() {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               subtotal: item.unitPrice * item.quantity,
-              options: item.selectedVariation ? { variationId: item.selectedVariation.id } : undefined,
+              options: buildItemOptions(item),
               notes: item.notes ?? undefined,
             })),
             totalAmount: subtotal,
@@ -790,7 +807,7 @@ function OrderEntryPageContent() {
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               subtotal: item.unitPrice * item.quantity,
-              options: item.selectedVariation ? { variationId: item.selectedVariation.id } : undefined,
+              options: buildItemOptions(item),
               notes: item.notes ?? undefined,
             })),
           }),
