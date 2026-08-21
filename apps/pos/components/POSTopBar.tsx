@@ -413,9 +413,13 @@ export function POSTopBar() {
       )}
 
       {/* Mid-shift cash in / cash out */}
+      {/* `||`, not `??`, on shiftId: the cart store seeds session.shiftId as an
+          empty string, which `??` treats as a real value and passes straight
+          through — the modal then had no shift to load, made no request at all,
+          and silently rendered an empty form. */}
       <CashDrawerModal
         isOpen={isCashDrawerOpen}
-        shiftId={session?.shiftId ?? getPosShift()?.shiftId}
+        shiftId={session?.shiftId || getPosShift()?.shiftId}
         onClose={() => setIsCashDrawerOpen(false)}
       />
 

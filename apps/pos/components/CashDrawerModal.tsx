@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getToken } from '@/lib/pos-session';
+import { getToken, getPosShift } from '@/lib/pos-session';
 import { Wallet, X, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -39,33 +39,47 @@ export function CashDrawerModal({
   const [submitting, setSubmitting] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+  const [loadError, setLoadError] = useState('');
+
+  // Fall back to the stored shift if the caller hands us nothing usable —
+  // the drawer belongs to whatever shift this terminal actually has open.
+  const activeShiftId = shiftId || getPosShift()?.shiftId || null;
 
   useEffect(() => {
-    if (!isOpen || !shiftId) return;
+    if (!isOpen) return;
     setAmount('');
     setReason('');
+    setLoadError(activeShiftId ? '' : 'No open shift on this terminal.');
+    if (!activeShiftId) return;
 
-    fetch(`${API_URL}/api/shifts/${shiftId}/summary`, { headers: { Authorization: `Bearer ${getToken()}` } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(setSummary)
-      .catch(() => {});
+    const auth = { headers: { Authorization: `Bearer ${getToken()}` } };
 
-    fetch(`${API_URL}/api/shifts/${shiftId}`, { headers: { Authorization: `Bearer ${getToken()}` } })
+    // Failures used to be swallowed, so a dead request looked identical to a
+    // shift with nothing in it. Say so instead.
+    fetch(`${API_URL}/api/shifts/${activeShiftId}/summary`, auth)
+      .then(async r => {
+        if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || `Couldn't load the shift (${r.status})`);
+        return r.json();
+      })
+      .then(s => { setSummary(s); setLoadError(''); })
+      .catch(e => setLoadError(e?.message || 'Could not load this shift.'));
+
+    fetch(`${API_URL}/api/shifts/${activeShiftId}`, auth)
       .then(r => (r.ok ? r.json() : null))
       .then(d => setEntries(d?.cashEntries ?? []))
       .catch(() => {});
-  }, [isOpen, shiftId]);
+  }, [isOpen, activeShiftId]);
 
   if (!isOpen) return null;
 
   const submit = async () => {
-    if (!shiftId) { toast.error('No open shift on this terminal'); return; }
+    if (!activeShiftId) { toast.error('No open shift on this terminal'); return; }
     if (amount === '' || Number(amount) <= 0) { toast.error('Enter an amount greater than zero'); return; }
     if (!reason.trim()) { toast.error('Pick or type a reason — this is what the manager sees'); return; }
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/api/shifts/${shiftId}/cash-entries`, {
+      const res = await fetch(`${API_URL}/api/shifts/${activeShiftId}/cash-entries`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ type, amount: Number(amount), reason: reason.trim() }),
@@ -118,6 +132,12 @@ export function CashDrawerModal({
         </div>
 
         <div className="p-5 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-5">
+
+          {loadError && (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-xs font-semibold text-rose-700">
+              {loadError}
+            </div>
+          )}
 
           {summary && (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-baseline justify-between">

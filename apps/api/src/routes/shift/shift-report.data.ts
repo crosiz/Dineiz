@@ -13,7 +13,7 @@ export async function buildShiftReportData(tenantId: string, shiftId: string) {
   // needs to wait for the shift row to come back first. Fetching in waves cost
   // a full network round trip per wave, and on a remote Postgres (Neon, ~700ms
   // RTT) that was most of the wall-clock time of a report. One wave instead.
-  const [shift, orders, activities, waiterStats, cancelledOrders] = await Promise.all([
+  const [shift, orders, activities, waiterStats, cancelledOrders, refundAgg] = await Promise.all([
     prisma.shift.findFirst({
       where: { id: shiftId, tenantId },
       include: {
@@ -41,6 +41,14 @@ export async function buildShiftReportData(tenantId: string, shiftId: string) {
       _sum: { netAmount: true },
     }),
     prisma.order.count({ where: { shiftId, tenantId, status: 'CANCELLED' } }),
+    // Shift.totalRefunds is a column nothing has ever written, so the report's
+    // "Refunds" line was a hardcoded zero in a financial document. Refunds are
+    // really Payments flipped to REFUNDED — read them.
+    prisma.payment.aggregate({
+      where: { order: { shiftId, tenantId }, status: 'REFUNDED' },
+      _sum: { amount: true },
+      _count: { id: true },
+    }),
   ]);
 
   // Checked after the fact rather than before: the parallel reads are all
@@ -128,6 +136,7 @@ export async function buildShiftReportData(tenantId: string, shiftId: string) {
     },
     paymentBreakdown,
     unsettled: { amount: unsettledAmount, orders: unsettledOrders },
+    refunds: { amount: Number(refundAgg._sum.amount ?? 0), count: refundAgg._count.id },
     time: { shiftDurationSeconds, totalBreakSeconds, activeSeconds },
     cash: { openingFloat: shift.openingFloat, cashTotal, cashIn, cashOut, expectedCash, actualCash, variance, countedFromDenominations },
   };

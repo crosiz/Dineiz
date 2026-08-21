@@ -185,6 +185,12 @@ export default function AdminPage() {
 
   const confirmForceClose = async () => {
     if (!forceCloseTarget) return;
+    // The reason is stored as the shift's closedReason and printed on its
+    // report, so it is required rather than optional decoration.
+    if (forceCloseReason.trim().length < 3) {
+      toast.error('Give a reason — it is recorded on the shift.');
+      return;
+    }
     setIsForceClosing(true);
     try {
       const res = await fetch(`${API_URL}/api/shifts/${forceCloseTarget.id}/force-close`, {
@@ -193,14 +199,22 @@ export default function AdminPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('pos_token')}`,
         },
-        body: JSON.stringify({ notes: forceCloseReason || undefined }),
+        // `reason` is the field the endpoint reads. Sending it as `notes` meant
+        // the reason never reached closedReason — and once a reason became
+        // mandatory, every force close from here would have been rejected.
+        body: JSON.stringify({ reason: forceCloseReason.trim() }),
       });
-      if (!res.ok) throw new Error('Failed to force close shift');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `Failed to force close shift (${res.status})`);
+      }
       toast.success(`${forceCloseTarget.name}'s shift was force closed`);
       setActiveShifts(prev => prev.filter(s => s.id !== forceCloseTarget.id));
       setForceCloseTarget(null);
-    } catch (e) {
-      toast.error('Could not force close this shift. Check connection and try again.');
+      setForceCloseReason('');
+    } catch (e: any) {
+      // Surface what the server actually said instead of blaming the network.
+      toast.error(e?.message || 'Could not force close this shift.');
     } finally {
       setIsForceClosing(false);
     }
@@ -491,7 +505,7 @@ export default function AdminPage() {
               <textarea
                 value={forceCloseReason}
                 onChange={(e) => setForceCloseReason(e.target.value)}
-                placeholder="Reason for force closing this shift..."
+                placeholder="Reason for force closing this shift (required)..."
                 className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[var(--pos-primary,#F59E0B)] transition-colors resize-none h-20 mb-6"
               />
               <div className="flex gap-3">

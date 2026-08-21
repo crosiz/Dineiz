@@ -76,7 +76,7 @@ const ACTIVITY_LABEL: Record<string, string> = {
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 
 function renderHtml(data: ShiftReportData): string {
-  const { shift, tenant, branch, isOpen, orders, activities, waiterStats, totals, paymentBreakdown, unsettled, time, cash, cancelledOrders } = data;
+  const { shift, tenant, branch, isOpen, orders, activities, waiterStats, totals, paymentBreakdown, unsettled, refunds, time, cash, cancelledOrders } = data;
   const fmt = makeTimeFormatters(branch.timezone || 'Asia/Karachi');
   // Tenant stores its brand colour as `colorPrimary` — the old report read a
   // non-existent `primaryColor`, so every PDF silently fell back to the default.
@@ -346,7 +346,7 @@ function renderHtml(data: ShiftReportData): string {
         ${row('Orders', String(totals.totalOrders))}
         ${row('Average order value', money(totals.avgOrderValue))}
         ${row('Orders per active hour', time.activeSeconds > 0 ? (totals.totalOrders / (time.activeSeconds / 3600)).toFixed(1) : '—')}
-        ${row('Refunds', money(shift.totalRefunds ?? 0))}
+        ${row('Refunds', refunds.count > 0 ? `−${money(refunds.amount)} (${refunds.count})` : money(0), refunds.count > 0 ? { tone: 'neg' } : {})}
       </div>
     </div>`)}
 
