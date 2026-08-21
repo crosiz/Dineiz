@@ -13,6 +13,7 @@ import {
   handleUpdateItem,
   handleDeleteItem,
   handleToggleAvailability,
+  handleBulkToggleAvailability,
   handleToggleCategoryAvailability,
   handleCreateVariation,
   handleUpdateVariation,
@@ -104,6 +105,11 @@ export const menuRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.put('/api/v1/menu/items/:id/availability', {
     preHandler: requireRole(ALL_STAFF),
   }, handleToggleAvailability);
+
+  // Bulk availability — POS Stock screen's "Mark Items Unavailable" action
+  fastify.put('/api/menu/items/bulk-availability', {
+    preHandler: requireRole(ALL_STAFF),
+  }, handleBulkToggleAvailability);
 
   // Image upload/delete
   fastify.post('/api/v1/menu/items/:id/image', {

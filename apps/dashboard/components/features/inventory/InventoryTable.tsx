@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react';
 import { Edit2, ArrowRightLeft, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
 import { InventoryItem } from './hooks/useInventory';
 import { AdjustStockModal } from './modals/AdjustStockModal';
 import { Pagination } from '../../ui/Pagination';
 
 interface InventoryTableProps {
   inventoryList: InventoryItem[];
+  onEdit?: (item: InventoryItem) => void;
 }
 
-export function InventoryTable({ inventoryList }: InventoryTableProps) {
+export function InventoryTable({ inventoryList, onEdit }: InventoryTableProps) {
   const [adjustItem, setAdjustItem] = useState<InventoryItem | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -24,19 +24,22 @@ export function InventoryTable({ inventoryList }: InventoryTableProps) {
     switch(status) {
       case 'LOW_STOCK': return 'text-amber-600 font-bold';
       case 'OUT_OF_STOCK': return 'text-red-600 font-bold';
+      case 'OVERSTOCKED': return 'text-blue-600 font-bold';
       default: return 'text-slate-900';
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch(status) {
-      case 'HEALTHY': 
+      case 'HEALTHY':
         return <span className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Healthy</span>;
-      case 'LOW_STOCK': 
+      case 'LOW_STOCK':
         return <span className="flex items-center gap-2 text-[13px] text-slate-500 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Low Stock</span>;
-      case 'OUT_OF_STOCK': 
+      case 'OUT_OF_STOCK':
         return <span className="flex items-center gap-2 text-[13px] text-slate-500 font-medium whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Out of Stock</span>;
-      default: 
+      case 'OVERSTOCKED':
+        return <span className="flex items-center gap-2 text-[13px] text-slate-500 font-medium whitespace-nowrap"><span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>Overstocked</span>;
+      default:
         return <span className="flex items-center gap-2 text-[13px] text-slate-500 font-medium capitalize"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>{status.toLowerCase()}</span>;
     }
   };
@@ -52,6 +55,7 @@ export function InventoryTable({ inventoryList }: InventoryTableProps) {
               <th className="w-32 px-6 py-4">In Stock</th>
               <th className="w-40 px-6 py-4">Min Threshold</th>
               <th className="w-32 px-6 py-4">Status</th>
+              <th className="w-32 px-6 py-4">Value</th>
               <th className="w-40 px-6 py-4">Branches</th>
               <th className="w-20 px-6 py-4 text-right">Actions</th>
             </tr>
@@ -87,12 +91,15 @@ export function InventoryTable({ inventoryList }: InventoryTableProps) {
                   {getStatusBadge(item.status)}
                 </td>
                 <td className="px-6 py-4">
+                  <span className="text-[13px] font-medium text-slate-700">PKR {item.stockValue.toLocaleString()}</span>
+                </td>
+                <td className="px-6 py-4">
                   <span className="text-[12px] font-medium text-slate-500 whitespace-nowrap inline-flex items-center">{item.branches.join(', ')}</span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <button
-                      onClick={() => toast.info('Editing ingredient details is coming soon')}
+                      onClick={() => onEdit?.(item)}
                       aria-label={`Edit ${item.name}`}
                       title="Edit"
                       className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"

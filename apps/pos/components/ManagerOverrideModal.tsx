@@ -4,9 +4,24 @@ interface ManagerOverrideModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (pin: string, reason: string) => Promise<void>;
+  /** Defaults to the original shift-force-close copy so existing callers are unaffected. */
+  title?: string;
+  description?: string;
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  confirmLabel?: string;
 }
 
-export function ManagerOverrideModal({ isOpen, onClose, onConfirm }: ManagerOverrideModalProps) {
+export function ManagerOverrideModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = 'Manager Override',
+  description = 'Enter your manager PIN and a reason to authorize force closing this shift.',
+  reasonLabel = 'Reason for Force Close',
+  reasonPlaceholder = 'e.g. System glitch, customer left',
+  confirmLabel = 'Authorize Force Close',
+}: ManagerOverrideModalProps) {
   const [pin, setPin] = useState('');
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,8 +69,8 @@ export function ManagerOverrideModal({ isOpen, onClose, onConfirm }: ManagerOver
           <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-5 shadow-md shadow-slate-900/20">
             <span className="material-symbols-outlined text-white text-[32px]">admin_panel_settings</span>
           </div>
-          <h2 className="text-[26px] font-bold text-slate-900 tracking-tight leading-tight mb-2">Manager Override</h2>
-          <p className="text-[15px] text-slate-500 font-medium px-4">Enter your manager PIN and a reason to authorize force closing this shift.</p>
+          <h2 className="text-[26px] font-bold text-slate-900 tracking-tight leading-tight mb-2">{title}</h2>
+          <p className="text-[15px] text-slate-500 font-medium px-4">{description}</p>
         </div>
 
         <div className="px-8 pb-4">
@@ -109,12 +124,12 @@ export function ManagerOverrideModal({ isOpen, onClose, onConfirm }: ManagerOver
           </div>
 
           <div>
-            <label className="block text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Reason for Force Close</label>
+            <label className="block text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">{reasonLabel}</label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. System glitch, customer left"
+              placeholder={reasonPlaceholder}
               className="w-full px-5 h-[56px] bg-slate-50 border border-slate-200 rounded-[16px] text-[15px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
             />
           </div>
@@ -126,7 +141,7 @@ export function ManagerOverrideModal({ isOpen, onClose, onConfirm }: ManagerOver
             disabled={isSubmitting || pin.length !== 4 || !reason.trim()}
             className="w-full h-[56px] rounded-[16px] bg-slate-900 text-white font-bold text-[16px] hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-slate-900 active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex items-center justify-center disabled:active:scale-100"
           >
-            {isSubmitting ? <span className="material-symbols-outlined animate-spin text-[24px]">progress_activity</span> : 'Authorize Force Close'}
+            {isSubmitting ? <span className="material-symbols-outlined animate-spin text-[24px]">progress_activity</span> : confirmLabel}
           </button>
           <button
             onClick={onClose}

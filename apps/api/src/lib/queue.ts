@@ -8,6 +8,7 @@ import { runAnalyticsAggregationJob } from '../jobs/analyticsSync';
 import { runAnomalyJob } from '../jobs/anomalyWorker';
 import { runForecastGeneration } from '../jobs/forecastWorker';
 import { runCustomersSegmentsJob } from '../jobs/customersWorker';
+import { checkExpiringIngredients } from '../routes/inventory/inventory.service';
 
 // Shared Redis connection for BullMQ.
 // lazyConnect: don't open this connection until a queue is actually used
@@ -61,6 +62,7 @@ export const forecastQueue = catchError(new Queue('forecast', { connection }), '
 export const aggregatorsQueue = catchError(new Queue('aggregators', { connection }), 'aggregatorsQueue');
 export const customersQueue = catchError(new Queue('customers', { connection }), 'customersQueue');
 export const whatsappQueue = catchError(new Queue('whatsapp', { connection }), 'whatsappQueue');
+export const inventoryQueue = catchError(new Queue('inventory', { connection }), 'inventoryQueue');
 
 // Each Worker needs its own dedicated (duplicated) blocking Redis connection,
 // so running all of them locally opens ~10 extra connections on top of the
@@ -146,6 +148,11 @@ createWorker('anomalies', async (job: any) => {
 // Forecast Generation Worker
 createWorker('forecast', async (job: any) => {
   return runForecastGeneration();
+});
+
+// Ingredient Expiry Check Worker (Edge Case 13) — daily scan for ingredients past their shelf life
+createWorker('inventory', async (job: any) => {
+  return checkExpiringIngredients();
 });
 
 // Customers CRM Worker

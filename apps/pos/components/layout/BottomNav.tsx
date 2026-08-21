@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'home',    label: 'HOME',    icon: Home,            path: '/pos/home' },
   { id: 'menu',    label: 'MENU',    icon: UtensilsCrossed, path: '/pos/order' },
   { id: 'tickets', label: 'TICKETS', icon: ClipboardList,   path: '/pos/tickets' },
+  { id: 'stock',   label: 'STOCK',   icon: Package,         path: '/pos/stock' },
   { id: 'tables',  label: 'TABLES',  icon: LayoutGrid,      path: '/pos/tables' },
   { id: 'admin',   label: 'ADMIN',   icon: ShieldCheck,     path: '/pos/admin' },
 ]

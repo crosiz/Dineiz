@@ -14,7 +14,8 @@ import { orderRoutes, voidRoutes } from './routes/order/index';
 import { pinRoutes } from './routes/pin/index';
 import { shiftRoutes } from './routes/shift/index';
 import { kdsRoutes } from './routes/kds/index';
-import { inventoryRoutes } from './routes/inventory/index';
+import { inventoryRoutes, transferRoutes, countRoutes } from './routes/inventory/index';
+import { posStockRoutes } from './routes/pos-stock/index';
 import { dealsRoutes } from './routes/deals/index';
 import { notificationRoutes } from './routes/notifications/index';
 import { analyticsRoutes } from './routes/analytics/index';
@@ -55,7 +56,7 @@ import { initSmsWorker } from './jobs/sms.worker';
 import { processAbandonedShifts } from './jobs/abandonedShifts';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
-import { anomalyQueue, reportsQueue } from './lib/queue';
+import { anomalyQueue, reportsQueue, inventoryQueue } from './lib/queue';
 import { sendManagerInviteEmail, sendPasswordResetEmail, sendAnomalyAlertEmail, sendScheduledReportEmail } from './lib/email.service';
 
 // Prevent transient network errors (like Redis ECONNRESET promise rejections) from crashing the server
@@ -133,6 +134,9 @@ async function build() {
   await fastify.register(shiftRoutes);
   await fastify.register(kdsRoutes);
   await fastify.register(inventoryRoutes);
+  await fastify.register(transferRoutes);
+  await fastify.register(countRoutes);
+  await fastify.register(posStockRoutes);
   await fastify.register(dealsRoutes);
   await fastify.register(notificationRoutes);
   await fastify.register(analyticsRoutes);
@@ -213,7 +217,6 @@ async function build() {
   await fastify.register(anomalyRoutes, { prefix: '/api/anomalies' });
   await fastify.register(forecastRoutes, { prefix: '/api/forecast' });
   await fastify.register(qrRoutes, { prefix: '/api/qr' });
-  await fastify.register(inventoryRoutes, { prefix: '/api/inventory' });
   await fastify.register(webhooksRoutes, { prefix: '/api/webhooks' });
 
   fastify.get('/health', async (request, reply) => {
@@ -320,6 +323,7 @@ async function start() {
 
       // Schedule repeatable jobs
       anomalyQueue.add('detectAnomalies', {}, { repeat: { pattern: '*/15 * * * *' } });
+      inventoryQueue.add('checkExpiringIngredients', {}, { repeat: { pattern: '0 6 * * *' } });
     }
     reportsQueue.add('runReportsJob', {}, { repeat: { pattern: '* * * * *' } });
 

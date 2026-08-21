@@ -2,10 +2,10 @@
 import React from 'react';
 import { ShoppingCart, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useInventory } from '@/components/features/inventory/hooks/useInventory';
+import { usePurchaseOrders } from '@/components/features/inventory/hooks/usePurchaseOrders';
 
 export function InventoryForecastTable({ data }: { data: any[] }) {
-  const { autoGeneratePO } = useInventory();
+  const { autoGeneratePO } = usePurchaseOrders();
   const generating = autoGeneratePO.isPending;
 
   if (!data || data.length === 0) {

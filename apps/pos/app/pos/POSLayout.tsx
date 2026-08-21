@@ -13,6 +13,7 @@ import { SocketProvider, useSocket } from '@/contexts/SocketContext';
 import { POSTopBar } from '@/components/POSTopBar';
 import { getPosSession, getPosShift } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
+import { QuickStockAlertModal, StockAlertPayload } from '@/components/QuickStockAlertModal';
 
 function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -24,6 +25,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const { socket } = useSocket();
   const [isMounted, setIsMounted] = useState(false);
   const { setBranding } = useBrandingStore();
+  const [stockAlert, setStockAlert] = useState<StockAlertPayload | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -53,7 +55,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
 
     // 2. WAITER: Only allowed on specific floor/order screens
     if (role === 'WAITER') {
-      const allowedWaiterPaths = ['/pos/tables', '/pos/tickets', '/pos/order'];
+      const allowedWaiterPaths = ['/pos/tables', '/pos/tickets', '/pos/order', '/pos/stock'];
       if (!allowedWaiterPaths.some(p => pathname.startsWith(p))) {
         router.replace('/pos/tables');
         return;
@@ -221,6 +223,50 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     };
   }, [socket, queryClient]);
 
+  // Global inventory awareness — mounted here (rather than the Stock screen
+  // itself) so a cashier taking an order on /pos/order still gets warned the
+  // moment an ingredient runs out, not only when they happen to be on the
+  // Stock tab. Scoped strictly to reacting to the socket event: it does not
+  // touch cart/order state and kitchen staff (who live on /pos/kds and
+  // never see the bottom nav) are excluded since the alert's actions are
+  // menu-availability/manager actions they can't take anyway.
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleOutOfStock = (payload: any) => {
+      const s = getPosSession();
+      if (!s || s.role === 'KITCHEN_STAFF') return;
+      if (payload?.branchId && s.branchId && payload.branchId !== s.branchId) return;
+      setStockAlert({
+        ingredientId: payload.ingredientId,
+        name: payload.name,
+        affectedItems: Array.isArray(payload.affectedItems) ? payload.affectedItems : [],
+      });
+    };
+
+    const handleItemUnavailable = (payload: any) => {
+      if (payload?.itemName) {
+        toast.info(`${payload.itemName} marked unavailable${payload.reason ? ` — ${payload.reason}` : ''}`);
+      }
+    };
+
+    const handleItemAvailable = (payload: any) => {
+      if (payload?.itemName) {
+        toast.success(`${payload.itemName} is available again`);
+      }
+    };
+
+    socket.on('inventory:out_of_stock', handleOutOfStock);
+    socket.on('menu:item_unavailable', handleItemUnavailable);
+    socket.on('menu:item_available', handleItemAvailable);
+
+    return () => {
+      socket.off('inventory:out_of_stock', handleOutOfStock);
+      socket.off('menu:item_unavailable', handleItemUnavailable);
+      socket.off('menu:item_available', handleItemAvailable);
+    };
+  }, [socket]);
+
   const handleSignOut = () => {
     clearSession();
     clearCart();
@@ -240,6 +286,8 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
 
       {/* Canonical Bottom Navigation */}
       {!hideBottomNav && <BottomNav />}
+
+      <QuickStockAlertModal alert={stockAlert} onDismiss={() => setStockAlert(null)} />
     </div>
   );
 }

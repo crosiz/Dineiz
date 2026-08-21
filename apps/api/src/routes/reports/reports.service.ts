@@ -289,7 +289,7 @@ export async function getPurchaseOrdersReportData(tenantId: string, branchId: st
     period: periodLabel(startDate, endDate),
     summary: [
       { label: 'Total Purchase Orders', value: orders.length },
-      { label: 'Received', value: orders.filter(o => o.status === 'RECEIVED').length },
+      { label: 'Received', value: orders.filter(o => o.status === 'FULLY_RECEIVED' || o.status === 'PARTIALLY_RECEIVED').length },
       { label: 'Pending / Sent', value: orders.filter(o => o.status === 'SENT' || o.status === 'DRAFT').length },
       { label: 'Total Estimated Value', value: totalValue },
     ],

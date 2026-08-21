@@ -68,14 +68,18 @@ model Tenant {
   tables      Table[]
 
   // Inventory & deals
-  ingredients    Ingredient[]
-  recipes        Recipe[]
-  stocks         Stock[]
-  stockMovements StockMovement[]
-  purchaseOrders PurchaseOrder[]
-  promoCodes     PromoCode[]
-  combos         Combo[]
-  buyXGetYDeals  BuyXGetYDeal[]
+  ingredients        Ingredient[]
+  recipes            Recipe[]
+  stocks             Stock[]
+  stockMovements     StockMovement[]
+  purchaseOrders     PurchaseOrder[]
+  suppliers          Supplier[]
+  wastageLogs        WastageLog[]
+  stockTransfers     StockTransfer[]
+  stockCountSessions StockCountSession[]
+  promoCodes         PromoCode[]
+  combos             Combo[]
+  buyXGetYDeals      BuyXGetYDeal[]
 
   // CRM / Loyalty
   customers                  Customer[]
@@ -159,9 +163,13 @@ model Branch {
   kdsStations KdsStation[]
 
   // Inventory
-  stocks         Stock[]
-  stockMovements StockMovement[]
-  purchaseOrders PurchaseOrder[]
+  stocks              Stock[]
+  stockMovements      StockMovement[]
+  purchaseOrders      PurchaseOrder[]
+  wastageLogs         WastageLog[]
+  stockCountSessions  StockCountSession[]
+  transfersFrom       StockTransfer[]     @relation("TransferFromBranch")
+  transfersTo         StockTransfer[]     @relation("TransferToBranch")
 
   // Delivery zones
   deliveryZones DeliveryZone[]
@@ -356,7 +364,7 @@ model Item {
   aggregatorMappings AggregatorMenuMapping[]
 
   // Inventory & deals
-  recipe          Recipe?
+  recipes         Recipe[]
   comboItems      ComboItem[]
   bxgyBuyDeals    BuyXGetYDeal[]   @relation("BxGyBuyItem")
   bxgyGetDeals    BuyXGetYDeal[]   @relation("BxGyGetItem")
@@ -374,7 +382,8 @@ model Variation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  item   Item    @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  recipe Recipe?
 
   @@index([itemId])
 }
@@ -942,7 +951,8 @@ enum UnitOfMeasure {
 enum PurchaseOrderStatus {
   DRAFT
   SENT
-  RECEIVED
+  PARTIALLY_RECEIVED
+  FULLY_RECEIVED
   CANCELLED
 }
 
@@ -955,51 +965,139 @@ enum StockMovementType {
   TRANSFER_IN
 }
 
-model Ingredient {
-  id           String        @id @default(cuid())
-  tenantId     String
-  name         String
-  category     String?
-  imageUrl     String?
-  minThreshold Float         @default(0)
-  unit         UnitOfMeasure @default(GRAM)
-  costPerUnit  Float         @default(0)
-  supplierName String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  recipeLines RecipeLine[]
-  stock       Stock[]
-  movements   StockMovement[]
-  poLines     PurchaseOrderLine[]
-
-  @@unique([tenantId, name])
-  @@index([tenantId])
+enum StockTransferStatus {
+  PENDING
+  IN_TRANSIT
+  RECEIVED
+  PARTIALLY_RECEIVED
+  CANCELLED
 }
 
-// A recipe defines how much of each ingredient is consumed when producing 1 unit of an Item.
-model Recipe {
-  id        String   @id @default(cuid())
-  tenantId  String
-  itemId    String   @unique
+enum StockCountStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StockCountType {
+  FULL
+  PARTIAL
+  SPOT
+}
+
+model Supplier {
+  id            String   @id @default(cuid())
+  tenantId      String
+  name          String
+  contactName   String?
+  phone         String?
+  whatsapp      String?
+  email         String?
+  address       String?
+  paymentTerms  String?
+  deliveryDays  String[]
+  minOrderValue Float?
+  rating        Int?
+  notes         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ingredients    Ingredient[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model Ingredient {
+  id       String  @id @default(cuid())
+  tenantId String
+  name     String
+  nameUrdu String?
+  sku      String?
+  barcode  String?
+  category String?
+  imageUrl String?
+
+  // Base unit — stock and recipe deductions are always stored in this unit
+  unit UnitOfMeasure @default(GRAM)
+  // Purchase unit — how it's bought. purchaseToBase converts 1 purchaseUnit -> base units (e.g. 1 KG = 1000 GRAM)
+  purchaseUnit   UnitOfMeasure?
+  purchaseToBase Float          @default(1)
+
+  minThreshold  Float   @default(0)
+  costPerUnit   Float   @default(0) // cost per BASE unit
+  supplierId    String?
+  supplierName  String? // informal/free-text supplier fallback when supplierId isn't set
+  shelfLifeDays Int?
+  storageType   String? // FROZEN, CHILLED, DRY, AMBIENT
+
+  isActive  Boolean   @default(true)
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  recipeLines   RecipeLine[]
+  stock         Stock[]
+  movements     StockMovement[]
+  poLines       PurchaseOrderLine[]
+  wastageLogs   WastageLog[]
+  transferLines StockTransferLine[]
+  countLines    StockCountLine[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, barcode])
+}
+
+// A recipe defines how much of each ingredient is consumed producing 1 sold unit of an Item (or one of its Variations).
+model Recipe {
+  id          String  @id @default(cuid())
+  tenantId    String
+  itemId      String
+  variationId String? @unique // null = base recipe; set = a specific Variation's own recipe
+
+  yieldQty        Float   @default(1) // portions produced per batch — batch recipes (e.g. a stockpot) set >1
+  prepTimeMinutes Int?
+  instructions    String?
+  isActive        Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item      Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  variation Variation? @relation(fields: [variationId], references: [id], onDelete: Cascade)
 
   lines RecipeLine[]
 
+  @@unique([itemId, variationId])
   @@index([tenantId])
+  @@index([variationId])
 }
 
 model RecipeLine {
   id           String @id @default(cuid())
   recipeId     String
   ingredientId String
-  quantity     Float // in ingredient.unit, consumed per 1 item
+
+  quantity         Float  // in `unit` below, per 1 recipe yield
+  unit             String // the unit the chef measures in, e.g. GRAM, TBSP — need not match the ingredient's base unit
+  conversionToBase Float  @default(1) // multiply quantity by this to get ingredient base units
+
+  isOptional     Boolean @default(false) // garnish etc — skipped silently if unavailable, never disables the item
+  wastagePercent Float   @default(0) // expected prep wastage; actual deduction = quantity * (1 + wastagePercent/100)
+
+  notes     String?
+  sortOrder Int     @default(0)
 
   recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
@@ -1015,8 +1113,16 @@ model Stock {
   branchId     String
   ingredientId String
 
-  quantity     Float @default(0)
-  reorderLevel Float @default(0)
+  quantity     Float  @default(0) // always in ingredient base units
+  reorderLevel Float  @default(0) // = "minThreshold": alert when quantity <= this
+  maxThreshold Float? // target level for auto-PO generation / overstocked detection
+  reservedQty  Float  @default(0) // committed to open orders but not yet deducted
+
+  lastCountedAt     DateTime?
+  lastCountedBy     String?
+  lastCountVariance Float?
+
+  averageCost Float @default(0) // weighted-average cost per base unit; updates on each purchase receipt
 
   updatedAt DateTime @updatedAt
 
@@ -1028,6 +1134,7 @@ model Stock {
   @@index([tenantId])
   @@index([branchId])
   @@index([ingredientId])
+  @@index([branchId, quantity])
 }
 
 model StockMovement {
@@ -1036,10 +1143,24 @@ model StockMovement {
   branchId     String
   ingredientId String
   type         StockMovementType
-  quantity     Float // positive for IN, negative for OUT
-  reference    String? // e.g. orderId, purchaseOrderId, transferId
-  note         String?
-  createdAt    DateTime          @default(now())
+  quantity     Float // positive for IN, negative for OUT (always base units)
+
+  quantityBefore Float?
+  quantityAfter  Float?
+  unitCost       Float?
+  totalCost      Float?
+
+  reference       String? // legacy free-form ref (orderId / PO id) — kept for back-compat lookups
+  purchaseOrderId String?
+  wastageLogId    String?
+  transferId      String?
+  countSessionId  String?
+
+  performedById   String?
+  performedByName String?
+
+  note      String?
+  createdAt DateTime @default(now())
 
   tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
@@ -1050,20 +1171,38 @@ model StockMovement {
   @@index([ingredientId])
   @@index([type])
   @@index([createdAt])
+  @@index([reference])
 }
 
 model PurchaseOrder {
   id           String              @id @default(cuid())
   tenantId     String
   branchId     String
-  supplierName   String?
-  status         PurchaseOrderStatus @default(DRAFT)
-  estimatedTotal Float               @default(0)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  supplierId   String?
+  supplierName String?
+  poNumber     String              @unique
+  status       PurchaseOrderStatus @default(DRAFT)
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  estimatedTotal Float  @default(0)
+  totalActual    Float?
+
+  expectedDate    DateTime?
+  receivedDate    DateTime?
+  notes           String?
+  invoiceNumber   String?
+  invoiceImageUrl String?
+
+  createdById    String?
+  createdByName  String?
+  receivedById   String?
+  receivedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch   Branch    @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
 
   lines PurchaseOrderLine[]
 
@@ -1073,18 +1212,148 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLine {
-  id              String @id @default(cuid())
-  purchaseOrderId String
+  id                String    @id @default(cuid())
+  purchaseOrderId   String
   ingredientId      String
   orderedQty        Float
-  receivedQty       Float  @default(0)
-  estimatedUnitCost Float  @default(0)
+  receivedQty       Float     @default(0)
+  unit              String? // purchase unit label, e.g. "KG"
+  estimatedUnitCost Float     @default(0)
+  actualUnitCost    Float?
+  lineTotal         Float?
+  expiryDate        DateTime?
+  batchNumber       String?
+  notes             String?
 
   purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
   ingredient    Ingredient    @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
 
   @@unique([purchaseOrderId, ingredientId])
   @@index([ingredientId])
+}
+
+model WastageLog {
+  id           String @id @default(cuid())
+  tenantId     String
+  branchId     String
+  ingredientId String
+
+  quantity Float  // in base units
+  unit     String // display unit at time of logging
+  reason   String // EXPIRED, SPOILED, DROPPED, OVER_PREP, PEST_DAMAGE, POWER_OUTAGE, QUALITY_REJECT, OTHER
+
+  costImpact Float // quantity * costPerBaseUnit at time of logging
+
+  reportedById   String
+  reportedByName String
+  approvedById   String?
+  approvedByName String?
+
+  shiftId  String?
+  notes    String?
+  photoUrl String?
+
+  timestamp DateTime @default(now())
+
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch     Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, branchId, timestamp])
+  @@index([ingredientId, timestamp])
+  @@index([reason])
+}
+
+model StockTransfer {
+  id             String               @id @default(cuid())
+  tenantId       String
+  fromBranchId   String
+  toBranchId     String
+  transferNumber String               @unique
+  status         StockTransferStatus  @default(PENDING)
+
+  requestedById   String
+  requestedByName String
+  approvedById    String?
+  receivedById    String?
+
+  notes        String?
+  createdAt    DateTime  @default(now())
+  dispatchedAt DateTime?
+  receivedAt   DateTime?
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromBranch Branch              @relation("TransferFromBranch", fields: [fromBranchId], references: [id], onDelete: Cascade)
+  toBranch   Branch              @relation("TransferToBranch", fields: [toBranchId], references: [id], onDelete: Cascade)
+  lines      StockTransferLine[]
+
+  @@index([tenantId, status])
+  @@index([fromBranchId, status])
+  @@index([toBranchId, status])
+}
+
+model StockTransferLine {
+  id            String  @id @default(cuid())
+  transferId    String
+  ingredientId  String
+  requestedQty  Float
+  dispatchedQty Float?
+  receivedQty   Float?
+  unit          String?
+  notes         String?
+
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  ingredient Ingredient    @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([transferId])
+}
+
+model StockCountSession {
+  id          String           @id @default(cuid())
+  tenantId    String
+  branchId    String
+  countNumber String           @unique
+  status      StockCountStatus @default(IN_PROGRESS)
+  countType   StockCountType   @default(FULL)
+
+  startedById   String
+  startedByName String
+  completedById String?
+  approvedById  String?
+
+  totalVarianceValue Float?
+  itemsCounted       Int    @default(0)
+  itemsWithVariance  Int    @default(0)
+
+  notes       String?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  lines  StockCountLine[]
+
+  @@index([tenantId, branchId, status])
+}
+
+model StockCountLine {
+  id           String @id @default(cuid())
+  sessionId    String
+  ingredientId String
+
+  systemQty     Float
+  countedQty    Float?
+  variance      Float?
+  varianceValue Float?
+
+  countedById String?
+  countedAt   DateTime?
+  notes       String?
+
+  session    StockCountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  ingredient Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([sessionId])
 }
 
 // FCM device tokens for low-stock notifications.
@@ -2082,6 +2351,9 @@ enum AnomalyType {
   HIGH_FREQUENCY_VOIDS
   LOW_STOCK
   STOCK_DISCREPANCY
+  NEGATIVE_STOCK_SALE
+  WASTAGE_EXCEEDS_STOCK
+  EXPIRED_INGREDIENT
 }
 
 enum AnomalySeverity {

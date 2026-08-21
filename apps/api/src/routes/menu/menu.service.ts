@@ -324,6 +324,15 @@ export async function toggleItemAvailability(
   });
 }
 
+/** Bulk version of toggleItemAvailability — used by the POS Stock screen's "Mark Items Unavailable" action. */
+export async function bulkToggleItemAvailability(tenantId: string, itemIds: string[], isAvailable: boolean, branchId?: string) {
+  const results = [];
+  for (const id of itemIds) {
+    results.push(await toggleItemAvailability(tenantId, id, isAvailable, branchId));
+  }
+  return results;
+}
+
 // ─── Image ───────────────────────────────────────────────────────────────────
 
 export async function uploadItemImage(tenantId: string, id: string, buffer: Buffer) {

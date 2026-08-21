@@ -375,3 +375,53 @@ export function emitDashboardStatsUpdated(tenantId: string, branchId: string): v
   socket.of('/kds').to(`branch:${branchId}`).emit('dashboard:stats_updated');
   socket.of('/kds').to(`tenant:${tenantId}`).emit('dashboard:stats_updated');
 }
+
+/** Broadcast that one or more ingredients' stock changed for a branch (any cause). */
+export function emitInventoryUpdated(tenantId: string, branchId: string, ingredientIds: string[]): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  const payload = { branchId, ingredientIds };
+  socket.of('/pos').to(`branch:${branchId}`).emit('inventory:updated', payload);
+  socket.of('/kds').to(`branch:${branchId}`).emit('inventory:updated', payload);
+  socket.of('/pos').to(`tenant:${tenantId}`).emit('inventory:updated', payload);
+}
+
+/** Broadcast that an ingredient crossed below its reorder threshold. */
+export function emitLowStock(data: {
+  branchId: string; ingredientId: string; name: string; currentQty: number;
+  unit: string; threshold: number; affectedItems: string[];
+}): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  socket.of('/pos').to(`branch:${data.branchId}`).emit('inventory:low_stock', data);
+}
+
+/** Broadcast that an ingredient hit zero (or below). */
+export function emitOutOfStock(data: {
+  branchId: string; ingredientId: string; name: string; affectedItems: { id: string; name: string }[];
+}): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  socket.of('/pos').to(`branch:${data.branchId}`).emit('inventory:out_of_stock', data);
+}
+
+/** Broadcast that a menu item was auto-disabled at a branch because a required ingredient ran out. */
+export function emitMenuItemUnavailable(branchId: string, itemId: string, itemName: string): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  socket.of('/pos').to(`branch:${branchId}`).emit('menu:item_unavailable', { itemId, itemName, reason: 'OUT_OF_STOCK' });
+}
+
+/** Broadcast that a previously auto-disabled menu item is available again. */
+export function emitMenuItemAvailable(branchId: string, itemId: string, itemName: string): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  socket.of('/pos').to(`branch:${branchId}`).emit('menu:item_available', { itemId, itemName });
+}
+
+/** Broadcast that a purchase order was received (fully or partially). */
+export function emitPoReceived(branchId: string, data: { poNumber: string; itemCount: number }): void {
+  const socket = getIO();
+  if (!socket) { return; }
+  socket.of('/pos').to(`branch:${branchId}`).emit('inventory:po_received', data);
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Package, AlertTriangle, XOctagon, CheckCircle } from 'lucide-react';
+import { Package, AlertTriangle, XOctagon, CheckCircle, Wallet } from 'lucide-react';
 
 interface InventoryStatsBarProps {
   stats: {
@@ -9,6 +9,7 @@ interface InventoryStatsBarProps {
     lowStock: number;
     outOfStock: number;
     healthy: number;
+    stockValue?: number;
   };
 }
 
@@ -74,6 +75,25 @@ export function InventoryStatsBar({ stats }: InventoryStatsBarProps) {
           </div>
         </div>
       </div>
+
+      {stats.stockValue !== undefined && (
+        <>
+          <div className="w-px h-8 bg-slate-100 hidden lg:block"></div>
+
+          {/* Stock Value */}
+          <div className="flex items-center gap-3 flex-1 min-w-[180px]">
+            <div className="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0">
+              <Wallet className="text-slate-600" size={16} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Stock Value</p>
+              <div className="flex items-baseline gap-1.5">
+                <h3 className="text-lg font-bold text-slate-900">PKR {stats.stockValue.toLocaleString()}</h3>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

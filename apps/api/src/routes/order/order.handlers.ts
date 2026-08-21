@@ -5,6 +5,7 @@ import {
 import {
   emitNewOrder, emitOrderUpdated, emitOrderCancelled, emitTableStatusChanged,
 } from '../../lib/socket';
+import { reverseOrDiscardInventoryForCancelledOrder } from '../inventory/inventory.service';
 import { prisma } from '@dineiz/db';
 
 
@@ -115,7 +116,16 @@ export async function handleGetOrder(request: FastifyRequest, reply: FastifyRepl
 export async function handleUpdateOrder(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user!.tenantId!;
   const { id } = request.params as any;
+
+  // Sync Point 4: capture the pre-update status so a transition into CANCELLED
+  // can tell whether the order ever reached the kitchen (restore stock) or not (log wastage instead).
+  const priorOrder = await prisma.order.findUnique({ where: { id, tenantId }, select: { status: true } });
+
   const order = await updateOrder(tenantId, id, request.body);
+
+  if (order.status === 'CANCELLED' && priorOrder && priorOrder.status !== 'CANCELLED') {
+    reverseOrDiscardInventoryForCancelledOrder(order.id, priorOrder.status).catch((e: any) => console.error('Inventory Reversal Error:', e));
+  }
 
   if (order.status === 'CANCELLED') {
     emitOrderCancelled(tenantId, order.branchId, order.id);

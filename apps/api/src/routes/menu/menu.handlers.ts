@@ -12,6 +12,7 @@ import {
   updateItem,
   deleteItem,
   toggleItemAvailability,
+  bulkToggleItemAvailability,
   toggleCategoryAvailability,
   getVariationsForItem,
   createVariation,
@@ -103,6 +104,15 @@ export async function handleToggleAvailability(request: FastifyRequest, reply: F
   const user = request.user!;
   // BRANCH_MANAGER can only toggle — validated in route (requireRole includes BRANCH_MANAGER)
   return toggleItemAvailability(user.tenantId!, id, isAvailable, branchId || user.branchId || undefined);
+}
+
+export async function handleBulkToggleAvailability(request: FastifyRequest, reply: FastifyReply) {
+  const { itemIds, isAvailable, branchId } = request.body as any;
+  const user = request.user!;
+  if (!Array.isArray(itemIds) || itemIds.length === 0) {
+    return reply.status(400).send({ error: 'itemIds is required' });
+  }
+  return bulkToggleItemAvailability(user.tenantId!, itemIds, isAvailable, branchId || user.branchId || undefined);
 }
 
 // ─── Image ───────────────────────────────────────────────────────────────────
