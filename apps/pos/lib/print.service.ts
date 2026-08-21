@@ -314,7 +314,8 @@ async function buildBill(data: any, isPaid: boolean) {
   const estimatedHeight = 45
     + estimateItemsHeight(data.items)
     + (hasDualTax ? 70 : 35)
-    + (branding.logoUrl && branding.showLogoOnReceipt ? 22 : 0)
+    + (branding.logoUrl && branding.showLogoOnReceipt ? 28 : 0)
+    + (!isPaid ? 8 : 0) // "DUE BILL" banner
     + 30; // footer + "powered by"
   const doc = createBaseDoc(estimatedHeight);
   let y = 10;
@@ -322,7 +323,7 @@ async function buildBill(data: any, isPaid: boolean) {
   if (branding.logoUrl && branding.showLogoOnReceipt) {
     const tenantLogo = await loadImageAsBase64(branding.logoUrl, 200);
     if (tenantLogo) {
-      const logoSize = 16;
+      const logoSize = 22;
       doc.addImage(tenantLogo, 'PNG', (PAPER_WIDTH - logoSize) / 2, y, logoSize, logoSize);
       y += logoSize + 3;
     }
@@ -352,6 +353,20 @@ async function buildBill(data: any, isPaid: boolean) {
 
   const layout = branding.receiptLayout || 'CLASSIC';
   const SEPARATOR = layout === 'MODERN' ? '================================' : '--------------------------------';
+
+  // A CUSTOMER_BILL is printed *before* payment — nothing else on the page
+  // otherwise distinguishes it from a paid receipt, so a bill left on a
+  // table can be mistaken for proof of payment. Paid receipts (isPaid=true)
+  // never show this.
+  if (!isPaid) {
+    doc.setFontSize(10);
+    doc.setFont(FONT, 'bold');
+    doc.setTextColor(200, 0, 0);
+    doc.text('*** DUE BILL — NOT PAID ***', PAPER_WIDTH / 2, y, { align: 'center' });
+    doc.setTextColor(0);
+    doc.setFont(FONT, 'normal');
+    y += 6;
+  }
 
   doc.setFontSize(10);
   doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
@@ -545,7 +560,7 @@ async function buildBill(data: any, isPaid: boolean) {
     y += 5;
 
     doc.setFont(FONT, 'bold');
-    printRow(doc, 'TOTAL', `PKR ${Number(data.total || 0).toLocaleString()}`, y);
+    printRow(doc, isPaid ? 'TOTAL' : 'TOTAL DUE', `PKR ${Number(data.total || 0).toLocaleString()}`, y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
   }

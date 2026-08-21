@@ -377,6 +377,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       const { printDocument } = await import('@/lib/print.service');
       await printDocument('CUSTOMER_BILL', printData as any);
       toast.success('Bill sent to printer');
+
+      // Same "table turns blue" signal the floor plan's own Print Bill
+      // action already sets (ClientTableMap.tsx) — this was the one other
+      // place a dine-in bill gets printed from, and it never touched table
+      // status, so a bill printed from here left the table looking untouched
+      // on the floor plan even though the bill had gone out.
+      if (order.type === 'DINE_IN' && order.tableId) {
+        fetch(`${API_URL}/api/tables/${order.tableId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify({ status: 'BILL_REQUESTED' }),
+        }).catch(() => {});
+      }
     } catch (err: any) {
       console.warn('Failed to print bill', err);
       toast.error(err?.message || 'Failed to print bill');

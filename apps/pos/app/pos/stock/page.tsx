@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCartStore } from '@/lib/store';
+import { getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { useTopBar } from '@/hooks/useTopBar';
 import { toast } from 'sonner';
@@ -108,7 +109,7 @@ export default function StockPage() {
       const res = await fetch(`${API_URL}/api/pos/stock-status?branchId=${session.branchId}`, {
         headers: {
           'Content-Type': 'application/json',
-          ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+          Authorization: `Bearer ${getToken()}`,
         },
       });
       if (!res.ok) throw new Error('Failed to load stock status');
@@ -175,7 +176,7 @@ export default function StockPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+          Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({
           itemIds: item.affectedItems.map((i) => i.id),
@@ -200,7 +201,7 @@ export default function StockPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+          Authorization: `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ branchId: session.branchId, ingredientId: item.ingredientId }),
       });
@@ -246,7 +247,7 @@ export default function StockPage() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        Authorization: `Bearer ${getToken()}`,
       },
       body: JSON.stringify({ pin, branchId: session.branchId }),
     });
@@ -259,7 +260,7 @@ export default function StockPage() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(session.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        Authorization: `Bearer ${getToken()}`,
       },
       body: JSON.stringify({
         branchId: session.branchId,

@@ -22,9 +22,40 @@ interface OrderDetailsModalProps {
   useKDS: boolean;
   readOnly?: boolean;
   onChanged?: () => void;
+  /**
+   * The order object already sitting in the Tickets/Home list (from
+   * /api/orders/live) — has status/type/table/total but not per-item
+   * price/addon detail. When provided, the modal paints instantly from this
+   * instead of showing a blank spinner while it re-fetches data the screen
+   * already had; the full-detail fetch still runs in the background and
+   * replaces the item list (with prices/addons) the moment it lands.
+   */
+  initialOrder?: any;
 }
 
-export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChanged }: OrderDetailsModalProps) {
+// Adapts the lightweight /api/orders/live shape into a stand-in for the full
+// /api/orders/:id detail shape, so the header/status/total can render before
+// the detailed fetch returns. Item rows are marked __partial and rendered as
+// a loading placeholder rather than real priced lines.
+function shellFromSummary(summary: any) {
+  return {
+    id: summary.id,
+    orderNumber: summary.orderNumber,
+    tokenNumber: summary.token,
+    status: summary.status,
+    type: summary.type,
+    createdAt: summary.createdAt,
+    table: summary.tableLabel ? { label: summary.tableLabel } : null,
+    tableId: null,
+    assignedWaiter: null,
+    netAmount: summary.total,
+    totalAmount: summary.total,
+    items: [],
+    __partial: true,
+  };
+}
+
+export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChanged, initialOrder }: OrderDetailsModalProps) {
   const router = useRouter();
   const session = useCartStore(s => s.session);
   const [order, setOrder] = useState<any>(null);
@@ -40,9 +71,9 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [cancelPinOpen, setCancelPinOpen] = useState(false);
 
-  const fetchOrder = async () => {
+  const fetchOrder = async (silent = false) => {
     if (!orderId) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
@@ -50,16 +81,29 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       if (!res.ok) throw new Error('Order not found');
       setOrder(await res.json());
     } catch {
-      toast.error('Could not load order');
-      onClose();
+      if (!silent) {
+        toast.error('Could not load order');
+        onClose();
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    setOrder(null);
-    if (orderId) fetchOrder();
+    if (!orderId) {
+      setOrder(null);
+      return;
+    }
+    if (initialOrder) {
+      // Instant paint from data the list screen already had — no spinner —
+      // then quietly upgrade to the full-detail response in the background.
+      setOrder(shellFromSummary(initialOrder));
+      fetchOrder(true);
+    } else {
+      setOrder(null);
+      fetchOrder();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
@@ -77,7 +121,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   if (!orderId) return null;
 
   const refreshAfterChange = () => {
-    fetchOrder();
+    fetchOrder(true);
     onChanged?.();
   };
 
@@ -167,6 +211,10 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const isReady = status === 'READY';
   const isFinal = status === 'COMPLETED' || status === 'CANCELLED';
   const canAct = !readOnly && !isFinal;
+  // Guards status/payment/cancel actions during the brief window where only
+  // the instant-paint shell (no priced items yet) has landed — Add
+  // Item/Assign/KOT stay clickable since they don't depend on item pricing.
+  const busy = order?.__partial || isUpdating;
 
   const netAmount = order ? Number(order.netAmount ?? order.totalAmount ?? 0) : 0;
 
@@ -175,7 +223,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92vh] flex flex-col">
-        {loading || !order ? (
+        {!order ? (
           <div className="flex items-center justify-center h-64">
             <span className="material-symbols-outlined animate-spin text-[#94A3B8] text-3xl">progress_activity</span>
           </div>
@@ -224,7 +272,13 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
             {/* Items */}
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {order.items.map((item: any) => (
+              {order.__partial ? (
+                <div className="space-y-3 animate-pulse">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="h-10 bg-[#F1F5F9] rounded-lg" />
+                  ))}
+                </div>
+              ) : order.items.map((item: any) => (
                 <div key={item.id} className="flex items-start justify-between gap-3 pb-3 border-b border-[#F1F5F9] last:border-0">
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-[#0F172A] text-[14px]">{item.quantity}x {item.item?.name || 'Item'}</p>
@@ -280,7 +334,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                 <div className="flex gap-2">
                   <button
                     onClick={requestCancel}
-                    disabled={isUpdating}
+                    disabled={busy}
                     className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
                   >
                     Cancel Order
@@ -289,15 +343,16 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   {isReady ? (
                     <button
                       onClick={() => setIsPaymentOpen(true)}
-                      className="flex-1 h-12 rounded-xl font-bold text-white text-[14px] shadow-sm transition-all"
+                      disabled={busy}
+                      className="flex-1 h-12 rounded-xl font-bold text-white text-[14px] shadow-sm transition-all disabled:opacity-50"
                       style={{ backgroundColor: 'var(--pos-primary)' }}
                     >
-                      Collect Payment
+                      {order.__partial ? 'Loading order…' : 'Collect Payment'}
                     </button>
                   ) : isPending ? (
                     <button
                       onClick={() => updateStatus(useKDS ? 'IN_KITCHEN' : 'READY')}
-                      disabled={isUpdating}
+                      disabled={busy}
                       className="flex-1 h-12 rounded-xl font-bold text-white text-[14px] shadow-sm transition-all disabled:opacity-50"
                       style={{ backgroundColor: 'var(--pos-primary)' }}
                     >
@@ -311,7 +366,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                     ) : (
                       <button
                         onClick={() => updateStatus('READY')}
-                        disabled={isUpdating}
+                        disabled={busy}
                         className="flex-1 h-12 rounded-xl font-bold text-white text-[14px] shadow-sm transition-all disabled:opacity-50"
                         style={{ backgroundColor: 'var(--pos-primary)' }}
                       >
