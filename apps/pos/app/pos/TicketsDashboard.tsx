@@ -14,6 +14,7 @@ import { useSWROrders } from '@/hooks/useSWROrders';
 import { toast } from 'sonner';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { OrderDetailsModal } from './OrderDetailsModal';
 
 interface Props {
   onViewChange?: (view: 'home' | 'menu' | 'tickets') => void;
@@ -24,17 +25,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const session = useCartStore(s => s.session);
   const [isMounted, setIsMounted] = useState(false);
 
-  // KDS setting — the tenant-wide Kitchen tab toggle OR'd with this specific
-  // branch's own KDS-hardware flag (set in Add/Edit Branch), so a branch
-  // that has its own KDS screen configured uses it even if the tenant-wide
-  // toggle was never turned on, and existing tenants relying on the
-  // tenant-wide toggle alone keep working exactly as before.
+  // KDS setting — the tenant-wide "Use KDS" toggle (Settings → Kitchen) is the
+  // master switch: turning it off disables KDS everywhere immediately. The
+  // branch-level flag (set in Add/Edit Branch) only matters as a per-branch
+  // opt-out while the tenant-wide toggle is on — it can never turn KDS ON by
+  // itself. Previously this was OR'd, so a branch defaulting to
+  // kdsEnabled=true meant the tenant-wide toggle could never actually turn
+  // KDS off.
   // When useKDS is false: PENDING orders get 'Mark Ready' button, not 'Send to Kitchen'
   const [useKDS, setUseKDS] = useState<boolean>(() => {
     try {
       const tenantWide = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}')?.kitchen?.useKDS ?? false;
       const branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
-      return tenantWide || branchLevel;
+      return tenantWide && branchLevel;
     } catch {}
     return false;
   });
@@ -298,6 +301,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   };
 
+  const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
   const [deleteHeldTarget, setDeleteHeldTarget] = useState<string | null>(null);
   const deleteHeldOrder = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -436,14 +440,21 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     };
 
     const openOrder = () => {
-      if (dataMode === 'history') return; // Readonly for history currently
-      const typeStr = order.type ? order.type.toLowerCase().replace('_', '-') : 'dine-in';
-      router.push(`/pos/order?orderId=${order.id}&edit=true&isHeld=${!!order.heldAt}&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${typeStr}`);
+      if (order.heldAt) {
+        // Held orders are local drafts (IndexedDB only) — resuming means
+        // going back to the menu to keep building the cart, not a details view.
+        const typeStr = order.type ? order.type.toLowerCase().replace('_', '-') : 'dine-in';
+        router.push(`/pos/order?orderId=${order.id}&edit=true&isHeld=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${typeStr}`);
+        return;
+      }
+      // A real, already-submitted order — show the details modal (view +
+      // actions) instead of dropping straight into the menu-punching screen.
+      setDetailsOrderId(order.id);
     };
 
     if (layout === 'list') {
       return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-[#E2E8F0] p-4 rounded-xl transition-all shadow-sm min-w-0 ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : 'cursor-pointer hover:border-[#CBD5E1]'}`}>
+        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-[#E2E8F0] p-4 rounded-xl transition-all shadow-sm min-w-0 cursor-pointer hover:border-[#CBD5E1] ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : ''}`}>
           <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
             <div className="w-16 shrink-0">
               <span className="text-xl font-bold text-[#0F172A]">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
@@ -539,7 +550,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     if (layout === 'kanban') {
       return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col py-3 border-b border-[#E2E8F0] group shrink-0 w-full ${dataMode === 'history' ? '' : 'cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all'}`}>
+        <div key={order.id} onClick={openOrder} className="flex flex-col py-3 border-b border-[#E2E8F0] group shrink-0 w-full cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all">
           <div className="flex justify-between items-start mb-2 w-full gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-lg font-bold text-[#0F172A] tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
@@ -661,7 +672,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
 
     return (
-      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden transition-all group h-full ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : 'cursor-pointer hover:border-[#CBD5E1] hover:shadow-md'}`}>
+      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-[#CBD5E1] hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -1169,6 +1180,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         variant="danger"
         onConfirm={confirmDeleteHeldOrder}
         onCancel={() => setDeleteHeldTarget(null)}
+      />
+
+      <OrderDetailsModal
+        orderId={detailsOrderId}
+        onClose={() => setDetailsOrderId(null)}
+        useKDS={useKDS}
+        readOnly={dataMode === 'history'}
+        onChanged={() => queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] })}
       />
     </main>
   );

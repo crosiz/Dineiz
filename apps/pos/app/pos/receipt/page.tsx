@@ -95,7 +95,7 @@ function ReceiptPageContent() {
       unitPrice: it.unitPrice,
       subtotal: it.subtotal ?? ((it.unitPrice || 0) * (it.quantity || 1)),
       variationName: it.options?.variation?.name,
-      addOnNames: (it.options?.addOns || []).map((a: any) => a.name),
+      addOnNames: (it.options?.addOns || []).map((a: any) => a.price ? `${a.name} (+${a.price})` : a.name),
     })),
     subtotal: order.totalAmount ?? 0,
     discountAmount: order.discountAmount ?? 0,

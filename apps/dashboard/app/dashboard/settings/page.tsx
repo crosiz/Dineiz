@@ -661,7 +661,14 @@ export default function SettingsPage() {
       const fd = new FormData(); fd.append("file", file); fd.append("type", "logo");
       const res = await fetch(`${API_URL}/api/settings/branding/upload-image`, { method: "POST", credentials: "include", body: fd });
       if (!res.ok) throw new Error();
-      const data = await res.json(); setBranding(p => ({ ...p, logoUrl: data.url })); toast.success("Logo uploaded");
+      const data = await res.json();
+      setBranding(p => ({ ...p, logoUrl: data.url }));
+      // Persist immediately — an upload is a discrete, deliberate action and
+      // must not depend on the 1.5s debounced auto-save below (meant for
+      // text-field typing). Navigating away inside that window used to
+      // silently drop the just-uploaded logo, since it never reached the DB.
+      await apiFetch("/api/settings/branding", { method: "PUT", body: JSON.stringify({ logoUrl: data.url }) });
+      toast.success("Logo uploaded");
     } catch { toast.error("Upload failed"); } finally { setUploadingLogo(false); }
   };
 

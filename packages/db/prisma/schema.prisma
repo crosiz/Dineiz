@@ -238,6 +238,8 @@ model User {
   StaffZktecoEnrollment   StaffZktecoEnrollment?
   VoidRequest             VoidRequest[]
   AnomalyEvents           AnomalyEvent[]
+
+  @@index([tenantId, branchId, role])
 }
 
 // -----------------------------------------------------------------------------

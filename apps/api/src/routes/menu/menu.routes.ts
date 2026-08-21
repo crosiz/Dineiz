@@ -1,6 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { getFullMenu } from './menu.service';
+import { cached } from '../../lib/cache';
 import {
   handleGetCategories,
   handleCreateCategory,
@@ -36,7 +37,13 @@ const ALL_STAFF = ['SUPER_ADMIN', 'TENANT_ADMIN', 'BRANCH_MANAGER'];
 export const menuRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
   fastify.get('/api/menu', { preHandler: requireTenant }, async (req) => {
-    return getFullMenu(req.user!.tenantId!, (req.query as any).branchId || req.user?.branchId || undefined);
+    const tenantId = req.user!.tenantId!;
+    const branchId = (req.query as any).branchId || req.user?.branchId || undefined;
+    // Short TTL — not meant to introduce visible staleness, just to absorb
+    // bursts (every POS terminal syncing its IndexedDB menu cache on mount/
+    // reconnect). Publishing invalidates it immediately below; direct item/
+    // category edits are covered by this TTL expiring within seconds.
+    return cached(`menu:${tenantId}:${branchId ?? 'all'}`, 10, () => getFullMenu(tenantId, branchId));
   });
 
   // ─── Categories ─────────────────────────────────────────────────────────────

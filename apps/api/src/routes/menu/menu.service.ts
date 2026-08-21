@@ -3,6 +3,7 @@ import { uploadImage } from '../../lib/cloudinary';
 import Anthropic from '@anthropic-ai/sdk';
 import Papa from 'papaparse';
 import { getIO, emitMenuPriceChanged } from '../../lib/socket';
+import { invalidatePattern } from '../../lib/cache';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
@@ -587,6 +588,8 @@ export async function publishMenu(tenantId: string, body?: { sourceBranchId: str
       }
     });
   }
+
+  invalidatePattern(`menu:${tenantId}:*`).catch(() => {});
 
   const io = getIO();
   if (io) {

@@ -127,30 +127,50 @@ const DASHES = '--------------------------------';
 const FONT = 'courier';
 const MARGIN = 5;
 
-function createBaseDoc() {
+// Thermal receipts are a continuous roll, not a fixed page — there's no
+// "next page" to overflow onto. A hardcoded page height silently clips
+// whatever is drawn past it (the TOTAL row and footer, most often) with no
+// error. Every generator estimates its own content height up front instead.
+function createBaseDoc(estimatedHeightMm = 200) {
   return new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [PAPER_WIDTH, 200]
+    format: [PAPER_WIDTH, Math.max(120, Math.ceil(estimatedHeightMm))]
   });
 }
 
-async function loadLogoAsBase64(): Promise<string | null> {
-  if (typeof window === 'undefined') return null;
+// Generous, intentionally over- rather than under-estimated — a little
+// trailing blank space on a downloaded PDF is harmless, a clipped total is not.
+function estimateItemsHeight(items: any[]): number {
+  return (items || []).reduce((sum, item) => {
+    let lines = 1; // item name (assume up to ~1 wrap on average)
+    if (item.variationName) lines += 1;
+    if (item.addOnNames?.length) lines += item.addOnNames.length;
+    if (item.notes) lines += 1;
+    return sum + lines * 4.5 + 2;
+  }, 0);
+}
+
+async function loadImageAsBase64(url: string, size = 240): Promise<string | null> {
+  if (typeof window === 'undefined' || !url) return null;
   return new Promise((resolve) => {
     const img = new window.Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = 240; // High resolution for crisp logo
-      canvas.height = 240;
+      canvas.width = size;
+      canvas.height = size;
       const ctx = canvas.getContext('2d');
-      if (ctx) ctx.drawImage(img, 0, 0, 240, 240);
+      if (ctx) ctx.drawImage(img, 0, 0, size, size);
       resolve(canvas.toDataURL('image/png'));
     };
     img.onerror = () => resolve(null);
-    img.src = '/images/dineiz-receipt-logo.svg';
+    img.src = url;
   });
+}
+
+async function loadLogoAsBase64(): Promise<string | null> {
+  return loadImageAsBase64('/images/dineiz-receipt-logo.svg', 240);
 }
 
 function getTenantName(fallback: string): string {
@@ -202,7 +222,8 @@ async function addFooter(doc: jsPDF, y: number, showThankYou = false) {
 
 // Template 1 — KOT
 async function generateKOT(data: any) {
-  const doc = createBaseDoc();
+  const estimatedHeight = 40 + estimateItemsHeight(data.items) + (data.notes ? 20 : 0) + 25;
+  const doc = createBaseDoc(estimatedHeight);
   let y = 10;
 
   doc.setFontSize(12);
@@ -286,17 +307,33 @@ async function generateKOT(data: any) {
 
 // Helper to build Bill or Receipt
 async function buildBill(data: any, isPaid: boolean) {
-  const doc = createBaseDoc();
+  const branding = useBrandingStore.getState().branding;
+
+  const hasDualTax = !isPaid && data.dualTaxConfig?.showDualTaxOnReceipt
+    && data.dualTaxConfig?.cashTaxEnabled && data.dualTaxConfig?.cardTaxEnabled;
+  const estimatedHeight = 45
+    + estimateItemsHeight(data.items)
+    + (hasDualTax ? 70 : 35)
+    + (branding.logoUrl && branding.showLogoOnReceipt ? 22 : 0)
+    + 30; // footer + "powered by"
+  const doc = createBaseDoc(estimatedHeight);
   let y = 10;
 
-  const branding = useBrandingStore.getState().branding;
+  if (branding.logoUrl && branding.showLogoOnReceipt) {
+    const tenantLogo = await loadImageAsBase64(branding.logoUrl, 200);
+    if (tenantLogo) {
+      const logoSize = 16;
+      doc.addImage(tenantLogo, 'PNG', (PAPER_WIDTH - logoSize) / 2, y, logoSize, logoSize);
+      y += logoSize + 3;
+    }
+  }
 
   doc.setFontSize(11);
   doc.setFont(FONT, 'bold');
   const tenantName = branding.restaurantName || data.tenantName || 'Dineiz';
   doc.text(tenantName, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
-  
+
   doc.setFontSize(9);
   doc.setFont(FONT, 'normal');
   
@@ -369,14 +406,14 @@ async function buildBill(data: any, isPaid: boolean) {
     let prefix = item.quantity > 1 ? `${item.quantity}x ` : '';
     let name = prefix + item.name;
     if (item.variationName) name += ` (${item.variationName})`;
-    
+
     // Value part
     const priceStr = Number(item.unitPrice || 0).toLocaleString();
     const amtStr = Number(item.subtotal || 0).toLocaleString();
-    
+
     const nameWidth = layout === 'MINIMAL' ? (PAPER_WIDTH - MARGIN * 2 - 20) : (PAPER_WIDTH - MARGIN * 2 - 6 - (PAPER_WIDTH <= 58 ? 24 : 32));
     const lines = doc.splitTextToSize(name, Math.max(10, nameWidth));
-    
+
     lines.forEach((line: string, i: number) => {
       if (i === 0) {
         if (layout === 'CLASSIC') {
@@ -397,6 +434,39 @@ async function buildBill(data: any, isPaid: boolean) {
       }
       y += 4.5;
     });
+
+    // Addons — each on its own indented, greyed line with its own price so
+    // the customer can see exactly what they were charged extra for
+    // (the AMT column above already includes these in the item subtotal).
+    if (item.addOnNames?.length) {
+      const indent = layout === 'CLASSIC' ? MARGIN + 6 : MARGIN;
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      item.addOnNames.forEach((addOnLabel: string) => {
+        const addOnLines = doc.splitTextToSize(`+ ${addOnLabel}`, PAPER_WIDTH - indent - MARGIN);
+        addOnLines.forEach((line: string) => {
+          doc.text(line, indent, y);
+          y += 4;
+        });
+      });
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+    }
+
+    if (item.notes) {
+      const indent = layout === 'CLASSIC' ? MARGIN + 6 : MARGIN;
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.setFont(FONT, 'italic');
+      const noteLines = doc.splitTextToSize(`* ${item.notes}`, PAPER_WIDTH - indent - MARGIN);
+      noteLines.forEach((line: string) => {
+        doc.text(line, indent, y);
+        y += 4;
+      });
+      doc.setFont(FONT, 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+    }
   });
 
   doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
