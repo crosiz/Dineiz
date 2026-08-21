@@ -6,6 +6,8 @@ import { useCartStore } from '@/lib/store';
 import { useTopBar } from '@/hooks/useTopBar';
 import { toast } from 'sonner';
 import { ChevronLeft, FileText, Download, Clock, CheckCircle2 } from 'lucide-react';
+import { getToken } from '@/lib/pos-session';
+import { downloadShiftReport } from '@/lib/shift-report';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -27,7 +29,9 @@ export default function ShiftReportSelectorPage() {
     
     const fetchShifts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/shifts?branchId=${session.branchId}&limit=50`, { credentials: 'include' });
+        const res = await fetch(`${API_URL}/api/shifts?branchId=${session.branchId}&limit=50`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
         if (res.ok) {
           const data = await res.json();
           // Filter to today's shifts (or keep all recent 50)
@@ -47,31 +51,15 @@ export default function ShiftReportSelectorPage() {
   const handleDownload = async (shiftId: string, format: 'pdf' | 'excel') => {
     if (downloadingId) return;
     setDownloadingId(shiftId);
-    
     try {
-      // Create a temporary link to trigger download via browser
-      const token = session?.token; // If token is needed in query, but we use credentials: include
-      
-      const res = await fetch(`${API_URL}/api/shifts/${shiftId}/report?format=${format}`, {
-        credentials: 'include'
-      });
-      
-      if (!res.ok) throw new Error('Failed to generate report');
-      
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `shift-report-${shiftId.slice(-6)}.${format === 'excel' ? 'xlsx' : 'pdf'}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('Report downloaded successfully');
-    } catch (e) {
+      // downloadShiftReport sends the POS bearer token. The previous version
+      // relied on `credentials: 'include'`, which the POS has no session
+      // cookie for — every download came back 401 and saved an error blob.
+      const { filename } = await downloadShiftReport(shiftId, format);
+      toast.success(`Saved ${filename}`);
+    } catch (e: any) {
       console.error(e);
-      toast.error('Failed to download report');
+      toast.error(e?.message || 'Failed to download report');
     } finally {
       setDownloadingId(null);
     }

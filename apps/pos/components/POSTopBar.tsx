@@ -7,10 +7,11 @@ import { useCartStore } from '@/lib/store';
 import { getPosSession, getPosShift, clearPosSession, setPosBreak } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { CloseShiftModal } from '@/components/CloseShiftModal';
+import { CashDrawerModal } from '@/components/CashDrawerModal';
 import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DineizLogo } from './ui/DineizLogo';
-import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet } from 'lucide-react';
 
 export function POSTopBar() {
   const config = useContext(TopBarStateContext);
@@ -30,6 +31,7 @@ export function POSTopBar() {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showTakeBreakConfirm, setShowTakeBreakConfirm] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
+  const [isCashDrawerOpen, setIsCashDrawerOpen] = useState(false);
   const [pendingBackConfirm, setPendingBackConfirm] = useState(false);
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
@@ -54,7 +56,10 @@ export function POSTopBar() {
     setIsValidatingClose(true);
     try {
       const token = localStorage.getItem('pos_token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+      // Every other POS call falls back to :3001; this one said :8080, so on a
+      // dev machine without NEXT_PUBLIC_API_URL set the close-shift guard
+      // silently failed its check.
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -270,6 +275,14 @@ export function POSTopBar() {
                     </button>
 
                     <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
+                    >
+                      <Wallet size={15} className="text-slate-500" />
+                      <span>Cash Drawer</span>
+                    </button>
+
+                    <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold disabled:opacity-50"
                       onClick={handleCloseShiftClick}
                       disabled={isValidatingClose}
@@ -398,6 +411,13 @@ export function POSTopBar() {
           onClose={() => setIsCloseShiftOpen(false)}
         />
       )}
+
+      {/* Mid-shift cash in / cash out */}
+      <CashDrawerModal
+        isOpen={isCashDrawerOpen}
+        shiftId={session?.shiftId ?? getPosShift()?.shiftId}
+        onClose={() => setIsCashDrawerOpen(false)}
+      />
 
       <ShiftCloseBlockerModal
         isOpen={isBlockerOpen}

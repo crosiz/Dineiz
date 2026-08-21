@@ -9,6 +9,7 @@ import { redeemLoyaltyForOrder, earnLoyaltyForOrder } from '../loyalty/loyalty.s
 import { deductInventoryForOrder } from '../inventory/inventory.service';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { getTodayOrdersWhere } from '../../lib/date-utils';
+import { recordOrderCompleted, recordOrderVoided } from '../shift/shift-activity';
 
 // ─── KDS routing helper ───────────────────────────────────────────────────────
 
@@ -816,9 +817,14 @@ export async function enqueueOrderEvents(
 ) {
   await enqueueZapierEvent({ tenantId, event: 'order.updated', payload: order }).catch(() => {});
   if (order.status === 'CANCELLED') {
+    recordOrderVoided(order, { amount: Number(order.netAmount ?? 0), wholeOrder: true });
     await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
   }
   if (order.status === 'COMPLETED') {
+    // Writes the ORDER_COMPLETED (and DISCOUNT_APPLIED) lines the Shift
+    // Management timeline and the shift PDF are built from. Fire-and-forget
+    // by design — see shift-activity.ts.
+    recordOrderCompleted({ ...order, payments: payments ?? order.payments });
     // Process earning when order is completed
     earnLoyaltyForOrder(order).catch(e => console.error('Loyalty Earn Error:', e));
     
@@ -889,7 +895,7 @@ export async function deleteOrderItem(
 
   const orderItem = await prisma.orderItem.findFirst({
     where: { id: itemId, orderId, order: { tenantId } },
-    include: { item: true }
+    include: { item: true, order: { select: { shiftId: true, orderNumber: true } } }
   });
 
   if (!orderItem) {
@@ -952,6 +958,21 @@ export async function deleteOrderItem(
       }
     });
   }
+
+  // Mirror the void onto the shift timeline. The AuditLog below is the
+  // tenant-wide compliance record; this is the same event in the cashier's
+  // own shift narrative, which is what the shift PDF and Shift Management
+  // timeline read from.
+  recordOrderVoided(
+    { id: orderId, shiftId: orderItem.order?.shiftId ?? null, orderNumber: orderItem.order?.orderNumber ?? null },
+    {
+      itemName,
+      quantity: data.quantity,
+      amount: data.quantity * orderItem.unitPrice,
+      reason: data.reason,
+      performedById: data.approvedByManagerId ?? cashierId,
+    },
+  );
 
   await prisma.auditLog.create({
     data: {

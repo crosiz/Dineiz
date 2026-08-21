@@ -1,4 +1,5 @@
 import { prisma } from '@dineiz/db';
+import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
 import {
   OpenShiftSchema, CloseShiftSchema, CashEntrySchema,
@@ -12,33 +13,155 @@ export async function getCurrentShift(branchId: string, tenantId: string, userId
   });
 }
 
-export async function listShifts(tenantId: string, query: { branchId?: string; cursor?: string; limit: number }, userBranchId?: string | null) {
-  const targetBranchId = query.branchId ?? userBranchId ?? undefined;
-  const shifts = await prisma.shift.findMany({
-    where: { tenantId, ...(targetBranchId ? { branchId: targetBranchId } : {}) },
-    orderBy: { openedAt: 'desc' },
-    take: query.limit + 1,
-    ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-    include: { 
-      user: { select: { id: true, name: true } }, 
-      branch: { select: { id: true, name: true } },
-      _count: { select: { orders: true } } 
-    },
+/**
+ * Resolves the timezone that "today", "yesterday" etc. should be measured in.
+ * A branch-scoped query uses that branch's own timezone; an all-branches
+ * query falls back to the tenant's first branch, then Asia/Karachi.
+ */
+async function resolveTimezone(tenantId: string, branchId?: string | null): Promise<string> {
+  const branch = branchId
+    ? await prisma.branch.findFirst({ where: { id: branchId }, select: { timezone: true } })
+    : await prisma.branch.findFirst({ where: { tenantId }, select: { timezone: true }, orderBy: { createdAt: 'asc' } });
+  return branch?.timezone || 'Asia/Karachi';
+}
+
+/** Turns YYYY-MM-DD calendar bounds into an absolute UTC instant range. */
+function toInstantRange(tz: string, from?: string, to?: string): { gte?: Date; lte?: Date } | undefined {
+  if (!from && !to) return undefined;
+  const range: { gte?: Date; lte?: Date } = {};
+  if (from) range.gte = fromZonedTime(`${from}T00:00:00`, tz);
+  if (to) range.lte = fromZonedTime(`${to}T23:59:59.999`, tz);
+  return range;
+}
+
+export interface ShiftListQuery {
+  branchId?: string;
+  from?: string;
+  to?: string;
+  status?: 'OPEN' | 'CLOSED' | 'ABANDONED';
+  search?: string;
+  cashierId?: string;
+  page: number;
+  limit: number;
+}
+
+/**
+ * Shift history.
+ *
+ * Every filter (date range, status, cashier search) runs in Postgres rather
+ * than being applied to a page of rows in the browser — that's what makes
+ * "Today" fast on a branch with months of shifts, and what makes the
+ * summary numbers describe the whole filtered range instead of whatever
+ * happened to fit on page one.
+ */
+export async function listShifts(tenantId: string, query: ShiftListQuery) {
+  // Role scoping is resolved by the handler (see resolveScope) — by the time a
+  // query reaches here, an absent branchId genuinely means "all branches".
+  const targetBranchId = query.branchId ?? undefined;
+  const tz = await resolveTimezone(tenantId, targetBranchId);
+  const openedAt = toInstantRange(tz, query.from, query.to);
+
+  const where: any = {
+    tenantId,
+    ...(targetBranchId ? { branchId: targetBranchId } : {}),
+    ...(query.status ? { status: query.status } : {}),
+    ...(query.cashierId ? { userId: query.cashierId } : {}),
+    ...(openedAt ? { openedAt } : {}),
+    ...(query.search
+      ? { user: { name: { contains: query.search, mode: 'insensitive' as const } } }
+      : {}),
+  };
+
+  const include = {
+    user: { select: { id: true, name: true, image: true, avatarColor: true } },
+    branch: { select: { id: true, name: true } },
+    _count: { select: { orders: true, breaks: true } },
+  };
+
+  const skip = (query.page - 1) * query.limit;
+
+  const [data, total, agg, openCount, byBranchRaw] = await Promise.all([
+    prisma.shift.findMany({ where, orderBy: { openedAt: 'desc' }, skip, take: query.limit, include }),
+    prisma.shift.count({ where }),
+    prisma.shift.aggregate({
+      where,
+      _sum: { totalSales: true, totalCash: true, totalCard: true, cashVariance: true, totalOrders: true },
+    }),
+    prisma.shift.count({ where: { ...where, status: 'OPEN' } }),
+    // Per-branch rollup so the all-branches view can show which branch each
+    // number came from without pulling every shift into the browser.
+    targetBranchId
+      ? Promise.resolve([] as any[])
+      : prisma.shift.groupBy({
+          by: ['branchId'],
+          where,
+          _sum: { totalSales: true, cashVariance: true },
+          _count: { id: true },
+        }),
+  ]);
+
+  // Average duration over closed shifts only — an open shift has no end yet,
+  // and counting "now" as its close would drag the average around by the minute.
+  const closed = await prisma.shift.findMany({
+    where: { ...where, closedAt: { not: null } },
+    select: { openedAt: true, closedAt: true },
   });
-  const hasMore = shifts.length > query.limit;
-  const data = hasMore ? shifts.slice(0, query.limit) : shifts;
-  return { data, nextCursor: hasMore ? data[data.length - 1].id : null };
+  const avgDurationMs = closed.length
+    ? closed.reduce((s, r) => s + (r.closedAt!.getTime() - r.openedAt.getTime()), 0) / closed.length
+    : 0;
+
+  let byBranch: { branchId: string; branchName: string; shifts: number; totalSales: number; cashVariance: number }[] = [];
+  if (byBranchRaw.length > 0) {
+    const branches = await prisma.branch.findMany({
+      where: { id: { in: byBranchRaw.map((b: any) => b.branchId) } },
+      select: { id: true, name: true },
+    });
+    const nameById = new Map(branches.map((b) => [b.id, b.name]));
+    byBranch = byBranchRaw
+      .map((b: any) => ({
+        branchId: b.branchId,
+        branchName: nameById.get(b.branchId) ?? 'Unknown branch',
+        shifts: b._count.id,
+        totalSales: Number(b._sum.totalSales ?? 0),
+        cashVariance: Number(b._sum.cashVariance ?? 0),
+      }))
+      .sort((a, b) => b.totalSales - a.totalSales);
+  }
+
+  return {
+    data,
+    pagination: { page: query.page, limit: query.limit, total, pages: Math.max(1, Math.ceil(total / query.limit)) },
+    summary: {
+      totalShifts: total,
+      openShifts: openCount,
+      totalSales: Number(agg._sum.totalSales ?? 0),
+      totalCash: Number(agg._sum.totalCash ?? 0),
+      totalCard: Number(agg._sum.totalCard ?? 0),
+      totalOrders: Number(agg._sum.totalOrders ?? 0),
+      netVariance: Number(agg._sum.cashVariance ?? 0),
+      avgDurationMs,
+    },
+    byBranch,
+    timezone: tz,
+    // Echo the resolved scope back so the UI can label itself honestly
+    // ("All branches" vs a specific one) instead of guessing.
+    scope: { branchId: targetBranchId ?? null },
+  };
 }
 
 export async function getShift(tenantId: string, id: string) {
   const shift = await prisma.shift.findFirst({
     where: { id, tenantId },
     include: {
-      user: { select: { id: true, name: true, email: true } },
+      user: { select: { id: true, name: true, email: true, role: true, image: true, avatarColor: true } },
+      // The detail page and the PDF both label the shift with its branch;
+      // without this they could only show a cashier name, which is ambiguous
+      // as soon as a tenant has more than one branch.
+      branch: { select: { id: true, name: true, phone: true, timezone: true } },
       cashEntries: { orderBy: { createdAt: 'asc' } },
       denominations: { orderBy: { denomination: 'desc' } },
       breaks: { orderBy: { startedAt: 'asc' } },
-      _count: { select: { orders: true } },
+      _count: { select: { orders: true, activities: true } },
     },
   });
 
@@ -71,6 +194,32 @@ export async function openShift(tenantId: string, userId: string, data: { branch
   return { conflict: false, shift };
 }
 
+/**
+ * The stored sales columns on a Shift (totalSales, totalCash, …).
+ *
+ * A shift only gets these written once it stops being OPEN. Both endings need
+ * them — a normal close and the abandoned-shift sweeper — so the arithmetic
+ * lives here rather than in whichever one was written first. Without it, an
+ * abandoned shift reads as PKR 0 in Shift Management no matter how much it
+ * actually took.
+ */
+export async function computeShiftTotals(shiftId: string) {
+  const [orderAgg, cashAgg, cardAgg] = await Promise.all([
+    prisma.order.aggregate({ where: { shiftId, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true }, _count: { id: true } }),
+    prisma.payment.aggregate({ where: { order: { shiftId }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
+    prisma.payment.aggregate({ where: { order: { shiftId }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
+  ]);
+
+  return {
+    totalSales: orderAgg._sum.netAmount ?? 0,
+    totalDiscount: orderAgg._sum.discountAmount ?? 0,
+    totalTax: orderAgg._sum.taxAmount ?? 0,
+    totalOrders: orderAgg._count.id,
+    totalCash: cashAgg._sum.amount ?? 0,
+    totalCard: cardAgg._sum.amount ?? 0,
+  };
+}
+
 export async function closeShift(tenantId: string, id: string, data: { closingCash: number; notes?: string; denominations?: any[], overridePin?: string, overrideReason?: string }) {
   const shift = await prisma.shift.findFirst({ where: { id, tenantId, status: 'OPEN' } });
   if (!shift) return null;
@@ -91,18 +240,7 @@ export async function closeShift(tenantId: string, id: string, data: { closingCa
     if (!canClose.canClose) return { error: 'Shift cannot be closed due to pending orders', blockers: canClose.blockers };
   }
 
-  const [orderAgg, cashAgg, cardAgg] = await Promise.all([
-    prisma.order.aggregate({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true }, _count: { id: true } }),
-    prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
-    prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
-  ]);
-
-  const totalSales = orderAgg._sum.netAmount ?? 0;
-  const totalDiscount = orderAgg._sum.discountAmount ?? 0;
-  const totalTax = orderAgg._sum.taxAmount ?? 0;
-  const totalOrders = orderAgg._count.id;
-  const totalCash = cashAgg._sum.amount ?? 0;
-  const totalCard = cardAgg._sum.amount ?? 0;
+  const { totalSales, totalDiscount, totalTax, totalOrders, totalCash, totalCard } = await computeShiftTotals(id);
 
   const cashEntryAgg = await prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } });
   const cashIn = cashEntryAgg.find((e) => e.type === 'CASH_IN')?._sum.amount ?? 0;
@@ -227,12 +365,19 @@ export async function getShiftSummary(tenantId: string, id: string) {
   const shift = await prisma.shift.findFirst({ where: { id, tenantId }, select: { id: true, status: true, openingFloat: true, openedAt: true } });
   if (!shift) return null;
 
-  const [orderAgg, cashAgg, cardAgg, totalOrders] = await Promise.all([
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, cashEntryAgg, breaks] = await Promise.all([
     prisma.order.aggregate({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
+    prisma.payment.aggregate({ where: { order: { shiftId: id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.order.count({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } } }),
+    prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
+    prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
   ]);
+
+  const totalCash = cashAgg._sum.amount ?? 0;
+  const cashIn = cashEntryAgg.find((e) => e.type === 'CASH_IN')?._sum.amount ?? 0;
+  const cashOut = cashEntryAgg.find((e) => e.type === 'CASH_OUT')?._sum.amount ?? 0;
 
   return {
     shiftId: id,
@@ -240,11 +385,23 @@ export async function getShiftSummary(tenantId: string, id: string) {
     openedAt: shift.openedAt,
     openingFloat: shift.openingFloat,
     totalSales: orderAgg._sum.netAmount ?? 0,
-    totalCash: cashAgg._sum.amount ?? 0,
+    totalCash,
     totalCard: cardAgg._sum.amount ?? 0,
+    totalDigital: digitalAgg._sum.amount ?? 0,
     totalDiscount: orderAgg._sum.discountAmount ?? 0,
     totalTax: orderAgg._sum.taxAmount ?? 0,
     totalOrders,
+    cashIn,
+    cashOut,
+    // The close-shift screen must show the SAME expected figure the server
+    // reconciles against, or the cashier sees one variance and the manager
+    // sees another. Mid-shift safe drops and paid-outs are part of it —
+    // the POS used to compute float + cash sales only and drift on any
+    // shift where money left the drawer.
+    expectedCash: shift.openingFloat + totalCash + cashIn - cashOut,
+    breakCount: breaks.filter((b) => b.endedAt !== null).length,
+    totalBreakMinutes: breaks.reduce((s, b) => s + (b.durationMinutes ?? 0), 0),
+    onBreak: breaks.some((b) => b.endedAt === null),
   };
 }
 
@@ -282,12 +439,23 @@ export async function getShiftActivity(tenantId: string, shiftId: string, page =
     prisma.shiftActivity.count({ where: { shiftId } }),
   ]);
 
+  // ShiftActivity stores only performedById (no relation), so resolve the
+  // names in one extra query rather than N — the timeline is meaningless if
+  // every line just says "someone did this".
+  const performerIds = [...new Set(stored.map((a) => a.performedById).filter(Boolean))] as string[];
+  const performers = performerIds.length
+    ? await prisma.user.findMany({ where: { id: { in: performerIds } }, select: { id: true, name: true } })
+    : [];
+  const nameById = new Map(performers.map((u) => [u.id, u.name]));
+
   // Map to the UI-facing shape
   const events = stored.map((a) => ({
+    id: a.id,
     time: a.occurredAt,
     type: a.activityType as string,
     description: a.notes ?? a.activityType,
     amount: a.amount ?? undefined,
+    performedBy: a.performedById ? nameById.get(a.performedById) ?? null : null,
     metadata: a.metadata,
   }));
 
@@ -300,6 +468,9 @@ export async function getActiveShiftStats(tenantId: string, branchId?: string | 
     where,
     include: {
       user: { select: { id: true, name: true, image: true, avatarColor: true } },
+      // Needed for the Branch column the live board shows when a tenant admin
+      // is viewing all branches at once.
+      branch: { select: { id: true, name: true } },
       _count: { select: { orders: true } },
       breaks: { orderBy: { startedAt: 'asc' } },
     },

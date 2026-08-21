@@ -31,8 +31,20 @@ export const CanCloseQuerySchema = z.object({
 
 export const ShiftIdParamSchema = z.object({ id: z.string() });
 
+/**
+ * History query. `from`/`to` are plain YYYY-MM-DD calendar dates interpreted
+ * in the *branch's* timezone, not the server's — a shift opened at 11pm in
+ * Karachi belongs to that Karachi day even though the API runs in UTC.
+ * The client sends a resolved range; presets (today/yesterday/week/month)
+ * are just shorthands for one, so there is a single code path here.
+ */
 export const ShiftListQuerySchema = z.object({
   branchId: z.string().optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().min(1).max(100).default(20),
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  status: z.enum(['OPEN', 'CLOSED', 'ABANDONED']).optional(),
+  search: z.string().optional(),
+  cashierId: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(200).default(25),
 });
