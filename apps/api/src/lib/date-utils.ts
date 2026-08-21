@@ -44,15 +44,37 @@ export async function getTodayOrdersWhere(
   const tz = await resolveBranchTimezone(branchId);
   const { from, to } = getBusinessDayRange(tz);
 
-  const todayShifts = await prisma.shift.findMany({
-    where: { tenantId, ...(branchId ? { branchId } : {}), openedAt: { gte: from, lte: to } },
+  // Two kinds of shift count as "current":
+  //   1. Any shift that opened today, and
+  //   2. Any shift that is STILL OPEN, whatever day it opened on.
+  //
+  // (2) matters because a service that runs past midnight — or simply a
+  // terminal whose shift hasn't been closed yet — keeps taking orders under
+  // a shift whose openedAt is now "yesterday". Scoping on openedAt alone
+  // dropped those orders off the live board the moment the clock rolled
+  // over, even while they were still genuinely PENDING/IN_KITCHEN/READY.
+  //
+  // This does not reintroduce the "orders linger forever under a shift
+  // nobody closed" problem the openedAt filter was added for: the
+  // abandoned-shift job (jobs/abandonedShifts.ts) flips any shift open >20h
+  // with >2h of inactivity to ABANDONED, so a genuinely forgotten shift
+  // stops being OPEN on its own and falls out of this window.
+  const currentShifts = await prisma.shift.findMany({
+    where: {
+      tenantId,
+      ...(branchId ? { branchId } : {}),
+      OR: [
+        { openedAt: { gte: from, lte: to } },
+        { status: 'OPEN' },
+      ],
+    },
     select: { id: true },
   });
-  const todayShiftIds = todayShifts.map((s) => s.id);
+  const currentShiftIds = currentShifts.map((s) => s.id);
 
   return {
     OR: [
-      ...(todayShiftIds.length > 0 ? [{ shiftId: { in: todayShiftIds } }] : []),
+      ...(currentShiftIds.length > 0 ? [{ shiftId: { in: currentShiftIds } }] : []),
       { shiftId: null, createdAt: { gte: from, lte: to } },
     ],
   };

@@ -6,38 +6,42 @@ import { TiersTab } from './TiersTab';
 import { CampaignsTab } from './CampaignsTab';
 import { MetricsTab } from './MetricsTab';
 import { MembersTab } from './MembersTab';
+import { BarChart3, Users, Settings, Award, Megaphone } from 'lucide-react';
 
 export function LoyaltyTabs({ settings, onRefresh }: { settings: any, onRefresh: () => void }) {
   const [activeTab, setActiveTab] = useState<'config' | 'tiers' | 'campaigns' | 'dashboard' | 'members'>('dashboard');
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'bar_chart' },
-    { id: 'members', label: 'Members', icon: 'group' },
-    { id: 'config', label: 'Configuration', icon: 'settings' },
-    { id: 'tiers', label: 'Tiers', icon: 'military_tech' },
-    { id: 'campaigns', label: 'Campaigns', icon: 'campaign' },
+    { id: 'dashboard', label: 'Analytics', icon: BarChart3 },
+    { id: 'members', label: 'Members', icon: Users },
+    { id: 'config', label: 'Configuration', icon: Settings },
+    { id: 'tiers', label: 'Tiers', icon: Award },
+    { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
   ];
 
   return (
-    <div>
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl w-max mb-6">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-              activeTab === tab.id
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
+    <div className="space-y-4">
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200 w-fit flex-wrap">
+        {tabs.map((tab) => {
+          const IconComponent = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <IconComponent size={14} className={activeTab === tab.id ? 'text-[#FF5722]' : 'text-slate-400'} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.06)]">
+      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs">
         {activeTab === 'dashboard' && <MetricsTab />}
         {activeTab === 'members' && <MembersTab />}
         {activeTab === 'config' && <ConfigurationTab settings={settings} onRefresh={onRefresh} />}
@@ -47,3 +51,4 @@ export function LoyaltyTabs({ settings, onRefresh }: { settings: any, onRefresh:
     </div>
   );
 }
+

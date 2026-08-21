@@ -2,6 +2,17 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useBrandingStore } from '@/lib/branding-store'
+import { useCartStore } from '@/lib/store'
+import { getToken } from '@/lib/pos-session'
+import { toast } from 'sonner'
+import { ReceiptView, type ReceiptData } from '@/components/ReceiptView'
+
+// The API is a separate origin (NEXT_PUBLIC_API_URL, :4000) from the POS
+// Next server (:3001), and there are no rewrites — these two fetches used
+// relative '/api/...' paths, so they 404'd against Next and the order never
+// loaded: the receipt rendered with no items and PKR 0 totals, and the
+// auto-return countdown (gated on `order`) never even started.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 function ReceiptPageContent() {
   const searchParams = useSearchParams()
@@ -17,7 +28,9 @@ function ReceiptPageContent() {
   const [countdown, setCountdown] = useState(30)
   const [autoRedirect, setAutoRedirect] = useState(true)
   const branding = useBrandingStore(s => s.branding)
+  const session = useCartStore(s => s.session)
   const [mounted, setMounted] = useState(false)
+  const [isPrinting, setIsPrinting] = useState(false)
 
   // Read localStorage only on the client to prevent SSR hydration mismatch
   useEffect(() => {
@@ -27,8 +40,8 @@ function ReceiptPageContent() {
   // Fetch order:
   useEffect(() => {
     if (!orderId) return
-    fetch(`/api/orders/${orderId}`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
+    fetch(`${API_URL}/api/orders/${orderId}`, {
+      headers: { 'Authorization': `Bearer ${getToken()}` }
     })
     .then(r => r.json())
     .then(setOrder)
@@ -57,11 +70,86 @@ function ReceiptPageContent() {
 
   const markCleaning = async () => {
     if (!tableId) return
-    await fetch(`/api/tables/${tableId}/status`, {
+    await fetch(`${API_URL}/api/tables/${tableId}/status`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
       body: JSON.stringify({ status: 'dirty' })
     }).catch(() => {})
+  }
+
+  // Same shape PaymentModal builds for the on-screen receipt right after a
+  // payment — this is the "reprint" mount of that same ReceiptView, fed
+  // from the fetched order instead of live checkout state.
+  const receiptData: ReceiptData | null = order ? {
+    tenantName: branding.restaurantName || 'Dineiz',
+    fbrNtn: branding.fbrNtn,
+    receiptHeader: branding.receiptHeader,
+    receiptFooter: branding.receiptFooter,
+    orderNumber: order.orderNumber || orderId?.slice(-6) || '',
+    tableLabel: order.table?.label || tableLabel || undefined,
+    orderType: order.type,
+    cashierName: order.shift?.user?.name,
+    items: (order.items || []).map((it: any) => ({
+      name: it.item?.name || it.itemName || 'Item',
+      quantity: it.quantity,
+      unitPrice: it.unitPrice,
+      subtotal: it.subtotal ?? ((it.unitPrice || 0) * (it.quantity || 1)),
+      variationName: it.options?.variation?.name,
+      addOnNames: (it.options?.addOns || []).map((a: any) => a.name),
+    })),
+    subtotal: order.totalAmount ?? 0,
+    discountAmount: order.discountAmount ?? 0,
+    taxAmount: order.taxAmount ?? 0,
+    taxLabel: order.appliedTaxLabel || 'GST',
+    total: order.netAmount ?? 0,
+    paymentMethod: method || order.payments?.[0]?.method || 'CASH',
+    // Cash tendered/change aren't persisted on the order once payment
+    // completes — only what's in this page's own query string (populated
+    // right after a fresh payment) has them; a reprint later just won't
+    // show this line, falling back to "Paid via {method}".
+    cashTendered: method === 'CASH' && amountPaid > 0 ? amountPaid : undefined,
+    changeGiven: method === 'CASH' && amountPaid > 0 ? change : undefined,
+    createdAt: order.createdAt ? new Date(order.createdAt) : new Date(),
+  } : null
+
+  const handlePrint = async () => {
+    if (!receiptData) return
+    setIsPrinting(true)
+    try {
+      const { printDocument } = await import('@/lib/print.service')
+      await printDocument('PAID_RECEIPT', {
+        orderNumber: receiptData.orderNumber,
+        tokenNumber: receiptData.orderNumber,
+        type: receiptData.orderType || 'DINE_IN',
+        tableLabel: receiptData.tableLabel,
+        cashierName: receiptData.cashierName ?? undefined,
+        tenantName: receiptData.tenantName,
+        branchName: session?.branchName || 'Main Branch',
+        items: receiptData.items,
+        subtotal: receiptData.subtotal,
+        discountAmount: receiptData.discountAmount ?? 0,
+        taxAmount: receiptData.taxAmount,
+        total: receiptData.total,
+        paymentMethod: receiptData.paymentMethod,
+        cashTendered: receiptData.cashTendered,
+        changeGiven: receiptData.changeGiven,
+        dualTaxConfig: {
+          cashTaxEnabled: session.cashTaxEnabled,
+          cashTaxRate: session.cashTaxRate,
+          cashTaxLabel: session.cashTaxLabel,
+          cardTaxEnabled: session.cardTaxEnabled,
+          cardTaxRate: session.cardTaxRate,
+          cardTaxLabel: session.cardTaxLabel,
+          showDualTaxOnReceipt: session.showDualTaxOnReceipt,
+          taxRoundingMethod: session.taxRoundingMethod,
+        },
+      } as any)
+      toast.success('Receipt sent to printer')
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to print receipt. Check printer connection in Settings.')
+    } finally {
+      setIsPrinting(false)
+    }
   }
 
   return (
@@ -92,91 +180,33 @@ function ReceiptPageContent() {
         </p>
       </div>
 
-      {/* Receipt card */}
-      <div style={{
-        width: '100%', maxWidth: '420px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderTop: '3px solid var(--pos-primary, #F59E0B)',
-        borderRadius: '16px',
-        padding: '20px',
-        marginBottom: '16px',
-        boxShadow: '0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)',
-        fontFamily: 'Courier New, monospace',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
-          <img src="/brand/dineiz-receipt-logo.svg" alt="Dineiz Receipt Logo" style={{ height: '44px', objectFit: 'contain' }} />
-        </div>
-        <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '14px', color: '#0F172A', margin: '0 0 4px' }}>
-          {branding.restaurantName ?? 'Dineiz Go'}
-        </p>
-        {branding.fbrNtn && (
-          <p style={{ textAlign: 'center', fontSize: '10px', color: '#64748B', margin: '0 0 8px' }}>
-            NTN: {branding.fbrNtn}
-          </p>
-        )}
-
-        <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
-
-        {order?.items?.map((item: any, i: number) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>
-            <span>{item.quantity}× {item.itemName}</span>
-            <span style={{ color: '#0F172A' }}>PKR {item.subtotal?.toLocaleString('en-PK')}</span>
-          </div>
-        ))}
-
-        <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B' }}>
-          <span>Subtotal</span><span>PKR {Math.round(order?.totalAmount ?? 0).toLocaleString('en-PK')}</span>
-        </div>
-        {order?.discountAmount > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B' }}>
-            <span>Discount</span><span>−PKR {Math.round(order.discountAmount).toLocaleString('en-PK')}</span>
-          </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748B' }}>
-          <span>{order?.appliedTaxLabel || 'GST'}</span>
-          <span>PKR {Math.round(order?.taxAmount ?? 0).toLocaleString('en-PK')}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>
-          <span>TOTAL</span><span style={{ color: 'var(--pos-primary, #F59E0B)' }}>PKR {Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}</span>
-        </div>
-        {method === 'CASH' && amountPaid > 0 && (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
-              <span>Cash Received</span><span>PKR {Math.round(amountPaid).toLocaleString('en-PK')}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#0F7A55', marginTop: '2px' }}>
-              <span>Change</span><span>PKR {Math.round(change).toLocaleString('en-PK')}</span>
-            </div>
-          </>
-        )}
-
-        {branding.receiptFooter && (
-          <>
-            <div style={{ borderTop: '1px dashed #E2E8F0', margin: '10px 0' }} />
-            <p style={{ textAlign: 'center', fontSize: '10px', color: '#94A3B8', fontStyle: 'italic' }}>
-              {branding.receiptFooter}
-            </p>
-          </>
+      {/* Receipt — same ReceiptView component PaymentModal renders right
+          after a payment completes; see components/ReceiptView.tsx. */}
+      <div style={{ width: '100%', maxWidth: '420px', marginBottom: '16px' }}>
+        {receiptData ? (
+          <ReceiptView data={receiptData} />
+        ) : (
+          <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', padding: '24px' }}>Loading receipt…</div>
         )}
       </div>
 
       {/* Action buttons — WhatsApp only shows when we actually have a
           number to send to (e.g. WhatsApp-sourced orders); previously this
           button rendered unconditionally with an empty onClick and did
-          nothing when tapped. */}
+          nothing when tapped — and separately read order?.customerPhone,
+          a flat field getOrder() never returns (the phone is nested under
+          order.customer.phone), so it never showed at all. */}
       <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
         <button
-          onClick={() => window.print()}
-          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
+          onClick={handlePrint}
+          disabled={isPrinting || !receiptData}
+          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: isPrinting ? 'default' : 'pointer', fontWeight: 600, opacity: isPrinting || !receiptData ? 0.6 : 1 }}
         >
-          🖨 Print
+          {isPrinting ? '⏳ Printing…' : '🖨 Print'}
         </button>
-        {order?.customerPhone && (
+        {order?.customer?.phone && (
           <a
-            href={`https://wa.me/${String(order.customerPhone).replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}.`)}`}
+            href={`https://wa.me/${String(order.customer.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}.`)}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#0F7A55', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}

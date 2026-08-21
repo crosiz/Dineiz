@@ -9,23 +9,18 @@ interface DineizLogoProps {
 
 // Actual pixel sizes for the rendered logo
 const SIZES = {
-  sm:  { height: 24, symbolSize: 24 },
-  md:  { height: 32, symbolSize: 30 },
-  lg:  { height: 40, symbolSize: 38 },
-  xl:  { height: 52, symbolSize: 48 },
+  sm: { height: 22, symbolSize: 22 },
+  md: { height: 28, symbolSize: 28 },
+  lg: { height: 36, symbolSize: 34 },
+  xl: { height: 48, symbolSize: 44 },
 };
 
 /**
  * DineizLogo
  *
- * When `showWordmark` is true  → renders the full horizontal wordmark SVG
- *                                 (the 800×200 asset that has symbol + "Dineiz" text)
- * When `showWordmark` is false → renders just the D-mark symbol as a square icon
- *                                 (collapsed sidebar / small contexts)
- *
- * The brand SVGs have a 768×768 (or similar) canvas where the actual glyph is
- * centred.  We compensate with negative vertical margins so the visible area
- * is tight to the mark.
+ * Renders the Dineiz brand logo crisply without negative margin hacks.
+ * - showWordmark: true -> full horizontal brandmark (symbol + "Dineiz")
+ * - showWordmark: false -> standalone monogram symbol for compact/collapsed contexts
  */
 export function DineizLogo({
   size = "md",
@@ -36,10 +31,6 @@ export function DineizLogo({
   const { height, symbolSize } = SIZES[size];
 
   if (showWordmark) {
-    // Full horizontal logo – the SVG canvas is large, compensate vertically.
-    const canvasHeight = height * 5.5;        // approximate canvas inflation
-    const vOffset = -(canvasHeight - height) / 2;
-
     const logoSrc =
       variant === "dark"
         ? "/brand/transparent/logos/dineiz-logo-dark-bg.svg"
@@ -47,65 +38,79 @@ export function DineizLogo({
 
     return (
       <div
-        className={`inline-flex items-center overflow-hidden select-none shrink-0 ${className}`}
-        style={{ height, minWidth: 0 }}
+        className={`inline-flex items-center select-none shrink-0 ${className}`}
+        style={{ height }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoSrc}
-          alt="Dineiz"
-          draggable={false}
-          className="pointer-events-none select-none"
+        <div
+          className="relative overflow-hidden flex items-center justify-center shrink-0"
           style={{
-            height: canvasHeight,
-            width: "auto",
-            marginTop: vOffset,
-            marginBottom: vOffset,
-            maxWidth: "none",
+            height,
+            width: height * 3.4, // Native aspect ratio ~3.4:1
           }}
-        />
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoSrc}
+            alt="Dineiz"
+            draggable={false}
+            className="pointer-events-none select-none max-w-none"
+            style={{
+              height: height * 4.46,
+              width: "auto",
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        </div>
       </div>
     );
   }
 
   // ── Symbol / Monogram (collapsed state) ─────────────────────────────────────
-  // Render a crisp, square symbol mark in a rounded container.
   const symbolSrc =
     variant === "dark"
       ? "/brand/transparent/symbols/dineiz-symbol-dark-bg.svg"
       : "/brand/transparent/symbols/dineiz-symbol-light-bg.svg";
 
-  // The symbol SVG has a lot of padding too – crop tightly.
-  const symbolCanvas = symbolSize * 1.7;
-  const symbolOffset = -(symbolCanvas - symbolSize) / 2;
+  const containerBg =
+    variant === "dark"
+      ? "bg-white/[0.06] border border-white/10"
+      : "bg-slate-100/80 border border-slate-200/80";
 
   return (
     <div
-      className={`inline-flex items-center justify-center overflow-hidden select-none shrink-0 rounded-lg ${className}`}
+      className={`inline-flex items-center justify-center select-none shrink-0 rounded-lg ${containerBg} ${className}`}
       style={{
-        width: symbolSize + 8,
-        height: symbolSize + 8,
-        background: "rgba(255,255,255,0.07)",
-        border: "1px solid rgba(255,255,255,0.10)",
+        width: symbolSize + 6,
+        height: symbolSize + 6,
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={symbolSrc}
-        alt="Dineiz"
-        draggable={false}
-        className="pointer-events-none select-none"
+      <div
+        className="relative overflow-hidden flex items-center justify-center"
         style={{
-          width: symbolCanvas,
-          height: symbolCanvas,
-          marginTop: symbolOffset,
-          marginBottom: symbolOffset,
-          marginLeft: symbolOffset,
-          marginRight: symbolOffset,
-          maxWidth: "none",
-          flexShrink: 0,
+          width: symbolSize,
+          height: symbolSize,
         }}
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={symbolSrc}
+          alt="Dineiz"
+          draggable={false}
+          className="pointer-events-none select-none max-w-none"
+          style={{
+            width: symbolSize * 1.45,
+            height: symbolSize * 1.45,
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+      </div>
     </div>
   );
 }
+

@@ -64,7 +64,7 @@ export function BranchSelect({
         >
           <option value="">{placeholder}</option>
           {includeAll && <option value="all">All Branches</option>}
-          {(branches ?? []).map((branch) => (
+          {(branches ?? []).map((branch: any) => (
             <option key={branch.id} value={branch.id}>
               {branch.name}{branch.city ? ` — ${branch.city}` : ''}
             </option>

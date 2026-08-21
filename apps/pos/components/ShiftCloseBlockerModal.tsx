@@ -1,5 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertTriangle, Receipt, Users, ArrowRight, ShieldCheck } from 'lucide-react';
 import { ManagerOverrideModal } from './ManagerOverrideModal';
 
 interface ShiftCloseBlockerModalProps {
@@ -31,49 +32,50 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
   }
 
   return (
-    <div className="fixed inset-0 z-[100] grid place-items-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} />
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" onClick={onClose} />
       
       <div 
-        className="relative z-10 w-full max-w-[500px] min-w-[320px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
-        style={{ animation: 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+        className="relative z-10 w-full max-w-[460px] min-w-[320px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
       >
-        <div className="p-8 pb-6 flex flex-col items-center text-center">
-          <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mb-5">
-            <span className="material-symbols-outlined text-rose-500 text-[32px]">warning</span>
+        <div className="p-6 pb-4 flex flex-col items-center text-center">
+          <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mb-3">
+            <AlertTriangle size={22} />
           </div>
-          <h2 className="text-[26px] font-bold text-slate-900 tracking-tight leading-tight mb-2">Shift Cannot Be Closed</h2>
-          <p className="text-[15px] text-slate-500 font-medium">There are unresolved items that require your attention before closing this shift.</p>
+          <h2 className="text-lg font-bold text-slate-900 leading-tight mb-1">Shift Cannot Be Closed</h2>
+          <p className="text-xs text-slate-500 font-medium">Unresolved items require attention before closing this shift.</p>
         </div>
 
-        <div className="px-8 pb-6 max-h-[50vh] overflow-y-auto space-y-3 custom-scrollbar">
+        <div className="px-6 pb-5 max-h-[48vh] overflow-y-auto space-y-2.5 custom-scrollbar">
           {blockers.map((blocker, idx) => (
-            <div key={idx} className="p-4 rounded-[20px] bg-slate-50 border border-slate-100 transition-all hover:bg-slate-100/50">
-              <div className="flex items-start gap-4">
-                <div className={`mt-0.5 w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${blocker.type === 'PENDING_ORDERS' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                  <span className="material-symbols-outlined text-[18px]">
-                    {blocker.type === 'PENDING_ORDERS' ? 'receipt_long' : 'group'}
-                  </span>
+            <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="flex items-start gap-3">
+                <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${blocker.type === 'PENDING_ORDERS' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
+                  {blocker.type === 'PENDING_ORDERS' ? (
+                    <Receipt size={14} />
+                  ) : (
+                    <Users size={14} />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-[16px] text-slate-900 tracking-tight">
+                  <h3 className="font-semibold text-xs text-slate-900">
                     {blocker.type === 'PENDING_ORDERS' ? 'Unpaid Orders' : 'Only Cashier Active'}
                   </h3>
-                  <p className="text-[14px] text-slate-500 mt-1 leading-relaxed">
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-normal">
                     {blocker.message}
                   </p>
 
                   {blocker.orders && blocker.orders.length > 0 && (
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-2.5 space-y-1.5">
                       {blocker.orders.map((o: any) => (
-                        <div key={o.id} className="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200/60 shadow-sm">
-                          <div className="flex items-center gap-3">
-                            <span className="font-bold text-[14px] text-slate-900">#{o.orderNumber || o.id.slice(-4)}</span>
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-[12px] font-bold text-slate-600 tracking-wide uppercase">
+                        <div key={o.id} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-slate-200 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 font-mono">#{o.orderNumber || o.id.slice(-4)}</span>
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase">
                               {o.table?.label || 'Takeaway'}
                             </span>
                           </div>
-                          <span className="text-[14px] font-bold text-slate-900">PKR {o.totalAmount?.toLocaleString()}</span>
+                          <span className="font-bold text-slate-900 font-mono">PKR {o.totalAmount?.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -84,30 +86,25 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
           ))}
         </div>
 
-        <div className="p-6 bg-white border-t border-slate-100 flex flex-col gap-3">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-2">
           <button
             onClick={() => {
               onClose();
               router.push('/pos/tickets');
             }}
-            className="w-full h-[52px] rounded-2xl bg-slate-900 text-white font-bold text-[15px] hover:bg-slate-800 active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)]"
+            className="w-full h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
           >
             Resolve Orders First
           </button>
           <button
             onClick={() => setShowOverride(true)}
-            className="w-full h-[52px] rounded-2xl bg-transparent border-2 border-slate-200 text-slate-600 font-bold text-[15px] hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] transition-all"
+            className="w-full h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-100 active:scale-95 transition-all"
           >
             Request Manager Override
           </button>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(40px) scale(0.96); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}} />
     </div>
   );
 }
+

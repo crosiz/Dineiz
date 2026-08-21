@@ -10,6 +10,7 @@ import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DineizLogo } from './ui/DineizLogo';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft } from 'lucide-react';
 
 export function POSTopBar() {
   const config = useContext(TopBarStateContext);
@@ -176,7 +177,7 @@ export function POSTopBar() {
               }}
               className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm"
             >
-              <span className="material-symbols-outlined text-sm">arrow_back</span>
+              <ArrowLeft size={15} />
               Back
             </button>
           )}
@@ -228,7 +229,7 @@ export function POSTopBar() {
             <div className="relative" ref={dropdownRef}>
               <button
                 data-testid="avatar-menu"
-                className="w-8.5 h-8.5 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-sm"
+                className="w-8.5 h-8.5 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-xs"
                 style={{ backgroundColor: avatarColor }}
                 title={avatarTitle}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -236,60 +237,69 @@ export function POSTopBar() {
               >
                 {avatarInitial}
               </button>
-              {/* Profile Dropdown */}
+              
+              {/* Profile Dropdown Popover */}
               {isDropdownOpen && (
-                <div className="absolute top-12 right-0 w-72 bg-white border border-[#E2E8F0] rounded-[16px] shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden animate-slide-down origin-top-right z-50">
-                  <div className="px-5 py-4 bg-white border-b border-[#E2E8F0]">
-                    <p className="font-bold text-[#0F172A] text-[15px] truncate">{avatarTitle}</p>
-                    <p className="text-[#64748B] text-[12px] font-medium mt-0.5">{cashierRole}</p>
-                  </div>
-
-                  <div className="px-5 py-2.5 bg-white border-b border-[#E2E8F0] flex items-center justify-between">
-                    <span className="text-[#64748B] text-[12px] uppercase tracking-wider font-semibold">Active Shift</span>
-                    <div className="flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[12px] font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      {shiftDuration}
+                <div className="absolute top-11 right-0 w-64 bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
+                  {/* User Info Header */}
+                  <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-bold text-slate-900 text-sm truncate">{avatarTitle}</p>
+                      <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 shrink-0">
+                        {cashierRole}
+                      </span>
+                    </div>
+                    
+                    {/* Active Shift Row */}
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60 text-xs">
+                      <span className="text-slate-500 font-medium">Shift Duration</span>
+                      <span className="font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px] tabular-nums">
+                        {shiftDuration || 'Active'}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="p-2 flex flex-col gap-1">
+                  {/* Menu Actions */}
+                  <div className="p-1.5 flex flex-col gap-0.5">
                     <button
-                      className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-[#F8FAFC] active:scale-[0.98] transition-all group"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
                       onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
                     >
-                      <span className="material-symbols-outlined text-[#64748B] group-hover:text-[#0F172A] transition-colors text-[20px]">
-                        {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
-                      </span>
-                      <span className="font-semibold text-[13px] text-[#0F172A]">{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
+                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
+                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
                     </button>
+
                     <button
-                      className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-[#F8FAFC] active:scale-[0.98] transition-all group disabled:opacity-50"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold disabled:opacity-50"
                       onClick={handleCloseShiftClick}
                       disabled={isValidatingClose}
                     >
-                      <span className="material-symbols-outlined text-[#64748B] group-hover:text-[#0F172A] transition-colors text-[20px]">schedule</span>
-                      <span className="font-semibold text-[13px] text-[#0F172A]">Close Shift</span>
+                      <Clock size={15} className="text-slate-500" />
+                      <span>Close Shift</span>
                     </button>
+
                     <button
-                      className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-[#F8FAFC] active:scale-[0.98] transition-all group"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
                       onClick={() => {
                         setIsDropdownOpen(false);
                         setShowTakeBreakConfirm(true);
                       }}
                     >
-                      <span className="material-symbols-outlined text-[#64748B] group-hover:text-[#0F172A] transition-colors text-[20px]">coffee</span>
-                      <span className="font-semibold text-[13px] text-[#0F172A] transition-colors">Take a Break</span>
+                      <Coffee size={15} className="text-slate-500" />
+                      <span>Take a Break</span>
                     </button>
-                    <div className="h-[1px] bg-[#E2E8F0] mx-3 my-1" />
+
+                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+
                     <button
-                      className="w-full px-4 py-3 rounded-lg flex items-center gap-3 text-left hover:bg-rose-50 active:scale-[0.98] transition-all group"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-rose-600 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100/80 transition-colors text-xs font-semibold"
                       onClick={() => {
                         setIsDropdownOpen(false);
                         setShowSignOutConfirm(true);
                       }}
                     >
-                      <span className="material-symbols-outlined text-rose-500 group-hover:text-rose-600 transition-colors text-[20px]">logout</span>
-                      <span className="font-semibold text-[13px] text-rose-600 group-hover:text-rose-700 transition-colors">Sign Out</span>
+                      <LogOut size={15} className="text-rose-500" />
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </div>
@@ -301,86 +311,81 @@ export function POSTopBar() {
 
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
-
-            <div className="p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-[#FDECEC] border border-[#F5C6C2] flex items-center justify-center mb-5">
-                <span className="material-symbols-outlined text-[#DC2626] text-[32px]">logout</span>
-              </div>
-              <h3 className="font-bold text-[#0F172A] text-[22px] clash-display tracking-wide mb-2">Sign Out of POS?</h3>
-              <p className="text-[#64748B] text-[14px] mb-8">
-                Your session will be closed, but your <strong className="text-[var(--pos-primary,#F59E0B)]">shift will remain active</strong> for when you return.
-              </p>
-
-              <div className="flex gap-3 w-full">
-                <button
-                  onClick={() => setShowSignOutConfirm(false)}
-                  className="flex-1 h-[52px] rounded-[14px] border border-[#E2E8F0] text-[#475569] hover:bg-[#F1F5F9] active:scale-[0.98] transition-all font-semibold text-[15px]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSignOut}
-                  className="flex-1 h-[52px] rounded-[14px] bg-[#DC2626] hover:bg-[#C4362E] text-white font-bold text-[15px] active:scale-[0.98] transition-all shadow-[0_4px_20px_rgba(220,38,38,0.25)]"
-                >
-                  Sign Out
-                </button>
-              </div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[360px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mb-4">
+              <LogOut size={20} />
             </div>
+            
+            <h3 className="font-bold text-slate-900 text-base mb-1">Sign Out of POS?</h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              Your session will be closed, but your <strong className="text-[var(--pos-primary,#F59E0B)]">shift will remain active</strong> for when you return.
+            </p>
 
+            <div className="flex gap-2.5 w-full">
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[360px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <Coffee size={20} />
+            </div>
+            
+            <h2 className="font-bold text-slate-900 text-base mb-1">Take a Break?</h2>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              You'll be locked out temporarily. Your shift stays active and all orders continue.
+            </p>
 
-            <div className="p-8 text-center flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 border border-[var(--pos-primary,#F59E0B)]/30 flex items-center justify-center mb-5">
-                <span className="material-symbols-outlined text-[var(--pos-primary,#F59E0B)] text-[32px]">coffee</span>
-              </div>
-              <h2 className="font-bold text-[#0F172A] text-[22px] clash-display tracking-wide mb-2">Take a Break?</h2>
-              <p className="text-[#64748B] text-[14px] leading-relaxed mb-8 max-w-[280px]">
-                You'll be locked out temporarily. Your shift stays active and all orders continue.
-              </p>
-
-              <div className="flex gap-3 w-full">
-                <button
-                  onClick={() => setShowTakeBreakConfirm(false)}
-                  className="flex-1 h-[48px] rounded-[14px] border border-[#E2E8F0] text-[#475569] font-semibold text-[15px] hover:bg-[#F1F5F9] active:scale-[0.98] transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    // Call the break-start API before locking the screen
-                    try {
-                      const shiftObj = getPosShift();
-                      const sessionObj = getPosSession();
-                      if (shiftObj?.shiftId && sessionObj?.token) {
-                        const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-                        const res = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}/break/start`, {
-                          method: 'POST',
-                          headers: { 'Authorization': `Bearer ${sessionObj.token}`, 'Content-Type': 'application/json' },
-                        });
-                        if (res.ok) {
-                          const data = await res.json();
-                          setPosBreak({ breakId: data.breakId, shiftId: shiftObj.shiftId, startedAt: data.startedAt });
-                        }
+            <div className="flex gap-2.5 w-full">
+              <button
+                onClick={() => setShowTakeBreakConfirm(false)}
+                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  // Call the break-start API before locking the screen
+                  try {
+                    const shiftObj = getPosShift();
+                    const sessionObj = getPosSession();
+                    if (shiftObj?.shiftId && sessionObj?.token) {
+                      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+                      const res = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}/break/start`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${sessionObj.token}`, 'Content-Type': 'application/json' },
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        setPosBreak({ breakId: data.breakId, shiftId: shiftObj.shiftId, startedAt: data.startedAt });
                       }
-                    } catch {
-                      // Non-fatal: still lock the screen even if API call fails
                     }
-                    router.push('/login?reason=break');
-                  }}
-                  className="flex-1 h-[48px] rounded-[14px] bg-orange-500 hover:bg-orange-400 text-white font-bold text-[15px] active:scale-[0.98] transition-all shadow-[0_4px_12px_rgba(249,115,22,0.3)]"
-                >
-                  Lock Screen
-                </button>
-              </div>
+                  } catch {
+                    // Non-fatal: still lock the screen even if API call fails
+                  }
+                  router.push('/login?reason=break');
+                }}
+                className="flex-1 h-10 rounded-xl bg-[#FF5722] hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+              >
+                Lock Screen
+              </button>
             </div>
           </div>
         </div>

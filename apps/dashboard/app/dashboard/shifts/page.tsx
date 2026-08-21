@@ -9,8 +9,9 @@ import { apiFetch, API_URL } from "@/lib/api";
 import { formatPKR, formatVariance } from "@/lib/formatters";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Clock, RefreshCw, Download, Search, Eye, X, ChevronRight,
+  Clock, RefreshCw, Download, Search, Eye, X, ChevronRight, ChevronDown, MoreVertical,
 } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 import { useTick } from "@/lib/hooks";
 import { io } from "socket.io-client";
 import { useBranchFilter } from "@/hooks/useBranchFilter";
@@ -233,6 +234,14 @@ export default function ShiftManagementPage() {
   });
   const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
 
+  // Pagination for History Tab
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(25);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [filterSearch, filterStatus, dateFrom, dateTo, effectiveBranchId]);
+
   // Live data
   const { data: liveData, isLoading: isLiveLoading, refetch: refetchLive } = useQuery({
     queryKey: ["shift-stats-active", effectiveBranchId],
@@ -283,6 +292,15 @@ export default function ShiftManagementPage() {
     if (filterSearch && !`${s.user?.name}`.toLowerCase().includes(filterSearch.toLowerCase())) return false;
     return true;
   });
+
+  // Pagination calculations
+  const totalItems = historyShifts.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / historyPageSize));
+  const validPage = Math.min(historyPage, totalPages);
+  const startIndex = (validPage - 1) * historyPageSize;
+  const paginatedShifts = historyShifts.slice(startIndex, startIndex + historyPageSize);
+  const startItem = totalItems === 0 ? 0 : startIndex + 1;
+  const endItem = Math.min(validPage * historyPageSize, totalItems);
 
   // Summary metrics
   const totalRevenue = historyShifts.reduce((s: number, sh: any) => s + Number(sh.totalSales ?? 0), 0);
@@ -441,182 +459,277 @@ export default function ShiftManagementPage() {
 
         {/* ══════════════════ HISTORY TAB ══════════════════ */}
         {activeTab === "history" && (
-          <>
+          <div className="space-y-6">
             {/* Filters */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-1.5">
-                <Search className="w-3.5 h-3.5 text-slate-300" />
+            <div className="flex items-center gap-3 flex-wrap bg-white">
+              <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50/50 shadow-xs focus-within:bg-white focus-within:border-slate-300 transition-all">
+                <Search className="w-4 h-4 text-slate-400" />
                 <input
                   value={filterSearch}
                   onChange={e => setFilterSearch(e.target.value)}
                   placeholder="Search cashier…"
-                  className="text-sm bg-transparent outline-none text-slate-700 placeholder:text-slate-300 w-32"
+                  className="text-xs bg-transparent outline-none text-slate-700 placeholder:text-slate-400 w-36 font-medium"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400">From</label>
+              <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50/50 shadow-xs">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">From</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={e => setDateFrom(e.target.value)}
-                  className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-slate-300"
+                  className="text-xs font-medium bg-transparent outline-none text-slate-700 cursor-pointer"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-400">To</label>
+              <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-2 bg-slate-50/50 shadow-xs">
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">To</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={e => setDateTo(e.target.value)}
-                  className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-slate-300"
+                  className="text-xs font-medium bg-transparent outline-none text-slate-700 cursor-pointer"
                 />
               </div>
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="text-sm border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none bg-white text-slate-600"
-              >
-                <option value="">All statuses</option>
-                <option value="CLOSED">Closed</option>
-                <option value="OPEN">Open</option>
-                <option value="ABANDONED">Abandoned</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  className="text-xs font-medium border border-slate-200 rounded-xl px-3 py-2 pr-8 outline-none bg-slate-50/50 text-slate-700 appearance-none cursor-pointer shadow-xs hover:bg-slate-50 transition-colors"
+                >
+                  <option value="">All statuses</option>
+                  <option value="CLOSED">Closed</option>
+                  <option value="OPEN">Open</option>
+                  <option value="ABANDONED">Abandoned</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
               {(filterSearch || filterStatus) && (
                 <button
                   onClick={() => { setFilterSearch(""); setFilterStatus(""); }}
-                  className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
                 >
-                  <X className="w-3 h-3" /> Clear
+                  <X className="w-3.5 h-3.5" /> Clear Filters
                 </button>
               )}
             </div>
 
             {/* Summary metrics */}
             {!isHistoryLoading && historyShifts.length > 0 && (
-              <div className="flex items-center gap-8 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-8 py-3.5 px-5 bg-slate-50/70 border border-slate-200/80 rounded-2xl">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5 uppercase tracking-wider">{historyShifts.length} shifts</p>
-                  <p className="text-xl font-black text-gray-900">{formatPKR(totalRevenue)}</p>
-                  <p className="text-[11px] text-gray-500 font-medium">total revenue</p>
+                  <p className="text-[11px] font-bold text-slate-400 mb-0.5 uppercase tracking-wider font-mono">{historyShifts.length} shifts</p>
+                  <p className="text-lg font-black text-slate-900 font-mono">{formatPKR(totalRevenue)}</p>
+                  <p className="text-[10px] text-slate-500 font-medium">total revenue</p>
                 </div>
-                <div className="w-px h-10 bg-gray-200" />
+                <div className="w-px h-8 bg-slate-200" />
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5 uppercase tracking-wider">Avg duration</p>
-                  <p className="text-xl font-black text-gray-900">
+                  <p className="text-[11px] font-bold text-slate-400 mb-0.5 uppercase tracking-wider font-mono">Avg duration</p>
+                  <p className="text-lg font-black text-slate-900 font-mono">
                     {avgDurationMs > 0 ? fmtDuration(avgDurationMs) : "—"}
                   </p>
+                  <p className="text-[10px] text-slate-500 font-medium">per shift</p>
                 </div>
-                <div className="w-px h-10 bg-gray-200" />
+                <div className="w-px h-8 bg-slate-200" />
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-0.5 uppercase tracking-wider">Net variance</p>
-                  <p className={`text-xl font-black ${totalVariance === 0 ? "text-gray-900" : totalVariance > 0 ? "text-green-600" : "text-red-600"}`}>
+                  <p className="text-[11px] font-bold text-slate-400 mb-0.5 uppercase tracking-wider font-mono">Net variance</p>
+                  <p className={`text-lg font-black font-mono ${totalVariance === 0 ? "text-slate-900" : totalVariance > 0 ? "text-emerald-600" : "text-rose-600"}`}>
                     {formatVariance(totalVariance)}
                   </p>
+                  <p className="text-[10px] text-slate-500 font-medium">cash balance</p>
                 </div>
               </div>
             )}
 
-            {/* History table */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    {["Date", "Cashier", "Opened", "Closed", "Duration", "Float", "Sales", "Cash", "Digital", "Variance", "Status", ""].map(h => (
-                      <th
-                        key={h}
-                        className={`py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap ${h === "" ? "pr-4 text-right" : "px-4"} ${h === "Date" ? "pl-5" : ""}`}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {isHistoryLoading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={i}>
-                        {Array.from({ length: 12 }).map((_, j) => (
-                          <td key={j} className="px-4 py-3">
-                            <div className="h-3.5 bg-slate-100 rounded animate-pulse w-14" />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  ) : historyShifts.length === 0 ? (
-                    <tr>
-                      <td colSpan={12} className="py-16 text-center text-sm text-slate-400">
-                        No shifts found
-                      </td>
+            {/* History table card with bottom pagination */}
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200/80 bg-slate-50/70">
+                      <th className="py-3.5 pl-6 pr-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">SHIFT #</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">DATE & TIME</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">BRANCH</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">CASHIER</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">DURATION</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">FLOAT</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">TOTAL SALES</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">CASH / CARD</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">VARIANCE</th>
+                      <th className="py-3.5 px-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">STATUS</th>
+                      <th className="py-3.5 pr-6 pl-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap text-right">ACTIONS</th>
                     </tr>
-                  ) : (
-                    historyShifts.map((s: any) => {
-                      const variance = Number(s.cashVariance ?? 0);
-                      return (
-                        <tr
-                          key={s.id}
-                          onClick={() => router.push(`/dashboard/shifts/${s.id}`)}
-                          className="group hover:bg-gray-50 cursor-pointer transition-colors"
-                        >
-                          <td className="py-3 pl-5 pr-4 text-xs text-slate-500 whitespace-nowrap">{fmtDate(s.openedAt)}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[9px] font-bold text-slate-400 shrink-0">
-                                {(s.user?.name ?? "?").substring(0, 2).toUpperCase()}
-                              </div>
-                              <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{s.user?.name ?? "—"}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{fmtTime(s.openedAt)}</td>
-                          <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                            {s.closedAt ? fmtTime(s.closedAt) : <span className="text-emerald-500">Open</span>}
-                          </td>
-                          <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                            {s.closedAt
-                              ? fmtDuration(new Date(s.closedAt).getTime() - new Date(s.openedAt).getTime())
-                              : <LiveDuration openedAt={s.openedAt} />}
-                          </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                            {formatPKR(Number(s.openingFloat ?? 0))}
-                          </td>
-                          <td className="py-3 px-4 text-xs font-medium text-slate-700 whitespace-nowrap tabular-nums">
-                            {formatPKR(Number(s.totalSales ?? 0))}
-                          </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                            {formatPKR(Number(s.totalCash ?? 0))}
-                          </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                            {formatPKR(Number(s.totalCard ?? 0))}
-                          </td>
-                          <td className="py-3 px-4 text-xs whitespace-nowrap tabular-nums">
-                            <span className={
-                              variance === 0 ? "text-slate-400"
-                              : variance > 0 ? "text-emerald-600 font-medium"
-                              : "text-red-500 font-medium"
-                            }>
-                              {formatVariance(variance)}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium ${
-                              s.closedReason ? "bg-amber-50 text-amber-600 border border-amber-200" :
-                              s.status === "OPEN" ? "bg-emerald-50 text-emerald-600 border border-emerald-200" :
-                              s.status === "ABANDONED" ? "bg-red-50 text-red-600 border border-red-200" :
-                              "bg-slate-50 text-slate-500 border border-slate-200"
-                            }`}>
-                              {s.closedReason ? "Force Closed" : s.status === "OPEN" ? "Open" : s.status === "ABANDONED" ? "Abandoned" : "Closed"}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            <ChevronRight className="w-3.5 h-3.5 text-slate-200 group-hover:text-slate-400 transition-colors inline" />
-                          </td>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {isHistoryLoading ? (
+                      Array.from({ length: 6 }).map((_, i) => (
+                        <tr key={i}>
+                          <td className="py-4 pl-6 pr-4"><div className="h-4 bg-slate-100 rounded w-20 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-24 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-24 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-28 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-16 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-16 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-16 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-20 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-16 animate-pulse" /></td>
+                          <td className="py-4 px-4"><div className="h-4 bg-slate-100 rounded w-16 animate-pulse" /></td>
+                          <td className="py-4 pr-6 pl-4 text-right"><div className="h-4 bg-slate-100 rounded w-6 ml-auto animate-pulse" /></td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                      ))
+                    ) : paginatedShifts.length === 0 ? (
+                      <tr>
+                        <td colSpan={11} className="py-16 text-center text-sm text-slate-400 font-medium">
+                          No shifts found matching criteria
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedShifts.map((s: any) => {
+                        const variance = Number(s.cashVariance ?? 0);
+                        const branchLabel = s.branch?.name || (effectiveBranchId ? "Current Branch" : "Main Branch");
+
+                        return (
+                          <tr
+                            key={s.id}
+                            onClick={() => router.push(`/dashboard/shifts/${s.id}`)}
+                            className="group hover:bg-slate-50/70 transition-colors cursor-pointer"
+                          >
+                            {/* Shift # */}
+                            <td className="py-3.5 pl-6 pr-4 whitespace-nowrap">
+                              <span className="font-mono font-bold text-xs text-[#FF5722]">
+                                #SFT-{s.id.slice(-6).toUpperCase()}
+                              </span>
+                            </td>
+
+                            {/* Date & Time */}
+                            <td className="py-3.5 px-4 text-xs font-medium text-slate-700 whitespace-nowrap">
+                              {fmtDate(s.openedAt)}, {fmtTime(s.openedAt)}
+                            </td>
+
+                            {/* Branch */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-teal-50/80 text-teal-700 border border-teal-200/80 text-[10px] font-bold uppercase font-mono tracking-wider">
+                                {branchLabel}
+                              </span>
+                            </td>
+
+                            {/* Cashier */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <div className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[9px] font-bold text-slate-600 shrink-0">
+                                  {(s.user?.name ?? "?").substring(0, 2).toUpperCase()}
+                                </div>
+                                <span className="text-xs font-medium text-slate-800">{s.user?.name ?? "—"}</span>
+                              </div>
+                            </td>
+
+                            {/* Duration */}
+                            <td className="py-3.5 px-4 text-xs font-mono text-slate-600 whitespace-nowrap tabular-nums">
+                              {s.closedAt
+                                ? fmtDuration(new Date(s.closedAt).getTime() - new Date(s.openedAt).getTime())
+                                : <LiveDuration openedAt={s.openedAt} />}
+                            </td>
+
+                            {/* Float */}
+                            <td className="py-3.5 px-4 text-xs text-slate-500 font-mono whitespace-nowrap tabular-nums">
+                              PKR {Number(s.openingFloat ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Total Sales */}
+                            <td className="py-3.5 px-4 text-xs font-bold text-slate-900 font-mono whitespace-nowrap tabular-nums">
+                              PKR {Number(s.totalSales ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Cash / Card */}
+                            <td className="py-3.5 px-4 text-xs text-slate-500 font-mono whitespace-nowrap tabular-nums">
+                              PKR {Number(s.totalCash ?? 0).toLocaleString()} / PKR {Number(s.totalCard ?? 0).toLocaleString()}
+                            </td>
+
+                            {/* Variance */}
+                            <td className="py-3.5 px-4 whitespace-nowrap tabular-nums">
+                              {variance === 0 ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-mono font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                  Balanced
+                                </span>
+                              ) : variance > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-mono font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  +PKR {Number(variance).toLocaleString()}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-xs text-rose-600 font-mono font-bold">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  -PKR {Math.abs(Number(variance)).toLocaleString()}
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 whitespace-nowrap">
+                              {s.closedReason ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  Force Closed
+                                </span>
+                              ) : s.status === "OPEN" ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                  Active
+                                </span>
+                              ) : s.status === "ABANDONED" ? (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                  Abandoned
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 font-medium">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Completed
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  router.push(`/dashboard/shifts/${s.id}`);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center justify-center"
+                                title="View Shift Details"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Navigation / Pagination Footer */}
+              <div className="px-6 py-4 flex items-center justify-between border-t border-slate-100 bg-white flex-wrap gap-3">
+                <div className="text-xs text-slate-500 font-medium">
+                  Showing <span className="font-semibold text-slate-900">{totalItems === 0 ? 0 : `${startItem}-${endItem}`}</span> of{' '}
+                  <span className="font-semibold text-slate-900">{totalItems.toLocaleString()}</span> {totalItems === 1 ? 'shift' : 'shifts'}
+                </div>
+                <div className="flex items-center">
+                  <Pagination 
+                    currentPage={validPage} 
+                    totalPages={totalPages} 
+                    onPageChange={setHistoryPage} 
+                    pageSize={historyPageSize}
+                    onPageSizeChange={(newSize) => {
+                      setHistoryPageSize(newSize);
+                      setHistoryPage(1);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

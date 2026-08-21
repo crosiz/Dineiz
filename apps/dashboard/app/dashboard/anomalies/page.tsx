@@ -44,63 +44,67 @@ export default function AnomaliesPage() {
   });
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <AlertTriangle className="text-rose-500" size={32} />
-            Anomalies
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <AlertTriangle className="text-rose-500" size={22} />
+            Security & Operations Anomalies
           </h1>
-          <p className="text-slate-500 mt-2">Security & fraud detection for your restaurant operations.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Automated detection of irregular cash handling, discounts, and voids</p>
         </div>
         <button 
           onClick={() => setShowSettings(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors"
+          className="h-9 px-3.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-xs"
         >
-          <Settings size={18} />
-          Settings
+          <Settings size={15} />
+          Rule Settings
         </button>
       </div>
 
       {criticalCount > 0 && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-center gap-3 font-medium">
-          <ShieldAlert size={20} className="text-rose-600" />
-          <span><strong className="font-black">{criticalCount} critical anomalies</strong> require your immediate attention.</span>
+        <div className="bg-rose-50/80 border border-rose-200 text-rose-800 px-4 py-2.5 rounded-xl flex items-center gap-2.5 text-xs font-medium">
+          <ShieldAlert size={16} className="text-rose-600 shrink-0" />
+          <span><strong className="font-bold">{criticalCount} critical anomaly events</strong> require review.</span>
         </div>
       )}
 
-      {/* Summary Row */}
-      <div className="flex flex-wrap gap-4">
+      {/* Segmented Filter Row */}
+      <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200 w-fit flex-wrap">
         <button 
           onClick={() => setFilter('ALL')}
-          className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors ${filter === 'ALL' ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+          className={`px-3 py-1 rounded-md font-semibold text-xs transition-colors ${filter === 'ALL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          All
+          All Events
         </button>
         <button 
           onClick={() => setFilter('CRITICAL')}
-          className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${filter === 'CRITICAL' ? 'bg-rose-600 text-white' : 'bg-white border border-rose-200 text-rose-700 hover:bg-rose-50'}`}
+          className={`px-3 py-1 rounded-md font-semibold text-xs transition-colors flex items-center gap-1.5 ${filter === 'CRITICAL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          Critical ({criticalCount})
+          Critical
+          {criticalCount > 0 && <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-100 text-rose-700 font-bold">{criticalCount}</span>}
         </button>
         <button 
           onClick={() => setFilter('HIGH')}
-          className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${filter === 'HIGH' ? 'bg-orange-500 text-white' : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'}`}
+          className={`px-3 py-1 rounded-md font-semibold text-xs transition-colors flex items-center gap-1.5 ${filter === 'HIGH' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          High ({highCount})
+          High
+          {highCount > 0 && <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-orange-100 text-orange-700 font-bold">{highCount}</span>}
         </button>
         <button 
           onClick={() => setFilter('MEDIUM')}
-          className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${filter === 'MEDIUM' ? 'bg-amber-500 text-white' : 'bg-white border border-amber-200 text-amber-700 hover:bg-amber-50'}`}
+          className={`px-3 py-1 rounded-md font-semibold text-xs transition-colors flex items-center gap-1.5 ${filter === 'MEDIUM' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          Medium ({mediumCount})
+          Medium
+          {mediumCount > 0 && <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-700 font-bold">{mediumCount}</span>}
         </button>
         <button 
           onClick={() => setFilter('RESOLVED')}
-          className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors flex items-center gap-2 ${filter === 'RESOLVED' ? 'bg-green-600 text-white' : 'bg-white border border-green-200 text-green-700 hover:bg-green-50'}`}
+          className={`px-3 py-1 rounded-md font-semibold text-xs transition-colors flex items-center gap-1.5 ${filter === 'RESOLVED' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
         >
-          <CheckCircle2 size={16} />
-          Resolved ({resolvedCount})
+          <CheckCircle2 size={13} className="text-emerald-600" />
+          Resolved
+          {resolvedCount > 0 && <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-700 font-bold">{resolvedCount}</span>}
         </button>
       </div>
 
@@ -112,3 +116,4 @@ export default function AnomaliesPage() {
     </div>
   );
 }
+

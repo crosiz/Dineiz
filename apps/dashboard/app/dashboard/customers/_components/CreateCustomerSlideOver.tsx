@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { X, Loader2 } from 'lucide-react';
 
 type CreateCustomerSlideOverProps = {
   isOpen: boolean;
@@ -51,31 +52,31 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
   return (
     <>
       <div 
-        className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40 transition-opacity" 
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 transition-opacity" 
         onClick={onClose}
       />
-      <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-2xl z-50 flex flex-col transform transition-transform duration-300">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+      <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white shadow-xl z-50 flex flex-col transform transition-transform duration-300">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{isEditing ? 'Edit Customer' : 'Add Customer'}</h2>
-            <p className="text-sm text-gray-500 mt-1">{isEditing ? "Update this customer's profile." : 'Create a new customer profile manually.'}</p>
+            <h2 className="text-base font-bold text-slate-900">{isEditing ? 'Edit Customer' : 'Add Customer'}</h2>
+            <p className="text-xs text-slate-500 mt-0.5">{isEditing ? "Update this customer's profile details." : 'Register a new customer profile manually.'}</p>
           </div>
           <button 
             onClick={onClose} 
-            className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
               <input
                 type="text"
                 required
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
                 placeholder="e.g. Ali Khan"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -83,11 +84,11 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone Number *</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number *</label>
               <input
                 type="tel"
                 required
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
                 placeholder="e.g. +923001234567"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -95,10 +96,10 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address (Optional)</label>
               <input
                 type="email"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
                 placeholder="e.g. ali@example.com"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -106,10 +107,10 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Birthday (Optional)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Birthday (Optional)</label>
               <input
                 type="date"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
                 value={formData.birthday}
                 onChange={e => setFormData({ ...formData, birthday: e.target.value })}
               />
@@ -117,10 +118,10 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
 
             {!isEditing && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Initial Notes (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Initial Notes (Optional)</label>
                 <textarea
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all h-24 resize-none"
-                  placeholder="Any special preferences or allergies..."
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all h-24 resize-none"
+                  placeholder="Preferences, allergy alerts, VIP notes..."
                   value={formData.notes}
                   onChange={e => setFormData({ ...formData, notes: e.target.value })}
                 />
@@ -129,11 +130,11 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
           </div>
         </form>
 
-        <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-sm"
+            className="h-9 px-4 bg-white text-slate-700 font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-xs shadow-xs"
           >
             Cancel
           </button>
@@ -141,12 +142,13 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
-            className="px-6 py-2.5 bg-[#FF5722] hover:bg-[#E64A19] text-white font-semibold rounded-xl shadow-[0_4px_12px_rgba(255,87,34,0.3)] transition-all flex items-center justify-center min-w-[120px] text-sm disabled:opacity-70 disabled:cursor-not-allowed"
+            className="h-9 px-5 bg-[#FF5722] hover:bg-[#F4511E] text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center min-w-[120px] text-xs disabled:opacity-70 disabled:cursor-not-allowed gap-1.5"
           >
-            {loading ? <span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> : isEditing ? 'Save Changes' : 'Create Customer'}
+            {loading ? <Loader2 size={15} className="animate-spin" /> : isEditing ? 'Save Changes' : 'Create Customer'}
           </button>
         </div>
       </div>
     </>
   );
 }
+

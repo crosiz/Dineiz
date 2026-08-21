@@ -400,6 +400,12 @@ function OrderEntryPageContent() {
     return items;
   }, [menuItems, activeCategoryId, debouncedSearch]);
 
+  const gridColsClass = viewMode === 'compact' ? 'grid-cols-1' :
+    viewMode === 'detailed' ? 'grid-cols-1 xl:grid-cols-2 gap-4' :
+      viewMode === 'large' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' :
+        viewMode === 'minimal' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2' :
+          'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4';
+
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
   const handleItemTap = (item: CachedMenuItem) => {
@@ -956,41 +962,76 @@ function OrderEntryPageContent() {
             </div>
           </div>
 
-          {/* Menu Grid */}
-          <div
-            className={`grid gap-2.5 p-3 content-start overflow-y-auto no-scrollbar pb-24 lg:pb-3 ${viewMode === 'compact' ? 'grid-cols-1' :
-                viewMode === 'detailed' ? 'grid-cols-1 xl:grid-cols-2 gap-4' :
-                  viewMode === 'large' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' :
-                    viewMode === 'minimal' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2' :
-                      'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4'
-              }`}
-            style={{ flex: 1 }}
-          >
+          {/* Menu Grid — "All" groups items under a category divider per
+              section (a flat, undifferentiated grid of the whole menu was
+              genuinely hard to scan mid-service); picking one category
+              already narrows the grid to just that category, so a divider
+              there would just repeat the category chip above it. */}
+          <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24 lg:pb-3">
             {menuLoading ? (
-              Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="bg-white border border-[#E2E8F0] rounded-2xl h-[220px] animate-pulse flex flex-col overflow-hidden">
-                  <div className="h-[120px] bg-[#F1F5F9]"></div>
-                  <div className="p-3 space-y-2">
-                    <div className="h-4 bg-[#E2E8F0] rounded w-3/4"></div>
-                    <div className="h-3 bg-[#E2E8F0] rounded w-1/2"></div>
+              <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="bg-white border border-[#E2E8F0] rounded-2xl h-[220px] animate-pulse flex flex-col overflow-hidden">
+                    <div className="h-[120px] bg-[#F1F5F9]"></div>
+                    <div className="p-3 space-y-2">
+                      <div className="h-4 bg-[#E2E8F0] rounded w-3/4"></div>
+                      <div className="h-3 bg-[#E2E8F0] rounded w-1/2"></div>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
+            ) : !activeCategoryId ? (
+              <div className="flex flex-col gap-7">
+                {categories.map(cat => {
+                  const catItems = filteredItems.filter(i => i.categoryId === cat.id);
+                  if (catItems.length === 0) return null;
+                  return (
+                    <section key={cat.id}>
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">{cat.name}</h3>
+                        <span className="text-[12px] font-bold text-[#94A3B8]">{catItems.length}</span>
+                        <div className="h-px flex-1 bg-[#E2E8F0]" />
+                      </div>
+                      <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
+                        {catItems.map(item => (
+                          <MenuItemCard
+                            key={item.id}
+                            item={{ ...item, categoryName: cat.name }}
+                            cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
+                            onTap={handleItemTap}
+                            viewMode={viewMode}
+                            onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
+                            isTogglingAvailable={togglingItemId === item.id}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+                {filteredItems.length === 0 && (
+                  <div className="text-center text-[#94A3B8] py-10 font-medium">No menu items match your search.</div>
+                )}
+              </div>
             ) : (
-              filteredItems.map(item => (
-                <MenuItemCard
-                  key={item.id}
-                  item={{
-                    ...item,
-                    categoryName: categories.find(c => c.id === item.categoryId)?.name
-                  }}
-                  cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
-                  onTap={handleItemTap}
-                  viewMode={viewMode}
-                  onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
-                  isTogglingAvailable={togglingItemId === item.id}
-                />
-              ))
+              <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
+                {filteredItems.map(item => (
+                  <MenuItemCard
+                    key={item.id}
+                    item={{
+                      ...item,
+                      categoryName: categories.find(c => c.id === item.categoryId)?.name
+                    }}
+                    cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
+                    onTap={handleItemTap}
+                    viewMode={viewMode}
+                    onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
+                    isTogglingAvailable={togglingItemId === item.id}
+                  />
+                ))}
+                {filteredItems.length === 0 && (
+                  <div className="col-span-full text-center text-[#94A3B8] py-10 font-medium">No menu items match your search.</div>
+                )}
+              </div>
             )}
           </div>
         </section>
@@ -1305,12 +1346,18 @@ function OrderEntryPageContent() {
           customerId={existingOrderData?.customerId || useCartStore.getState().customerId || undefined}
           isOpen={isPaymentOpen}
           onClose={() => setIsPaymentOpen(false)}
-          onSuccess={(orderId, method, amountPaid, change) => {
+          onSuccess={() => {
+            // PaymentModal now shows the full receipt itself (see
+            // components/PaymentModal.tsx / ReceiptView.tsx) and only calls
+            // this once the cashier explicitly taps "Done" — it used to
+            // push to /pos/receipt here, which fetched the order via a
+            // relative '/api/...' URL that 404'd against the wrong origin,
+            // so the receipt screen it landed on was permanently blank.
             setIsPaymentOpen(false);
             clearCart();
             setDiscount(null);
             setPaymentOrderId(null);
-            router.push(`/pos/receipt?orderId=${orderId}&method=${method}&amountPaid=${amountPaid}&change=${change}&tableId=${searchParams.get('tableId') ?? ''}&tableLabel=${encodeURIComponent(searchParams.get('tableLabel') ?? '')}`);
+            router.push('/pos/home');
           }}
         />
       )}

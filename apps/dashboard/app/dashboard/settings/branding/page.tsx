@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Palette } from "lucide-react";
 
 export default function BrandingRedirectPage() {
   const router = useRouter();
@@ -11,18 +12,18 @@ export default function BrandingRedirectPage() {
   }, [router]);
 
   return (
-    <div className="flex h-full items-center justify-center bg-gray-50">
-      <div className="text-center p-8 max-w-md">
-        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <span className="material-symbols-outlined text-primary text-3xl">palette</span>
+    <div className="flex h-full items-center justify-center bg-slate-50">
+      <div className="text-center p-8 max-w-md bg-white rounded-xl border border-slate-200 shadow-xs">
+        <div className="w-12 h-12 bg-[#FF5722]/10 rounded-xl flex items-center justify-center mx-auto mb-3 text-[#FF5722]">
+          <Palette size={24} />
         </div>
-        <h2 className="text-lg font-bold text-gray-900 mb-2">Branding has moved</h2>
-        <p className="text-sm text-gray-500 mb-5">
-          Branding settings are now part of the main Settings page for a cleaner experience.
+        <h2 className="text-sm font-bold text-slate-900 mb-1">Branding Settings Moved</h2>
+        <p className="text-xs text-slate-500 mb-4">
+          Branding settings are now unified in the main Organization Settings panel.
         </p>
         <button
           onClick={() => router.push("/dashboard/settings#branding")}
-          className="px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
+          className="h-9 px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white rounded-lg font-semibold text-xs transition-colors shadow-xs"
         >
           Go to Settings → Branding
         </button>
@@ -30,3 +31,4 @@ export default function BrandingRedirectPage() {
     </div>
   );
 }
+

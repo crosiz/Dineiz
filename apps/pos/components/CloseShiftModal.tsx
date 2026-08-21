@@ -4,6 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getPosShift, getToken } from '@/lib/pos-session';
+import { 
+  Clock, X, CheckCircle2, Printer, Download, 
+  AlertCircle, Timer, Receipt, Banknote, Wallet, 
+  Check, TrendingUp, TrendingDown, FileEdit, CheckCheck
+} from 'lucide-react';
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -109,39 +114,39 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in font-body-md text-[#0F172A]">
-      <div className="w-full max-w-[480px] bg-white rounded-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.15)] overflow-hidden border border-[#E2E8F0] flex flex-col max-h-[90vh] animate-slide-up">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150 text-slate-900">
+      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
         
         {isSuccess ? (
           <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
-              <span className="material-symbols-outlined text-[32px]">check_circle</span>
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
+              <CheckCircle2 size={24} />
             </div>
-            <h2 className="text-[22px] font-bold text-[#0F172A] clash-display tracking-wide mb-2">Shift Closed Successfully</h2>
-            <p className="text-[#64748B] mb-8">Would you like to generate and download the shift report?</p>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Shift Closed Successfully</h2>
+            <p className="text-xs text-slate-500 mb-6">Would you like to generate and download the shift summary report?</p>
             
-            <div className="flex flex-col gap-3 w-full">
+            <div className="flex flex-col gap-2.5 w-full">
               <button 
                 onClick={() => {
                   window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/${shiftId}/report?format=pdf`, '_blank');
                 }}
-                className="w-full py-3.5 bg-[var(--pos-primary)] text-white rounded-xl font-bold hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 shadow-md shadow-orange-500/20"
+                className="w-full h-11 bg-[#FF5722] text-white rounded-xl font-semibold text-xs hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 shadow-xs"
               >
-                <span className="material-symbols-outlined text-[20px]">print</span>
+                <Printer size={15} />
                 Print Report
               </button>
               <button 
                 onClick={() => {
                   window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/${shiftId}/report?format=pdf`, '_blank');
                 }}
-                className="w-full py-3.5 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl font-bold hover:bg-[#F8FAFC] transition-colors flex justify-center items-center gap-2 shadow-sm"
+                className="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 transition-colors flex justify-center items-center gap-2"
               >
-                <span className="material-symbols-outlined text-[20px]">download</span>
+                <Download size={15} />
                 Download PDF
               </button>
               <button 
                 onClick={() => router.push('/login')}
-                className="w-full py-3.5 mt-2 text-[#64748B] font-bold hover:text-[#0F172A] transition-colors"
+                className="w-full h-10 mt-1 text-slate-500 font-semibold text-xs hover:text-slate-900 transition-colors"
               >
                 Skip
               </button>
@@ -150,167 +155,166 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         ) : (
           <>
             {/* Header */}
-            <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] p-6 flex justify-between items-center relative overflow-hidden">
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#D97706]">schedule</span>
-            </div>
-            <div>
-              <h2 className="text-[22px] font-bold text-[#0F172A] clash-display tracking-wide leading-none">Close Shift</h2>
-              <p className="text-[13px] text-[#64748B] font-medium mt-1">Review summary and reconcile cash</p>
-            </div>
-          </div>
-          
-          <button 
-            onClick={onClose}
-            className="relative z-10 w-9 h-9 flex items-center justify-center rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-4 text-[#64748B]">
-              <div className="w-12 h-12 rounded-full border-4 border-[#CBD5E1] border-t-[var(--pos-primary,#F59E0B)] animate-spin"></div>
-              <span className="text-[14px] font-medium tracking-wide">Calculating totals...</span>
-            </div>
-          ) : !summary ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-4">
-                <span className="material-symbols-outlined text-2xl">error</span>
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#FF5722]">
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 leading-tight">Close Shift</h2>
+                  <p className="text-xs text-slate-500 font-medium">Reconcile cash and review totals</p>
+                </div>
               </div>
-              <p className="text-rose-600 font-bold">Failed to load shift summary.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
               
-              {/* Summary Stats Grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-[16px] flex flex-col justify-between">
-                  <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-[0.05em] mb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px]">timer</span>
-                    Duration
-                  </p>
-                  <p className="text-[20px] font-bold text-[#0F172A] font-mono">{formatDuration(summary.openedAt)}</p>
-                </div>
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-[16px] flex flex-col justify-between">
-                  <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-[0.05em] mb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px]">receipt_long</span>
-                    Orders
-                  </p>
-                  <p className="text-[20px] font-bold text-[#0F172A]">{summary.totalOrders}</p>
-                </div>
-                
-                <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-[16px] flex flex-col justify-between">
-                  <p className="text-[11px] font-bold text-[#64748B] uppercase tracking-[0.05em] mb-2 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[14px]">payments</span>
-                    Net Sales
-                  </p>
-                  <p className="text-[20px] font-bold text-emerald-600">PKR {summary.totalSales.toLocaleString()}</p>
-                </div>
-                
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-[16px] flex flex-col justify-between relative overflow-hidden">
-                  <div className="absolute -right-4 -bottom-4 opacity-10">
-                    <span className="material-symbols-outlined text-[80px] text-amber-700">account_balance_wallet</span>
-                  </div>
-                  <p className="text-[11px] font-bold text-amber-800 uppercase tracking-[0.05em] mb-2 relative z-10">
-                    Expected Cash
-                  </p>
-                  <p className="text-[24px] font-bold text-amber-900 relative z-10 leading-none mt-1">
-                    <span className="text-[14px] mr-1">PKR</span>{expectedCash.toLocaleString()}
-                  </p>
-                </div>
-              </div>
+              <button 
+                onClick={onClose}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </div>
 
-              {/* Cash Reconciliation */}
-              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-[20px] p-5 shadow-sm">
-                <label className="block text-[12px] font-bold text-[#0F172A] uppercase tracking-[0.05em] mb-3">
-                  Actual Cash In Drawer
-                </label>
-                
-                <div className="relative group">
-                  <div className="h-[64px] border-2 border-[#CBD5E1] group-focus-within:border-[var(--pos-primary,#F59E0B)] rounded-[14px] bg-white flex items-center px-4 transition-all duration-300 shadow-sm">
-                    <div className="flex items-center">
-                      <span className="text-[16px] font-bold text-[#D97706] mr-3">PKR</span>
-                      <div className="w-[2px] h-6 bg-[#CBD5E1]"></div>
+            {/* Content */}
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
+                  <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#FF5722] animate-spin"></div>
+                  <span className="text-xs font-medium">Calculating totals...</span>
+                </div>
+              ) : !summary ? (
+                <div className="text-center py-12">
+                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle size={20} />
+                  </div>
+                  <p className="text-rose-600 font-bold text-xs">Failed to load shift summary.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-5">
+                  
+                  {/* Summary Stats Grid */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col justify-between">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono mb-1.5 flex items-center gap-1.5">
+                        <Timer size={13} className="text-slate-400" />
+                        Duration
+                      </p>
+                      <p className="text-base font-bold text-slate-900 font-mono">{formatDuration(summary.openedAt)}</p>
                     </div>
-                    <input
-                      type="number"
-                      value={closingCash}
-                      onChange={(e) => setClosingCash(e.target.value === '' ? '' : Number(e.target.value))}
-                      className="w-full bg-transparent border-none text-right text-[26px] font-bold text-[#0F172A] focus:ring-0 placeholder:text-[#94A3B8] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      placeholder="0"
-                      autoFocus
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col justify-between">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono mb-1.5 flex items-center gap-1.5">
+                        <Receipt size={13} className="text-slate-400" />
+                        Orders
+                      </p>
+                      <p className="text-base font-bold text-slate-900 font-mono">{summary.totalOrders}</p>
+                    </div>
+                    
+                    <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col justify-between">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono mb-1.5 flex items-center gap-1.5">
+                        <Banknote size={13} className="text-slate-400" />
+                        Net Sales
+                      </p>
+                      <p className="text-base font-bold text-emerald-600 font-mono">PKR {summary.totalSales.toLocaleString()}</p>
+                    </div>
+                    
+                    <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-xl flex flex-col justify-between">
+                      <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider font-mono mb-1.5 flex items-center gap-1.5">
+                        <Wallet size={13} className="text-amber-600" />
+                        Expected Cash
+                      </p>
+                      <p className="text-base font-bold text-amber-900 font-mono">
+                        PKR {expectedCash.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cash Reconciliation */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider font-mono mb-2">
+                      Actual Cash In Drawer
+                    </label>
+                    
+                    <div className="relative">
+                      <div className="h-12 border border-slate-300 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center px-3.5 transition-colors shadow-xs">
+                        <span className="text-xs font-bold text-slate-400 mr-2 font-mono">PKR</span>
+                        <div className="w-[1px] h-4 bg-slate-200 mr-2"></div>
+                        <input
+                          type="number"
+                          value={closingCash}
+                          onChange={(e) => setClosingCash(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="w-full bg-transparent border-none text-right text-lg font-bold text-slate-900 focus:ring-0 placeholder:text-slate-400 outline-none font-mono"
+                          placeholder="0"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Variance indicator */}
+                    {closingCash !== '' && (
+                      <div className={`mt-2.5 flex items-center gap-2 py-1.5 px-2.5 rounded-lg text-xs font-semibold ${
+                        variance === 0 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : variance > 0 
+                            ? 'bg-sky-50 text-sky-700 border border-sky-200' 
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        {variance === 0 ? <Check size={14} /> : variance > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        <span>
+                          {variance === 0 
+                            ? 'Drawer is perfectly balanced' 
+                            : variance > 0 
+                              ? `Over by PKR ${Math.abs(variance).toLocaleString()}` 
+                              : `Short by PKR ${Math.abs(variance).toLocaleString()}`
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider font-mono mb-1.5 flex items-center gap-1.5">
+                      <FileEdit size={13} className="text-slate-400" />
+                      Shift Notes <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Record any explanations for variance, payouts, or notes..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 text-xs outline-none focus:border-[#FF5722] focus:bg-white transition-all resize-none h-20 placeholder:text-slate-400"
                     />
                   </div>
-                </div>
-                
-                {/* Variance indicator */}
-                <div className="mt-4 min-h-[24px]">
-                  {closingCash !== '' && (
-                    <div className={`flex items-center gap-2 py-2 px-3 rounded-lg text-[13px] font-bold ${
-                      variance === 0 
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                        : variance > 0 
-                          ? 'bg-sky-50 text-sky-700 border border-sky-200' 
-                          : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      <span className="material-symbols-outlined text-[18px]">
-                        {variance === 0 ? 'check_circle' : variance > 0 ? 'trending_up' : 'trending_down'}
-                      </span>
-                      <span>
-                        {variance === 0 
-                          ? 'Drawer is perfectly balanced' 
-                          : variance > 0 
-                            ? `Over by PKR ${Math.abs(variance).toLocaleString()}` 
-                            : `Short by PKR ${Math.abs(variance).toLocaleString()}`
-                        }
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Notes */}
-              <div>
-                <label className="block text-[12px] font-bold text-[#0F172A] uppercase tracking-[0.05em] mb-2 flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px]">edit_note</span>
-                  Shift Notes <span className="text-[#64748B] font-normal lowercase">(optional)</span>
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Record any explanations for variance, refunds, payouts..."
-                  className="w-full bg-[#F8FAFC] border border-[#CBD5E1] rounded-[14px] p-4 text-[#0F172A] text-[14px] outline-none focus:border-[var(--pos-primary,#F59E0B)] focus:ring-1 focus:ring-[var(--pos-primary,#F59E0B)] transition-all resize-none h-[88px] placeholder:text-[#94A3B8]"
-                />
-              </div>
-
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="p-5 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading || isSubmitting || closingCash === ''}
-            className="w-full h-[56px] rounded-[14px] bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-[16px] flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md"
-          >
-            {isSubmitting ? (
-              <span className="material-symbols-outlined animate-spin text-[24px]">progress_activity</span>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-[20px]">task_alt</span>
-                Close Shift
-              </>
-            )}
-          </button>
-        </div>
-        </>
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex gap-2.5">
+              <button
+                onClick={onClose}
+                className="w-1/3 h-11 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isLoading || isSubmitting || closingCash === ''}
+                className="w-2/3 h-11 rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+              >
+                {isSubmitting ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <>
+                    <CheckCheck size={16} />
+                    <span>Confirm & Close Shift</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
+

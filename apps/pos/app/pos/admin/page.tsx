@@ -5,6 +5,7 @@ import { useCartStore } from '@/lib/store';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
+import { clearPosSession } from '@/lib/pos-session';
 import { 
   ChevronRight, 
   RefreshCw, 
@@ -43,10 +44,19 @@ export default function AdminPage() {
 
   useEffect(() => {
     try {
-      const settings = localStorage.getItem('pos_tenant_settings');
-      if (settings) {
-        const parsed = JSON.parse(settings);
-        setPdfMode(parsed.printing?.usePDFMode !== false);
+      const settingsStr = localStorage.getItem('pos_tenant_settings') || '{}';
+      const parsed = JSON.parse(settingsStr);
+      const resolved = parsed.printing?.usePDFMode !== false;
+      setPdfMode(resolved);
+      // Persist the resolved default immediately — previously this only
+      // ever read the key, so on a fresh terminal the toggle displayed
+      // "PDF Mode: ON" while nothing had actually been written to
+      // localStorage yet, leaving print.service.ts to resolve the same
+      // unset key independently (and, before the fix there, differently).
+      if (parsed.printing?.usePDFMode === undefined) {
+        if (!parsed.printing) parsed.printing = {};
+        parsed.printing.usePDFMode = true;
+        localStorage.setItem('pos_tenant_settings', JSON.stringify(parsed));
       }
     } catch(e) {}
   }, []);
@@ -65,16 +75,13 @@ export default function AdminPage() {
   
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // No rightActions here on purpose — this used to add its own Logout
+  // button (removing only 'pos_session', leaving a stale 'pos_token'
+  // behind) duplicating Sign Out, which already lives in POSTopBar's
+  // avatar menu on every screen including this one.
   useTopBar({
     pageTitle: 'Manager Panel',
     breadcrumb: session?.branchName ? `Branch: ${session.branchName}` : 'Manager Full Access',
-    rightActions: (
-      <div className="flex items-center gap-4">
-        <button onClick={() => { localStorage.removeItem('pos_session'); router.push('/login'); }} title="Logout">
-          <span className="material-symbols-outlined text-red-500 cursor-pointer hover:text-red-600 transition-opacity">power_settings_new</span>
-        </button>
-      </div>
-    )
   });
 
   const fetchStats = async () => {
@@ -402,10 +409,18 @@ export default function AdminPage() {
               label="Override Table Status"
               onClick={() => router.push('/pos/tables')}
             />
-            <ActionRow 
-              icon={<Lock size={20} className="text-[#64748B]" />} 
-              label="Lock This Terminal" 
-              onClick={() => { localStorage.clear(); router.push('/login'); }} 
+            <ActionRow
+              icon={<Lock size={20} className="text-[#64748B]" />}
+              label="Lock This Terminal"
+              onClick={() => {
+                // clearPosSession() ends the login session without wiping
+                // pos_branch_id/pos_branding — localStorage.clear() used to
+                // nuke everything, including the terminal's link to its
+                // branch, so this terminal came back showing "Branch Not
+                // Found" and had to be re-paired with a POS code.
+                clearPosSession();
+                router.push('/login');
+              }}
             />
           </div>
         </section>

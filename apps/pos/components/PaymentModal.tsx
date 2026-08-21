@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { usePrinter } from '@/hooks/usePrinter';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
+import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -36,6 +36,7 @@ interface PaymentModalProps {
 
 export default function PaymentModal({
   orderId,
+  orderNumber,
   orderTotal,
   orderItems,
   items,
@@ -46,8 +47,6 @@ export default function PaymentModal({
   customerId,
   onSuccess,
 }: PaymentModalProps) {
-  const { printReceipt, status: printerStatus, connect: connectPrinter } = usePrinter();
-
   const cart = useCartStore((s) => s.cart);
   const session = useCartStore((s) => s.session);
 
@@ -85,6 +84,10 @@ export default function PaymentModal({
   const [loyaltyProfile, setLoyaltyProfile] = useState<any>(null);
   const [loyaltySettings, setLoyaltySettings] = useState<any>(null);
   const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  // Tracked independent of whether the loyalty program is active — the
+  // "Message Customer" receipt action only needs a phone number, and
+  // shouldn't disappear just because the tenant hasn't turned loyalty on.
+  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadLoyalty() {
@@ -99,6 +102,7 @@ export default function PaymentModal({
             headers: { 'Authorization': `Bearer ${token}` }
           }).then(r => r.json())
         ]);
+        if (profRes?.phone) setCustomerPhone(profRes.phone);
         if (profRes && setRes?.settings?.isActive) {
           setLoyaltyProfile(profRes);
           setLoyaltySettings(setRes.settings);
@@ -149,6 +153,10 @@ export default function PaymentModal({
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  // What was actually charged when payment succeeded — captured once so the
+  // receipt (and the deferred onSuccess call once the cashier dismisses it)
+  // can still show/report it after `activeMethod`/amountEntered have reset.
+  const [finalPaymentInfo, setFinalPaymentInfo] = useState<{ method: string; tendered: number; change: number } | null>(null);
   const clearCart = useCartStore((s) => s.clearCart);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -167,32 +175,38 @@ export default function PaymentModal({
     }
   }, [isOpen, totalWithTip]);
 
-  const handlePrintReceipt = async (method: string, tendered: number, change: number) => {
-    if (printerStatus !== 'ready') {
-      try {
-        await connectPrinter();
-      } catch (e) {
-        console.warn('Printer connection failed', e);
-        return;
-      }
-    }
+  // Shared by the printed receipt and the on-screen ReceiptView so both
+  // ever only describe the same order once.
+  const receiptItems = displayItems.map((c: any) => ({
+    name: c.name || c.item?.name || c.itemName || 'Unknown Item',
+    quantity: c.quantity,
+    unitPrice: c.unitPrice,
+    subtotal: c.subtotal || ((c.unitPrice || 0) * c.quantity),
+    variationName: c.selectedVariation?.name || c.options?.variation?.name,
+    addOnNames: (c.selectedAddOns || c.options?.addOns || []).map((a: any) => a.price ? `${a.name} (+${a.price})` : a.name),
+  }));
 
+  const [isPrinting, setIsPrinting] = useState(false);
+  const handlePrintReceipt = async (method: string, tendered: number, change: number) => {
+    // Routed through print.service.ts's printDocument — this used to call
+    // usePrinter().printReceipt directly, which always sends raw ESC/POS
+    // bytes over WebUSB regardless of the Admin panel's PDF-mode toggle.
+    // Every other receipt/KOT in the app (order screen, floor plan bill,
+    // KDS reprint) already goes through printDocument; this was the one
+    // path that silently ignored the setting and threw "No thermal
+    // printer paired" on any terminal without hardware attached.
+    setIsPrinting(true);
     try {
-      await printReceipt({
-        orderNumber: orderId,
-        tokenNumber: orderId.substring(orderId.length - 4),
+      const { printDocument } = await import('@/lib/print.service');
+      await printDocument('PAID_RECEIPT', {
+        orderNumber: orderNumber || orderId.slice(-6),
+        tokenNumber: orderNumber || orderId.slice(-4),
         type: useCartStore.getState().orderType || 'DINE_IN',
+        tableLabel,
         cashierName: session.cashierName ?? undefined,
-        tenantName: session.restaurantName || 'Dineiz',
+        tenantName: branding.restaurantName || 'Dineiz',
         branchName: session?.branchName || 'Main Branch',
-        items: displayItems.map((c: any) => ({
-          name: c.name || c.item?.name || c.itemName || 'Unknown Item',
-          quantity: c.quantity,
-          unitPrice: c.unitPrice,
-          subtotal: c.subtotal || ((c.unitPrice || 0) * c.quantity),
-          variationName: c.selectedVariation?.name || c.options?.variation?.name,
-          addOnNames: (c.selectedAddOns || c.options?.addOns || []).map((a: any) => a.price ? `${a.name} (+${a.price})` : a.name)
-        })),
+        items: receiptItems,
         subtotal,
         discountAmount: discountAmount + loyaltyDiscount,
         taxAmount,
@@ -200,13 +214,61 @@ export default function PaymentModal({
         paymentMethod: method,
         cashTendered: tendered > 0 ? tendered : undefined,
         changeGiven: change > 0 ? change : undefined,
-      });
-    } catch (e) {
+        dualTaxConfig: {
+          cashTaxEnabled: session.cashTaxEnabled,
+          cashTaxRate: session.cashTaxRate,
+          cashTaxLabel: session.cashTaxLabel,
+          cardTaxEnabled: session.cardTaxEnabled,
+          cardTaxRate: session.cardTaxRate,
+          cardTaxLabel: session.cardTaxLabel,
+          showDualTaxOnReceipt: session.showDualTaxOnReceipt,
+          taxRoundingMethod: session.taxRoundingMethod,
+        },
+      } as any);
+      toast.success('Receipt sent to printer');
+    } catch (e: any) {
       console.warn('Failed to print receipt', e);
+      toast.error(e?.message || 'Failed to print receipt. Check printer connection in Settings.');
+    } finally {
+      setIsPrinting(false);
     }
   };
 
+  // Captured once, right when payment succeeds and before clearCart() runs
+  // — the on-screen receipt (and a reprint from it) reads this snapshot
+  // rather than the live cart/discount/etc. state, which is emptied out
+  // from under it the moment clearCart() fires.
+  const [receiptSnapshot, setReceiptSnapshot] = useState<ReceiptData | null>(null);
+
+  const buildReceiptData = (method: string, tendered: number, change: number): ReceiptData => ({
+    tenantName: branding.restaurantName || 'Dineiz',
+    fbrNtn: branding.fbrNtn,
+    receiptHeader: branding.receiptHeader,
+    receiptFooter: branding.receiptFooter,
+    orderNumber: orderNumber || orderId.slice(-6),
+    tableLabel,
+    orderType: useCartStore.getState().orderType,
+    cashierName: session.cashierName,
+    items: receiptItems,
+    subtotal,
+    discountAmount,
+    loyaltyDiscount,
+    redeemedPoints,
+    taxAmount,
+    taxLabel,
+    tipAmount,
+    total: totalWithTip,
+    paymentMethod: method,
+    cashTendered: method === 'CASH' ? tendered : undefined,
+    changeGiven: method === 'CASH' ? change : undefined,
+    createdAt: new Date(),
+  });
+
   const handlePaymentSuccess = async (methodLabel: string, tendered: number = totalWithTip, change: number = 0) => {
+    // Snapshot before anything below touches the cart/discount state.
+    setReceiptSnapshot(buildReceiptData(methodLabel, tendered, change));
+    setFinalPaymentInfo({ method: methodLabel, tendered, change });
+
     // Settings → Point of Sale → "Auto-print receipt on payment" was never
     // actually consulted here — a receipt printed on every successful
     // payment regardless of the toggle. The manual "Print Receipt" button
@@ -222,12 +284,18 @@ export default function PaymentModal({
 
     setShowSuccess(true);
     clearCart();
+    // No auto-dismiss timer — a 2-second window was nowhere near enough
+    // time to actually read a receipt, let alone print or share it. The
+    // cashier now leaves via an explicit action (Print / Message Customer
+    // / Done) in the success screen below.
+  };
 
-    setTimeout(() => {
-      onClose();
-      setShowSuccess(false);
-      onSuccess(orderId, methodLabel, tendered, change);
-    }, 2000);
+  const handleDone = () => {
+    onClose();
+    setShowSuccess(false);
+    if (finalPaymentInfo) {
+      onSuccess(orderId, finalPaymentInfo.method, finalPaymentInfo.tendered, finalPaymentInfo.change);
+    }
   };
 
   const submitPayment = async (payload: any) => {
@@ -312,15 +380,45 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
-  if (showSuccess) {
+  if (showSuccess && receiptSnapshot) {
     return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center p-6 z-[60] animate-in fade-in duration-300">
-        <div className="text-center space-y-6 max-w-md animate-in zoom-in-95 duration-500">
-          <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-[#10B981] rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-[#10B981] text-[40px] font-bold">check</span>
+      <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col items-center z-[60] animate-in fade-in duration-300 overflow-y-auto py-8 px-4">
+        <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-[#10B981] rounded-full flex items-center justify-center mb-4 shrink-0 animate-in zoom-in-95 duration-500">
+          <span className="material-symbols-outlined text-[#10B981] text-[40px] font-bold">check</span>
+        </div>
+        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Payment Successful</h2>
+        <p className="text-[#64748B] mb-6">{finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0 ? `Give ${finalPaymentInfo.change.toFixed(0)} change` : 'Order completed'}</p>
+
+        <ReceiptView data={receiptSnapshot} />
+
+        <div className="w-full max-w-[380px] flex flex-col gap-2.5 mt-6">
+          <div className="flex gap-2.5">
+            <button
+              onClick={() => handlePrintReceipt(finalPaymentInfo?.method || receiptSnapshot.paymentMethod, finalPaymentInfo?.tendered || 0, finalPaymentInfo?.change || 0)}
+              disabled={isPrinting}
+              className="flex-1 h-[52px] rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold flex items-center justify-center gap-2 hover:bg-[#F1F5F9] transition-all disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined">{isPrinting ? 'hourglass_top' : 'print'}</span>
+              {isPrinting ? 'Printing…' : 'Print Receipt'}
+            </button>
+            {customerPhone && (
+              <a
+                href={`https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(receiptSnapshot.total).toLocaleString()}.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 h-[52px] rounded-xl bg-[#0F7A55] text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 transition-all"
+              >
+                <span className="material-symbols-outlined">chat</span>
+                Message Customer
+              </a>
+            )}
           </div>
-          <h2 className="text-3xl font-bold text-[#0F172A]">Payment Successful</h2>
-          <p className="text-[#64748B] text-lg">Order #{orderId} has been completed.</p>
+          <button
+            onClick={handleDone}
+            className="w-full h-[52px] rounded-xl bg-[var(--pos-primary,#F59E0B)] text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all shadow-md"
+          >
+            Done
+          </button>
         </div>
       </div>
     );

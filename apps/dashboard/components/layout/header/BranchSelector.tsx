@@ -43,7 +43,7 @@ export function BranchSelector() {
           focus:ring-orange-500/10 min-w-[160px]"
       >
         <option value="">All Branches</option>
-        {branches?.map(branch => (
+        {branches?.map((branch: any) => (
           <option key={branch.id} value={branch.id}>
             {branch.name}
           </option>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useTopBar } from '@/hooks/useTopBar';
@@ -9,6 +9,15 @@ import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { getDB } from '@/lib/db';
+import { syncOfflineOrders } from '@/lib/sync';
+import { toast } from 'sonner';
+
+// How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
+// surfacing on Home — matches the "rush" framing already used for KDS
+// (kds/page.tsx's default rushThreshold).
+const AGING_TICKET_MINUTES = 20;
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -38,7 +47,6 @@ export default function HomeDashboard() {
     sortOrder: 'newest',
     historySearch: '',
   });
-  const [alerts, setAlerts] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
 
   // Shift & Cashier info
@@ -147,36 +155,43 @@ export default function HomeDashboard() {
     };
   }, [fetchStats, posSocket]);
 
-  // Alerts Logic
-  const fetchAlerts = useCallback(() => {
-    if (!session?.branchId) return;
-    fetch(`${API_URL}/api/v1/tenant/alerts?branchId=${session.branchId}`, {
-      credentials: 'include',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) setAlerts(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
-  }, [session?.branchId]);
+  // "Needs Attention" — replaces the old Alerts section, which called
+  // GET /api/v1/tenant/alerts (only a GET is registered — the "Clear"
+  // button's DELETE call 404'd) and rendered fields (alert.type/message/
+  // detail/id) that don't exist on that endpoint's actual payload (raw
+  // low-stock rows: itemName/quantity/reorderLevel) — so the section was
+  // permanently empty, and tenant-wide ingredient stock is a manager
+  // concern anyway, not something a cashier acts on mid-service.
+  //
+  // Everything here is derived from data the screen already loads — no
+  // new endpoint — and is directly actionable by whoever's on shift.
+  const isAging = (order: any) => {
+    if (order.status !== 'PENDING' && order.status !== 'IN_KITCHEN') return false;
+    const minutes = (Date.now() - new Date(order.createdAt).getTime()) / 60000;
+    return minutes >= AGING_TICKET_MINUTES;
+  };
+  const agingTickets = useMemo(() => activeOrders.filter(isAging), [activeOrders]);
+  const billRequestedTables = useMemo(
+    () => tables.filter((t: any) => t.statusInfo?.status === 'BILL_REQUESTED'),
+    [tables]
+  );
+  const unsyncedOrders = useLiveQuery(() => {
+    const db = getDB();
+    return db.offlineOrders ? db.offlineOrders.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
+  }, []) ?? [];
 
-  useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
-
-  const clearAlert = async (id: string) => {
+  const [isRetryingSync, setIsRetryingSync] = useState(false);
+  const retrySync = async () => {
+    setIsRetryingSync(true);
     try {
-      await fetch(`${API_URL}/api/v1/tenant/alerts/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      setAlerts(alerts.filter((a) => a.id !== id));
-    } catch {
-      // Handle gracefully
+      await syncOfflineOrders();
+      toast.success('Sync attempted for pending offline orders');
+    } finally {
+      setIsRetryingSync(false);
     }
   };
+
+  const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedOrders.length;
 
   // Tables Logic
   const fetchTables = useCallback(() => {
@@ -359,11 +374,17 @@ export default function HomeDashboard() {
                       : (order.itemCount || order.itemsCount || 1);
                     const amount = order.netAmount ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0;
                     const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';
+                    // Same left-accent language Tickets already uses for
+                    // service type (see TicketsDashboard's "Dine-In" /
+                    // "Takeaway & Delivery" section dots) rather than
+                    // inventing a new colour scheme just for this card.
+                    const accentColor = order.type === 'DINE_IN' ? '#2A5DB0' : 'var(--pos-primary,#F59E0B)';
 
                     return (
                       <div
                         key={order.id}
                         onClick={() => router.push(`/pos/order?orderId=${order.id}&edit=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${(order.type || 'dine_in').toLowerCase().replace('_', '-')}`)}
+                        style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
                         className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-[#CBD5E1] transition-all border border-[#E2E8F0] flex flex-col gap-2.5"
                       >
                         <div className="flex justify-between items-start gap-2">
@@ -389,42 +410,76 @@ export default function HomeDashboard() {
             </div>
           </section>
 
-          {/* Notifications */}
-          <section className="flex flex-col gap-2" id="alerts-section">
-            <h3 className="clash-display text-2xl mb-1 text-[#0F172A]">Alerts</h3>
-            {alerts.length === 0 ? (
-              <div className="text-[#64748B] italic">No active alerts</div>
+          {/* Needs Attention — real, actionable signal derived from data this
+              screen already loads, in place of the old "Alerts" section
+              (which called a GET-only endpoint's DELETE, rendered fields
+              that endpoint never returned, and showed manager-facing
+              ingredient stock to a cashier — see HomeDashboard notes above). */}
+          <section className="flex flex-col gap-2" id="needs-attention-section">
+            <h3 className="clash-display text-2xl mb-1 text-[#0F172A]">Needs Attention</h3>
+            {needsAttentionCount === 0 ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700">
+                <span className="material-symbols-outlined">check_circle</span>
+                <p className="font-bold">All clear — nothing waiting on you.</p>
+              </div>
             ) : (
-              alerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`p-4 ${
-                    alert.type === 'CRITICAL' ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
-                  } border rounded-xl flex items-center justify-between shadow-sm`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className={`material-symbols-outlined ${alert.type === 'CRITICAL' ? 'text-rose-600' : 'text-sky-600'}`}>
-                      {alert.type === 'CRITICAL' ? 'warning' : 'info'}
-                    </span>
-                    <div>
-                      <p className="font-bold text-[#0F172A]">{alert.message}</p>
-                      <p className="text-xs text-[#64748B]">{alert.detail}</p>
+              <div className="flex flex-col gap-2">
+                {agingTickets.map((order: any) => {
+                  const minutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
+                  return (
+                    <div
+                      key={`aging-${order.id}`}
+                      onClick={() => router.push(`/pos/order?orderId=${order.id}&edit=true&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${(order.type || 'dine_in').toLowerCase().replace('_', '-')}`)}
+                      className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-amber-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="material-symbols-outlined text-amber-600">schedule</span>
+                        <div>
+                          <p className="font-bold text-[#0F172A]">Order #{order.tokenNumber || order.orderNumber} has been waiting {minutes}m</p>
+                          <p className="text-xs text-[#64748B]">{order.tableLabel ? `Table ${order.tableLabel}` : order.type} · still {order.status === 'PENDING' ? 'not sent to kitchen' : 'in the kitchen'}</p>
+                        </div>
+                      </div>
+                      <span className="text-amber-700 font-bold text-xs uppercase tracking-widest px-2">View</span>
                     </div>
+                  );
+                })}
+
+                {billRequestedTables.map((t: any) => (
+                  <div
+                    key={`bill-${t.id}`}
+                    onClick={() => router.push('/pos/tables')}
+                    className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-rose-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className="material-symbols-outlined text-rose-600">payments</span>
+                      <div>
+                        <p className="font-bold text-[#0F172A]">Table {t.label} is waiting for the bill</p>
+                        <p className="text-xs text-[#64748B]">Customer requested payment</p>
+                      </div>
+                    </div>
+                    <span className="text-rose-700 font-bold text-xs uppercase tracking-widest px-2">Go to Table</span>
                   </div>
-                  {alert.type === 'CRITICAL' ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-rose-700 font-bold text-xs uppercase tracking-widest px-2">Critical</span>
-                      <button onClick={() => clearAlert(alert.id)} className="bg-rose-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm">
-                        Clear
-                      </button>
+                ))}
+
+                {unsyncedOrders.length > 0 && (
+                  <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <span className="material-symbols-outlined text-sky-600">cloud_off</span>
+                      <div>
+                        <p className="font-bold text-[#0F172A]">{unsyncedOrders.length} order{unsyncedOrders.length > 1 ? 's' : ''} saved offline, not yet synced</p>
+                        <p className="text-xs text-[#64748B]">Will sync automatically when back online</p>
+                      </div>
                     </div>
-                  ) : (
-                    <button onClick={() => clearAlert(alert.id)} className="bg-sky-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm">
-                      Clear
+                    <button
+                      onClick={retrySync}
+                      disabled={isRetryingSync}
+                      className="bg-sky-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm disabled:opacity-50"
+                    >
+                      {isRetryingSync ? 'Syncing…' : 'Retry Now'}
                     </button>
-                  )}
-                </div>
-              ))
+                  </div>
+                )}
+              </div>
             )}
           </section>
         </div>

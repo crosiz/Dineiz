@@ -304,12 +304,14 @@ export async function createOrder(
   }
 
   // Trigger Analytics Aggregation
-  analyticsQueue.add('aggregate', { 
-    tenantId, 
-    branchId, 
-    date: new Date().toISOString() 
+  analyticsQueue.add('aggregate', {
+    tenantId,
+    branchId,
+    date: new Date().toISOString()
   }, { removeOnComplete: true }).catch(e => console.error('Analytics Job Error:', e));
-  
+
+  invalidateLiveOrdersCache(tenantId, branchId);
+
   return order;
 }
 
@@ -518,6 +520,21 @@ export async function listOrderHistory(
 
 const LIVE_ORDERS_CACHE_TTL_SECONDS = 4;
 
+// The TTL above is short, but the cache was never actively invalidated on
+// writes — a new/updated order could sit invisible on the live board for up
+// to the full TTL on top of the client's own poll interval. Call this after
+// any mutation that changes what the live board should show (create,
+// status/void update, item append, item delete). Both the branch-scoped and
+// tenant-wide ('all') keys are cleared since either could have been serving
+// a view that included this branch.
+function invalidateLiveOrdersCache(tenantId: string, branchId?: string | null) {
+  const keys = [`live-orders:${tenantId}:all`];
+  if (branchId) keys.push(`live-orders:${tenantId}:${branchId}`);
+  Promise.all(keys.map((k) => upstash.del(k))).catch((e) =>
+    console.error('Failed to invalidate live-orders cache:', e)
+  );
+}
+
 export async function listLiveOrders(tenantId: string, branchId: string | undefined) {
   const cacheKey = `live-orders:${tenantId}:${branchId ?? 'all'}`;
   const cached = await upstash.get(cacheKey).catch(() => null);
@@ -703,7 +720,7 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
   if (items && Array.isArray(items)) {
     const routedItems = await routeItemsToKdsStations(tenantId, existingOrder.branchId, items);
 
-    return prisma.order.update({
+    const updated = await prisma.order.update({
       where: { id, tenantId },
       data: {
         ...orderData,
@@ -726,9 +743,11 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
       },
       include: { items: true, orderDeals: true },
     });
+    invalidateLiveOrdersCache(tenantId, existingOrder.branchId);
+    return updated;
   }
 
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id, tenantId },
     data: {
       ...orderData,
@@ -747,6 +766,8 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
     },
     include: { items: true, payments: true, orderDeals: true },
   });
+  invalidateLiveOrdersCache(tenantId, existingOrder.branchId);
+  return updated;
 }
 
 export async function appendOrderItems(tenantId: string, id: string, newItems: any[]) {
@@ -781,6 +802,8 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
   if (io) {
     io.to(`branch:${updatedOrder.branchId}`).emit('order:updated', { orderId: id });
   }
+
+  invalidateLiveOrdersCache(tenantId, updatedOrder.branchId);
 
   return updatedOrder;
 }
@@ -834,7 +857,7 @@ export async function enqueueOrderEvents(
 }
 
 export async function assignOrder(tenantId: string, id: string, data: { waiterId: string; waiterName: string }) {
-  return prisma.order.update({
+  const updated = await prisma.order.update({
     where: { id, tenantId },
     data: {
       assignedWaiterId: data.waiterId,
@@ -845,6 +868,8 @@ export async function assignOrder(tenantId: string, id: string, data: { waiterId
       assignedWaiter: { select: { avatarColor: true } }
     }
   });
+  invalidateLiveOrdersCache(tenantId, updated.branchId);
+  return updated;
 }
 
 export async function deleteOrderItem(
@@ -896,7 +921,7 @@ export async function deleteOrderItem(
       cashTaxLabel, cardTaxLabel, taxableSubtotal, taxRoundingMethod || 'ROUND',
     );
 
-    return prisma.order.update({
+    const recalculated = await prisma.order.update({
       where: { id: orderId },
       data: {
         totalAmount: taxableSubtotal, taxAmount, netAmount: taxableSubtotal + taxAmount,
@@ -904,6 +929,8 @@ export async function deleteOrderItem(
       },
       include: { items: { include: { item: { select: { name: true, image: true } } } }, payments: true, table: true, assignedWaiter: true }
     });
+    invalidateLiveOrdersCache(tenantId, order.branchId);
+    return recalculated;
   }
 
   if (data.quantity > orderItem.quantity) {
@@ -1006,9 +1033,11 @@ export async function deleteOrderItem(
       }, 
       payments: true, 
       table: true, 
-      assignedWaiter: true 
+      assignedWaiter: true
     }
   });
+
+  invalidateLiveOrdersCache(tenantId, updatedOrder.branchId);
 
   return updatedOrder;
 }

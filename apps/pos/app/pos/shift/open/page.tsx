@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { getToken, getPosSession } from '@/lib/pos-session';
+import { getToken, getPosSession, clearPosSession } from '@/lib/pos-session';
 
 export default function ShiftOpenGate() {
   const router = useRouter();
@@ -248,9 +248,13 @@ export default function ShiftOpenGate() {
               <p className="text-[11px] text-[#64748B] text-center px-4 font-medium">
                 Your shift record and all orders will be tracked from now
               </p>
-              <button 
+              <button
                 onClick={() => {
-                  localStorage.removeItem('pos_session');
+                  // Ends the session without clearing pos_branch_id, so the
+                  // terminal stays linked to its branch for the next login
+                  // (previously this only removed pos_session, leaving a
+                  // stale pos_token behind).
+                  clearPosSession();
                   router.push('/login');
                 }}
                 className="mt-4 text-[#ef4444] text-[13px] font-bold hover:underline"

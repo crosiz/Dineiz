@@ -19,7 +19,11 @@ export async function listShifts(tenantId: string, query: { branchId?: string; c
     orderBy: { openedAt: 'desc' },
     take: query.limit + 1,
     ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-    include: { user: { select: { id: true, name: true } }, _count: { select: { orders: true } } },
+    include: { 
+      user: { select: { id: true, name: true } }, 
+      branch: { select: { id: true, name: true } },
+      _count: { select: { orders: true } } 
+    },
   });
   const hasMore = shifts.length > query.limit;
   const data = hasMore ? shifts.slice(0, query.limit) : shifts;

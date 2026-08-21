@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef } from 'react';
 
 interface NavItemProps {
   href: string;
@@ -13,8 +12,6 @@ interface NavItemProps {
   onHover?: () => void;
 }
 
-const BRAND = '#FF5722';
-
 export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }: NavItemProps) {
   const pathname = usePathname();
   const exactOnlyRoutes = ['/dashboard', '/dashboard/settings'];
@@ -23,55 +20,30 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
     ? pathname === href
     : pathname === href || pathname.startsWith(href + '/');
 
-  const linkRef = useRef<HTMLAnchorElement>(null);
-
-  useEffect(() => {
-    if (isActive && linkRef.current) {
-      linkRef.current.scrollIntoView({ block: 'nearest' });
-    }
-  }, [isActive]);
-
   return (
     <Link
-      ref={linkRef}
       href={href}
       title={collapsed ? label : undefined}
-      className={`group relative flex items-center transition-all duration-200 rounded-lg text-[13px] mb-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF5722]/60 ${
-        collapsed ? 'justify-center w-10 h-10 mx-auto p-0' : 'px-3 py-2.5 justify-between'
+      onMouseEnter={onHover}
+      className={`group relative flex items-center transition-colors duration-150 rounded-lg text-[13px] select-none outline-none border ${
+        collapsed
+          ? `justify-center w-9 h-9 mx-auto p-0 my-0.5 ${
+              isActive 
+                ? 'bg-white/[0.09] text-[#FF5722] border-white/[0.08] font-bold' 
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] border-transparent'
+            }`
+          : `px-2.5 h-[34px] justify-between my-0.5 ${
+              isActive
+                ? 'bg-white/[0.09] text-white font-medium border-white/[0.08]'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.04] border-transparent font-medium'
+            }`
       }`}
-      style={
-        isActive
-          ? {
-              background: 'rgba(255,87,34,0.12)',
-              color: '#FFFFFF',
-              fontWeight: 500,
-              borderLeft: collapsed ? 'none' : `2px solid ${BRAND}`,
-              paddingLeft: collapsed ? undefined : '10px',
-            }
-          : {
-              color: '#64748B',
-              borderLeft: collapsed ? 'none' : '2px solid transparent',
-              paddingLeft: collapsed ? undefined : '10px',
-            }
-      }
-      onMouseEnter={e => {
-        if (!isActive) {
-          (e.currentTarget as HTMLAnchorElement).style.color = '#CBD5E1';
-          (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(255,255,255,0.04)';
-        }
-        if (onHover) onHover();
-      }}
-      onMouseLeave={e => {
-        if (!isActive) {
-          (e.currentTarget as HTMLAnchorElement).style.color = '#64748B';
-          (e.currentTarget as HTMLAnchorElement).style.background = 'transparent';
-        }
-      }}
     >
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
         <span
-          className="shrink-0 flex items-center justify-center w-[18px] h-[18px]"
-          style={{ color: isActive ? BRAND : 'inherit' }}
+          className={`shrink-0 flex items-center justify-center transition-colors ${
+            isActive ? 'text-[#FF5722]' : 'text-zinc-500 group-hover:text-zinc-300'
+          }`}
         >
           {icon}
         </span>
@@ -84,22 +56,14 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
         <span className="shrink-0 ml-2">{badge}</span>
       )}
 
-      {/* Tooltip (collapsed mode) */}
+      {/* Floating Tooltip (Collapsed Mode) */}
       {collapsed && (
         <div
-          className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 z-50 transition-opacity duration-150 shadow-xl"
-          style={{
-            background: '#1E2538',
-            color: '#E2E8F0',
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}
+          className="absolute left-full ml-2.5 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 z-50 transition-opacity duration-150 shadow-2xl bg-[#18181B] text-zinc-100 border border-zinc-700/80 flex items-center gap-2"
         >
-          {label}
+          <span>{label}</span>
           {badge && (
-            <span
-              className="ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
-              style={{ background: BRAND }}
-            >
+            <span className="shrink-0">
               {badge}
             </span>
           )}
@@ -108,3 +72,7 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
     </Link>
   );
 }
+
+
+
+

@@ -17,7 +17,13 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
   } else {
     try {
       const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
-      if (settings.printing?.usePDFMode === true) {
+      // Default to PDF when the key has never been set. The Admin panel's
+      // toggle shows "PDF Mode: ON" by default on a fresh terminal
+      // (`usePDFMode !== false`) — this used to check `=== true` instead,
+      // so an unset key took the USB path here while the UI claimed PDF
+      // mode, and every print on a fresh terminal failed with "No thermal
+      // printer paired" until someone found and re-toggled the switch.
+      if (settings.printing?.usePDFMode !== false) {
         printMode = 'PDF';
       }
     } catch (e) {

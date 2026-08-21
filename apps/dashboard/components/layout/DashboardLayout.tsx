@@ -68,7 +68,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         {showHeader && <Header />}
         
         <main
-          className={`transition-all duration-300 min-h-screen flex flex-col ${isKDS ? 'ml-0' : sidebarCollapsed ? 'ml-[68px]' : 'ml-[240px]'} ${showHeader ? 'pt-[68px]' : ''}`}
+          className={`transition-all duration-300 min-h-screen flex flex-col ${isKDS ? 'ml-0' : sidebarCollapsed ? 'ml-[68px]' : 'ml-[248px]'} ${showHeader ? 'pt-16' : ''}`}
           style={{ background: isKDS ? '#0A0A0F' : '#F8FAFC' }}
         >
           {!isKDS && showHeader && <PlanBanner />}

@@ -97,7 +97,7 @@ function Input({
         value={value}
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
-        className="w-full h-9 bg-white border border-[#E2E8F0] rounded-lg px-3 text-[13.5px] text-[#0F172A] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1] transition-all"
+        className="w-full h-9 bg-white border border-[#E2E8F0] rounded-lg px-3 text-[13.5px] text-[#0F172A] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722] transition-all"
       />
       {hint && <p className="text-[11.5px] text-[#94A3B8]">{hint}</p>}
     </div>
@@ -119,7 +119,7 @@ function Textarea({
         placeholder={placeholder}
         rows={rows}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-[13.5px] text-[#0F172A] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1] transition-all resize-none"
+        className="w-full bg-white border border-[#E2E8F0] rounded-lg px-3 py-2 text-[13.5px] text-[#0F172A] placeholder:text-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722] transition-all resize-none"
       />
       {hint && <p className="text-[11.5px] text-[#94A3B8]">{hint}</p>}
     </div>
@@ -140,7 +140,7 @@ function Select({
         <select
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="w-full h-9 bg-white border border-[#E2E8F0] rounded-lg pl-3 pr-8 text-[13.5px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1] transition-all appearance-none cursor-pointer"
+          className="w-full h-9 bg-white border border-[#E2E8F0] rounded-lg pl-3 pr-8 text-[13.5px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722] transition-all appearance-none cursor-pointer"
         >
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -182,7 +182,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#6366F1]/30 focus:ring-offset-1 ${checked ? "bg-[#6366F1]" : "bg-[#CBD5E1]"}`}
+      className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#FF5722]/30 focus:ring-offset-1 ${checked ? "bg-[#FF5722]" : "bg-[#CBD5E1]"}`}
     >
       <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${checked ? "translate-x-4" : "translate-x-0"}`} />
     </button>
@@ -237,7 +237,7 @@ function NumberInput({ value, onChange, min = 0, max = 100, step = 1, suffix }: 
         min={min} max={max} step={step}
         value={value}
         onChange={e => onChange(parseFloat(e.target.value) || 0)}
-        className="w-[68px] h-8 bg-white border border-[#E2E8F0] rounded-lg px-2.5 text-[13px] font-medium text-[#0F172A] text-center focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1] transition-all"
+        className="w-[68px] h-8 bg-white border border-[#E2E8F0] rounded-lg px-2.5 text-[13px] font-medium text-[#0F172A] text-center focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722] transition-all"
       />
       {suffix && <span className="text-[12px] font-medium text-[#64748B]">{suffix}</span>}
     </div>
@@ -464,7 +464,7 @@ export default function SettingsPage() {
   const debouncedReceipt = useDebounce(receipt, 1500);
 
   const [branding, setBranding] = useState({
-    restaurantName: "", primaryColor: "#6366F1", secondaryColor: "#0F172A",
+    restaurantName: "", primaryColor: "#FF5722", secondaryColor: "#0F172A",
     accentColor: "#F59E0B", logoUrl: "",
   });
   const [savingBranding, setSavingBranding] = useState(false);
@@ -711,13 +711,13 @@ export default function SettingsPage() {
                   onClick={() => setActiveSection(item.id)}
                   className={`w-full text-left px-3 py-2 rounded-lg text-[13px] font-medium transition-all flex items-center gap-2
                     ${active
-                      ? item.danger ? "bg-red-50 text-red-600" : "bg-[#F1F5FF] text-[#4F46E5]"
+                      ? item.danger ? "bg-red-50 text-red-600 font-semibold" : "bg-[#FF5722]/10 text-[#FF5722] font-semibold"
                       : item.danger ? "text-[#94A3B8] hover:text-red-500 hover:bg-red-50"
                         : "text-[#64748B] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
                     }`}
                 >
                   {active && (
-                    <span className={`w-1 h-4 rounded-full shrink-0 ${item.danger ? "bg-red-400" : "bg-[#6366F1]"}`} />
+                    <span className={`w-1 h-4 rounded-full shrink-0 ${item.danger ? "bg-red-400" : "bg-[#FF5722]"}`} />
                   )}
                   {item.label}
                 </button>
@@ -808,7 +808,7 @@ export default function SettingsPage() {
                           type="text"
                           value={receipt.cashTaxLabel}
                           onChange={e => setReceipt(p => ({ ...p, cashTaxLabel: e.target.value }))}
-                          className="w-28 h-8 border border-[#E2E8F0] bg-white rounded-lg px-2.5 text-[12px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1]"
+                          className="w-28 h-8 border border-[#E2E8F0] bg-white rounded-lg px-2.5 text-[12px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722]"
                           placeholder="GST (Cash)"
                         />
                         <NumberInput value={receipt.cashTaxRate} onChange={v => setReceipt(p => ({ ...p, cashTaxRate: v }))} min={0} max={50} step={0.5} suffix="%" />
@@ -825,7 +825,7 @@ export default function SettingsPage() {
                           type="text"
                           value={receipt.cardTaxLabel}
                           onChange={e => setReceipt(p => ({ ...p, cardTaxLabel: e.target.value }))}
-                          className="w-28 h-8 border border-[#E2E8F0] bg-white rounded-lg px-2.5 text-[12px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15 focus:border-[#6366F1]"
+                          className="w-28 h-8 border border-[#E2E8F0] bg-white rounded-lg px-2.5 text-[12px] text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15 focus:border-[#FF5722]"
                           placeholder="GST (Card/Digital)"
                         />
                         <NumberInput value={receipt.cardTaxRate} onChange={v => setReceipt(p => ({ ...p, cardTaxRate: v }))} min={0} max={50} step={0.5} suffix="%" />
@@ -842,7 +842,7 @@ export default function SettingsPage() {
                     <select
                       value={receipt.taxRoundingMethod}
                       onChange={e => setReceipt(p => ({ ...p, taxRoundingMethod: e.target.value as any }))}
-                      className="h-8 px-3 bg-white border border-[#E2E8F0] rounded-lg text-[12px] font-medium text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/15"
+                      className="h-8 px-3 bg-white border border-[#E2E8F0] rounded-lg text-[12px] font-medium text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15"
                     >
                       <option value="ROUND">Round (nearest)</option>
                       <option value="FLOOR">Floor (always down)</option>
@@ -874,7 +874,7 @@ export default function SettingsPage() {
                         <div 
                           key={l.id}
                           onClick={() => setReceipt(p => ({ ...p, layout: l.id }))}
-                          className={`cursor-pointer border rounded-lg p-3 flex flex-col gap-1 transition-all ${receipt.layout === l.id ? 'border-[#6366F1] bg-[#6366F1]/5 ring-1 ring-[#6366F1]' : 'border-[#E2E8F0] hover:border-[#CBD5E1]'}`}
+                          className={`cursor-pointer border rounded-lg p-3 flex flex-col gap-1 transition-all ${receipt.layout === l.id ? 'border-[#FF5722] bg-[#FF5722]/5 ring-1 ring-[#FF5722]' : 'border-[#E2E8F0] hover:border-[#CBD5E1]'}`}
                         >
                           <div className="font-semibold text-[13px] text-[#0F172A]">{l.label}</div>
                           <div className="text-[11px] text-[#64748B] leading-tight">{l.desc}</div>
@@ -1064,7 +1064,7 @@ export default function SettingsPage() {
                           <input
                             value={branding[key]}
                             onChange={e => setBranding(p => ({ ...p, [key]: e.target.value }))}
-                            className="flex-1 h-8 border border-[#E2E8F0] rounded-md px-2 text-[11.5px] font-mono text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20 focus:border-[#6366F1] transition-all"
+                            className="flex-1 h-8 border border-[#E2E8F0] rounded-md px-2 text-[11.5px] font-mono text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/20 focus:border-[#FF5722] transition-all"
                           />
                         </div>
                       </div>
@@ -1093,7 +1093,7 @@ export default function SettingsPage() {
                             type="checkbox"
                             checked={(notifications as any)[key]?.[ch] ?? false}
                             onChange={e => handleNotif(key, ch, e.target.checked)}
-                            className="w-3.5 h-3.5 rounded accent-[#6366F1]"
+                            className="w-3.5 h-3.5 rounded accent-[#FF5722]"
                           />
                           <span className="text-[12px] text-[#64748B] capitalize">{ch}</span>
                         </label>
