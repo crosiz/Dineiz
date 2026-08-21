@@ -21,8 +21,22 @@ const duration = (secs: number) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-/** Reports are read in the restaurant's own timezone, not the server's. */
-function makeTimeFormatters(timezone: string) {
+/**
+ * Reports are read in the restaurant's own timezone, not the server's.
+ *
+ * A malformed value in Branch.timezone would otherwise throw a RangeError out
+ * of Intl and fail the whole download — a bad string in one branch row is not
+ * a good reason for nobody to get their end-of-day report.
+ */
+function makeTimeFormatters(rawTimezone: string) {
+  let timezone = rawTimezone;
+  try {
+    new Intl.DateTimeFormat('en-GB', { timeZone: timezone });
+  } catch {
+    console.warn(`[shift-report] invalid timezone ${JSON.stringify(rawTimezone)}, falling back to Asia/Karachi`);
+    timezone = 'Asia/Karachi';
+  }
+
   const dateTime = new Intl.DateTimeFormat('en-GB', {
     timeZone: timezone, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
   });

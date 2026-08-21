@@ -9,24 +9,23 @@ import { prisma } from '@dineiz/db';
  * one place.
  */
 export async function buildShiftReportData(tenantId: string, shiftId: string) {
-  const shift = await prisma.shift.findFirst({
-    where: { id: shiftId, tenantId },
-    include: {
-      user: true,
-      branch: { include: { tenant: true } },
-      cashEntries: { orderBy: { createdAt: 'asc' } },
-      denominations: { orderBy: { denomination: 'desc' } },
-      breaks: { orderBy: { startedAt: 'asc' } },
-    },
-  });
-
-  if (!shift) return null;
-
-  const isOpen = shift.status === 'OPEN';
-
-  const [orders, activities, waiterStats] = await Promise.all([
+  // Everything here keys off `shiftId`, which the caller already has — nothing
+  // needs to wait for the shift row to come back first. Fetching in waves cost
+  // a full network round trip per wave, and on a remote Postgres (Neon, ~700ms
+  // RTT) that was most of the wall-clock time of a report. One wave instead.
+  const [shift, orders, activities, waiterStats, cancelledOrders] = await Promise.all([
+    prisma.shift.findFirst({
+      where: { id: shiftId, tenantId },
+      include: {
+        user: true,
+        branch: { include: { tenant: true } },
+        cashEntries: { orderBy: { createdAt: 'asc' } },
+        denominations: { orderBy: { denomination: 'desc' } },
+        breaks: { orderBy: { startedAt: 'asc' } },
+      },
+    }),
     prisma.order.findMany({
-      where: { shiftId: shift.id, status: { notIn: ['CANCELLED'] } },
+      where: { shiftId, tenantId, status: { notIn: ['CANCELLED'] } },
       include: {
         payments: { where: { status: 'COMPLETED' } },
         table: true,
@@ -34,16 +33,22 @@ export async function buildShiftReportData(tenantId: string, shiftId: string) {
       },
       orderBy: { createdAt: 'asc' },
     }),
-    prisma.shiftActivity.findMany({ where: { shiftId: shift.id }, orderBy: { occurredAt: 'asc' } }),
+    prisma.shiftActivity.findMany({ where: { shiftId }, orderBy: { occurredAt: 'asc' } }),
     prisma.order.groupBy({
       by: ['assignedWaiterId', 'assignedWaiterName'],
-      where: { shiftId: shift.id, status: { notIn: ['CANCELLED'] }, assignedWaiterId: { not: null } },
+      where: { shiftId, tenantId, status: { notIn: ['CANCELLED'] }, assignedWaiterId: { not: null } },
       _count: { id: true },
       _sum: { netAmount: true },
     }),
+    prisma.order.count({ where: { shiftId, tenantId, status: 'CANCELLED' } }),
   ]);
 
-  const cancelledOrders = await prisma.order.count({ where: { shiftId: shift.id, status: 'CANCELLED' } });
+  // Checked after the fact rather than before: the parallel reads are all
+  // tenant-scoped too, so a miss here just means a little wasted work on a
+  // request that was going to 404 anyway.
+  if (!shift) return null;
+
+  const isOpen = shift.status === 'OPEN';
 
   // ── Money ──────────────────────────────────────────────────────────────────
   const totalOrders = orders.length;
@@ -82,8 +87,12 @@ export async function buildShiftReportData(tenantId: string, shiftId: string) {
   // ── Time ───────────────────────────────────────────────────────────────────
   const shiftEnd = shift.closedAt ? shift.closedAt.getTime() : Date.now();
   const shiftDurationSeconds = Math.max(0, Math.floor((shiftEnd - shift.openedAt.getTime()) / 1000));
+  // An unfinished break is measured to the end of the shift, not to "now".
+  // Closing a shift now auto-ends open breaks, but historical rows can still
+  // carry one, and against Date.now() such a break grew by a day every day —
+  // which drove active time to zero on shifts that were otherwise fine.
   const totalBreakSeconds = shift.breaks.reduce((s, b) => {
-    const end = b.endedAt ? b.endedAt.getTime() : Date.now();
+    const end = Math.min(b.endedAt ? b.endedAt.getTime() : Date.now(), shiftEnd);
     return s + Math.max(0, Math.floor((end - b.startedAt.getTime()) / 1000));
   }, 0);
   const activeSeconds = Math.max(0, shiftDurationSeconds - totalBreakSeconds);

@@ -24,6 +24,19 @@ export const CloseShiftSchema = z.object({
   overrideReason: z.string().optional(),
 });
 
+/**
+ * Force close, initiated from the dashboard by an already-authenticated
+ * manager. A reason is mandatory: this bypasses the pending-order guard and
+ * ends someone else's shift, so the shift record has to say why.
+ * `actualCash` is optional — omitting it records the drawer as never counted
+ * rather than as zero.
+ */
+export const ForceCloseShiftSchema = z.object({
+  reason: z.string().trim().min(3, 'Give a reason of at least 3 characters'),
+  actualCash: z.number().min(0).optional(),
+  notes: z.string().optional(),
+});
+
 export const CanCloseQuerySchema = z.object({
   shiftId: z.string(),
   branchId: z.string(),

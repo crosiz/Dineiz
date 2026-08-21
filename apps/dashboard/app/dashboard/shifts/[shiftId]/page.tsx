@@ -200,8 +200,10 @@ export default function ShiftDetailPage() {
     : Date.now() - new Date(shift.openedAt).getTime();
 
   const breaks: any[] = shift.breaks ?? [];
+  const shiftEndMs = shift.closedAt ? new Date(shift.closedAt).getTime() : Date.now();
+  // Cap an unfinished break at the end of the shift — see shift-report.data.ts.
   const totalBreakMs = breaks.reduce((s: number, b: any) => {
-    const end = b.endedAt ? new Date(b.endedAt).getTime() : Date.now();
+    const end = Math.min(b.endedAt ? new Date(b.endedAt).getTime() : Date.now(), shiftEndMs);
     return s + Math.max(0, end - new Date(b.startedAt).getTime());
   }, 0);
   const activeMs = Math.max(0, shiftMs - totalBreakMs);

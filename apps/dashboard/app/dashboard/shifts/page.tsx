@@ -97,18 +97,25 @@ function ForceCloseModal({ shiftId, cashierName, onClose, onSuccess }: {
   shiftId: string; cashierName: string; onClose: () => void; onSuccess: () => void;
 }) {
   const [reason, setReason] = useState("");
-  const [pin, setPin] = useState("");
+  const [countedCash, setCountedCash] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!reason.trim()) { setError("Please enter a reason."); return; }
-    if (pin.length < 4) { setError("Manager PIN must be at least 4 digits."); return; }
+    if (reason.trim().length < 3) { setError("Please give a reason — it is recorded on the shift."); return; }
     setLoading(true);
+    setError("");
     try {
+      // `reason` goes to the server as the shift's closedReason, not buried in
+      // free-text notes. Leaving the cash box blank records the drawer as
+      // never counted rather than as zero, which would otherwise show up as a
+      // shortage the size of the whole day's cash.
       await apiFetch(`/api/shifts/${shiftId}/force-close`, {
         method: "PUT",
-        body: JSON.stringify({ notes: `FORCE CLOSED by manager. Reason: ${reason}`, actualCash: 0 }),
+        body: JSON.stringify({
+          reason: reason.trim(),
+          ...(countedCash.trim() !== "" ? { actualCash: Number(countedCash) } : {}),
+        }),
       });
       onSuccess();
       onClose();
@@ -129,7 +136,8 @@ function ForceCloseModal({ shiftId, cashierName, onClose, onSuccess }: {
           </button>
         </div>
         <p className="text-sm text-slate-500 mb-4">
-          Closing <strong className="text-slate-700">{cashierName}</strong>&apos;s shift with no cash count. This is recorded on the shift.
+          Ends <strong className="text-slate-700">{cashierName}</strong>&apos;s shift immediately, even if orders are still
+          unsettled. The reason is stored on the shift and shown in its report.
         </p>
         <div className="space-y-3">
           <div>
@@ -143,14 +151,17 @@ function ForceCloseModal({ shiftId, cashierName, onClose, onSuccess }: {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Manager PIN *</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+              Counted cash <span className="font-normal text-slate-400">— leave blank if nobody counted the drawer</span>
+            </label>
             <input
-              type="password"
-              maxLength={8}
-              value={pin}
-              onChange={e => setPin(e.target.value.replace(/\D/g, ""))}
-              placeholder="4-digit PIN"
-              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono tracking-widest focus:outline-none focus:ring-1 focus:ring-slate-400"
+              type="number"
+              min={0}
+              inputMode="numeric"
+              value={countedCash}
+              onChange={e => setCountedCash(e.target.value)}
+              placeholder="Not counted"
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-slate-400"
             />
           </div>
           {error && <p className="text-red-500 text-xs">{error}</p>}

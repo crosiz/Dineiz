@@ -31,6 +31,12 @@ function toInstantRange(tz: string, from?: string, to?: string): { gte?: Date; l
   const range: { gte?: Date; lte?: Date } = {};
   if (from) range.gte = fromZonedTime(`${from}T00:00:00`, tz);
   if (to) range.lte = fromZonedTime(`${to}T23:59:59.999`, tz);
+  // A range whose end precedes its start can only ever return nothing. Swap
+  // rather than silently showing an empty table — a manager who picked the
+  // dates the wrong way round meant the range between them.
+  if (range.gte && range.lte && range.gte > range.lte) {
+    return { gte: range.lte, lte: range.gte };
+  }
   return range;
 }
 
@@ -220,7 +226,23 @@ export async function computeShiftTotals(shiftId: string) {
   };
 }
 
-export async function closeShift(tenantId: string, id: string, data: { closingCash: number; notes?: string; denominations?: any[], overridePin?: string, overrideReason?: string }) {
+export interface CloseShiftInput {
+  /** Cash the cashier physically counted. `null` = never counted (force close). */
+  closingCash: number | null;
+  notes?: string;
+  denominations?: { denomination: number; quantity: number }[];
+  /** POS path: a manager authorises the override by entering their PIN. */
+  overridePin?: string;
+  overrideReason?: string;
+  /**
+   * Dashboard path: the caller is already authenticated as a manager, so no
+   * PIN round-trip is needed — the route's requireRole is the authorisation.
+   */
+  force?: boolean;
+  forcedById?: string;
+}
+
+export async function closeShift(tenantId: string, id: string, data: CloseShiftInput) {
   const shift = await prisma.shift.findFirst({ where: { id, tenantId, status: 'OPEN' } });
   if (!shift) return null;
 
@@ -232,9 +254,17 @@ export async function closeShift(tenantId: string, id: string, data: { closingCa
       where: { tenantId, posPin: data.overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } }
     });
     if (!manager) return { error: 'Invalid manager PIN or insufficient permissions' };
-    if (!data.overrideReason) return { error: 'Override reason is required' };
+    if (!data.overrideReason?.trim()) return { error: 'Override reason is required' };
     isForceClosed = true;
     managerId = manager.id;
+  } else if (data.force) {
+    // A force close exists precisely to get past the pending-order blocker.
+    // Routing it through canCloseShift meant the dashboard's Force Close
+    // silently did nothing whenever there were unsettled orders — which is the
+    // only situation anyone reaches for it in the first place.
+    if (!data.overrideReason?.trim()) return { error: 'A reason is required to force close a shift' };
+    isForceClosed = true;
+    managerId = data.forcedById ?? null;
   } else {
     const canClose = await canCloseShift(tenantId, shift.branchId, id, shift.userId);
     if (!canClose.canClose) return { error: 'Shift cannot be closed due to pending orders', blockers: canClose.blockers };
@@ -247,38 +277,89 @@ export async function closeShift(tenantId: string, id: string, data: { closingCa
   const cashOut = cashEntryAgg.find((e) => e.type === 'CASH_OUT')?._sum.amount ?? 0;
 
   const expectedCash = shift.openingFloat + totalCash + cashIn - cashOut;
-  const cashVariance = parseFloat((data.closingCash - expectedCash).toFixed(2));
-  const denominations = data.denominations ?? [];
 
-  const closed = await prisma.$transaction(async (tx) => {
-    if (denominations.length > 0) {
-      await tx.shiftDenomination.createMany({
-        data: denominations.map((d) => ({ shiftId: id, denomination: d.denomination, quantity: d.quantity, total: d.denomination * d.quantity })),
-      });
-    }
-    const updatedShift = await tx.shift.update({
-      where: { id },
-      data: { 
-        status: 'CLOSED', 
-        closedAt: new Date(), 
-        closingCash: data.closingCash, 
-        totalSales, totalCash, totalCard, totalDiscount, totalTax, totalOrders, cashVariance, 
-        notes: data.notes,
-        closedReason: isForceClosed ? data.overrideReason : null
-      },
-      include: { user: { select: { id: true, name: true } }, denominations: { orderBy: { denomination: 'desc' } }, cashEntries: true },
-    });
-    
-    if (isForceClosed) {
-      await tx.shiftActivity.create({
-        data: { shiftId: id, activityType: 'FORCE_CLOSED_BY_MANAGER', performedById: managerId, notes: `Force closed by manager. Reason: ${data.overrideReason}`, amount: data.closingCash },
-      });
-    } else {
-      await tx.shiftActivity.create({
-        data: { shiftId: id, activityType: 'CLOSED', notes: `Shift closed — PKR ${data.closingCash.toLocaleString()} counted`, amount: data.closingCash },
-      });
-    }
-    return updatedShift;
+  // An uncounted drawer has no variance. Recording closingCash 0 for a force
+  // close reported the entire float plus every cash sale as a shortage, which
+  // then polluted the branch's net-variance figure — a manager tidying up an
+  // abandoned terminal looked like a theft event.
+  const counted = data.closingCash;
+  const cashVariance = counted === null ? null : parseFloat((counted - expectedCash).toFixed(2));
+  const denominations = data.denominations ?? [];
+  const closedAt = new Date();
+
+  // Read outside the transaction. Everything inside an interactive transaction
+  // races Prisma's 5s timeout, and on a remote Postgres each round trip is
+  // ~700ms — reading breaks in there was enough to blow the budget and abort
+  // the whole close with P2028. (Same trap as the one documented in
+  // createOrder.) A break cannot outlive its shift: left open, every later read
+  // measured its duration against "now", so a shift closed on Monday reported a
+  // break that grew by a day every day.
+  const openBreaks = await prisma.shiftBreak.findMany({ where: { shiftId: id, endedAt: null } });
+  const endedBreaks = openBreaks.map((b) => ({
+    id: b.id,
+    durationMinutes: Math.max(0, Math.round((closedAt.getTime() - b.startedAt.getTime()) / 60_000)),
+  }));
+
+  const closeActivity = isForceClosed
+    ? {
+        shiftId: id,
+        activityType: 'FORCE_CLOSED_BY_MANAGER' as const,
+        performedById: managerId,
+        notes: `Force closed by manager — ${data.overrideReason}${
+          counted === null ? ' (drawer not counted)' : ` · PKR ${Math.round(counted).toLocaleString('en-US')} counted`
+        }`,
+        amount: counted,
+      }
+    : {
+        shiftId: id,
+        activityType: 'CLOSED' as const,
+        performedById: shift.userId,
+        notes: `Shift closed — PKR ${Math.round(counted ?? 0).toLocaleString('en-US')} counted`,
+        amount: counted,
+      };
+
+  await prisma.$transaction(
+    [
+      ...(denominations.length > 0
+        ? [prisma.shiftDenomination.createMany({
+            data: denominations.map((d) => ({ shiftId: id, denomination: d.denomination, quantity: d.quantity, total: d.denomination * d.quantity })),
+          })]
+        : []),
+      ...endedBreaks.map((b) =>
+        prisma.shiftBreak.update({ where: { id: b.id }, data: { endedAt: closedAt, durationMinutes: b.durationMinutes } }),
+      ),
+      prisma.shift.update({
+        where: { id },
+        data: {
+          status: 'CLOSED',
+          closedAt,
+          closingCash: counted,
+          totalSales, totalCash, totalCard, totalDiscount, totalTax, totalOrders, cashVariance,
+          notes: data.notes,
+          closedReason: isForceClosed ? data.overrideReason : null,
+        },
+      }),
+      prisma.shiftActivity.createMany({
+        data: [
+          ...endedBreaks.map((b) => ({
+            shiftId: id,
+            activityType: 'BREAK_END' as const,
+            notes: `Break auto-ended at shift close — ${b.durationMinutes} minute${b.durationMinutes !== 1 ? 's' : ''}`,
+            metadata: { breakId: b.id, durationMinutes: b.durationMinutes, autoEnded: true },
+          })),
+          closeActivity,
+        ],
+      }),
+    ],
+    // A batch transaction ships every statement in one round trip, so the whole
+    // close is a single network hop rather than one per write.
+  );
+
+  // Re-read with the relations the callers expect. Outside the transaction so
+  // the include's extra queries can't count against its budget.
+  const closed = await prisma.shift.findUnique({
+    where: { id },
+    include: { user: { select: { id: true, name: true } }, denominations: { orderBy: { denomination: 'desc' } }, cashEntries: true },
   });
 
   emitShiftEvent(shift.branchId, 'closed', id);

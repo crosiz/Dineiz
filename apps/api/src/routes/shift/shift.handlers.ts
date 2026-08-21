@@ -4,7 +4,7 @@ import {
   getShiftOrders, getShiftActivity, getActiveShiftStats,
   startBreak, endBreak, canCloseShift, getShiftReport,
 } from './shift.service';
-import { OpenShiftSchema, CloseShiftSchema, CashEntrySchema, CanCloseQuerySchema, ShiftListQuerySchema } from './shift.schema';
+import { OpenShiftSchema, CloseShiftSchema, CashEntrySchema, CanCloseQuerySchema, ShiftListQuerySchema, ForceCloseShiftSchema } from './shift.schema';
 import { prisma } from '@dineiz/db';
 
 /**
@@ -104,15 +104,25 @@ export async function handleGetActiveShifts(request: FastifyRequest, reply: Fast
 
 export async function handleForceCloseShift(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as { id: string };
-  const body = request.body as { actualCash?: number, notes?: string };
-  
+  const parsed = ForceCloseShiftSchema.safeParse(request.body ?? {});
+  if (!parsed.success) return reply.status(400).send({ error: 'Invalid body', issues: parsed.error.issues });
+
+  // The route is already gated to BRANCH_MANAGER / TENANT_ADMIN, so the session
+  // is the authorisation. `force` skips the pending-order blocker, which is the
+  // entire point of this endpoint — without it, force-closing a shift that had
+  // unsettled orders returned an error body under a 200 status, so the
+  // dashboard reported success while nothing actually closed.
   const result = await closeShift(request.user!.tenantId!, id, {
-    closingCash: body.actualCash ?? 0,
-    notes: body.notes,
-    denominations: []
+    // Omitted entirely means nobody counted the drawer. Don't invent a zero.
+    closingCash: parsed.data.actualCash ?? null,
+    notes: parsed.data.notes,
+    force: true,
+    forcedById: request.user!.id,
+    overrideReason: parsed.data.reason,
   });
 
   if (!result) return reply.status(404).send({ error: 'Open shift not found' });
+  if ('error' in result) return reply.status(400).send(result);
   return result;
 }
 
