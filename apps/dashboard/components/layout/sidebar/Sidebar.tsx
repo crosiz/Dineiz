@@ -97,8 +97,8 @@ export function Sidebar() {
     if (href === '/dashboard/menu') prefetch(['menu', branchId], `/api/menu${branchId ? `?branchId=${branchId}` : ''}`);
     if (href === '/dashboard/orders') prefetch(['orders', branchId, 1, 10, ''], `/api/orders?page=1&limit=10${branchId ? `&branchId=${branchId}` : ''}`);
     if (href === '/dashboard/staff') prefetch(['staff', branchId], `/api/staff${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/inventory') prefetch(['inventory', branchId], `/api/inventory${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/forecast') prefetch(['inventory-forecast', branchId], `/api/inventory/forecast${branchId ? `?branchId=${branchId}` : ''}`);
+    if (href === '/dashboard/inventory') prefetch(['inventory', 'summary', branchId], `/api/inventory/summary${branchId ? `?branchId=${branchId}` : ''}`);
+    if (href === '/dashboard/forecast') prefetch(['inventory-forecast', branchId], `/api/forecast/inventory${branchId ? `?branchId=${branchId}` : ''}`);
     if (href === '/dashboard/deals') prefetch(['deals', branchId], `/api/deals${branchId ? `?branchId=${branchId}` : ''}`);
   };
 
