@@ -2,7 +2,10 @@ import express from "express";
 import puppeteer from "puppeteer";
 
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+// A full shift report — every order plus the complete activity log — can run
+// to a few hundred KB of HTML on a busy day, and a whole-month export more.
+// 2mb was tight enough that a long shift silently 413'd.
+app.use(express.json({ limit: "16mb" }));
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

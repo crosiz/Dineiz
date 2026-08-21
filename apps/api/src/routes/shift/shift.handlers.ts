@@ -4,8 +4,23 @@ import {
   getShiftOrders, getShiftActivity, getActiveShiftStats,
   startBreak, endBreak, canCloseShift, getShiftReport,
 } from './shift.service';
-import { OpenShiftSchema, CloseShiftSchema, CashEntrySchema, CanCloseQuerySchema } from './shift.schema';
+import { OpenShiftSchema, CloseShiftSchema, CashEntrySchema, CanCloseQuerySchema, ShiftListQuerySchema } from './shift.schema';
 import { prisma } from '@dineiz/db';
+
+/**
+ * The branch a shift query is locked to, or `undefined` for "all branches".
+ *
+ * A TENANT_ADMIN usually *also* has a home branchId on their user row, so
+ * falling back to `user.branchId` whenever no branchId param was sent silently
+ * pinned them to that one branch — "All Branches" in the dashboard switcher
+ * could never actually show more than one. `scopedBranchId` is the existing
+ * convention for this (auth.ts sets it for BRANCH_MANAGER only); cashiers are
+ * pinned here too, since they have no business reading another branch's shifts.
+ */
+function resolveScope(request: FastifyRequest, requestedBranchId?: string): string | undefined {
+  const forced = request.scopedBranchId ?? (request.user?.role === 'CASHIER' ? request.user.branchId : null);
+  return forced ?? requestedBranchId ?? undefined;
+}
 
 export async function handleGetCurrentShift(request: FastifyRequest, reply: FastifyReply) {
   const user = request.user!;
@@ -14,9 +29,9 @@ export async function handleGetCurrentShift(request: FastifyRequest, reply: Fast
   return shift ?? { open: false };
 }
 export async function handleListShifts(request: FastifyRequest, reply: FastifyReply) {
-  const raw = request.query as Record<string, string>;
-  const limit = Math.min(Math.max(parseInt(raw.limit ?? '20', 10) || 20, 1), 100);
-  return listShifts(request.user!.tenantId!, { branchId: raw.branchId, cursor: raw.cursor, limit }, request.user!.branchId);
+  const parsed = ShiftListQuerySchema.safeParse(request.query);
+  if (!parsed.success) return reply.status(400).send({ error: 'Invalid query', issues: parsed.error.issues });
+  return listShifts(request.user!.tenantId!, { ...parsed.data, branchId: resolveScope(request, parsed.data.branchId) });
 }
 export async function handleGetShift(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as any;
@@ -72,12 +87,13 @@ export async function handleGetShiftSummary(request: FastifyRequest, reply: Fast
 
 export async function handleGetActiveShifts(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user!.tenantId!;
-  const branchId = request.user!.branchId;
+  const branchId = resolveScope(request, (request.query as Record<string, string>)?.branchId);
 
   const activeShifts = await prisma.shift.findMany({
     where: { tenantId, ...(branchId ? { branchId } : {}), status: 'OPEN' },
     include: {
       user: { select: { id: true, name: true, image: true, avatarColor: true } },
+      branch: { select: { id: true, name: true } },
       _count: { select: { orders: true } },
     },
     orderBy: { openedAt: 'desc' }
@@ -121,11 +137,8 @@ export async function handleGetShiftActivity(request: FastifyRequest, reply: Fas
 
 export async function handleGetActiveShiftStats(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user!.tenantId!;
-  // BRANCH_MANAGER sees only their own branch; TENANT_ADMIN sees all unless filtered
-  const userBranchId = request.user!.branchId;
   const raw = request.query as Record<string, string>;
-  const branchId = raw.branchId ?? userBranchId ?? undefined;
-  const data = await getActiveShiftStats(tenantId, branchId);
+  const data = await getActiveShiftStats(tenantId, resolveScope(request, raw.branchId));
   return data;
 }
 

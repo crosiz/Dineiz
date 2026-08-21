@@ -1,5 +1,6 @@
 import { prisma } from '@dineiz/db';
 import { sendWhatsAppMessage } from '../lib/whatsapp';
+import { computeShiftTotals } from '../routes/shift/shift.service';
 
 export async function processAbandonedShifts() {
   console.log('Running abandoned shifts check...');
@@ -27,9 +28,14 @@ export async function processAbandonedShifts() {
     const lastActivityTime = lastActivity ? lastActivity.occurredAt : shift.openedAt;
 
     if (lastActivityTime < twoHoursAgo) {
+      // Freeze the sales figures onto the shift the same way a normal close
+      // does. An abandoned shift that took PKR 40,000 should say so in Shift
+      // Management, not read as a blank row — the cash is still missing and
+      // someone has to account for it.
+      const totals = await computeShiftTotals(shift.id);
       await prisma.shift.update({
         where: { id: shift.id },
-        data: { status: 'ABANDONED', closedAt: new Date() },
+        data: { status: 'ABANDONED', closedAt: new Date(), ...totals },
       });
       
       await prisma.shiftActivity.create({
