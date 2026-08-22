@@ -17,6 +17,13 @@ const CATEGORIES = [
 const UNITS = ['GRAM', 'KILOGRAM', 'ML', 'LITER', 'PCS'] as const;
 const STORAGE_TYPES = ['FROZEN', 'CHILLED', 'DRY', 'AMBIENT'];
 
+// An untouched number input registered with { valueAsNumber: true } yields NaN,
+// not undefined — and z.number().optional() only treats undefined as "absent",
+// so NaN fails validation and silently blocks the whole form's submit. Accept
+// NaN as an alternate branch and fold it to undefined (keeps clean type inference,
+// unlike z.preprocess which widens the field's input type to unknown).
+const optionalPositiveInt = z.number().int().positive().optional().or(z.nan().transform(() => undefined));
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   nameUrdu: z.string().optional(),
@@ -30,7 +37,7 @@ const schema = z.object({
   costPerPurchaseUnit: z.number().min(0),
   supplierId: z.string().optional(),
   supplierName: z.string().optional(),
-  shelfLifeDays: z.number().int().positive().optional(),
+  shelfLifeDays: optionalPositiveInt,
   storageType: z.string().optional(),
   imageUrl: z.string().url().optional().or(z.literal('')),
 });

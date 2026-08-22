@@ -8,6 +8,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useSuppliers, Supplier } from '../hooks/useSuppliers';
 import { DELIVERY_DAYS } from './supplierConstants';
 
+// An untouched number input registered with { valueAsNumber: true } yields NaN,
+// not undefined — and z.number().optional() only treats undefined as "absent",
+// so NaN fails validation and silently blocks the whole form's submit. Accept
+// NaN as an alternate branch and fold it to undefined (keeps clean type inference,
+// unlike z.preprocess which widens the field's input type to unknown).
+const optionalNumber = (min: number, max?: number) =>
+  (max !== undefined ? z.number().min(min).max(max) : z.number().min(min))
+    .optional()
+    .or(z.nan().transform(() => undefined));
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   contactName: z.string().optional(),
@@ -16,8 +26,8 @@ const schema = z.object({
   email: z.string().email('Enter a valid email').optional().or(z.literal('')),
   address: z.string().optional(),
   paymentTerms: z.string().optional(),
-  minOrderValue: z.number().min(0).optional(),
-  rating: z.number().min(1).max(5).optional(),
+  minOrderValue: optionalNumber(0),
+  rating: optionalNumber(1, 5),
   notes: z.string().optional(),
 });
 
