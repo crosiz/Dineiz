@@ -440,7 +440,6 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   const session = useCartStore((s) => s.session);
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [elapsedSecs, setElapsedSecs] = useState(0);
-  const [isSlidingOut, setIsSlidingOut] = useState(false);
   const [isReprinting, setIsReprinting] = useState(false);
 
   const handleReprintKOT = async () => {
@@ -493,27 +492,20 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   }
 
   const handleMarkReady = () => {
-    setIsSlidingOut(true);
+    // Remove it from the board immediately — no artificial delay. The PATCH
+    // fires in the background and never gates this; a slide-out animation
+    // isn't worth trading away instant removal for.
+    toast.success(`Order #${order.orderNumber} bumped`);
+    onReady(order.id);
 
-    // Fire the PATCH immediately in the background — it no longer gates
-    // the card leaving the board. The kitchen already physically bumped
-    // the order by tapping this; the 500ms slide-out below is a cosmetic
-    // delay only, not a wait on the network.
-    const bump = fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
+    fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
       credentials: 'include',
     }).then((res) => {
       if (!res.ok) throw new Error('Failed to bump order');
-    });
-
-    setTimeout(() => {
-      toast.success(`Order #${order.orderNumber} bumped`);
-      onReady(order.id);
-    }, 500);
-
-    bump.catch(() => {
+    }).catch(() => {
       toast.error(`Order #${order.orderNumber} failed to bump — restored`);
       onReadyFailed(order);
     });
@@ -533,7 +525,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   }
 
   return (
-    <article className={`bg-white rounded-xl shadow-md border border-[#E2E8F0] flex flex-col h-[340px] overflow-hidden ${isSlidingOut ? 'slide-out' : ''}`}>
+    <article className="bg-white rounded-xl shadow-md border border-[#E2E8F0] flex flex-col h-[340px] overflow-hidden">
       {/* Header */}
       <div className={`${headerBg} ${headerText} p-3 flex justify-between items-center transition-colors duration-500 shrink-0`}>
         <div className="flex items-baseline gap-2">
