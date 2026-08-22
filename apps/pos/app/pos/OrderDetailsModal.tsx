@@ -126,7 +126,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   };
 
   const updateStatus = async (status: string) => {
+    const previousStatus = order?.status;
     setIsUpdating(true);
+    // Optimistic: flip the stepper/badge immediately and let the list
+    // screen behind this modal know right away, instead of waiting for
+    // the PUT to confirm before anything visibly changes.
+    setOrder((prev: any) => (prev ? { ...prev, status } : prev));
+    onChanged?.();
+
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
         method: 'PUT',
@@ -135,9 +142,11 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       });
       if (!res.ok) throw new Error('Failed to update status');
       toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : status === 'CANCELLED' ? 'Order cancelled' : 'Order updated');
-      refreshAfterChange();
+      fetchOrder(true);
     } catch {
-      toast.error('Failed to update order');
+      toast.error('Failed to update order — reverted');
+      setOrder((prev: any) => (prev ? { ...prev, status: previousStatus } : prev));
+      onChanged?.();
     } finally {
       setIsUpdating(false);
     }

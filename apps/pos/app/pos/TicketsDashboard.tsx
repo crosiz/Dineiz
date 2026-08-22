@@ -315,6 +315,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   };
 
   const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
+  // Full order object already in `orders` (from useSWROrders) — passed as
+  // initialOrder so OrderDetailsModal paints instantly instead of blocking
+  // on a fresh GET /api/orders/:id every time a card is tapped.
+  const [detailsOrder, setDetailsOrder] = useState<any>(null);
   const [deleteHeldTarget, setDeleteHeldTarget] = useState<string | null>(null);
   const deleteHeldOrder = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -476,6 +480,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       // A real, already-submitted order — show the details modal (view +
       // actions) instead of dropping straight into the menu-punching screen.
       setDetailsOrderId(order.id);
+      setDetailsOrder(order);
     };
 
     if (layout === 'list') {
@@ -566,7 +571,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 </a>
               )}
               <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] hover:bg-[#E2E8F0]'}`}>
-                {isUpdatingThis ? 'Updating...' : !!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
+                {!!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
               </button>
             </div>
           )}
@@ -675,7 +680,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   onClick={onActionClick}
                   className={`text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md ${isReady ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : isPending ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : (isInKitchen && useKDS) ? 'bg-blue-50 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-white border border-[#CBD5E1] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9]'}`}
                 >
-                  {isUpdatingThis ? '...' : !!order.heldAt ? 'Resume' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In KDS...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect' : 'View Order'}
+                  {!!order.heldAt ? 'Resume' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In KDS...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect' : 'View Order'}
                 </button>
               </div>
             </div>
@@ -803,7 +808,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               onClick={onActionClick}
               className={`flex-1 py-3.5 text-sm font-bold transition-colors flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'text-[#0F172A] hover:bg-[#E2E8F0]'}`}
             >
-              {isUpdatingThis ? 'Updating...' : !!order.heldAt ? 'Resume Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
+              {!!order.heldAt ? 'Resume Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
             </button>
           </div>
         )}
@@ -1210,7 +1215,8 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
       <OrderDetailsModal
         orderId={detailsOrderId}
-        onClose={() => setDetailsOrderId(null)}
+        initialOrder={detailsOrder}
+        onClose={() => { setDetailsOrderId(null); setDetailsOrder(null); }}
         useKDS={useKDS}
         readOnly={dataMode === 'history'}
         onChanged={() => queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] })}

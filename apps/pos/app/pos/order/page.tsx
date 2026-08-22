@@ -548,6 +548,19 @@ function OrderEntryPageContent() {
         }))
       });
 
+      // Same reasoning as the new-order path: the kitchen needs the extra
+      // items the instant this is tapped, not after a round trip. Everything
+      // this KOT needs (the added items, which table/order it's for) is
+      // already known — print now instead of waiting on the POST.
+      printKOT(
+        {
+          orderNumber: existingOrderData?.orderNumber || paymentOrderNumber || `#${paymentOrderId?.slice(-6)}`,
+          tokenNumber: existingOrderData?.tokenNumber,
+          createdAt: new Date().toISOString(),
+        },
+        orderTypeStr, sessionObj, cartItems, notes
+      );
+
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${paymentOrderId}/items`, {
           method: 'POST',
@@ -562,7 +575,6 @@ function OrderEntryPageContent() {
         const order = await res.json();
         setOrderNote('');
         toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} updated!`);
-        printKOT(order, orderTypeStr, sessionObj, cartItems, notes);
 
         if (isHeld && rawOrderId) {
           try {
@@ -601,9 +613,10 @@ function OrderEntryPageContent() {
     // the network round trip resolves; reconcile the temp id/order number
     // once the POST actually lands, in the background.
     const localId = uuid();
+    const tempOrderNumber = `#${localId.slice(0, 6).toUpperCase()}`;
     const optimisticOrder = {
       id: localId,
-      orderNumber: 'Sending…',
+      orderNumber: tempOrderNumber,
       tokenNumber: null,
       status: 'IN_KITCHEN',
       type: orderTypeStr,
@@ -636,6 +649,15 @@ function OrderEntryPageContent() {
     menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
       [optimisticOrder, ...(Array.isArray(old) ? old : [])]
     );
+
+    // Print the KOT NOW, from data we already have — the kitchen needs the
+    // ticket the instant this is tapped, not after a round trip to the
+    // server. Everything printDocument needs (items, table, totals) is
+    // already known client-side; only the real order number isn't, so it
+    // prints with the temp one. This used to wait for the POST to resolve,
+    // which silently reintroduced the exact "kitchen waits on the network"
+    // problem this whole optimistic flow exists to remove.
+    printKOT(optimisticOrder, orderTypeStr, sessionObj, cartItems, notes);
 
     toast.success('Order sent to kitchen!');
     if (isHeld && rawOrderId) {
@@ -685,10 +707,10 @@ function OrderEntryPageContent() {
 
       const order = await res.json();
       // Reconcile: swap the temp ticket for the real one wherever it landed.
+      // KOT already printed above with the temp number — not reprinted here.
       menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
         Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...optimisticOrder, ...order } : o)) : old
       );
-      printKOT(order, orderTypeStr, sessionObj, cartItems, notes);
     } catch (err) {
       // Never silently drop an order the cashier already walked away from —
       // queue it the same way an upfront-detected offline failure already

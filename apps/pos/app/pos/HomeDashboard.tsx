@@ -35,6 +35,15 @@ export default function HomeDashboard() {
   const [homeSearch, setHomeSearch] = useState('');
 
   const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
+  // The full order object from the list the cashier already has on screen —
+  // passed to OrderDetailsModal as initialOrder so it paints instantly
+  // instead of blocking on a fresh GET /api/orders/:id every time a card is
+  // tapped.
+  const [detailsOrder, setDetailsOrderState] = useState<any>(null);
+  const openOrderDetails = (order: any) => {
+    setDetailsOrderId(order.id);
+    setDetailsOrderState(order);
+  };
   // Same master-switch semantics as TicketsDashboard: the tenant-wide toggle
   // must be able to turn KDS off everywhere on its own.
   const [useKDS] = useState<boolean>(() => {
@@ -321,7 +330,7 @@ export default function HomeDashboard() {
                     return (
                       <div
                         key={order.id}
-                        onClick={() => setDetailsOrderId(order.id)}
+                        onClick={() => openOrderDetails(order)}
                         style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
                         className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-[#CBD5E1] transition-all border border-[#E2E8F0] flex flex-col gap-2.5"
                       >
@@ -367,7 +376,7 @@ export default function HomeDashboard() {
                   return (
                     <div
                       key={`aging-${order.id}`}
-                      onClick={() => setDetailsOrderId(order.id)}
+                      onClick={() => openOrderDetails(order)}
                       className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-amber-300 transition-colors"
                     >
                       <div className="flex items-center gap-4">
@@ -563,7 +572,8 @@ export default function HomeDashboard() {
 
       <OrderDetailsModal
         orderId={detailsOrderId}
-        onClose={() => setDetailsOrderId(null)}
+        initialOrder={detailsOrder}
+        onClose={() => { setDetailsOrderId(null); setDetailsOrderState(null); }}
         useKDS={useKDS}
       />
     </div>
