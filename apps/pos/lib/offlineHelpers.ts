@@ -1,4 +1,4 @@
-import { getDB, type CachedMenuItem, type OfflineOrder } from './db';
+import { getDB, type CachedMenuItem, type OfflineOrder, type OfflinePayment, type PendingItemAdd } from './db';
 
 // ─── Menu Caching ─────────────────────────────────────────────────────────────
 
@@ -90,4 +90,77 @@ export async function pruneOldOrders(): Promise<void> {
     .equals('synced')
     .filter((o) => new Date(o.createdAt).getTime() < cutoff)
     .delete();
+}
+
+// ─── Offline Payment Queue ─────────────────────────────────────────────────
+//
+// Same pattern as the order queue above. `body` is the exact JSON string
+// that would have been sent as the PUT /api/orders/:orderId body — stored
+// pre-serialized so sync just re-sends it, no need to reconstruct payment
+// shape/tax recalculation client-side.
+
+export async function queueOfflinePayment(
+  payment: Omit<OfflinePayment, 'localId' | 'syncStatus' | 'createdAt' | 'syncAttempts'>
+): Promise<string> {
+  const db = getDB();
+  const localId = uuidv4();
+  await db.offlinePayments.add({
+    ...payment,
+    localId,
+    createdAt: new Date().toISOString(),
+    syncStatus: 'pending',
+    syncAttempts: 0,
+  });
+  return localId;
+}
+
+export async function getPendingPayments(): Promise<OfflinePayment[]> {
+  const db = getDB();
+  return db.offlinePayments.where('syncStatus').anyOf(['pending', 'failed']).sortBy('createdAt');
+}
+
+export async function markPaymentSynced(localId: string): Promise<void> {
+  const db = getDB();
+  await db.offlinePayments.update(localId, { syncStatus: 'synced' });
+}
+
+export async function markPaymentFailed(localId: string, errorMessage?: string): Promise<void> {
+  const db = getDB();
+  await db.offlinePayments.update(localId, { syncStatus: 'failed', errorMessage });
+}
+
+// ─── Pending Item-Add Queue ─────────────────────────────────────────────────
+//
+// For adding items to an order that's already been sent (e.g. already in
+// the kitchen). `body` is the exact JSON string for
+// POST /api/orders/:orderId/items.
+
+export async function queueItemAdd(
+  itemAdd: Omit<PendingItemAdd, 'localId' | 'syncStatus' | 'createdAt' | 'syncAttempts'>
+): Promise<string> {
+  const db = getDB();
+  const localId = uuidv4();
+  await db.pendingItemAdds.add({
+    ...itemAdd,
+    localId,
+    createdAt: new Date().toISOString(),
+    syncStatus: 'pending',
+    syncAttempts: 0,
+  });
+  return localId;
+}
+
+export async function getPendingItemAdds(): Promise<PendingItemAdd[]> {
+  const db = getDB();
+  return db.pendingItemAdds.where('syncStatus').anyOf(['pending', 'failed']).sortBy('createdAt');
+}
+
+export async function markItemAddSynced(localId: string): Promise<void> {
+  const db = getDB();
+  await db.pendingItemAdds.update(localId, { syncStatus: 'synced' });
+}
+
+export async function markItemAddFailed(localId: string, errorMessage?: string): Promise<void> {
+  const db = getDB();
+  await db.pendingItemAdds.update(localId, { syncStatus: 'failed', errorMessage });
 }

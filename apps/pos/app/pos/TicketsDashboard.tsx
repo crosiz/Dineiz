@@ -285,8 +285,17 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   }, [socket, session.branchId, queryClient, dataMode]);
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    setIsUpdating(orderId);
+
+    // Optimistic: patch every cached active-orders query (any myOrdersOnly/
+    // sortOrder/waiterId variant — setQueriesData matches by key prefix) so
+    // the card flips status immediately instead of waiting on the PUT.
+    const previous = queryClient.getQueriesData({ queryKey: ['swr-active-orders'] });
+    queryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
+      Array.isArray(old) ? old.map((o: any) => (o.id === orderId ? { ...o, status: newStatus } : o)) : old
+    );
+
     try {
-      setIsUpdating(orderId);
       const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
@@ -296,6 +305,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] });
     } catch (e) {
       console.error(e);
+      // Roll back the optimistic patch, then re-pull real state.
+      previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] });
+      toast.error('Could not update order status — reverted.');
     } finally {
       setIsUpdating(null);
     }

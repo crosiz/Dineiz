@@ -6,6 +6,7 @@ import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
+import { queueOfflinePayment } from '@/lib/offlineHelpers';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -298,47 +299,75 @@ export default function PaymentModal({
     }
   };
 
+  // Local-first: the cash/card exchange already happened physically at the
+  // counter by the time this fires (this modal never talks to a real
+  // payment gateway — JazzCash/EasyPaisa are gated off above), so recording
+  // it server-side doesn't need to block the receipt. We show the receipt
+  // immediately and let the PUT run in the background; if it's offline or
+  // fails, it's queued the same way order/page.tsx already queues orders
+  // (see lib/offlineHelpers.ts's queueOfflinePayment / lib/sync.ts's
+  // syncOfflinePayments, drained by the same startBackgroundSync loop).
   const submitPayment = async (payload: any) => {
     setIsProcessing(true);
     try {
       const token = localStorage.getItem('pos_token') ?? '';
-      const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: 'COMPLETED',
-          redeemedPointsAmount: redeemedPoints,
-          payments: (payload.method === 'SPLIT' ? payload.payments : [payload]).map((p: any) => ({
-            method: p.method,
-            amount: p.amount,
-            status: p.status || 'COMPLETED',
-            transactionId: p.transactionRef || p.transactionId,
-          })),
-        })
+      const body = JSON.stringify({
+        status: 'COMPLETED',
+        redeemedPointsAmount: redeemedPoints,
+        payments: (payload.method === 'SPLIT' ? payload.payments : [payload]).map((p: any) => ({
+          method: p.method,
+          amount: p.amount,
+          status: p.status || 'COMPLETED',
+          transactionId: p.transactionRef || p.transactionId,
+        })),
       });
-      if (!res.ok) throw new Error('Payment failed');
-
-      if (tableId) {
-        try {
-          await fetch(`${API_URL}/api/tables/${tableId}/status`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-            body: JSON.stringify({ status: 'dirty' })
-          });
-        } catch (e) {
-          console.warn('Failed to update table status directly from POS', e);
-        }
-      }
 
       const isCash = payload.method === 'CASH';
       const tendered = isCash ? (payload.amount + (payload.change || 0)) : totalWithTip;
+
+      // Paint the receipt now — this is the whole point of local-first.
       await handlePaymentSuccess(payload.method || 'SPLIT', tendered, payload.change || 0);
+
+      const sendPayment = () =>
+        fetch(`${API_URL}/api/orders/${orderId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body,
+        }).then((res) => {
+          if (!res.ok) throw new Error(`Payment sync failed (${res.status})`);
+
+          // Best-effort — the table's authoritative post-payment status
+          // update is ClientTableMap's onSuccess→handleMarkAsFree (fires
+          // once the cashier taps Done below); this just flags it for
+          // bussing sooner for callers that don't already do that.
+          if (tableId) {
+            fetch(`${API_URL}/api/tables/${tableId}/status`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify({ status: 'dirty' }),
+            }).catch((e) => console.warn('Failed to update table status directly from POS', e));
+          }
+        });
+
+      if (!navigator.onLine) {
+        await queueOfflinePayment({ orderId, tableId, body });
+      } else {
+        sendPayment().catch(async (e) => {
+          console.warn('Payment PUT failed, queueing for retry', e);
+          try {
+            await queueOfflinePayment({ orderId, tableId, body });
+          } catch (queueErr) {
+            console.error('Failed to queue payment offline', queueErr);
+            toast.error('Payment could not be saved. Please check with a manager.');
+          }
+        });
+      }
     } catch (e) {
       toast.error('Payment submission failed. Please try again.');
     } finally {

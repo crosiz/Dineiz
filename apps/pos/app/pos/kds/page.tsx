@@ -298,6 +298,9 @@ export default function KDSPage() {
                 onReady={(id) => {
                   setOrders(prev => prev.filter(o => o.id !== id));
                 }}
+                onReadyFailed={(failedOrder) => {
+                  setOrders(prev => (prev.some(o => o.id === failedOrder.id) ? prev : [...prev, failedOrder]));
+                }}
               />
             ))}
           </div>
@@ -433,7 +436,7 @@ function playLoudRing() {
   }
 }
 
-function OrderCard({ order, rushThreshold, onReady }: { order: KdsOrder, rushThreshold: number, onReady: (id: string) => void }) {
+function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: KdsOrder, rushThreshold: number, onReady: (id: string) => void, onReadyFailed: (order: KdsOrder) => void }) {
   const session = useCartStore((s) => s.session);
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [elapsedSecs, setElapsedSecs] = useState(0);
@@ -489,27 +492,31 @@ function OrderCard({ order, rushThreshold, onReady }: { order: KdsOrder, rushThr
     timeStr = `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
   }
 
-  const handleMarkReady = async () => {
-    try {
-      setIsSlidingOut(true);
-      await new Promise(r => setTimeout(r, 500));
-      
-      const res = await fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-        credentials: 'include'
-      });
-      if (res.ok) {
-        toast.success(`Order #${order.orderNumber} bumped`);
-        onReady(order.id);
-      } else {
-        toast.error('Failed to bump order');
-        setIsSlidingOut(false);
-      }
-    } catch (e) {
-      setIsSlidingOut(false);
-    }
+  const handleMarkReady = () => {
+    setIsSlidingOut(true);
+
+    // Fire the PATCH immediately in the background — it no longer gates
+    // the card leaving the board. The kitchen already physically bumped
+    // the order by tapping this; the 500ms slide-out below is a cosmetic
+    // delay only, not a wait on the network.
+    const bump = fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      credentials: 'include',
+    }).then((res) => {
+      if (!res.ok) throw new Error('Failed to bump order');
+    });
+
+    setTimeout(() => {
+      toast.success(`Order #${order.orderNumber} bumped`);
+      onReady(order.id);
+    }, 500);
+
+    bump.catch(() => {
+      toast.error(`Order #${order.orderNumber} failed to bump — restored`);
+      onReadyFailed(order);
+    });
   };
 
   let typeBadgeColor = 'border-blue-500 text-blue-400 bg-blue-500/10';
