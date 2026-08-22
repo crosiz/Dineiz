@@ -7,6 +7,7 @@ import {
   markItemAddSynced,
   markItemAddFailed,
 } from './offlineHelpers';
+import { reconcileServerId } from './core/views';
 
 export async function syncOfflineOrders() {
   const db = getDB();
@@ -37,11 +38,17 @@ export async function syncOfflineOrders() {
       }
 
       const serverOrder = await response.json();
-      
-      await db.offlineOrders.update(order.localId, { 
+
+      await db.offlineOrders.update(order.localId, {
         syncStatus: 'synced',
         serverId: serverOrder.id
       });
+      // If this order was created via the event-sourced command layer
+      // (lib/core/commands.ts), order.localId is that same permanent order
+      // id — reconcile it now the same way the foreground path in
+      // order/page.tsx does. No-ops harmlessly for orders that predate
+      // that system or never went through it.
+      reconcileServerId(order.localId, serverOrder.id);
     } catch (error) {
       await db.offlineOrders.update(order.localId, { 
         syncStatus: 'failed',

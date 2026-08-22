@@ -17,6 +17,8 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import { queueOfflineOrder, queueItemAdd } from '@/lib/offlineHelpers';
+import * as commands from '@/lib/core/commands';
+import { reconcileServerId } from '@/lib/core/views';
 import { registerOrderSync } from '@/lib/syncRegistration';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -608,15 +610,39 @@ function OrderEntryPageContent() {
       return;
     }
 
-    // ── Brand-new order — local-first / optimistic ─────────────────────────
-    // Paint the ticket onto Tickets/Home instantly and navigate away before
-    // the network round trip resolves; reconcile the temp id/order number
-    // once the POST actually lands, in the background.
-    const localId = uuid();
-    const tempOrderNumber = `#${localId.slice(0, 6).toUpperCase()}`;
+    // ── Brand-new order — event-sourced / local-first ───────────────────────
+    // createOrder() generates a permanent client-owned id + order number
+    // (lib/core/event-log.ts's nextOrderNumber — terminal-scoped, never
+    // reassigned) and appends it to the local event log immediately; the
+    // ticket is painted onto Tickets/Home and the cashier is navigated away
+    // before the network round trip resolves. Unlike the previous
+    // "Sending…"/temp-number approach, this number is never swapped for a
+    // different one once the background POST lands — the server doesn't
+    // accept client-supplied ids yet (that's a later phase), so its
+    // response id is recorded separately via reconcileServerId() purely so
+    // later operations (payment, append-items) know what to PUT against.
+    const { orderId: localId, orderNumber } = await commands.createOrder({
+      type: orderTypeStr,
+      tableId,
+      tableLabel: selectedTableLabel || undefined,
+      notes,
+    });
+    for (const item of cartItems) {
+      await commands.addItem(localId, {
+        itemId: item.itemId,
+        itemName: item.name,
+        variationId: item.selectedVariation?.id ?? null,
+        variationName: item.selectedVariation?.name ?? null,
+        qty: item.quantity,
+        unitPrice: item.unitPrice,
+        note: item.notes ?? null,
+      });
+    }
+    await commands.sendToKitchen(localId);
+
     const optimisticOrder = {
       id: localId,
-      orderNumber: tempOrderNumber,
+      orderNumber,
       tokenNumber: null,
       status: 'IN_KITCHEN',
       type: orderTypeStr,
@@ -706,10 +732,14 @@ function OrderEntryPageContent() {
       if (!res.ok) throw new Error(await res.text());
 
       const order = await res.json();
-      // Reconcile: swap the temp ticket for the real one wherever it landed.
-      // KOT already printed above with the temp number — not reprinted here.
+      // Reconcile against the real order: everything server-computed (tax,
+      // timestamps) updates, but id/orderNumber stay the client-owned
+      // permanent ones — never swapped back to the server's cuid/ORD-number.
+      // reconcileServerId records the real id separately (views.ts) purely
+      // so a later payment/append-items call knows what to PUT against.
+      reconcileServerId(localId, order.id);
       menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...optimisticOrder, ...order } : o)) : old
+        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...order, id: localId, orderNumber } : o)) : old
       );
     } catch (err) {
       // Never silently drop an order the cashier already walked away from —
@@ -756,7 +786,7 @@ function OrderEntryPageContent() {
             addonIds: item.selectedAddOns?.map((a) => a.id),
             notes: item.notes,
           })),
-        });
+        }, localId); // same permanent id — lets lib/sync.ts reconcile the view store once this syncs
         await registerOrderSync();
         toast.info('Order could not reach the server — saved locally and will sync automatically.');
       } catch (queueErr) {
