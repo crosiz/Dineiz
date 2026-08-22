@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useTopBar } from '@/hooks/useTopBar';
@@ -8,10 +8,12 @@ import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
+import { useSWRTables } from '@/hooks/useSWRTables';
+import { useShiftStats } from '@/hooks/useShiftStats';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
-import { syncOfflineOrders } from '@/lib/sync';
+import { syncOfflineOrders, syncOfflinePayments, syncPendingItemAdds } from '@/lib/sync';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 
@@ -44,12 +46,6 @@ export default function HomeDashboard() {
     return false;
   });
 
-  // Local state for dashboard stats & orders
-  const [stats, setStats] = useState({
-    ordersServed: 0,
-    totalValue: 0,
-    averagePerOrder: 0,
-  });
   // Instant paint from the IndexedDB (Dexie) cache, refreshed from the network
   // in the background — same stale-while-revalidate hook TicketsDashboard uses,
   // instead of an uncached fetch on every mount.
@@ -60,12 +56,25 @@ export default function HomeDashboard() {
     sortOrder: 'newest',
     historySearch: '',
   });
-  const [tables, setTables] = useState<any[]>([]);
+  // Same pattern, applied to the floor plan (shares its IDB cache entry with
+  // ClientTableMap.tsx). Reused for today's shift stats below, once
+  // `activeShift` is available (see the `useShiftStats` call further down —
+  // deferred until after mount, matching this file's existing isMounted/
+  // activeShift pattern for anything read from localStorage, to avoid a
+  // server/client render mismatch).
+  const { tables } = useSWRTables(session?.branchId ?? null);
 
   // Shift & Cashier info
   const [activeShift, setActiveShift] = useState<any>(null);
   const [shiftStatus, setShiftStatus] = useState<string>('LOCAL');
   const [shiftElapsed, setShiftElapsed] = useState<string>('0h 0m');
+
+  // Instant paint from cache, refreshed in the background — replaces the
+  // old fetchStats()/useState pair that showed zeros on every mount.
+  const { stats, invalidate: invalidateStats } = useShiftStats(
+    session?.branchId ?? null,
+    activeShift?.shiftId || activeShift?.id || null
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -116,57 +125,14 @@ export default function HomeDashboard() {
   // Calculate Held Orders count
   const heldOrdersCount = activeOrders.filter((o) => o.status === 'HELD' || o.status === 'PARKED').length;
 
-  // Stats Logic
-  const fetchStats = useCallback(() => {
-    if (!session?.branchId) return;
-    
-    const shiftStr = localStorage.getItem('pos_shift');
-    const shift = shiftStr ? JSON.parse(shiftStr) : null;
-    const shiftId = shift?.shiftId || shift?.id;
-
-    if (!shiftId) {
-      setStats({ ordersServed: 0, totalValue: 0, averagePerOrder: 0 });
-      return;
-    }
-
-    fetch(`${API_URL}/api/analytics/today?branchId=${session.branchId}&shiftId=${shiftId}`, {
-      credentials: 'include',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && !data.error) {
-          setStats({
-            ordersServed: data.orders || 0,
-            totalValue: data.revenue || 0,
-            averagePerOrder: data.orders ? data.revenue / data.orders : 0,
-          });
-        }
-      })
-      .catch(() => {});
-  }, [session?.branchId]);
-
+  // A payment changes today's revenue/order-count numbers server-side —
+  // force the cached stats to refetch rather than waiting for the next
+  // 60s poll.
   useEffect(() => {
-    fetchStats();
-    
-    if (posSocket) {
-      posSocket.on('payment:confirmed', fetchStats);
-    }
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchStats();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      if (posSocket) {
-        posSocket.off('payment:confirmed', fetchStats);
-      }
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchStats, posSocket]);
+    if (!posSocket) return;
+    posSocket.on('payment:confirmed', invalidateStats);
+    return () => { posSocket.off('payment:confirmed', invalidateStats); };
+  }, [posSocket, invalidateStats]);
 
   // "Needs Attention" — replaces the old Alerts section, which called
   // GET /api/v1/tenant/alerts (only a GET is registered — the "Clear"
@@ -185,78 +151,37 @@ export default function HomeDashboard() {
   };
   const agingTickets = useMemo(() => activeOrders.filter(isAging), [activeOrders]);
   const billRequestedTables = useMemo(
-    () => tables.filter((t: any) => t.statusInfo?.status === 'BILL_REQUESTED'),
+    () => tables.filter((t: any) => t.status === 'BILL_REQUESTED'),
     [tables]
   );
   const unsyncedOrders = useLiveQuery(() => {
     const db = getDB();
     return db.offlineOrders ? db.offlineOrders.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
   }, []) ?? [];
+  const unsyncedPayments = useLiveQuery(() => {
+    const db = getDB();
+    return db.offlinePayments ? db.offlinePayments.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
+  }, []) ?? [];
+  const unsyncedItemAdds = useLiveQuery(() => {
+    const db = getDB();
+    return db.pendingItemAdds ? db.pendingItemAdds.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
+  }, []) ?? [];
+  const unsyncedCount = unsyncedOrders.length + unsyncedPayments.length + unsyncedItemAdds.length;
 
   const [isRetryingSync, setIsRetryingSync] = useState(false);
   const retrySync = async () => {
     setIsRetryingSync(true);
     try {
       await syncOfflineOrders();
-      toast.success('Sync attempted for pending offline orders');
+      await syncPendingItemAdds();
+      await syncOfflinePayments();
+      toast.success('Sync attempted for pending offline data');
     } finally {
       setIsRetryingSync(false);
     }
   };
 
-  const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedOrders.length;
-
-  // Tables Logic
-  const fetchTables = useCallback(() => {
-    if (!session?.branchId) return;
-    Promise.all([
-      fetch(`${API_URL}/api/floor-plan/${session.branchId}/tables`, {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []),
-      fetch(`${API_URL}/api/floor-plan/${session.branchId}/table-orders`, {
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-        .then((r) => (r.ok ? r.json() : []))
-        .catch(() => []),
-    ])
-      .then(([tablesData, statusesData]) => {
-        if (Array.isArray(tablesData)) {
-          const statusMap = new Map();
-          if (Array.isArray(statusesData)) {
-            statusesData.forEach((s: any) => statusMap.set(s.tableId, s));
-          }
-          const mergedTables = tablesData.map((t: any) => ({
-            ...t,
-            statusInfo: statusMap.get(t.id) || null,
-          }));
-          setTables(mergedTables);
-        }
-      })
-      .catch(() => {});
-  }, [session?.branchId]);
-
-  useEffect(() => {
-    fetchTables();
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchTables();
-      }
-    }, 30000);
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        fetchTables();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [fetchTables]);
+  const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedCount;
 
   return (
     <div className="flex flex-col h-[calc(100vh-72px-64px)] w-full bg-[#F8FAFC] overflow-hidden">
@@ -474,12 +399,18 @@ export default function HomeDashboard() {
                   </div>
                 ))}
 
-                {unsyncedOrders.length > 0 && (
+                {unsyncedCount > 0 && (
                   <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-4">
                       <span className="material-symbols-outlined text-sky-600">cloud_off</span>
                       <div>
-                        <p className="font-bold text-[#0F172A]">{unsyncedOrders.length} order{unsyncedOrders.length > 1 ? 's' : ''} saved offline, not yet synced</p>
+                        <p className="font-bold text-[#0F172A]">
+                          {[
+                            unsyncedOrders.length > 0 ? `${unsyncedOrders.length} order${unsyncedOrders.length > 1 ? 's' : ''}` : null,
+                            unsyncedPayments.length > 0 ? `${unsyncedPayments.length} payment${unsyncedPayments.length > 1 ? 's' : ''}` : null,
+                            unsyncedItemAdds.length > 0 ? `${unsyncedItemAdds.length} item update${unsyncedItemAdds.length > 1 ? 's' : ''}` : null,
+                          ].filter(Boolean).join(', ')} saved offline, not yet synced
+                        </p>
                         <p className="text-xs text-[#64748B]">Will sync automatically when back online</p>
                       </div>
                     </div>
@@ -572,7 +503,7 @@ export default function HomeDashboard() {
             <div className="flex-1 bg-white border border-[#E2E8F0] rounded-2xl p-4 flex flex-col relative overflow-hidden shadow-sm">
               {(() => {
                 const tablesByFloor = tables.reduce((acc, t) => {
-                  const f = t.floorNumber || t.floor || 1;
+                  const f = t.floorNumber || 1;
                   if (!acc[f]) acc[f] = [];
                   acc[f].push(t);
                   return acc;
@@ -612,7 +543,7 @@ export default function HomeDashboard() {
                               >
                                 <div
                                   className={`size-8 rounded-full ${
-                                    t.statusInfo || t.status === 'OCCUPIED' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
+                                    t.status !== 'FREE' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
                                   } ring-4 shadow-sm`}
                                 />
                                 <span className="text-xs text-[#0F172A] font-bold text-center">{t.label}</span>

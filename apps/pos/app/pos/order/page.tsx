@@ -16,7 +16,7 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
-import { queueOfflineOrder } from '@/lib/offlineHelpers';
+import { queueOfflineOrder, queueItemAdd } from '@/lib/offlineHelpers';
 import { registerOrderSync } from '@/lib/syncRegistration';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -462,198 +462,285 @@ function OrderEntryPageContent() {
   const baseLabel = isCard ? (session?.cardTaxLabel ?? 'Tax') : (session?.cashTaxLabel ?? 'Tax');
   const taxLabel = taxRate > 0 ? `${baseLabel} (${(taxRate * 100).toFixed(0)}%)` : baseLabel;
 
+  // Fire-and-forget: printing (and the WebUSB device round-trip it can
+  // involve) must never delay getting the cashier back to Home after a
+  // successful order — a missing/unpaired printer previously blocked
+  // this whole flow until the print attempt failed. Unchanged from the
+  // original sendToKitchen — just factored out so both the online-success
+  // path and the optimistic-reconciliation path below can call it.
+  const printKOT = async (order: any, orderTypeStr: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY', sessionObj: any, cartItems: typeof cart, notes: string) => {
+    try {
+      const { useBrandingStore } = await import('@/lib/branding-store');
+      const branding = useBrandingStore.getState().branding;
+      let autoPrintKOT = true;
+      try {
+        const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+        const branchLevel = branding?.branchKotAutoPrint ?? false;
+        if (settings?.pos?.autoPrintKOT === false && !branchLevel) autoPrintKOT = false;
+      } catch {}
+      if (autoPrintKOT) {
+        const { printDocument } = await import('@/lib/print.service');
+        await printDocument('KOT', {
+          orderNumber: order.orderNumber || order.id?.slice(-6),
+          tokenNumber: order.tokenNumber || 'NEW',
+          type: orderTypeStr,
+          cashierName: sessionObj.cashierName || sessionObj.userId,
+          tenantName: branding.restaurantName || 'Dineiz',
+          branchName: sessionObj.branchName || 'Main Branch',
+          items: cartItems.map(c => ({
+            name: c.name,
+            quantity: c.quantity,
+            notes: c.notes,
+            variationName: c.selectedVariation?.name,
+            addOnNames: c.selectedAddOns?.map((a: any) => a.name),
+            unitPrice: c.basePrice || 0,
+            subtotal: (c.basePrice || 0) * c.quantity
+          })),
+          notes,
+          createdAt: order.createdAt || new Date().toISOString(),
+          subtotal: order.subtotal || 0,
+          discountAmount: order.discountAmount || 0,
+          taxAmount: order.taxAmount || 0,
+          total: order.total || 0,
+          paymentMethod: order.paymentMethod || 'CASH',
+        });
+      }
+    } catch (printErr) {
+      console.error('KOT Print failed', printErr);
+      toast.error('Order sent, but KOT printing failed. Check printer connection in Settings.');
+    }
+  };
+
   const sendToKitchen = async () => {
     if (cart.length === 0) return;
     if (!canSubmitOrder) {
       toast.error(needsTable ? 'Select a table before sending this order to the kitchen.' : 'Select an order type before sending this order to the kitchen.');
       return;
     }
-    setKitchenLoading(true);
 
     const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
     const shift = JSON.parse(localStorage.getItem('pos_shift') ?? '{}');
     const orderTypeStr = orderType || 'DINE_IN';
-    const tableId = selectedTableId;
-    const isEdit = isEditing;
+    const tableId = (selectedTableId && selectedTableId !== 'undefined') ? selectedTableId : null;
     const isHeld = searchParams.get('isHeld') === 'true';
     const rawOrderId = searchParams.get('orderId');
     const isActuallyEdit = !!paymentOrderId && !isHeld;
     const isAppending = isActuallyEdit && existingOrderData;
 
+    const cartItems = cart;
+    const notes = orderNote;
+
+    // ── Adding items to an order already sent to the kitchen ──────────────
+    // Kept synchronous (not optimistic) — the kitchen may already be
+    // cooking this order, so we don't assume the append succeeded until
+    // the server confirms it. What changes here vs. before: a failure
+    // while offline is now queued for retry instead of just failing.
+    if (isAppending) {
+      setKitchenLoading(true);
+      const body = JSON.stringify({
+        items: cartItems.map(item => ({
+          itemId: item.itemId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.unitPrice * item.quantity,
+          options: buildItemOptions(item),
+          notes: item.notes ?? undefined,
+        }))
+      });
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${paymentOrderId}/items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`,
+          },
+          body,
+        });
+        if (!res.ok) throw new Error(await res.text());
+
+        const order = await res.json();
+        setOrderNote('');
+        toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} updated!`);
+        printKOT(order, orderTypeStr, sessionObj, cartItems, notes);
+
+        if (isHeld && rawOrderId) {
+          try {
+            const db = getDB();
+            if (db.heldOrders) await db.heldOrders.delete(rawOrderId);
+          } catch (e) { console.error('Failed to delete held order', e); }
+        }
+
+        clearCart();
+        setDiscount(null);
+        router.push('/pos/home');
+      } catch (err) {
+        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
+        if (isOffline) {
+          try {
+            await queueItemAdd({ orderId: paymentOrderId!, body });
+            toast.success('No connection — items saved locally and will sync automatically.');
+            clearCart();
+            setDiscount(null);
+            router.push('/pos/home');
+          } catch (queueErr) {
+            console.error('Failed to queue item add', queueErr);
+            toast.error('Failed to save items offline. Please retry.');
+          }
+        } else {
+          toast.error('Failed to send order. Check connection.');
+        }
+      } finally {
+        setKitchenLoading(false);
+      }
+      return;
+    }
+
+    // ── Brand-new order — local-first / optimistic ─────────────────────────
+    // Paint the ticket onto Tickets/Home instantly and navigate away before
+    // the network round trip resolves; reconcile the temp id/order number
+    // once the POST actually lands, in the background.
+    const localId = uuid();
+    const optimisticOrder = {
+      id: localId,
+      orderNumber: 'Sending…',
+      tokenNumber: null,
+      status: 'IN_KITCHEN',
+      type: orderTypeStr,
+      tableId,
+      tableLabel: selectedTableLabel || undefined,
+      items: cartItems.map(c => ({
+        id: `${localId}-${c.itemId}`,
+        itemId: c.itemId,
+        name: c.name,
+        quantity: c.quantity,
+        unitPrice: c.unitPrice,
+        subtotal: c.subtotal,
+        item: { name: c.name },
+      })),
+      subtotal,
+      taxAmount,
+      discountAmount,
+      netAmount: total,
+      totalAmount: subtotal,
+      total,
+      notes,
+      createdAt: new Date().toISOString(),
+      cashierId: sessionObj.userId || sessionObj.cashierId,
+      shiftId: shift.shiftId ?? null,
+    };
+
+    // Prepend even if this query has no data yet (e.g. its first-ever fetch
+    // never landed because we're fully offline) — otherwise the ticket
+    // would silently fail to appear anywhere until a later successful sync.
+    menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
+      [optimisticOrder, ...(Array.isArray(old) ? old : [])]
+    );
+
+    toast.success('Order sent to kitchen!');
+    if (isHeld && rawOrderId) {
+      try {
+        const db = getDB();
+        if (db.heldOrders) await db.heldOrders.delete(rawOrderId);
+      } catch (e) { console.error('Failed to delete held order', e); }
+    }
+    setOrderNote('');
+    clearCart();
+    setDiscount(null);
+    router.push('/pos/home');
+
+    const body = JSON.stringify({
+      type: orderTypeStr,
+      tableId,
+      branchId: sessionObj.branchId,
+      tenantId: sessionObj.tenantId,
+      cashierId: sessionObj.userId || sessionObj.cashierId,
+      shiftId: shift.shiftId ?? null,
+      items: cartItems.map(item => ({
+        itemId: item.itemId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        subtotal: item.unitPrice * item.quantity,
+        options: buildItemOptions(item),
+        notes: item.notes ?? undefined,
+      })),
+      totalAmount: subtotal,
+      taxAmount,
+      discountAmount,
+      netAmount: total,
+      notes,
+      status: 'IN_KITCHEN',
+    });
+
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders${isAppending ? `/${paymentOrderId}/items` : ''}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${getToken()}`,
         },
-        body: JSON.stringify(isAppending ? {
-          items: cart.map(item => ({
-            itemId: item.itemId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            subtotal: item.unitPrice * item.quantity,
-            options: buildItemOptions(item),
-            notes: item.notes ?? undefined,
-          }))
-        } : {
-          type: orderTypeStr,
-          tableId: (tableId && tableId !== 'undefined') ? tableId : null,
-          branchId: sessionObj.branchId,
-          tenantId: sessionObj.tenantId,
-          cashierId: sessionObj.userId || sessionObj.cashierId,
-          shiftId: shift.shiftId ?? null,
-          items: cart.map(item => ({
-            itemId: item.itemId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            subtotal: item.unitPrice * item.quantity,
-            options: buildItemOptions(item),
-            notes: item.notes ?? undefined,
-          })),
-          totalAmount: subtotal,
-          taxAmount,
-          discountAmount,
-          netAmount: total,
-          notes: orderNote,
-          status: 'IN_KITCHEN',
-        })
+        body,
       });
-
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(err);
-      }
+      if (!res.ok) throw new Error(await res.text());
 
       const order = await res.json();
-      setPaymentOrderId(order.id);
-      setOrderNote('');
-      toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} sent to kitchen!`);
-
-      // Fire-and-forget: printing (and the WebUSB device round-trip it can
-      // involve) must never delay getting the cashier back to Home after a
-      // successful order — a missing/unpaired printer previously blocked
-      // this whole flow until the print attempt failed.
-      (async () => {
-        try {
-          const { useBrandingStore } = await import('@/lib/branding-store');
-          const branding = useBrandingStore.getState().branding;
-          // This used to check branding.autoKotPrint, a field nothing ever
-          // actually set (branding never carried it) — undefined !== false
-          // is always true, so KOT auto-print silently ran unconditionally
-          // regardless of Settings → Point of Sale → "Auto-print KOT". Also
-          // OR'd with this branch's own KOT-printer flag from Add/Edit
-          // Branch, same reasoning as the KDS toggle above.
-          let autoPrintKOT = true;
-          try {
-            const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
-            const branchLevel = branding?.branchKotAutoPrint ?? false;
-            if (settings?.pos?.autoPrintKOT === false && !branchLevel) autoPrintKOT = false;
-          } catch {}
-          if (autoPrintKOT) {
-            const { printDocument } = await import('@/lib/print.service');
-            await printDocument('KOT', {
-              orderNumber: order.orderNumber || order.id?.slice(-6),
-              tokenNumber: order.tokenNumber || 'NEW',
-              type: orderTypeStr,
-              cashierName: sessionObj.cashierName || sessionObj.userId,
-              tenantName: branding.restaurantName || 'Dineiz',
-              branchName: sessionObj.branchName || 'Main Branch',
-              items: cart.map(c => ({
-                name: c.name,
-                quantity: c.quantity,
-                notes: c.notes,
-                variationName: c.selectedVariation?.name,
-                addOnNames: c.selectedAddOns?.map((a: any) => a.name),
-                unitPrice: c.basePrice || 0,
-                subtotal: (c.basePrice || 0) * c.quantity
-              })),
-              notes: orderNote,
-              createdAt: order.createdAt || new Date().toISOString(),
-              subtotal: order.subtotal || 0,
-              discountAmount: order.discountAmount || 0,
-              taxAmount: order.taxAmount || 0,
-              total: order.total || 0,
-              paymentMethod: order.paymentMethod || 'CASH',
-            });
-          }
-        } catch (printErr) {
-          console.error('KOT Print failed', printErr);
-          toast.error('Order sent, but KOT printing failed. Check printer connection in Settings.');
-        }
-      })();
-
-      // If this was a held order, remove it from local DB
-      if (isHeld && rawOrderId) {
-        try {
-          const db = getDB();
-          if (db.heldOrders) {
-            await db.heldOrders.delete(rawOrderId);
-          }
-        } catch (e) {
-          console.error('Failed to delete held order', e);
-        }
-      }
-
-      // After order is placed, always return to home
-      clearCart();
-      setDiscount(null);
-      router.push('/pos/home');
+      // Reconcile: swap the temp ticket for the real one wherever it landed.
+      menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
+        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...optimisticOrder, ...order } : o)) : old
+      );
+      printKOT(order, orderTypeStr, sessionObj, cartItems, notes);
     } catch (err) {
-      const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-      // "Offline mode" in Settings → Point of Sale was previously not
-      // consulted at all — every terminal silently queued orders locally on
-      // any network failure regardless of the toggle. Default to true (the
-      // existing behavior) if the setting was never fetched yet, so a
-      // terminal that hasn't synced settings doesn't suddenly stop
-      // tolerating drops.
+      // Never silently drop an order the cashier already walked away from —
+      // queue it the same way an upfront-detected offline failure already
+      // does, regardless of whether navigator.onLine agrees (a request can
+      // fail for reasons other than being offline, e.g. a cold Neon DB
+      // timing out). The ticket already on screen gets removed and
+      // re-added via the offline queue's own sync, so the visible list
+      // stays consistent with what's actually pending.
+      menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
+        Array.isArray(old) ? old.filter((o: any) => o.id !== localId) : old
+      );
+
       let offlineModeEnabled = true;
       try {
         const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
         if (settings?.pos?.offlineMode === false) offlineModeEnabled = false;
       } catch {}
 
-      if (isOffline && !isAppending && offlineModeEnabled) {
-        try {
-          await queueOfflineOrder({
-            tenantId: sessionObj.tenantId,
-            branchId: sessionObj.branchId,
-            cashierId: sessionObj.userId || sessionObj.cashierId || 'cashier-1',
-            shiftId: shift.shiftId ?? undefined,
-            type: (orderTypeStr as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'),
-            tableId: (tableId && tableId !== 'undefined') ? tableId : undefined,
-            subtotal,
-            discountAmount,
-            taxAmount,
-            total,
-            notes: orderNote,
-            items: cart.map(item => ({
-              itemId: item.itemId,
-              itemName: item.name,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              variationId: item.selectedVariation?.id,
-              addonIds: item.selectedAddOns?.map((a) => a.id),
-              notes: item.notes,
-            })),
-          });
-          await registerOrderSync();
-
-          toast.success('No connection — order saved locally and will sync automatically.');
-          clearCart();
-          setDiscount(null);
-          router.push('/pos/home');
-        } catch (queueErr) {
-          console.error('Failed to queue offline order', queueErr);
-          toast.error('Failed to save order offline. Please retry.');
-        }
-      } else if (isOffline && !offlineModeEnabled) {
-        toast.error('No connection, and offline mode is turned off for this branch — order was not saved. Check connection and try again.');
-      } else {
-        toast.error('Failed to send order. Check connection.');
+      if (!offlineModeEnabled) {
+        toast.error('Order failed to send and offline mode is off — please check with a manager.');
+        return;
       }
-    } finally {
-      setKitchenLoading(false);
+
+      try {
+        await queueOfflineOrder({
+          tenantId: sessionObj.tenantId,
+          branchId: sessionObj.branchId,
+          cashierId: sessionObj.userId || sessionObj.cashierId || 'cashier-1',
+          shiftId: shift.shiftId ?? undefined,
+          type: (orderTypeStr as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'),
+          tableId: tableId ?? undefined,
+          subtotal,
+          discountAmount,
+          taxAmount,
+          total,
+          notes,
+          items: cartItems.map(item => ({
+            itemId: item.itemId,
+            itemName: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            variationId: item.selectedVariation?.id,
+            addonIds: item.selectedAddOns?.map((a) => a.id),
+            notes: item.notes,
+          })),
+        });
+        await registerOrderSync();
+        toast.info('Order could not reach the server — saved locally and will sync automatically.');
+      } catch (queueErr) {
+        console.error('Failed to queue offline order', queueErr);
+        toast.error('Order failed to send and could not be saved offline. Please check with a manager.');
+      }
     }
   };
 
@@ -790,33 +877,45 @@ function OrderEntryPageContent() {
     } else if (cart.length > 0) {
       // We have an existing order but there are un-sent items in the cart
       setChargeLoading(true);
-      try {
-        const isHeld = searchParams.get('isHeld') === 'true';
-        const isActuallyEdit = !!paymentOrderId && !isHeld;
-        const isAppending = isActuallyEdit && existingOrderData;
+      const isHeld = searchParams.get('isHeld') === 'true';
+      const isActuallyEdit = !!paymentOrderId && !isHeld;
+      const isAppending = isActuallyEdit && existingOrderData;
+      const body = JSON.stringify({
+        items: cart.map(item => ({
+          itemId: item.itemId,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          subtotal: item.unitPrice * item.quantity,
+          options: buildItemOptions(item),
+          notes: item.notes ?? undefined,
+        })),
+      });
 
+      try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders${isAppending ? `/${paymentOrderId}/items` : ''}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${getToken()}`,
           },
-          body: JSON.stringify({
-            items: cart.map(item => ({
-              itemId: item.itemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.unitPrice * item.quantity,
-              options: buildItemOptions(item),
-              notes: item.notes ?? undefined,
-            })),
-          }),
+          body,
         });
 
         if (!res.ok) throw new Error('Could not append items');
         setIsPaymentOpen(true);
-      } catch {
-        toast.error('Could not update order. Check connection.');
+      } catch (err) {
+        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
+        if (isOffline && isAppending) {
+          try {
+            await queueItemAdd({ orderId: paymentOrderId!, body });
+            toast.success('No connection — items saved locally and will sync automatically. Charge again once synced.');
+          } catch (queueErr) {
+            console.error('Failed to queue item add', queueErr);
+            toast.error('Failed to save items offline. Please retry.');
+          }
+        } else {
+          toast.error('Could not update order. Check connection.');
+        }
       } finally {
         setChargeLoading(false);
       }

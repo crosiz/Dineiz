@@ -1,4 +1,12 @@
 import { getDB } from './db';
+import {
+  getPendingPayments,
+  markPaymentSynced,
+  markPaymentFailed,
+  getPendingItemAdds,
+  markItemAddSynced,
+  markItemAddFailed,
+} from './offlineHelpers';
 
 export async function syncOfflineOrders() {
   const db = getDB();
@@ -44,27 +52,76 @@ export async function syncOfflineOrders() {
   }
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+export async function syncOfflinePayments() {
+  const pending = await getPendingPayments();
+  if (pending.length === 0) return;
+
+  for (const payment of pending) {
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${payment.orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payment.body,
+      });
+      if (!res.ok) throw new Error(`Payment sync failed (${res.status})`);
+      await markPaymentSynced(payment.localId);
+    } catch (error) {
+      await markPaymentFailed(payment.localId, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+}
+
+export async function syncPendingItemAdds() {
+  const pending = await getPendingItemAdds();
+  if (pending.length === 0) return;
+
+  for (const itemAdd of pending) {
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${itemAdd.orderId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: itemAdd.body,
+      });
+      if (!res.ok) throw new Error(`Item-add sync failed (${res.status})`);
+      await markItemAddSynced(itemAdd.localId);
+    } catch (error) {
+      await markItemAddFailed(itemAdd.localId, error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+}
+
+async function syncAll() {
+  // Sequential, not parallel — item-adds and payments both target an
+  // order that may itself still be an unsynced local order, so give
+  // syncOfflineOrders first crack at resolving real server ids.
+  await syncOfflineOrders().catch(console.error);
+  await syncPendingItemAdds().catch(console.error);
+  await syncOfflinePayments().catch(console.error);
+}
+
 // Start background sync polling when online
 export function startBackgroundSync(intervalMs = 30000) {
   if (typeof window === 'undefined') return;
-  
+
   // Sync immediately if online
   if (navigator.onLine) {
-    syncOfflineOrders().catch(console.error);
+    syncAll();
   }
 
   // Poll
   const interval = setInterval(() => {
     if (navigator.onLine) {
-      syncOfflineOrders().catch(console.error);
+      syncAll();
     }
   }, intervalMs);
 
   // Listen to network status
   const handleOnline = () => {
-    syncOfflineOrders().catch(console.error);
+    syncAll();
   };
-  
+
   window.addEventListener('online', handleOnline);
 
   return () => {
