@@ -1,5 +1,4 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { z } from 'zod';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import {
   InventorySummaryQuerySchema, IngredientsQuerySchema, IngredientIdParamSchema,
@@ -30,17 +29,17 @@ export const inventoryRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
   // SUPPLIERS
   fastify.get('/api/inventory/suppliers', { preHandler: requireTenant }, handleGetSuppliers);
-  fastify.post('/api/inventory/suppliers', { schema: { body: SupplierCreateSchema, response: { 201: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateSupplier);
-  fastify.put('/api/inventory/suppliers/:id', { schema: { params: IngredientIdParamSchema, body: SupplierUpdateSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdateSupplier);
+  fastify.post('/api/inventory/suppliers', { schema: { body: SupplierCreateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateSupplier);
+  fastify.put('/api/inventory/suppliers/:id', { schema: { params: IngredientIdParamSchema, body: SupplierUpdateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdateSupplier);
   fastify.delete('/api/inventory/suppliers/:id', { schema: { params: IngredientIdParamSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleDeleteSupplier);
 
   // INGREDIENTS
   fastify.get('/api/inventory/ingredients', { schema: { querystring: IngredientsQuerySchema }, preHandler: requireTenant }, handleGetIngredients);
   fastify.get('/api/inventory/ingredients/:id', { schema: { params: IngredientIdParamSchema }, preHandler: requireTenant }, handleGetIngredientById);
   fastify.get('/api/inventory/ingredients/:id/usage', { schema: { params: IngredientIdParamSchema }, preHandler: requireTenant }, handleGetIngredientUsage);
-  fastify.post('/api/inventory/ingredients', { schema: { body: IngredientCreateSchema, response: { 201: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateIngredient);
-  fastify.put('/api/inventory/ingredients/:id', { schema: { params: IngredientIdParamSchema, body: IngredientUpdateSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdateIngredient);
-  fastify.post('/api/inventory/ingredients/:id/adjust', { schema: { params: IngredientIdParamSchema, body: StockAdjustSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleAdjustStock);
+  fastify.post('/api/inventory/ingredients', { schema: { body: IngredientCreateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateIngredient);
+  fastify.put('/api/inventory/ingredients/:id', { schema: { params: IngredientIdParamSchema, body: IngredientUpdateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdateIngredient);
+  fastify.post('/api/inventory/ingredients/:id/adjust', { schema: { params: IngredientIdParamSchema, body: StockAdjustSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleAdjustStock);
   fastify.delete('/api/inventory/ingredients/:id', { schema: { params: IngredientIdParamSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleDeleteIngredient);
   fastify.post('/api/inventory/ingredients/import', { schema: { body: ImportCsvSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleImportIngredientsCsv);
   fastify.post('/api/inventory/ingredients/:id/cost-impact-preview', { schema: { params: IngredientIdParamSchema, body: CostImpactPreviewSchema }, preHandler: requireRole(MANAGE_ROLES) }, handlePreviewCostImpact);
@@ -53,17 +52,17 @@ export const inventoryRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // PURCHASE ORDERS
   fastify.get('/api/inventory/purchase-orders', { schema: { querystring: PurchaseOrderQuerySchema }, preHandler: requireTenant }, handleGetPurchaseOrders);
   fastify.get('/api/inventory/purchase-orders/:id', { schema: { params: IngredientIdParamSchema }, preHandler: requireTenant }, handleGetPurchaseOrderById);
-  fastify.post('/api/inventory/purchase-orders', { schema: { body: PurchaseOrderCreateSchema, response: { 201: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleCreatePurchaseOrder);
+  fastify.post('/api/inventory/purchase-orders', { schema: { body: PurchaseOrderCreateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCreatePurchaseOrder);
   fastify.post('/api/inventory/purchase-orders/auto', { preHandler: requireRole(MANAGE_ROLES) }, handleAutoGeneratePO);
-  fastify.put('/api/inventory/purchase-orders/:id', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderUpdateSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdatePurchaseOrder);
+  fastify.put('/api/inventory/purchase-orders/:id', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderUpdateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleUpdatePurchaseOrder);
   fastify.post('/api/inventory/purchase-orders/:id/send', { schema: { params: IngredientIdParamSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleSendPurchaseOrder);
   fastify.post('/api/inventory/purchase-orders/:id/cancel', { schema: { params: IngredientIdParamSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCancelPurchaseOrder);
-  fastify.put('/api/inventory/purchase-orders/:id/receive', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderReceiveSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleReceivePurchaseOrder);
-  fastify.post('/api/inventory/purchase-orders/:id/receive', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderReceiveSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleReceivePurchaseOrder);
+  fastify.put('/api/inventory/purchase-orders/:id/receive', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderReceiveSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleReceivePurchaseOrder);
+  fastify.post('/api/inventory/purchase-orders/:id/receive', { schema: { params: IngredientIdParamSchema, body: PurchaseOrderReceiveSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleReceivePurchaseOrder);
 
   // WASTAGE LOG
   fastify.get('/api/inventory/wastage', { schema: { querystring: WastageQuerySchema }, preHandler: requireTenant }, handleGetWastageLogs);
-  fastify.post('/api/inventory/wastage', { schema: { body: WastageCreateSchema, response: { 201: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateWastageLog);
+  fastify.post('/api/inventory/wastage', { schema: { body: WastageCreateSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCreateWastageLog);
   fastify.get('/api/inventory/wastage/analytics', { schema: { querystring: WastageAnalyticsQuerySchema }, preHandler: requireTenant }, handleGetWastageAnalytics);
 
   // RECIPES
@@ -71,7 +70,7 @@ export const inventoryRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.get('/api/inventory/recipes/food-cost-report', { preHandler: requireRole(MANAGE_ROLES) }, handleFoodCostReport);
   fastify.get('/api/inventory/recipes/:itemId', { preHandler: requireRole(MANAGE_ROLES) }, handleGetRecipeForItem);
   fastify.put('/api/inventory/recipes/:itemId', { preHandler: requireRole(MANAGE_ROLES) }, handleUpsertRecipe);
-  fastify.post('/api/inventory/recipes', { schema: { body: RecipeUpsertSchema, response: { 200: z.any() } }, preHandler: requireRole(MANAGE_ROLES) }, handleUpsertRecipe);
+  fastify.post('/api/inventory/recipes', { schema: { body: RecipeUpsertSchema }, preHandler: requireRole(MANAGE_ROLES) }, handleUpsertRecipe);
   fastify.delete('/api/inventory/recipes/:itemId', { preHandler: requireRole(MANAGE_ROLES) }, handleDeleteRecipe);
   fastify.post('/api/inventory/recipes/copy', { schema: { body: RecipeCopySchema }, preHandler: requireRole(MANAGE_ROLES) }, handleCopyRecipe);
 };
