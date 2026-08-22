@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { getToken, getPosShift } from '@/lib/pos-session';
+import { getToken, getPosShift, resolveActiveShiftId } from '@/lib/pos-session';
 import { Wallet, X, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -41,34 +41,39 @@ export function CashDrawerModal({
   const [summary, setSummary] = useState<any>(null);
   const [loadError, setLoadError] = useState('');
 
-  // Fall back to the stored shift if the caller hands us nothing usable —
-  // the drawer belongs to whatever shift this terminal actually has open.
-  const activeShiftId = shiftId || getPosShift()?.shiftId || null;
+  const [activeShiftId, setActiveShiftId] = useState<string | null>(shiftId || getPosShift()?.shiftId || null);
 
   useEffect(() => {
     if (!isOpen) return;
     setAmount('');
     setReason('');
-    setLoadError(activeShiftId ? '' : 'No open shift on this terminal.');
-    if (!activeShiftId) return;
 
-    const auth = { headers: { Authorization: `Bearer ${getToken()}` } };
+    // The prop and getPosShift() are both just localStorage — the inactivity
+    // sweeper can auto-close a shift server-side with no client-side signal,
+    // and getShiftSummary doesn't check status, so a stale id used to load
+    // and display a dead shift's numbers as if they were live.
+    (async () => {
+      const resolvedId = await resolveActiveShiftId(API_URL);
+      setActiveShiftId(resolvedId);
+      setLoadError(resolvedId ? '' : 'No open shift on this terminal.');
+      if (!resolvedId) return;
 
-    // Failures used to be swallowed, so a dead request looked identical to a
-    // shift with nothing in it. Say so instead.
-    fetch(`${API_URL}/api/shifts/${activeShiftId}/summary`, auth)
-      .then(async r => {
-        if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || `Couldn't load the shift (${r.status})`);
-        return r.json();
-      })
-      .then(s => { setSummary(s); setLoadError(''); })
-      .catch(e => setLoadError(e?.message || 'Could not load this shift.'));
+      const auth = { headers: { Authorization: `Bearer ${getToken()}` } };
 
-    fetch(`${API_URL}/api/shifts/${activeShiftId}`, auth)
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => setEntries(d?.cashEntries ?? []))
-      .catch(() => {});
-  }, [isOpen, activeShiftId]);
+      fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, auth)
+        .then(async r => {
+          if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || `Couldn't load the shift (${r.status})`);
+          return r.json();
+        })
+        .then(s => { setSummary(s); setLoadError(''); })
+        .catch(e => setLoadError(e?.message || 'Could not load this shift.'));
+
+      fetch(`${API_URL}/api/shifts/${resolvedId}`, auth)
+        .then(r => (r.ok ? r.json() : null))
+        .then(d => setEntries(d?.cashEntries ?? []))
+        .catch(() => {});
+    })();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

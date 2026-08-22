@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { getPosShift, getToken } from '@/lib/pos-session';
+import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
 import {
   Clock, X, CheckCircle2, Printer, Download, AlertCircle, Timer, Receipt,
@@ -36,8 +36,12 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const [reportState, setReportState] = useState<'idle' | 'working' | 'saved' | 'failed'>('idle');
   const [savedFilename, setSavedFilename] = useState('');
 
-  const shiftObj = getPosShift();
-  const shiftId = shiftObj?.shiftId;
+  // Not read straight from localStorage: the shift the terminal thinks is
+  // open can be stale — the inactivity sweeper auto-closes a shift after
+  // ~20 hours with no client-side signal, and this screen used to trust
+  // getPosShift() blindly, showing (and trying to close) a shift the server
+  // had already ended. resolveActiveShiftId checks the server first.
+  const [shiftId, setShiftId] = useState<string | null>(() => getPosShift()?.shiftId ?? null);
 
   // Closing a shift clears the POS session, so the token has to be captured
   // before that happens — the report download that follows still needs it.
@@ -46,11 +50,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const token = tokenRef.current;
 
   useEffect(() => {
-    if (!isOpen || !shiftId) return;
+    if (!isOpen) return;
 
     const fetchSummary = async () => {
+      setIsLoading(true);
       try {
-        const res = await fetch(`${API_URL}/api/shifts/${shiftId}/summary`, {
+        const resolvedId = await resolveActiveShiftId(API_URL);
+        setShiftId(resolvedId);
+        if (!resolvedId) throw new Error('No open shift found — it may have been closed automatically.');
+
+        const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Failed to fetch shift summary');
@@ -63,7 +72,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     };
 
     fetchSummary();
-  }, [isOpen, shiftId, token]);
+  }, [isOpen, token]);
 
   // Denomination counting drives the total, so the two can never disagree.
   const denominationTotal = useMemo(

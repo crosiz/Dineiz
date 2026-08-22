@@ -4,7 +4,7 @@ import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopBarStateContext } from '../contexts/TopBarContext';
 import { useCartStore } from '@/lib/store';
-import { getPosSession, getPosShift, clearPosSession, setPosBreak } from '@/lib/pos-session';
+import { getPosSession, getPosShift, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { CashDrawerModal } from '@/components/CashDrawerModal';
@@ -375,23 +375,40 @@ export function POSTopBar() {
               </button>
               <button
                 onClick={async () => {
-                  // Call the break-start API before locking the screen
+                  // Two bugs used to make this record nothing while still
+                  // locking the screen, so a cashier's break simply vanished:
+                  // (1) fetch() with a Content-Type: application/json header
+                  // but no body — Fastify rejects that as a malformed request
+                  // before the route handler ever runs; (2) getPosShift() can
+                  // be stale (the inactivity sweeper can auto-close a shift
+                  // server-side with no client-side signal), so the call
+                  // targeted a shift that was no longer OPEN. Both are wrapped
+                  // in a bare try/catch below, so neither ever surfaced.
+                  const sessionObj = getPosSession();
+                  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+                  const shiftId = await resolveActiveShiftId(API_URL);
+
+                  if (!shiftId) {
+                    toast.error('No open shift found — it may have been closed automatically. Open a new shift to continue.');
+                    setShowTakeBreakConfirm(false);
+                    return;
+                  }
+
                   try {
-                    const shiftObj = getPosShift();
-                    const sessionObj = getPosSession();
-                    if (shiftObj?.shiftId && sessionObj?.token) {
-                      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-                      const res = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}/break/start`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${sessionObj.token}`, 'Content-Type': 'application/json' },
-                      });
-                      if (res.ok) {
-                        const data = await res.json();
-                        setPosBreak({ breakId: data.breakId, shiftId: shiftObj.shiftId, startedAt: data.startedAt });
-                      }
+                    const res = await fetch(`${API_URL}/api/shifts/${shiftId}/break/start`, {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${sessionObj?.token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({}),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setPosBreak({ breakId: data.breakId, shiftId, startedAt: data.startedAt });
+                    } else {
+                      const body = await res.json().catch(() => ({}));
+                      toast.error(body?.error || "Couldn't start your break — it may not be recorded.");
                     }
                   } catch {
-                    // Non-fatal: still lock the screen even if API call fails
+                    toast.error("Couldn't reach the server — your break may not be recorded.");
                   }
                   router.push('/login?reason=break');
                 }}

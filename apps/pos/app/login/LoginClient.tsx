@@ -385,16 +385,27 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       const posBreak = getPosBreak();
       if (posBreak?.shiftId) {
         try {
+          // A Content-Type: application/json header with no body is rejected
+          // by Fastify before the route runs — same bug as break/start (see
+          // POSTopBar.tsx). It made every break-end call fail silently, which
+          // left the ShiftBreak row open forever (durationMinutes null),
+          // still counted as "on break" until the shift itself closed.
           const breakRes = await fetch(`${API_URL}/api/shifts/${posBreak.shiftId}/break/end`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${data.token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
           });
           if (breakRes.ok) {
             const breakData = await breakRes.json();
             const mins = breakData.durationMinutes ?? 0;
             toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
+          } else {
+            const body = await breakRes.json().catch(() => ({}));
+            toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
           }
-        } catch { /* non-fatal */ } finally {
+        } catch {
+          toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
+        } finally {
           clearPosBreak();
         }
       }
