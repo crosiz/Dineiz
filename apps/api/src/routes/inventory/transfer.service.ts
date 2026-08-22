@@ -86,7 +86,7 @@ export async function dispatchTransfer(
     }
 
     await tx.stockTransfer.update({ where: { id }, data: { status: 'IN_TRANSIT', dispatchedAt: new Date(), approvedById: dispatchedBy.id } });
-  });
+  }, { timeout: 30000 }); // loops over every transfer line
 
   for (const line of transfer.lines) await postStockChangeEffects(tenantId, transfer.fromBranchId, line.ingredientId);
   return getTransferById(tenantId, id);
@@ -146,7 +146,7 @@ export async function receiveTransfer(
       where: { id },
       data: { status: allFullyReceived ? 'RECEIVED' : 'PARTIALLY_RECEIVED', receivedAt: allFullyReceived ? new Date() : transfer.receivedAt, receivedById: receivedBy.id },
     });
-  });
+  }, { timeout: 30000 }); // loops over every transfer line
 
   for (const line of transfer.lines) await postStockChangeEffects(tenantId, transfer.toBranchId, line.ingredientId);
   return getTransferById(tenantId, id);

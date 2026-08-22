@@ -313,7 +313,7 @@ export async function createIngredient(tenantId: string, data: any) {
     }
 
     return ing;
-  });
+  }, { timeout: 15000 });
 }
 
 export async function updateIngredient(tenantId: string, id: string, data: any) {
@@ -411,7 +411,7 @@ export async function adjustStock(tenantId: string, ingredientId: string, data: 
       },
     });
     return stock;
-  });
+  }, { timeout: 15000 });
 
   await postStockChangeEffects(tenantId, branchId, ingredientId);
   return result;
@@ -573,7 +573,7 @@ export async function upsertRecipe(tenantId: string, body: { itemId: string; var
       },
       include: { lines: true },
     });
-  });
+  }, { timeout: 15000 });
 }
 
 export async function deleteRecipe(tenantId: string, itemId: string, variationId?: string | null) {
@@ -873,7 +873,7 @@ export async function receivePurchaseOrder(
       },
       include: { lines: { include: { ingredient: true } }, branch: true },
     });
-  });
+  }, { timeout: 30000 }); // loops over every PO line — generous timeout for larger orders
 
   for (const ingredientId of touchedIngredientIds) {
     await postStockChangeEffects(tenantId, po.branchId, ingredientId);
@@ -1018,7 +1018,7 @@ export async function createWastageLog(
     }
 
     return wastage;
-  });
+  }, { timeout: 15000 });
 
   await postStockChangeEffects(tenantId, data.branchId, data.ingredientId);
   return result;
@@ -1132,7 +1132,7 @@ export async function deductInventoryForOrder(orderId: string) {
             },
           });
         }
-      });
+      }, { timeout: 10000 });
     }
   }
 
@@ -1178,7 +1178,7 @@ export async function reverseOrDiscardInventoryForCancelledOrder(orderId: string
             note: 'Order cancelled before reaching the kitchen — stock restored',
           },
         });
-      });
+      }, { timeout: 10000 });
       touched.add(m.ingredientId);
     }
   } else {

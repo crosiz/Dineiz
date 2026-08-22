@@ -132,7 +132,7 @@ export async function completeCount(
         },
       });
       await tx.stockCountLine.update({ where: { id: line.id }, data: { variance, varianceValue } });
-    });
+    }, { timeout: 10000 });
   }
 
   const notes = driftedDuringCount > 0

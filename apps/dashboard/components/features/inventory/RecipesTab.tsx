@@ -178,6 +178,14 @@ export function RecipesTab() {
     }
   };
 
+  // Land on a working editor instead of a bare "Select an Item" placeholder —
+  // auto-select the first item once the list loads if nothing is picked yet.
+  useEffect(() => {
+    if (selectedItemId || items.length === 0) return;
+    setSelectedItemId(items[0].itemId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
+
   // Sync local editing state whenever the selected item/variation (or its underlying data) changes.
   useEffect(() => {
     if (!selectedItemId) return;
