@@ -36,12 +36,18 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Saves an order to the local IndexedDB queue when offline or before sync.
+ *
+ * `localId` can be supplied explicitly — e.g. the event-sourced order id
+ * from lib/core/commands.ts's createOrder() — so that once this syncs,
+ * lib/sync.ts can reconcile the same id back into the view store via
+ * reconcileServerId(). Defaults to a fresh id for existing callers that
+ * don't have one of their own.
  */
 export async function queueOfflineOrder(
-  order: Omit<OfflineOrder, 'localId' | 'syncStatus' | 'createdAt' | 'syncAttempts'>
+  order: Omit<OfflineOrder, 'localId' | 'syncStatus' | 'createdAt' | 'syncAttempts'>,
+  localId: string = uuidv4()
 ): Promise<string> {
   const db = getDB();
-  const localId = uuidv4();
   await db.offlineOrders.add({
     ...order,
     localId,

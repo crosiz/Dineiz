@@ -325,6 +325,20 @@ export default function PaymentModal({
       const isCash = payload.method === 'CASH';
       const tendered = isCash ? (payload.amount + (payload.change || 0)) : totalWithTip;
 
+      // If this order was created via the event-sourced command layer this
+      // session, this flips its status to COMPLETED and frees/dirties its
+      // table in the shared view store immediately — instant everywhere
+      // that store is read. Harmless no-op for orders not tracked there
+      // (pre-existing orders, or ones from a call site not yet converted).
+      const { collectPayment } = await import('@/lib/core/commands');
+      collectPayment(orderId, {
+        method: payload.method || 'SPLIT',
+        total: totalWithTip,
+        cashReceived: isCash ? payload.amount + (payload.change || 0) : undefined,
+        change: payload.change || 0,
+        taxAmount,
+      }).catch(() => {});
+
       // Paint the receipt now — this is the whole point of local-first.
       await handlePaymentSuccess(payload.method || 'SPLIT', tendered, payload.change || 0);
 

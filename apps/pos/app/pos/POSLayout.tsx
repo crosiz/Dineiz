@@ -6,6 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { getDB } from '@/lib/db';
 import { startBackgroundSync } from '@/lib/sync';
+import { rebuildViews, seedTablesFromServer } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
@@ -143,6 +144,15 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     applyBranding();
 
     const cleanupSync = startBackgroundSync();
+
+    // Event-sourced view store (lib/core/views.ts) — replay the local event
+    // log into memory once on mount (fast: IndexedDB read + pure reducer,
+    // no network) so orders created earlier this session are already there
+    // before any screen reads from it, then seed table reference data from
+    // the server the same way ClientTableMap/useSWRTables already do.
+    rebuildViews().catch(console.error);
+    const s = getPosSession();
+    if (s?.branchId) seedTablesFromServer(s.branchId).catch(console.error);
 
     return () => {
       cleanupSync && cleanupSync();
