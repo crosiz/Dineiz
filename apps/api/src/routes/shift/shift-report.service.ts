@@ -88,8 +88,14 @@ function renderHtml(data: ShiftReportData): string {
       <span class="row-value${opts.tone ? ' tone-' + opts.tone : ''}">${value}</span>
     </div>`;
 
-  const section = (title: string, body: string, opts: { break?: boolean } = {}) =>
-    body ? `<section class="block${opts.break ? ' page-break' : ''}"><h2>${esc(title)}</h2>${body}</section>` : '';
+  // `flow: true` is for the two sections that can legitimately run to
+  // several pages (Orders, Activity Log) — everything else is short enough
+  // to guarantee fits on one page, so it stays a single atomic block (see
+  // `.block { break-inside: avoid-page }` below) rather than risking a
+  // table splitting after its heading and one row, stranding the rest on
+  // the next page with a ragged gap behind it.
+  const section = (title: string, body: string, opts: { break?: boolean; flow?: boolean } = {}) =>
+    body ? `<section class="block${opts.break ? ' page-break' : ''}${opts.flow ? ' flow' : ''}"><h2>${esc(title)}</h2>${body}</section>` : '';
 
   const varianceTone = cash.variance === null || Math.round(cash.variance) === 0
     ? undefined
@@ -208,11 +214,20 @@ function renderHtml(data: ShiftReportData): string {
     : '';
 
   // ── Timeline ───────────────────────────────────────────────────────────────
-  const timelineTable = activities.length
+  // ORDER_COMPLETED is excluded here on purpose: it duplicates the Orders
+  // table row-for-row (same order #, amount, method, time), and on a busy
+  // shift it's the overwhelming majority of activity rows — 65 orders meant
+  // 65 near-identical "Order completed" lines burying the handful of entries
+  // that actually need a manager's attention (a cash-out, a break, a void).
+  // The full record — including every ORDER_COMPLETED — still exists in the
+  // shift's activity feed on the dashboard and in the Excel export, where
+  // page count isn't a cost; this is specifically the printed page.
+  const printedActivities = activities.filter((a) => a.activityType !== 'ORDER_COMPLETED');
+  const timelineTable = printedActivities.length
     ? `<table>
         <thead><tr><th class="col-time">Time</th><th class="col-event">Event</th><th>Detail</th><th class="num">Amount</th></tr></thead>
         <tbody>
-          ${activities.map((a) => `<tr>
+          ${printedActivities.map((a) => `<tr>
             <td class="col-time">${fmt.t(a.occurredAt)}</td>
             <td class="col-event">${esc(ACTIVITY_LABEL[a.activityType] ?? a.activityType)}</td>
             <td>${esc(a.notes || '—')}</td>
@@ -220,7 +235,7 @@ function renderHtml(data: ShiftReportData): string {
           </tr>`).join('')}
         </tbody>
       </table>`
-    : '<p class="empty">No activity was recorded for this shift.</p>';
+    : '<p class="empty">No notable activity — every event on this shift was a routine order (see Orders above).</p>';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -248,8 +263,19 @@ function renderHtml(data: ShiftReportData): string {
   .banner-alert { border-color: #FCA5A5; background: #FEF2F2; color: #991B1B; }
 
   h2 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #475569; margin: 0 0 8px; padding-bottom: 5px; border-bottom: 1px solid #E2E8F0; }
-  .block { margin-top: 20px; }
+  /* Every section is short enough to fit on one page, so it moves as a whole
+     rather than splitting after its heading and a row or two — that's what
+     produced a ragged "gap, then the rest on the next page" for Cash
+     Movements on a page that only had room for one row of it. Sections that
+     can genuinely run to multiple pages (.flow: Orders, Activity Log) opt
+     back out, since forcing THEM to be atomic would just move a multi-page
+     table wholesale instead of splitting it cleanly between rows. */
+  .block { margin-top: 20px; break-inside: avoid-page; page-break-inside: avoid; }
+  .block.flow { break-inside: auto; page-break-inside: auto; }
   .page-break { page-break-before: always; }
+  /* A heading is never left alone at the bottom of a page with its content
+     pushed to the next — the two always move together. */
+  h2 { break-after: avoid-page; page-break-after: avoid; }
 
   .cols { display: flex; gap: 28px; }
   .cols > * { flex: 1; min-width: 0; }
@@ -375,9 +401,9 @@ function renderHtml(data: ShiftReportData): string {
 
   ${waiterTable ? section('Server performance', waiterTable) : ''}
 
-  ${section('Orders', ordersTable, { break: true })}
+  ${section('Orders', ordersTable, { break: true, flow: true })}
 
-  ${section('Full activity log', timelineTable, { break: true })}
+  ${section('Activity Log', timelineTable, { break: true, flow: true })}
 
   ${section('Notes', `<div class="note-box">${shift.notes ? esc(shift.notes) : 'No notes were recorded for this shift.'}</div>`)}
 

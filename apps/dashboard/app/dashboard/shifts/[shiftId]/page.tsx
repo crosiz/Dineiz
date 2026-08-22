@@ -546,7 +546,13 @@ export default function ShiftDetailPage() {
                 ) : activities.length === 0 ? (
                   <p className="text-sm text-slate-400 text-center py-4">No activity recorded.</p>
                 ) : (
-                  <div className="relative pl-3 border-l border-slate-100 space-y-5">
+                  // Bounded and internally scrollable — a busy shift can run to
+                  // hundreds of entries once "Load more" has been clicked a few
+                  // times, and an unbounded list here made the card grow taller
+                  // than the entire main content column, dragging the whole
+                  // page down with it. The sidebar now stays a fixed-height
+                  // panel regardless of how much history is loaded into it.
+                  <div className="relative pl-3 border-l border-slate-100 space-y-5 max-h-[640px] overflow-y-auto pr-1">
                     {activities.map((event: any, i: number) => {
                       const style = EVENT_STYLE[event.type] ?? { label: event.type, dot: "bg-slate-300" };
                       return (
