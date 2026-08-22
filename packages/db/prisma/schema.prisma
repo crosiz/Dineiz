@@ -479,6 +479,13 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Set exactly once, atomically, the first time this order's COMPLETED
+  // side effects (inventory deduction, loyalty earn, deal counters,
+  // Zapier, ERP sync) are applied — see enqueueOrderEvents in
+  // order.service.ts. A retried/duplicated status update must never
+  // re-fire that bundle; this is the latch that guarantees it.
+  sideEffectsAppliedAt DateTime?
+
   // Delivery
   deliveryAddress String?
   deliveryLat     Float?
