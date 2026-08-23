@@ -17,17 +17,24 @@ const POS_LOGIN_ROLES = ['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF',
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 export const staffSchema = z.object({
-  name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().optional(),
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('Invalid email address').optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
   role: z.enum(['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF', 'RIDER', 'WORKER', 'COOK', 'GUARD']),
   branchId: z.string().min(1, 'Branch assignment is required'),
   // Dashboard password (Branch Manager only)
-  password: z.string().optional(),
+  password: z.string().optional().or(z.literal('')),
   // POS PIN (all other roles)
-  posPin: z.string().optional(),
+  posPin: z.string().optional().or(z.literal('')),
 }).superRefine((data, ctx) => {
   if ((DASHBOARD_LOGIN_ROLES as readonly string[]).includes(data.role)) {
+    if (!data.email || !data.email.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email is required for branch managers',
+        path: ['email'],
+      });
+    }
     if (!data.password || data.password.length < 8) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -104,7 +111,6 @@ function DashboardPasswordField() {
         <input
           {...register('password')}
           type={showPw ? 'text' : 'password'}
-          placeholder="Min. 8 characters"
           autoComplete="new-password"
           className={`w-full h-10 px-4 pr-11 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
             errors.password ? 'border-red-300' : 'border-slate-200'
@@ -302,7 +308,6 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 </label>
                 <input
                   {...register('name')}
-                  placeholder="e.g. John Doe"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
                     errors.name ? 'border-red-300' : 'border-slate-200'
                   }`}
@@ -318,7 +323,6 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 <input
                   {...register('email')}
                   type="email"
-                  placeholder="john@example.com"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
                     errors.email ? 'border-red-300' : 'border-slate-200'
                   }`}
@@ -333,7 +337,6 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 </label>
                 <input
                   {...register('phone')}
-                  placeholder="+1 (555) 000-0000"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
                     errors.phone ? 'border-red-300' : 'border-slate-200'
                   }`}

@@ -94,7 +94,6 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
                   <input
                     {...register('name')}
                     type="text"
-                    placeholder="e.g. Ali Khan"
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium"
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
@@ -107,7 +106,6 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
                   <input
                     {...register('phone')}
                     type="tel"
-                    placeholder="e.g. +92 300 1234567"
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium"
                   />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}

@@ -70,7 +70,7 @@ export class StaffService {
         where,
         skip,
         take: limit,
-        include: { 
+        include: {
           branch: true,
           StaffZktecoEnrollment: true,
           AttendancePunch: {
@@ -87,7 +87,7 @@ export class StaffService {
 
     const staff = users.map(u => {
       const uniqueDays = new Set(u.AttendancePunch.map(p => new Date(p.punchTime).toISOString().split('T')[0]));
-      
+
       return {
         id: u.id,
         name: u.name,
@@ -125,7 +125,7 @@ export class StaffService {
       throw new Error('This email is already registered');
     }
 
-    const avatarColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+    const avatarColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 
     // Same bcrypt cost as better-auth's own password hashing (lib/auth.ts)
     // so credentials created here verify correctly through the normal
@@ -182,7 +182,7 @@ export class StaffService {
     if (!user) throw new Error('Staff member not found');
 
     const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    
+
     return prisma.user.update({
       where: { id },
       data: { status: newStatus }
