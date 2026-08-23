@@ -6,6 +6,7 @@ import {
   emitNewOrder, emitOrderUpdated, emitTableStatusChanged,
 } from '../../lib/socket';
 import { prisma } from '@dineiz/db';
+import { withIdempotency } from '../../lib/idempotency';
 
 
 export async function handleCreateOrder(request: FastifyRequest, reply: FastifyReply) {
@@ -13,28 +14,44 @@ export async function handleCreateOrder(request: FastifyRequest, reply: FastifyR
     const tenantId = request.user!.tenantId!;
     const userId = request.user!.id!;
     const body = request.body as any;
-    const order = await createOrder(tenantId, userId, body);
+    // A client-generated order id (lib/core/commands.ts's createOrder on
+    // the POS) is already a natural idempotency key — the outbox
+    // (lib/core/outbox.ts) sends it so a request that times out
+    // client-side after actually succeeding server-side doesn't create a
+    // second, duplicate order on retry.
+    const idempotencyKey = request.headers['x-idempotency-key'] as string | undefined;
 
-    emitNewOrder(tenantId, body.branchId, order);
+    const { statusCode, body: responseBody } = await withIdempotency(
+      tenantId,
+      'POST /api/orders',
+      idempotencyKey,
+      async () => {
+        const order = await createOrder(tenantId, userId, body);
 
-    if (body.tableId) {
-      // Fire-and-forget: the client already has its order confirmation, and the
-      // table shouldn't need to wait on this write to turn occupied on-screen —
-      // emit as soon as the (usually near-instant) DB write resolves in the background.
-      prisma.table.update({
-        where: { id: body.tableId, tenantId },
-        data: { status: 'occupied' },
-      }).then(() => {
-        emitTableStatusChanged(body.branchId, {
-          tableId: body.tableId,
-          status: 'occupied',
-          orderId: order.id,
-          since: order.createdAt.toISOString(),
-        }, tenantId);
-      }).catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
-    }
+        emitNewOrder(tenantId, body.branchId, order);
 
-    return reply.status(201).send(order);
+        if (body.tableId) {
+          // Fire-and-forget: the client already has its order confirmation, and the
+          // table shouldn't need to wait on this write to turn occupied on-screen —
+          // emit as soon as the (usually near-instant) DB write resolves in the background.
+          prisma.table.update({
+            where: { id: body.tableId, tenantId },
+            data: { status: 'occupied' },
+          }).then(() => {
+            emitTableStatusChanged(body.branchId, {
+              tableId: body.tableId,
+              status: 'occupied',
+              orderId: order.id,
+              since: order.createdAt.toISOString(),
+            }, tenantId);
+          }).catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
+        }
+
+        return { statusCode: 201, body: order };
+      }
+    );
+
+    return reply.status(statusCode).send(responseBody);
   } catch (e: any) {
     console.error('CREATE ORDER ERROR:', e);
     if (e.message === 'PLAN_LIMIT_EXCEEDED') {
@@ -138,10 +155,21 @@ export async function handleAppendOrderItems(request: FastifyRequest, reply: Fas
     const tenantId = request.user!.tenantId!;
     const { id } = request.params as any;
     const { items } = request.body as any;
+    // Same reasoning as handleCreateOrder — a timed-out-but-actually-
+    // succeeded append would otherwise add the same items twice on retry.
+    const idempotencyKey = request.headers['x-idempotency-key'] as string | undefined;
 
-    const order = await appendOrderItems(tenantId, id, items);
+    const { statusCode, body: responseBody } = await withIdempotency(
+      tenantId,
+      'POST /api/orders/:id/items',
+      idempotencyKey,
+      async () => {
+        const order = await appendOrderItems(tenantId, id, items);
+        return { statusCode: 200, body: order };
+      }
+    );
 
-    return reply.status(200).send(order);
+    return reply.status(statusCode).send(responseBody);
   } catch (e: any) {
     console.error('APPEND ORDER ITEMS ERROR:', e);
     return reply.status(500).send({ error: e.message });

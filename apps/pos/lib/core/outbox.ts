@@ -57,11 +57,12 @@ let consecutiveFailures = 0;
 let consecutiveProbeSuccesses = 0;
 let probeHandle: ReturnType<typeof setInterval> | null = null;
 
-function authHeaders(): Record<string, string> {
+function authHeaders(idempotencyKey?: string): Record<string, string> {
   const token = getToken();
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : {}),
   };
 }
 
@@ -268,7 +269,16 @@ async function runCreateOrder(task: OutboxTask): Promise<void> {
     status: 'IN_KITCHEN',
   });
 
-  const res = await fetchWithTimeout(`${API_URL}/api/orders`, { method: 'POST', headers: authHeaders(), body });
+  // task.aggregateId is this order's permanent client id (lib/core/
+  // event-log.ts's nextOrderNumber) — stable across every retry of this
+  // exact CREATE_ORDER task, so the server can tell "the last attempt
+  // timed out client-side but actually landed" from "this genuinely never
+  // arrived" (apps/api/src/lib/idempotency.ts).
+  const res = await fetchWithTimeout(`${API_URL}/api/orders`, {
+    method: 'POST',
+    headers: authHeaders(task.aggregateId),
+    body,
+  });
   if (!res.ok) throw classifyHttpError(res.status);
   const created = await res.json();
   reconcileServerId(task.aggregateId, created.id);
@@ -294,9 +304,12 @@ async function runAddItems(task: OutboxTask): Promise<void> {
     })),
   });
 
+  // eventIds are seq-ordered by deriveTaskChains and stable across retries
+  // of this same task, so joining them is a stable, unique-enough key for
+  // this exact "add these specific lines" request.
   const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}/items`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: authHeaders(`additems:${task.eventIds.join(',')}`),
     body,
   });
   if (!res.ok) throw classifyHttpError(res.status);
@@ -384,6 +397,36 @@ async function markConfirmed(eventIds: string | string[]): Promise<void> {
   reflectOrderSyncState(ids, 'SYNCED');
 }
 
+// Phase 6: tells the server about a POISONED event so an admin dashboard
+// can see it without inspecting this terminal's own IndexedDB. Best-effort
+// — if this report itself can't reach the server, the event is still
+// POISONED locally either way, and the next drain pass (or a future
+// terminal restart) will try reporting it again since it stays POISONED
+// (never re-queued) and reportDeadLetter is called fresh each time an
+// event newly enters that state.
+async function reportDeadLetter(e: PosEvent, attempts: number): Promise<void> {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/pos/dead-letters`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        branchId: e.branchId,
+        terminalId: e.terminalId,
+        eventId: e.id,
+        eventType: e.type,
+        aggregateId: e.aggregateId,
+        aggregateType: e.aggregateType,
+        payload: e.payload,
+        attempts,
+        lastError: e.lastError,
+      }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    console.warn('[outbox] Failed to report dead letter', e.id, err);
+  }
+}
+
 async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> {
   const now = new Date().toISOString();
   const events = (await edb.events.bulkGet(eventIds)).filter(Boolean) as PosEvent[];
@@ -402,6 +445,7 @@ async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> 
       lastAttemptAt: now,
       lastError: err.message,
     });
+    if (poisoned) reportDeadLetter({ ...e, lastError: err.message }, attempts).catch(() => {});
   }
   reflectOrderSyncState(eventIds, anyPoisoned ? 'POISONED' : 'DEGRADED');
   return anyPoisoned;
@@ -422,6 +466,7 @@ async function cascadePoisonOrder(orderId: string, reason: string): Promise<void
     .toArray();
   for (const e of rest) {
     await edb.events.update(e.id, { syncState: 'POISONED', lastAttemptAt: now, lastError: reason });
+    reportDeadLetter({ ...e, lastError: reason }, e.attempts).catch(() => {});
   }
   if (rest.length) reflectOrderSyncState(rest.map((e) => e.id), 'POISONED');
 }

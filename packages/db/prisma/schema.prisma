@@ -2427,3 +2427,52 @@ model AnomalySettings {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+// Fix 2 — request-level idempotency for the two order endpoints where a
+// retried request duplicates data rather than harmlessly re-applying (order
+// creation, item append). A client sends the same X-Idempotency-Key on a
+// retry of the exact same logical request; the second arrival returns the
+// first one's cached response instead of processing again. No FK relation
+// on purpose — this is a short-lived cache row, not a durable business
+// record; deliberately allowed to outlive its tenant if one is deleted
+// (harmless, and avoids adding cascade-delete cost to every order/item
+// creation for a table that's pure retry-safety plumbing).
+model IdempotencyKey {
+  id         String   @id @default(cuid())
+  tenantId   String
+  endpoint   String // e.g. "POST /api/orders"
+  key        String // client-supplied, opaque
+  statusCode Int
+  response   Json
+  createdAt  DateTime @default(now())
+
+  @@unique([tenantId, endpoint, key])
+  @@index([createdAt])
+}
+
+// Phase 6 — admin visibility into POISONED outbox events. These live only
+// in each terminal's local IndexedDB (lib/core/outbox.ts) until now; a
+// terminal POSTs here the moment an event's retries are exhausted and it's
+// marked POISONED, so a manager can see "this order never made it to the
+// server" without walking over to that specific terminal.
+model PosDeadLetter {
+  id          String    @id @default(cuid())
+  tenantId    String
+  branchId    String
+  terminalId  String
+  eventId     String // the client-generated event id, for cross-reference
+  eventType   String
+  aggregateId String
+  aggregateType String
+  payload     Json
+  attempts    Int
+  lastError   String?
+  poisonedAt  DateTime  @default(now())
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, eventId])
+  @@index([tenantId, branchId, resolvedAt])
+}
+
