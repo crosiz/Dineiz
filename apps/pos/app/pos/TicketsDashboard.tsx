@@ -311,38 +311,16 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     // Local-first: the command appends an event and updates useViews
     // synchronously — every screen reading that store (Home, Tickets, and
-    // eventually KDS) sees the new status instantly, permanently. This
-    // does NOT roll back on a PUT failure below — the physical action
-    // (food sent to the kitchen / marked ready) already happened; reverting
-    // the screen would just reintroduce the "shows updated then flips back"
-    // bug. A background retry is what should reconcile a failed sync, not
-    // an immediate UI rollback (a real retry queue for arbitrary status
-    // changes is Phase 3's outbox — for now this at least stops lying to
-    // the cashier about what already happened).
+    // eventually KDS) sees the new status instantly, permanently. This does
+    // NOT roll back on a sync failure — the physical action (food sent to
+    // the kitchen / marked ready) already happened; reverting the screen
+    // would just reintroduce the "shows updated then flips back" bug.
+    // Shipping the change to the server, with retry/backoff, is the
+    // outbox's job now (lib/core/outbox.ts's UPDATE_STATUS task) — it runs
+    // independently of this screen and doesn't need a try/catch here.
     if (newStatus === 'READY') await markReady(orderId);
     else await sendToKitchen(orderId);
-
-    // Resolve the real server id — if this order was created via the
-    // event-sourced flow this session, `orderId` is the permanent client id
-    // and the server only knows it by a different id (see
-    // lib/core/views.ts's reconcileServerId). Orders merged in from the
-    // server already carry serverId === id.
-    const order = useViews.getState().orders[orderId];
-    const putId = order?.serverId ?? orderId;
-
-    try {
-      const res = await fetch(`${API_URL}/api/orders/${putId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      if (!res.ok) throw new Error('Failed to update status');
-    } catch (e) {
-      console.error(e);
-      toast.error('Marked locally, but the server hasn’t confirmed yet — will retry automatically.');
-    } finally {
-      setIsUpdating(null);
-    }
+    setIsUpdating(null);
   };
 
   const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);

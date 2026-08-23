@@ -394,6 +394,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             const mins = breakData.durationMinutes ?? 0;
             toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
           }
+          const { endBreak } = await import('@/lib/core/commands');
+          endBreak(posBreak.shiftId).catch(() => {});
         } catch { /* non-fatal */ } finally {
           clearPosBreak();
         }
