@@ -821,7 +821,15 @@ export async function enqueueOrderEvents(
     await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
   }
   if (order.status === 'COMPLETED') {
-    // Atomically claim the latch before running the bundle so retries or concurrent requests fire side effects at most once
+    // Atomic claim: this bundle (inventory deduction, loyalty earn, deal
+    // counters, Zapier, ERP sync) must fire at most once per order, ever.
+    // A retried/duplicated PUT (the outbox's own retry-with-backoff makes
+    // this a real, expected occurrence — not just a hypothetical) used to
+    // re-run all of it every time it observed status === 'COMPLETED', with
+    // no check for whether it already had been. Racing this on `WHERE
+    // sideEffectsAppliedAt IS NULL` means only one concurrent request can
+    // ever win the claim — the loser sees claim.count === 0 and skips the
+    // whole block instead of re-firing it.
     const claim = await prisma.order.updateMany({
       where: { id: order.id, sideEffectsAppliedAt: null },
       data: { sideEffectsAppliedAt: new Date() },
@@ -834,7 +842,7 @@ export async function enqueueOrderEvents(
       recordOrderCompleted({ ...order, payments: payments ?? order.payments });
       // Process earning when order is completed
       earnLoyaltyForOrder(order).catch(e => console.error('Loyalty Earn Error:', e));
-      
+
       // Process redemption if passed during payment completion
       if (redeemedPointsAmount) {
         redeemLoyaltyForOrder(order, redeemedPointsAmount).catch(e => console.error('Loyalty Redeem Error:', e));
