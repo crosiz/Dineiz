@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useTopBar } from '@/hooks/useTopBar';
@@ -142,6 +143,21 @@ export default function HomeDashboard() {
     posSocket.on('payment:confirmed', invalidateStats);
     return () => { posSocket.off('payment:confirmed', invalidateStats); };
   }, [posSocket, invalidateStats]);
+
+  // useSWRTables (unlike ClientTableMap's own inline table state) has no
+  // socket wiring of its own — it only refreshes on its 30s poll, so a
+  // table freed/occupied elsewhere could sit stale here for up to that
+  // long, which is exactly what showed up as a lingering "Needs Attention"
+  // entry for an already-free table. Force an immediate refetch instead.
+  const tablesQueryClient = useQueryClient();
+  useEffect(() => {
+    if (!posSocket || !session?.branchId) return;
+    const onTableStatusChanged = () => {
+      tablesQueryClient.invalidateQueries({ queryKey: ['swr-tables', session.branchId] });
+    };
+    posSocket.on('table:status_changed', onTableStatusChanged);
+    return () => { posSocket.off('table:status_changed', onTableStatusChanged); };
+  }, [posSocket, session?.branchId, tablesQueryClient]);
 
   // "Needs Attention" — replaces the old Alerts section, which called
   // GET /api/v1/tenant/alerts (only a GET is registered — the "Clear"

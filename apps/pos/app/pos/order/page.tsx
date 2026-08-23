@@ -484,9 +484,15 @@ function OrderEntryPageContent() {
         const { printDocument } = await import('@/lib/print.service');
         await printDocument('KOT', {
           orderNumber: order.orderNumber || order.id?.slice(-6),
-          tokenNumber: order.tokenNumber || 'NEW',
+          // Falls back to the permanent order number, never a placeholder —
+          // this is the exact "kitchen ticket shows a bogus identity"
+          // failure mode the whole event-sourced order-number change exists
+          // to eliminate. tokenNumber itself isn't generated client-side
+          // yet (Phase 1 only covers orderNumber), so for locally-created
+          // orders this is what actually prints until that's added.
+          tokenNumber: order.tokenNumber || order.orderNumber,
           type: orderTypeStr,
-          cashierName: sessionObj.cashierName || sessionObj.userId,
+          cashierName: sessionObj.name || sessionObj.userId,
           tenantName: branding.restaurantName || 'Dineiz',
           branchName: sessionObj.branchName || 'Main Branch',
           items: cartItems.map(c => ({
@@ -732,14 +738,17 @@ function OrderEntryPageContent() {
       if (!res.ok) throw new Error(await res.text());
 
       const order = await res.json();
-      // Reconcile against the real order: everything server-computed (tax,
-      // timestamps) updates, but id/orderNumber stay the client-owned
-      // permanent ones — never swapped back to the server's cuid/ORD-number.
-      // reconcileServerId records the real id separately (views.ts) purely
-      // so a later payment/append-items call knows what to PUT against.
+      // Reconcile against the real order: id MUST become the real server
+      // id — every other screen (Tickets, Home, KDS) reads this cache and
+      // uses `id` to PUT/PATCH against /api/orders/:id, which the server
+      // has never heard of under the client-generated id. Only orderNumber
+      // stays the client-owned permanent one; everything else (including
+      // id) takes the server's values. reconcileServerId still records the
+      // mapping in views.ts for anything reading the event-sourced store
+      // directly instead of this cache.
       reconcileServerId(localId, order.id);
       menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...order, id: localId, orderNumber } : o)) : old
+        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...order, orderNumber } : o)) : old
       );
     } catch (err) {
       // Never silently drop an order the cashier already walked away from —
