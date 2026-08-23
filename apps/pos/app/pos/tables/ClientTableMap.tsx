@@ -231,29 +231,16 @@ export default function ClientTableMap() {
     }
   };
 
-  // API call: Mark table status as FREE
+  // Local-first: flips the table green in the shared view store immediately
+  // and queues a TABLE_STATUS_CHANGED event; the outbox
+  // (lib/core/outbox.ts's UPDATE_TABLE_STATUS task) ships the PUT with its
+  // own retry/backoff, replacing the old blocking fetch-then-command call
+  // (which used to silently skip the local update too whenever the PUT
+  // failed, leaving the table stuck showing the wrong color).
   const handleMarkAsFree = async (tableId: string) => {
-    try {
-      const token = getToken();
-      const res = await fetch(`${API_URL}/api/tables/${tableId}/status`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'FREE' }),
-      });
-
-      if (res.ok) {
-        await setTableStatus(tableId, 'FREE');
-        toast.success('Table marked as Free');
-        setSelectedTable(null);
-      } else {
-        toast.error('Failed to update table status');
-      }
-    } catch {
-      toast.error('Network error');
-    }
+    await setTableStatus(tableId, 'FREE');
+    toast.success('Table marked as Free');
+    setSelectedTable(null);
   };
 
   // Handle Print Bill
@@ -317,18 +304,7 @@ export default function ClientTableMap() {
         }
       }
 
-      const token = getToken();
-      await fetch(`${API_URL}/api/tables/${selectedTable.id}/status`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'BILL_REQUESTED' }),
-      });
-
       await setTableStatus(selectedTable.id, 'BILL_REQUESTED');
-
       toast.success('Table updated to Bill Requested');
     } catch {
       toast.error('Failed to update table status');

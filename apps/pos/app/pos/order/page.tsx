@@ -16,10 +16,10 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
-import { queueOfflineOrder, queueItemAdd } from '@/lib/offlineHelpers';
+import { queueItemAdd } from '@/lib/offlineHelpers';
 import * as commands from '@/lib/core/commands';
-import { useViews, reconcileServerId } from '@/lib/core/views';
-import { registerOrderSync } from '@/lib/syncRegistration';
+import { useViews } from '@/lib/core/views';
+import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
@@ -172,8 +172,16 @@ function OrderEntryPageContent() {
     let interval: NodeJS.Timeout;
     if (paymentOrderId) {
       interval = setInterval(async () => {
+        // paymentOrderId is this terminal's permanent client id — the
+        // server only knows a locally-created order by its reconciled
+        // serverId (lib/core/views.ts's reconcileServerId, set once the
+        // outbox's CREATE_ORDER task lands). Polling by the client id 404s
+        // every time until then; skip rather than spam a request that can
+        // never succeed.
+        const serverId = useViews.getState().orders[paymentOrderId]?.serverId;
+        if (!serverId) return;
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${paymentOrderId}`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${serverId}`, {
             headers: { 'Authorization': `Bearer ${getToken()}` }
           });
           if (res.ok) {
@@ -312,28 +320,68 @@ function OrderEntryPageContent() {
 
   const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
   const [orderStatus, setOrderStatus] = useState<string | null>(null);
+  const [draftPrompt, setDraftPrompt] = useState<Awaited<ReturnType<typeof loadCartDraft>>>(null);
+
+  const applyFreshOrderParams = () => {
+    const type = searchParams.get('type');
+    if (type) {
+      useCartStore.setState({ orderType: type.toUpperCase().replace('-', '_') as any });
+    }
+    const tId = searchParams.get('tableId');
+    const tLabel = searchParams.get('tableLabel');
+    if (tId) useCartStore.setState({ selectedTableId: tId });
+    if (tLabel) useCartStore.setState({ selectedTableLabel: tLabel });
+  };
+
+  const handleRestoreDraft = () => {
+    if (!draftPrompt) return;
+    useCartStore.setState({
+      cart: draftPrompt.cart,
+      orderType: (draftPrompt.orderType as any) ?? null,
+      selectedTableId: draftPrompt.selectedTableId,
+      selectedTableLabel: draftPrompt.selectedTableLabel,
+    });
+    if (draftPrompt.customerId) {
+      useCartStore.getState().setCustomer({ id: draftPrompt.customerId, name: draftPrompt.customerName || 'Customer' });
+    }
+    setOrderNote(draftPrompt.notes ?? '');
+    setDraftPrompt(null);
+    clearCartDraft().catch(console.error);
+  };
+
+  const handleDiscardDraft = () => {
+    setDraftPrompt(null);
+    useCartStore.getState().clearCart();
+    applyFreshOrderParams();
+    clearCartDraft().catch(console.error);
+  };
 
   // Strict Cart Mount Rules
   useEffect(() => {
     const existingOrderId = searchParams.get('orderId');
     const heldOrderIdParam = searchParams.get('heldOrderId');
     const isHeld = searchParams.get('isHeld') === 'true' || !!heldOrderIdParam;
-    
+
     // Normalize the ID to use
     const idToLoad = heldOrderIdParam || existingOrderId;
 
     if (!idToLoad) {
-      // RULE 1: FRESH ORDER
-      useCartStore.getState().clearCart();
-      const type = searchParams.get('type');
-      if (type) {
-        const uppercaseType = type.toUpperCase().replace('-', '_');
-        useCartStore.setState({ orderType: uppercaseType as any });
-      }
-      const tId = searchParams.get('tableId');
-      const tLabel = searchParams.get('tableLabel');
-      if (tId) useCartStore.setState({ selectedTableId: tId });
-      if (tLabel) useCartStore.setState({ selectedTableLabel: tLabel });
+      // RULE 1: FRESH ORDER — unless a draft was saved for exactly this
+      // situation (a break interruption, or a reload/crash mid-order):
+      // offer to restore it instead of silently discarding in-progress
+      // work. Cart items live only in memory until ORDER_SENT_TO_KITCHEN,
+      // so this is the only durability a not-yet-sent order has.
+      loadCartDraft().then((draft) => {
+        if (draft?.cart?.length) {
+          setDraftPrompt(draft);
+        } else {
+          useCartStore.getState().clearCart();
+          applyFreshOrderParams();
+        }
+      }).catch(() => {
+        useCartStore.getState().clearCart();
+        applyFreshOrderParams();
+      });
       return;
     }
 
@@ -362,11 +410,54 @@ function OrderEntryPageContent() {
         }
       }).catch(() => toast.error('Failed to load local held order'));
     } else {
-      // RULE 2: Load from API
+      // RULE 2: Load from the local view store first — an order created via
+      // the event-sourced flow (lib/core/commands.ts) is keyed by its
+      // permanent client id, which the server has never heard of until the
+      // outbox's CREATE_ORDER task reconciles it (lib/core/views.ts's
+      // reconcileServerId). Fetching `idToLoad` from the API before that
+      // happens 404s — and the old code here didn't check res.ok, so it
+      // quietly treated the 404 error body as an order with no items and no
+      // type, which is why "Collect Payment" on a fresh order used to land
+      // on an empty "no table selected" screen. Every order Tickets/Home can
+      // link to is already in this store (that's what they render from), so
+      // this is also just fewer round trips for the common case.
+      const tracked = useViews.getState().orders[idToLoad];
+      if (tracked) {
+        useCartStore.setState({
+          existingOrderData: tracked,
+          existingItems: tracked.items.map((it) => ({
+            id: it.lineId,
+            itemId: it.itemId,
+            itemName: it.itemName,
+            quantity: it.qty,
+            unitPrice: it.unitPrice,
+            subtotal: it.qty * it.unitPrice,
+            variationName: it.variationName,
+            notes: it.note,
+          })),
+          orderType: tracked.type as any,
+          selectedTableId: tracked.tableId || searchParams.get('tableId') || null,
+          selectedTableLabel: tracked.tableLabel || searchParams.get('tableLabel') || null,
+        });
+        useCartStore.getState().setSourceOrderId(tracked.id);
+        setPaymentOrderId(tracked.id);
+        setPaymentOrderNumber(tracked.orderNumber);
+        setOrderStatus(tracked.status);
+        if (tracked.customerId) {
+          useCartStore.getState().setCustomer({ id: tracked.customerId, name: tracked.customerName || 'Customer' });
+        }
+        if (searchParams.get('checkout') === 'true') {
+          setIsPaymentOpen(true);
+        }
+        return;
+      }
+
+      // Not tracked locally (e.g. a very old order from before this
+      // terminal's view store existed) — fall back to the network.
       fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${idToLoad}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       })
-        .then(r => r.json())
+        .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
         .then(order => {
           if (useCartStore.getState().cartSessionId !== currentSessionId) return; // Stale fetch check
           useCartStore.setState({
@@ -453,6 +544,26 @@ function OrderEntryPageContent() {
   const [orderNote, setOrderNote] = useState('');
   const [showKitchenNote, setShowKitchenNote] = useState(false);
   const guestCount = searchParams.get('guests') || '2';
+
+  // Cart draft auto-save — debounced 300ms. Only for a brand-new,
+  // not-yet-sent order: one already loaded from the server (paymentOrderId)
+  // or from a held order already has its own persistence. This is what lets
+  // "Take a Break" (POSTopBar.tsx) and an accidental reload hand the
+  // in-progress order back on the restore prompt above, instead of losing it.
+  useEffect(() => {
+    if (paymentOrderId || heldOrderId || draftPrompt) return;
+    const handler = setTimeout(() => {
+      if (cart.length > 0) {
+        saveCartDraft({
+          cart, orderType, selectedTableId, selectedTableLabel,
+          customerId, customerName, notes: orderNote, reason: 'autosave',
+        }).catch(console.error);
+      } else {
+        clearCartDraft().catch(console.error);
+      }
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [cart, orderType, selectedTableId, selectedTableLabel, customerId, customerName, orderNote, paymentOrderId, heldOrderId, draftPrompt]);
 
   const activePaymentMethod = useCartStore(s => s.activePaymentMethod);
   const isCard = ['CARD', 'JAZZCASH', 'EASYPAISA', 'BANK_TRANSFER', 'ONLINE'].includes((activePaymentMethod || 'CASH').toUpperCase());
@@ -627,6 +738,12 @@ function OrderEntryPageContent() {
     // accept client-supplied ids yet (that's a later phase), so its
     // response id is recorded separately via reconcileServerId() purely so
     // later operations (payment, append-items) know what to PUT against.
+    //
+    // Shipping to the server is no longer done here — commands.sendToKitchen()
+    // below queues an ORDER_SENT_TO_KITCHEN event, and the outbox
+    // (lib/core/outbox.ts, started once in POSLayout) picks it up and POSTs
+    // it — with retry/backoff/circuit-breaker — the moment it's queued,
+    // whether or not this screen is still mounted to see it happen.
     const { orderId: localId, orderNumber } = await commands.createOrder({
       type: orderTypeStr,
       tableId,
@@ -642,6 +759,7 @@ function OrderEntryPageContent() {
         qty: item.quantity,
         unitPrice: item.unitPrice,
         note: item.notes ?? null,
+        addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
       });
     }
     await commands.sendToKitchen(localId);
@@ -671,101 +789,9 @@ function OrderEntryPageContent() {
     }
     setOrderNote('');
     clearCart();
+    clearCartDraft().catch(console.error);
     setDiscount(null);
     router.push('/pos/home');
-
-    const body = JSON.stringify({
-      type: orderTypeStr,
-      tableId,
-      branchId: sessionObj.branchId,
-      tenantId: sessionObj.tenantId,
-      cashierId: sessionObj.userId || sessionObj.cashierId,
-      shiftId: shift.shiftId ?? null,
-      items: cartItems.map(item => ({
-        itemId: item.itemId,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.unitPrice * item.quantity,
-        options: buildItemOptions(item),
-        notes: item.notes ?? undefined,
-      })),
-      totalAmount: subtotal,
-      taxAmount,
-      discountAmount,
-      netAmount: total,
-      notes,
-      status: 'IN_KITCHEN',
-    });
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`,
-        },
-        body,
-      });
-      if (!res.ok) throw new Error(await res.text());
-
-      const order = await res.json();
-      // id stays the permanent client-generated one everywhere in the view
-      // — reconcileServerId just records the real server id separately, for
-      // whatever later PUTs/PATCHes this order (payment, append-items,
-      // mark ready). orderNumber was already correct from creation.
-      reconcileServerId(localId, order.id);
-    } catch (err) {
-      // Never silently drop an order the cashier already walked away from.
-      // The order stays visible in the view (it's real — items were sent to
-      // the kitchen) but flagged as not yet confirmed by the server, same
-      // signal the offline-payment/item-add badges already use elsewhere.
-      const s = useViews.getState();
-      const stillThere = s.orders[localId];
-      if (stillThere) {
-        s._setSnapshot({ orders: { ...s.orders, [localId]: { ...stillThere, syncState: 'DEGRADED' } } });
-      }
-
-      let offlineModeEnabled = true;
-      try {
-        const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
-        if (settings?.pos?.offlineMode === false) offlineModeEnabled = false;
-      } catch {}
-
-      if (!offlineModeEnabled) {
-        toast.error('Order failed to send and offline mode is off — please check with a manager.');
-        return;
-      }
-
-      try {
-        await queueOfflineOrder({
-          tenantId: sessionObj.tenantId,
-          branchId: sessionObj.branchId,
-          cashierId: sessionObj.userId || sessionObj.cashierId || 'cashier-1',
-          shiftId: shift.shiftId ?? undefined,
-          type: (orderTypeStr as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'),
-          tableId: tableId ?? undefined,
-          subtotal,
-          discountAmount,
-          taxAmount,
-          total,
-          notes,
-          items: cartItems.map(item => ({
-            itemId: item.itemId,
-            itemName: item.name,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            variationId: item.selectedVariation?.id,
-            addonIds: item.selectedAddOns?.map((a) => a.id),
-            notes: item.notes,
-          })),
-        }, localId); // same permanent id — lets lib/sync.ts reconcile the view store once this syncs
-        await registerOrderSync();
-        toast.info('Order could not reach the server — saved locally and will sync automatically.');
-      } catch (queueErr) {
-        console.error('Failed to queue offline order', queueErr);
-        toast.error('Order failed to send and could not be saved offline. Please check with a manager.');
-      }
-    }
   };
 
   const holdOrder = async () => {
@@ -1028,6 +1054,15 @@ function OrderEntryPageContent() {
         confirmText="Clear"
         onConfirm={() => { clearCart(); setPaymentOrderId(null); setConfirmClearOpen(false); }}
         onCancel={() => setConfirmClearOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={!!draftPrompt}
+        title="Restore In-Progress Order?"
+        message={`You have ${draftPrompt?.cart?.length ?? 0} item(s) from an order that wasn't sent to the kitchen yet${draftPrompt?.selectedTableLabel ? ` (Table ${draftPrompt.selectedTableLabel})` : ''}.`}
+        confirmText="Restore Order"
+        cancelText="Start New Order"
+        onConfirm={handleRestoreDraft}
+        onCancel={handleDiscardDraft}
       />
 
       <main
@@ -1480,6 +1515,13 @@ function OrderEntryPageContent() {
           orderId={paymentOrderId}
           orderNumber={paymentOrderNumber || undefined}
           orderTotal={searchParams.get('totalAmount') ? Number(searchParams.get('totalAmount')) : combinedTotal}
+          // PaymentModal computes its own totals from `items` (falling back
+          // to the cart store's `cart` when omitted) — for a "Collect
+          // Payment" tap on an order that's already fully sent, `cart` is
+          // empty (everything's in `existingItems`), which used to render
+          // Subtotal/GST/Total Due as a flat PKR 0.00 regardless of the
+          // real order total.
+          items={[...existingItems, ...cart]}
           orderItems={[...existingItems.map(c => `${c.quantity}x ${c.itemName || c.item?.name}`), ...cart.map(c => `${c.quantity}x ${c.name}`)].join(' · ')}
           tableLabel={searchParams.get('tableLabel') ?? undefined}
           tableId={searchParams.get('tableId') ?? undefined}

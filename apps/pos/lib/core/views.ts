@@ -12,6 +12,11 @@ export interface OrderViewItem {
   note: string | null;
   sentToKitchen: boolean;
   voided: boolean;
+  // Carried through so the outbox can rebuild the exact POST /api/orders
+  // options shape (variation + addOns) without depending on the cart store
+  // still being populated at ship time — the cart is cleared the instant
+  // the cashier navigates away, but the outbox may not drain until later.
+  addOns: Array<{ id: string; name: string; price: number }>;
 }
 
 export type OrderStatus =
@@ -41,6 +46,11 @@ export interface OrderView {
   discountReason: string | null;
   netAmount: number;
   paymentMethod: string | null;
+  // Only set for a SPLIT payment (multiple methods) — carried through so
+  // the outbox can ship the exact per-method breakdown to the server
+  // instead of collapsing it back into one line.
+  payments: Array<{ method: string; amount: number; status?: string; transactionId?: string | null }> | null;
+  redeemedPointsAmount: number | null;
   cashReceived: number;
   change: number;
   shiftId: string;
@@ -163,7 +173,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         guestCount: e.payload.guestCount ?? null,
         items: [],
         subtotal: 0, taxAmount: 0, discountAmount: 0, discountReason: null, netAmount: 0,
-        paymentMethod: null, cashReceived: 0, change: 0,
+        paymentMethod: null, payments: null, redeemedPointsAmount: null, cashReceived: 0, change: 0,
         shiftId: e.shiftId,
         cashierId: e.actorId,
         cashierName: e.actorName,
@@ -202,6 +212,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
           note: e.payload.note ?? null,
           sentToKitchen: false,
           voided: false,
+          addOns: e.payload.addOns ?? [],
         }],
         updatedAt: e.clientTime,
       };
@@ -305,6 +316,8 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         ...o,
         status: 'COMPLETED',
         paymentMethod: e.payload.method,
+        payments: e.payload.payments ?? null,
+        redeemedPointsAmount: e.payload.redeemedPointsAmount ?? null,
         cashReceived: e.payload.cashReceived ?? 0,
         change: e.payload.change ?? 0,
         taxAmount: e.payload.taxAmount ?? o.taxAmount,
@@ -638,6 +651,7 @@ function mapServerOrderToView(o: any): OrderView {
       note: it.notes ?? null,
       sentToKitchen: true,
       voided: it.status === 'VOIDED',
+      addOns: it.options?.addOns ?? [],
     })),
     subtotal: total,
     taxAmount: Number(o.taxAmount ?? 0),
@@ -645,6 +659,8 @@ function mapServerOrderToView(o: any): OrderView {
     discountReason: null,
     netAmount: total,
     paymentMethod: o.payments?.[0]?.method ?? null,
+    payments: null,
+    redeemedPointsAmount: null,
     cashReceived: 0,
     change: 0,
     shiftId: o.shiftId ?? '',

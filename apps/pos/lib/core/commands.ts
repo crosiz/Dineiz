@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { append, nextOrderNumber, type EventType } from './event-log';
 import { useViews } from './views';
+import { kickOutbox } from './outbox';
 
 async function emit(
   type: EventType,
@@ -11,16 +12,15 @@ async function emit(
 ) {
   const e = await append(type, aggType, aggId, payload, dependsOn);
   useViews.getState()._applyEvent(e); // views update NOW
+  kickOutbox(); // ship it — debounced, so a burst of emits in one caller only drains once
   return e;
 }
 
-// Track the last event per aggregate for dependency chaining. Phase 1 ships
-// events via the existing fetch-then-queue-offline path in the calling
-// screens (order/page.tsx, PaymentModal.tsx) rather than a dedicated outbox
-// — see the Phase 1 plan for why: the full dependency-DAG outbox (spec Part
-// D) is Phase 2, once there's a server endpoint designed to understand this
-// event shape. `dependsOn` is still recorded here so it's available once
-// that outbox exists — it just isn't consulted by anything yet.
+// Track the last event per aggregate for dependency chaining, and to let
+// the outbox (lib/core/outbox.ts) collapse a run of queued events for the
+// same aggregate into one HTTP call against the existing REST endpoints —
+// see outbox.ts's header comment for why it ships snapshots, not raw
+// deltas, until Phase 4 adds a real event-ingestion endpoint.
 const lastEventByAggregate = new Map<string, string>();
 function chain(aggId: string): string[] {
   const prev = lastEventByAggregate.get(aggId);
@@ -50,6 +50,7 @@ export async function addItem(orderId: string, item: {
   itemId: string; itemName: string;
   variationId?: string | null; variationName?: string | null;
   qty: number; unitPrice: number; note?: string | null;
+  addOns?: Array<{ id: string; name: string; price: number }> | null;
 }) {
   const e = await emit('ITEM_ADDED', 'ORDER', orderId,
     { lineId: `ln_${nanoid(10)}`, ...item }, chain(orderId));
@@ -100,6 +101,10 @@ export async function collectPayment(orderId: string, p: {
   method: string; total: number; cashReceived?: number;
   change?: number; taxRate?: number; taxAmount?: number;
   transactionRef?: string | null;
+  // Only set for a SPLIT payment (multiple methods in one checkout) —
+  // carried through to the server as-is instead of collapsing to one line.
+  payments?: Array<{ method: string; amount: number; status?: string; transactionId?: string | null }>;
+  redeemedPointsAmount?: number;
 }) {
   const e = await emit('PAYMENT_COLLECTED', 'ORDER', orderId, p, chain(orderId));
   remember(orderId, e.id);

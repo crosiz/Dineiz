@@ -10,8 +10,12 @@ import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { CashDrawerModal } from '@/components/CashDrawerModal';
 import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { AdminPinModal } from '@/components/AdminPinModal';
 import { DineizLogo } from './ui/DineizLogo';
-import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert } from 'lucide-react';
+import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
+import { startBreak } from '@/lib/core/commands';
+import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
 
 export function POSTopBar() {
   const config = useContext(TopBarStateContext);
@@ -36,6 +40,13 @@ export function POSTopBar() {
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
   const [isValidatingClose, setIsValidatingClose] = useState(false);
+
+  // Sign-out sync guard — blocks signing out while this terminal still has
+  // events queued for the server, instead of silently abandoning them.
+  const [signOutSyncing, setSignOutSyncing] = useState(false);
+  const [unsyncedInfo, setUnsyncedInfo] = useState<UnsyncedSummary | null>(null);
+  const [showForcePin, setShowForcePin] = useState(false);
+  const signOutPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -140,13 +151,54 @@ export function POSTopBar() {
     };
   }, []);
 
-  const handleSignOut = () => {
+  const finishSignOut = () => {
+    if (signOutPollRef.current) { clearInterval(signOutPollRef.current); signOutPollRef.current = null; }
     clearPosSession();
     useCartStore.getState().clearSession();
     useCartStore.getState().clearCart();
     toast.success('Signed out successfully');
     window.location.href = '/login';
   };
+
+  // Terminal-owned outbox: events queued here (lib/core/outbox.ts) survive
+  // in IndexedDB regardless of who's signed in, and the next session on
+  // this terminal resumes shipping them. But signing out unmounts POSLayout
+  // — which stops the drain loop — so anything still queued at that moment
+  // would sit idle until someone logs back in here. Rather than silently
+  // abandon it, block the sign-out and show what's still in flight.
+  const handleSignOut = async () => {
+    const pending = await hasUnsyncedEvents();
+    if (!pending) {
+      finishSignOut();
+      return;
+    }
+
+    setShowSignOutConfirm(false);
+    setUnsyncedInfo(await getUnsyncedSummary());
+    setSignOutSyncing(true);
+    kickOutbox();
+
+    signOutPollRef.current = setInterval(async () => {
+      const stillPending = await hasUnsyncedEvents();
+      if (!stillPending) {
+        setSignOutSyncing(false);
+        finishSignOut();
+        return;
+      }
+      setUnsyncedInfo(await getUnsyncedSummary());
+    }, 1500);
+  };
+
+  const cancelSignOutWait = () => {
+    if (signOutPollRef.current) { clearInterval(signOutPollRef.current); signOutPollRef.current = null; }
+    setSignOutSyncing(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (signOutPollRef.current) clearInterval(signOutPollRef.current);
+    };
+  }, []);
 
   // Avatar — match login screen style
   const posSession = isMounted ? getPosSession() : null;
@@ -353,6 +405,61 @@ export function POSTopBar() {
         </div>
       )}
 
+      {/* Blocks sign-out while unsynced events are still in flight */}
+      {signOutSyncing && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <RefreshCw size={20} className="animate-spin" style={{ animationDuration: '1.5s' }} />
+            </div>
+
+            <h3 className="font-bold text-slate-900 text-base mb-1">Finishing Sync…</h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-4">
+              This terminal has <strong className="text-slate-700">{unsyncedInfo?.count ?? 0} change{unsyncedInfo?.count === 1 ? '' : 's'}</strong> still
+              being sent to the server. Signing out now would leave them queued until someone logs back in here.
+              {(unsyncedInfo?.poisoned ?? 0) > 0 && (
+                <span className="block mt-2 text-rose-600 font-semibold">
+                  {unsyncedInfo!.poisoned} of these were rejected by the server and need a manager to review them.
+                </span>
+              )}
+            </p>
+
+            <div className="flex gap-2.5 w-full mb-2">
+              <button
+                onClick={cancelSignOutWait}
+                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                Keep Working
+              </button>
+              <button
+                onClick={() => kickOutbox()}
+                className="flex-1 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw size={13} /> Retry Now
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowForcePin(true)}
+              className="w-full h-9 rounded-xl bg-transparent text-rose-600 hover:bg-rose-50 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+            >
+              <ShieldAlert size={13} /> Force Sign Out (Manager PIN)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showForcePin && (
+        <AdminPinModal
+          onClose={() => setShowForcePin(false)}
+          onSuccess={() => {
+            setShowForcePin(false);
+            setSignOutSyncing(false);
+            finishSignOut();
+          }}
+        />
+      )}
+
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
@@ -394,6 +501,25 @@ export function POSTopBar() {
                     return;
                   }
 
+                  // Any items sitting in the cart builder aren't durable
+                  // anywhere yet (they only become an event once sent to the
+                  // kitchen) — save them as a draft so the order screen can
+                  // offer to restore it once this cashier's back.
+                  const cart = useCartStore.getState();
+                  if (cart.cart.length > 0) {
+                    const draft: CartDraft = {
+                      cart: cart.cart,
+                      orderType: cart.orderType ?? null,
+                      selectedTableId: cart.selectedTableId ?? null,
+                      selectedTableLabel: cart.selectedTableLabel ?? null,
+                      customerId: cart.customerId ?? null,
+                      customerName: cart.customerName ?? null,
+                      notes: null,
+                      reason: 'break',
+                    };
+                    saveCartDraft(draft).catch(console.error);
+                  }
+
                   try {
                     const res = await fetch(`${API_URL}/api/shifts/${shiftId}/break/start`, {
                       method: 'POST',
@@ -407,6 +533,10 @@ export function POSTopBar() {
                       const body = await res.json().catch(() => ({}));
                       toast.error(body?.error || "Couldn't start your break — it may not be recorded.");
                     }
+                    // Local audit-trail record — the break API call above is
+                    // still what the server actually relies on; this just
+                    // keeps the local event log complete.
+                    startBreak(shiftId).catch(console.error);
                   } catch {
                     toast.error("Couldn't reach the server — your break may not be recorded.");
                   }

@@ -403,6 +403,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             const body = await breakRes.json().catch(() => ({}));
             toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
           }
+          const { endBreak } = await import('@/lib/core/commands');
+          endBreak(posBreak.shiftId).catch(() => {});
         } catch {
           toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
         } finally {

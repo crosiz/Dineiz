@@ -132,36 +132,21 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
   const updateStatus = async (status: string) => {
     setIsUpdating(true);
-    // Local-first: flip the stepper/badge immediately, and — if this order
-    // is tracked in the shared view store (lib/core/views.ts, populated for
-    // anything created this session or merged in from the server) — update
-    // that too, so the ticket card behind this modal shows the same status
-    // without waiting on the PUT below. No rollback on failure: the action
-    // already happened physically: reverting the screen would just lie to
-    // the cashier about what they already did.
+    // Local-first: flip the stepper/badge immediately — the command updates
+    // the shared view store (lib/core/views.ts) synchronously too, so the
+    // ticket card behind this modal shows the same status without waiting
+    // on a network round trip. No rollback on failure: the action already
+    // happened physically; reverting the screen would just lie to the
+    // cashier about what they already did. Shipping to the server, with
+    // retry/backoff, is the outbox's job now (lib/core/outbox.ts's
+    // UPDATE_STATUS task) — it runs independently of this modal.
     setOrder((prev: any) => (prev ? { ...prev, status } : prev));
     if (status === 'READY') await markReady(orderId!);
     else if (status === 'IN_KITCHEN') await sendToKitchen(orderId!);
     else if (status === 'CANCELLED') await cancelOrder(orderId!);
     onChanged?.();
-
-    const tracked = useViews.getState().orders[orderId!];
-    const putId = tracked?.serverId ?? orderId;
-
-    try {
-      const res = await fetch(`${API_URL}/api/orders/${putId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error('Failed to update status');
-      toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : status === 'CANCELLED' ? 'Order cancelled' : 'Order updated');
-      fetchOrder(true);
-    } catch {
-      toast.error('Marked locally, but the server hasn’t confirmed yet — will retry automatically.');
-    } finally {
-      setIsUpdating(false);
-    }
+    toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : status === 'CANCELLED' ? 'Order cancelled' : 'Order updated');
+    setIsUpdating(false);
   };
 
   const handleAssign = async (waiter: { id: string; name: string } | null) => {

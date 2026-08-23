@@ -5,6 +5,7 @@ import { useCartStore } from '@/lib/store';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { getDB } from '@/lib/db';
+import { startOutbox } from '@/lib/core/outbox';
 import { startBackgroundSync } from '@/lib/sync';
 import { useViews, rebuildViews, seedTablesFromServer, refreshOrders } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -143,6 +144,22 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     };
     applyBranding();
 
+    // Outbox drain loop (lib/core/outbox.ts) — ships queued events from the
+    // local log to the server, replacing the old per-screen fetch-then-
+    // queue-offline pattern for every command-driven flow (new orders,
+    // status changes, payments, table status). Started before rebuildViews()
+    // resolves is fine: it reads straight from IndexedDB itself and simply
+    // finds nothing queued yet on a cold start.
+    const cleanupOutbox = startOutbox();
+
+    // lib/sync.ts's older queue still runs alongside it: the "add items to
+    // an order already sent to the kitchen" flow (order/page.tsx's
+    // isAppending branch) was deliberately NOT moved onto the outbox — it
+    // edits an order that may not yet have a local view-store entry (e.g.
+    // opened via a direct link before refreshOrders() has populated it),
+    // and commands.addItem() silently no-ops when the target order isn't in
+    // the store yet. Its offline queue (pendingItemAdds) still needs this
+    // loop to drain it.
     const cleanupSync = startBackgroundSync();
 
     // Event-sourced view store (lib/core/views.ts) — replay the local event
@@ -168,6 +185,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       .forEach((r) => router.prefetch(r));
 
     return () => {
+      cleanupOutbox();
       cleanupSync && cleanupSync();
     };
   }, []);
