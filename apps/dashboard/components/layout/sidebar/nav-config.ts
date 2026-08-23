@@ -51,6 +51,7 @@ export const TENANT_ADMIN_NAV: NavSection[] = [
       { label: 'Reports', href: '/dashboard/reports', icon: 'FileText' },
       { label: 'Anomalies', href: '/dashboard/anomalies', icon: 'AlertTriangle' },
       { label: 'Forecast', href: '/dashboard/forecast', icon: 'TrendingUp' },
+      { label: 'POS Sync Issues', href: '/dashboard/pos-sync', icon: 'WifiOff' },
     ]
   },
   {
@@ -102,6 +103,7 @@ export const BRANCH_MANAGER_NAV = (branchName: string): NavSection[] => [
     items: [
       { label: "Today's Report", href: '/dashboard/reports/today', icon: 'FileText' },
       { label: 'Shift Report', href: '/dashboard/reports/shift', icon: 'ClipboardList' },
+      { label: 'POS Sync Issues', href: '/dashboard/pos-sync', icon: 'WifiOff' },
     ]
   },
 ];

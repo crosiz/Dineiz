@@ -21,7 +21,7 @@ import {
   LayoutTemplate, Monitor, Building2, Users, Package, 
   Clock, Tag, UserCheck, Star, BarChart3, FileText, 
   TrendingUp, Globe, Truck, QrCode, Webhook,
-  CreditCard, Settings, MessageCircle
+  CreditCard, Settings, MessageCircle, WifiOff
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -49,6 +49,7 @@ const iconMap: Record<string, React.ReactNode> = {
   Webhook: <Webhook size={16} />,
   CreditCard: <CreditCard size={16} />,
   Settings: <Settings size={16} />,
+  WifiOff: <WifiOff size={16} />,
 };
 
 export function Sidebar() {
