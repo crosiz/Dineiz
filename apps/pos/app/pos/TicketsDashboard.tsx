@@ -11,6 +11,8 @@ import { useSocket } from '@/contexts/SocketContext';
 import { getToken, getPosSession } from '@/lib/pos-session';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
+import { useViews, type OrderView } from '@/lib/core/views';
+import { markReady, sendToKitchen } from '@/lib/core/commands';
 import { toast } from 'sonner';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
@@ -177,7 +179,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  const { orders, isFetching, isStale } = useSWROrders({
+  // History is a genuinely different concern from live operational state —
+  // paginated search over orders that are, by definition, no longer live —
+  // and stays on the existing fetch-based hook. `enabled: false` in live
+  // mode means it doesn't poll '/api/orders/live' in the background for
+  // data this screen no longer renders from it.
+  const { orders: historyOrders, isFetching, isStale } = useSWROrders({
     branchId: session.branchId,
     dataMode,
     myOrdersOnly,
@@ -186,10 +193,33 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     sortOrder,
     historySearch,
     refetchIntervalMs: 15_000,
+    enabled: dataMode === 'history',
   });
 
+  // Phase 2: live orders read directly from the shared event-derived store
+  // — populated by lib/core/views.ts's refreshOrders (bootstrap + socket-
+  // driven, see POSLayout.tsx) merged with anything this terminal created
+  // locally. No fetch, no loading state, no per-screen polling.
+  const LIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED'];
+  const liveOrdersRaw = useViews((s) => Object.values(s.orders).filter((o) => LIVE_STATUSES.includes(o.status)));
+  const liveOrders = useMemo(() => {
+    const sorted = [...liveOrdersRaw];
+    if (sortOrder === 'oldest') sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    else if (sortOrder === 'newest') sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (sortOrder === 'table') sorted.sort((a, b) => (a.tableLabel || '').localeCompare(b.tableLabel || ''));
+    if (myOrdersOnly && session.cashierId) {
+      return sorted.filter((o) => o.cashierId === session.cashierId || o.assignedWaiterId === session.cashierId);
+    }
+    if (waiterFilter && waiterFilter !== 'ALL') {
+      return sorted.filter((o) => o.assignedWaiterId === waiterFilter);
+    }
+    return sorted;
+  }, [liveOrdersRaw, sortOrder, myOrdersOnly, waiterFilter, session.cashierId]);
+
+  const orders: any[] = dataMode === 'history' ? historyOrders : liveOrders;
+
   // For history mode: show a spinner only on the very first load (no IDB data yet)
-  // For live mode: never block — IDB data renders instantly, network runs silently
+  // Live mode never blocks — the view store is always already populated.
   const isLoading = dataMode === 'history' && isFetching && orders.length === 0;
 
   const heldOrders = useLiveQuery(() => {
@@ -244,12 +274,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
   useEffect(() => {
     if (!socket || !session.branchId) return;
-    // On any real-time order event: invalidate SWR cache so background refresh fires
-    const handleOrderUpdate = () => {
-      if (dataMode === 'live') {
-        queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] });
-      }
-    };
+    // order:created/status_changed/cancelled → lib/core/views.ts's shared
+    // store is now what live orders render from, and POSLayout.tsx already
+    // refreshes it centrally on these same events (so every screen stays in
+    // sync, not just this one) — no per-screen listener needed here anymore.
     // Listen for tenant settings updates (e.g. useKDS toggled from admin)
     const handleSettingsUpdate = (settings: any) => {
       if (settings?.kitchen?.useKDS !== undefined) {
@@ -271,44 +299,47 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     };
 
     socket.emit('join_branch', session.branchId);
-    socket.on('order:created', handleOrderUpdate);
-    socket.on('order:status_changed', handleOrderUpdate);
-    socket.on('order:cancelled', handleOrderUpdate);
     socket.on('tenant:settings_updated', handleSettingsUpdate);
 
     return () => {
-      socket.off('order:created', handleOrderUpdate);
-      socket.off('order:status_changed', handleOrderUpdate);
-      socket.off('order:cancelled', handleOrderUpdate);
       socket.off('tenant:settings_updated', handleSettingsUpdate);
     };
-  }, [socket, session.branchId, queryClient, dataMode]);
+  }, [socket, session.branchId]);
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string, newStatus: 'IN_KITCHEN' | 'READY') => {
     setIsUpdating(orderId);
 
-    // Optimistic: patch every cached active-orders query (any myOrdersOnly/
-    // sortOrder/waiterId variant — setQueriesData matches by key prefix) so
-    // the card flips status immediately instead of waiting on the PUT.
-    const previous = queryClient.getQueriesData({ queryKey: ['swr-active-orders'] });
-    queryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-      Array.isArray(old) ? old.map((o: any) => (o.id === orderId ? { ...o, status: newStatus } : o)) : old
-    );
+    // Local-first: the command appends an event and updates useViews
+    // synchronously — every screen reading that store (Home, Tickets, and
+    // eventually KDS) sees the new status instantly, permanently. This
+    // does NOT roll back on a PUT failure below — the physical action
+    // (food sent to the kitchen / marked ready) already happened; reverting
+    // the screen would just reintroduce the "shows updated then flips back"
+    // bug. A background retry is what should reconcile a failed sync, not
+    // an immediate UI rollback (a real retry queue for arbitrary status
+    // changes is Phase 3's outbox — for now this at least stops lying to
+    // the cashier about what already happened).
+    if (newStatus === 'READY') await markReady(orderId);
+    else await sendToKitchen(orderId);
+
+    // Resolve the real server id — if this order was created via the
+    // event-sourced flow this session, `orderId` is the permanent client id
+    // and the server only knows it by a different id (see
+    // lib/core/views.ts's reconcileServerId). Orders merged in from the
+    // server already carry serverId === id.
+    const order = useViews.getState().orders[orderId];
+    const putId = order?.serverId ?? orderId;
 
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+      const res = await fetch(`${API_URL}/api/orders/${putId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error('Failed to update status');
-      queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] });
     } catch (e) {
       console.error(e);
-      // Roll back the optimistic patch, then re-pull real state.
-      previous.forEach(([key, data]) => queryClient.setQueryData(key, data));
-      queryClient.invalidateQueries({ queryKey: ['swr-active-orders'] });
-      toast.error('Could not update order status — reverted.');
+      toast.error('Marked locally, but the server hasn’t confirmed yet — will retry automatically.');
     } finally {
       setIsUpdating(null);
     }

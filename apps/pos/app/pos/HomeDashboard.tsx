@@ -1,16 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useTopBar } from '@/hooks/useTopBar';
 import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
-import { useSWROrders } from '@/hooks/useSWROrders';
-import { useSWRTables } from '@/hooks/useSWRTables';
 import { useShiftStats } from '@/hooks/useShiftStats';
+import { useViews } from '@/lib/core/views';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
@@ -56,23 +54,21 @@ export default function HomeDashboard() {
     return false;
   });
 
-  // Instant paint from the IndexedDB (Dexie) cache, refreshed from the network
-  // in the background — same stale-while-revalidate hook TicketsDashboard uses,
-  // instead of an uncached fetch on every mount.
-  const { orders: activeOrders } = useSWROrders({
-    branchId: session?.branchId ?? null,
-    dataMode: 'live',
-    myOrdersOnly: false,
-    sortOrder: 'newest',
-    historySearch: '',
-  });
-  // Same pattern, applied to the floor plan (shares its IDB cache entry with
-  // ClientTableMap.tsx). Reused for today's shift stats below, once
-  // `activeShift` is available (see the `useShiftStats` call further down —
-  // deferred until after mount, matching this file's existing isMounted/
-  // activeShift pattern for anything read from localStorage, to avoid a
-  // server/client render mismatch).
-  const { tables } = useSWRTables(session?.branchId ?? null);
+  // Phase 2: reads directly from the shared event-derived store instead of
+  // fetching — populated by lib/core/views.ts's refreshOrders (bootstrap +
+  // socket-driven, see POSLayout.tsx) merged with anything this terminal
+  // created locally this session. No loading state, no per-screen fetch.
+  const ACTIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'];
+  const activeOrders = useViews((s) =>
+    Object.values(s.orders)
+      .filter((o) => ACTIVE_STATUSES.includes(o.status))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  );
+  // Phase 2: table view is the same shared store ClientTableMap now reads
+  // from too (see lib/core/views.ts's seedTablesFromServer, kept fresh by
+  // POSLayout.tsx's table:status_changed listener) — a table freed on the
+  // Tables screen shows up here with no fetch, not just on the next poll.
+  const tables = useViews((s) => Object.values(s.tables));
 
   // Shift & Cashier info
   const [activeShift, setActiveShift] = useState<any>(null);
@@ -132,8 +128,13 @@ export default function HomeDashboard() {
     showBackButton: false,
   });
 
-  // Calculate Held Orders count
-  const heldOrdersCount = activeOrders.filter((o) => o.status === 'HELD' || o.status === 'PARKED').length;
+  // Held orders are local-only drafts (see lib/db.ts's heldOrders table) —
+  // they never become a real ORDER_CREATED event (or a server order at all)
+  // until resumed, so they never appear in useViews.orders. The previous
+  // `activeOrders.filter(o => o.status === 'HELD' || 'PARKED')` check was
+  // always empty for the same reason even before this conversion — neither
+  // status value is ever set on a live order.
+  const heldOrdersCount = useLiveQuery(() => getDB().heldOrders.count(), []) ?? 0;
 
   // A payment changes today's revenue/order-count numbers server-side —
   // force the cached stats to refetch rather than waiting for the next
@@ -144,20 +145,10 @@ export default function HomeDashboard() {
     return () => { posSocket.off('payment:confirmed', invalidateStats); };
   }, [posSocket, invalidateStats]);
 
-  // useSWRTables (unlike ClientTableMap's own inline table state) has no
-  // socket wiring of its own — it only refreshes on its 30s poll, so a
-  // table freed/occupied elsewhere could sit stale here for up to that
-  // long, which is exactly what showed up as a lingering "Needs Attention"
-  // entry for an already-free table. Force an immediate refetch instead.
-  const tablesQueryClient = useQueryClient();
-  useEffect(() => {
-    if (!posSocket || !session?.branchId) return;
-    const onTableStatusChanged = () => {
-      tablesQueryClient.invalidateQueries({ queryKey: ['swr-tables', session.branchId] });
-    };
-    posSocket.on('table:status_changed', onTableStatusChanged);
-    return () => { posSocket.off('table:status_changed', onTableStatusChanged); };
-  }, [posSocket, session?.branchId, tablesQueryClient]);
+  // The table:status_changed → refresh wiring now lives centrally in
+  // POSLayout.tsx (it refreshes lib/core/views.ts's shared table store,
+  // which this screen and ClientTableMap both read), so no per-screen
+  // listener is needed here anymore.
 
   // "Needs Attention" — replaces the old Alerts section, which called
   // GET /api/v1/tenant/alerts (only a GET is registered — the "Clear"
@@ -333,7 +324,7 @@ export default function HomeDashboard() {
 
                   return filtered.map((order: any) => {
                     const itemCount = Array.isArray(order.items)
-                      ? order.items.reduce((acc: number, i: any) => acc + (i.quantity || 1), 0)
+                      ? order.items.reduce((acc: number, i: any) => acc + (i.qty ?? i.quantity ?? 1), 0)
                       : (order.itemCount || order.itemsCount || 1);
                     const amount = order.netAmount ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0;
                     const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';

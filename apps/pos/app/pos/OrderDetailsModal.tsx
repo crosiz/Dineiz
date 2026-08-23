@@ -11,6 +11,8 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
+import { useViews } from '@/lib/core/views';
+import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -38,18 +40,21 @@ interface OrderDetailsModalProps {
 // the detailed fetch returns. Item rows are marked __partial and rendered as
 // a loading placeholder rather than real priced lines.
 function shellFromSummary(summary: any) {
+  // Accepts either the old /api/orders/live summary shape or a
+  // lib/core/views.ts OrderView (Phase 2 — Home/Tickets now pass the latter
+  // as initialOrder), which uses different field names for the same data.
   return {
     id: summary.id,
     orderNumber: summary.orderNumber,
-    tokenNumber: summary.token,
+    tokenNumber: summary.tokenNumber ?? summary.token ?? null,
     status: summary.status,
     type: summary.type,
     createdAt: summary.createdAt,
     table: summary.tableLabel ? { label: summary.tableLabel } : null,
-    tableId: null,
-    assignedWaiter: null,
-    netAmount: summary.total,
-    totalAmount: summary.total,
+    tableId: summary.tableId ?? null,
+    assignedWaiter: summary.assignedWaiterName ? { name: summary.assignedWaiterName } : null,
+    netAmount: summary.netAmount ?? summary.total ?? 0,
+    totalAmount: summary.netAmount ?? summary.total ?? 0,
     items: [],
     __partial: true,
   };
@@ -126,16 +131,25 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   };
 
   const updateStatus = async (status: string) => {
-    const previousStatus = order?.status;
     setIsUpdating(true);
-    // Optimistic: flip the stepper/badge immediately and let the list
-    // screen behind this modal know right away, instead of waiting for
-    // the PUT to confirm before anything visibly changes.
+    // Local-first: flip the stepper/badge immediately, and — if this order
+    // is tracked in the shared view store (lib/core/views.ts, populated for
+    // anything created this session or merged in from the server) — update
+    // that too, so the ticket card behind this modal shows the same status
+    // without waiting on the PUT below. No rollback on failure: the action
+    // already happened physically: reverting the screen would just lie to
+    // the cashier about what they already did.
     setOrder((prev: any) => (prev ? { ...prev, status } : prev));
+    if (status === 'READY') await markReady(orderId!);
+    else if (status === 'IN_KITCHEN') await sendToKitchen(orderId!);
+    else if (status === 'CANCELLED') await cancelOrder(orderId!);
     onChanged?.();
 
+    const tracked = useViews.getState().orders[orderId!];
+    const putId = tracked?.serverId ?? orderId;
+
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+      const res = await fetch(`${API_URL}/api/orders/${putId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ status }),
@@ -144,9 +158,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : status === 'CANCELLED' ? 'Order cancelled' : 'Order updated');
       fetchOrder(true);
     } catch {
-      toast.error('Failed to update order — reverted');
-      setOrder((prev: any) => (prev ? { ...prev, status: previousStatus } : prev));
-      onChanged?.();
+      toast.error('Marked locally, but the server hasn’t confirmed yet — will retry automatically.');
     } finally {
       setIsUpdating(false);
     }

@@ -118,3 +118,106 @@ export async function cancelOrder(orderId: string) {
 export async function setTableStatus(tableId: string, status: string) {
   await emit('TABLE_STATUS_CHANGED', 'TABLE', tableId, { status });
 }
+
+export async function changeItemNote(orderId: string, lineId: string, note: string) {
+  const e = await emit('ITEM_NOTE_CHANGED', 'ORDER', orderId, { lineId, note }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function changeOrderNote(orderId: string, note: string) {
+  const e = await emit('ORDER_NOTE_CHANGED', 'ORDER', orderId, { note }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function removeDiscount(orderId: string, reason: string, approverId?: string) {
+  const e = await emit('DISCOUNT_REMOVED', 'ORDER', orderId,
+    { reason, approverId: approverId ?? null }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function markServed(orderId: string) {
+  const e = await emit('ORDER_SERVED', 'ORDER', orderId, {}, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function walkOutOrder(orderId: string, reason: string, approverId: string) {
+  const e = await emit('ORDER_WALKED_OUT', 'ORDER', orderId, { reason, approverId }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function attachCustomer(
+  orderId: string, customer: { customerId?: string | null; phone: string; name?: string | null }
+) {
+  const e = await emit('CUSTOMER_ATTACHED', 'ORDER', orderId, customer, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function assignWaiter(
+  orderId: string, waiterId: string | null, waiterName: string | null, waiterColor?: string | null
+) {
+  const e = await emit('WAITER_ASSIGNED', 'ORDER', orderId, { waiterId, waiterName, waiterColor }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function moveOrderToTable(
+  orderId: string, fromTableId: string | null, toTableId: string, toTableLabel?: string
+) {
+  const e = await emit('ORDER_MOVED_TO_TABLE', 'ORDER', orderId,
+    { fromTableId, toTableId, toTableLabel }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function mergeTable(fromTableId: string, intoTableId: string) {
+  await emit('TABLE_MERGED', 'TABLE', fromTableId, { intoTableId });
+}
+
+export async function splitTable(sourceTableId: string, newTableIds: string[]) {
+  await emit('TABLE_SPLIT', 'TABLE', sourceTableId, { newTableIds });
+}
+
+export async function markBillPrinted(orderId: string, copyNumber = 1) {
+  const e = await emit('BILL_PRINTED', 'ORDER', orderId, { copyNumber }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function markReceiptPrinted(orderId: string, copyNumber = 1) {
+  const e = await emit('RECEIPT_PRINTED', 'ORDER', orderId, { copyNumber }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function markCancellationKotPrinted(orderId: string, lineIds: string[], reason: string) {
+  const e = await emit('CANCELLATION_KOT_PRINTED', 'ORDER', orderId, { lineIds, reason }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+export async function recordManagerApproval(action: string, targetId: string, managerId: string) {
+  await emit('MANAGER_APPROVED', 'ORDER', targetId, { action, managerId });
+}
+
+export async function recordManagerDenial(action: string, targetId: string, managerId: string) {
+  await emit('MANAGER_DENIED', 'ORDER', targetId, { action, managerId });
+}
+
+export async function openShift(shiftId: string, openingFloat: number, denominations?: any) {
+  await emit('SHIFT_OPENED', 'SHIFT', shiftId, { openingFloat, denominations });
+}
+
+export async function closeShift(shiftId: string, closingCash: number, variance: number, notes?: string) {
+  await emit('SHIFT_CLOSED', 'SHIFT', shiftId, { closingCash, variance, notes });
+}
+
+export async function startBreak(shiftId: string, breakType?: string) {
+  await emit('BREAK_STARTED', 'SHIFT', shiftId, { breakType });
+}
+
+export async function endBreak(shiftId: string) {
+  await emit('BREAK_ENDED', 'SHIFT', shiftId, {});
+}
+
+export async function cashIn(shiftId: string, amount: number, reason: string) {
+  await emit('CASH_IN', 'SHIFT', shiftId, { amount, reason });
+}
+
+export async function cashOut(shiftId: string, amount: number, reason: string, approverId?: string) {
+  await emit('CASH_OUT', 'SHIFT', shiftId, { amount, reason, approverId: approverId ?? null });
+}
