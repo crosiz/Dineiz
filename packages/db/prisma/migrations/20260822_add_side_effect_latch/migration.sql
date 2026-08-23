@@ -1,0 +1,16 @@
+-- AlterTable
+-- Hand-authored: `prisma migrate dev --create-only`'s shadow-database replay
+-- fails on this environment (P3006/P1014 against an existing, unrelated
+-- migration — "Tenant" table missing when replaying from scratch), so this
+-- was generated via `prisma migrate diff --from-schema-datasource ...
+-- --to-schema-datamodel ...` against the real dev DB instead, which needs
+-- no shadow database. Verified as the only diff produced.
+--
+-- Adds the atomic-claim column enqueueOrderEvents (order.service.ts) uses
+-- to guarantee its COMPLETED side effects (inventory deduction, loyalty
+-- earn, deal counters, Zapier, ERP sync) fire at most once per order, ever
+-- — see the code change in the same pass. Existing completed orders are
+-- backfilled in a separate, explicitly-reviewed step (not part of this
+-- migration file) so they don't re-fire the bundle the first time a manager
+-- edits one of them post-migration.
+ALTER TABLE "Order" ADD COLUMN     "sideEffectsAppliedAt" TIMESTAMP(3);

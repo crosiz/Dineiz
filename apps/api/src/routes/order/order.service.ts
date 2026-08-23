@@ -821,41 +821,57 @@ export async function enqueueOrderEvents(
     await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
   }
   if (order.status === 'COMPLETED') {
-    // Writes the ORDER_COMPLETED (and DISCOUNT_APPLIED) lines the Shift
-    // Management timeline and the shift PDF are built from. Fire-and-forget
-    // by design — see shift-activity.ts.
-    recordOrderCompleted({ ...order, payments: payments ?? order.payments });
-    // Process earning when order is completed
-    earnLoyaltyForOrder(order).catch(e => console.error('Loyalty Earn Error:', e));
-    
-    // Process redemption if passed during payment completion
-    if (redeemedPointsAmount) {
-      redeemLoyaltyForOrder(order, redeemedPointsAmount).catch(e => console.error('Loyalty Redeem Error:', e));
-    }
+    // Atomic claim: this bundle (inventory deduction, loyalty earn, deal
+    // counters, Zapier, ERP sync) must fire at most once per order, ever.
+    // A retried/duplicated PUT (the outbox's own retry-with-backoff makes
+    // this a real, expected occurrence — not just a hypothetical) used to
+    // re-run all of it every time it observed status === 'COMPLETED', with
+    // no check for whether it already had been. Racing this on `WHERE
+    // sideEffectsAppliedAt IS NULL` means only one concurrent request can
+    // ever win the claim — the loser sees claim.count === 0 and skips the
+    // whole block instead of re-firing it.
+    const claim = await prisma.order.updateMany({
+      where: { id: order.id, sideEffectsAppliedAt: null },
+      data: { sideEffectsAppliedAt: new Date() },
+    });
 
-    deductInventoryForOrder(order.id).catch(e => console.error('Inventory Deduction Error:', e));
-    await enqueueZapierEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
-    await erpSyncQueue.add('erp.sync', { tenantId }, {
-      attempts: 5,
-      backoff: { type: 'exponential', delay: 2000 },
-      removeOnComplete: true,
-      removeOnFail: true,
-    }).catch(() => {});
-    emitDashboardStatsUpdated(tenantId, order.branchId);
+    if (claim.count === 1) {
+      // Writes the ORDER_COMPLETED (and DISCOUNT_APPLIED) lines the Shift
+      // Management timeline and the shift PDF are built from. Fire-and-forget
+      // by design — see shift-activity.ts.
+      recordOrderCompleted({ ...order, payments: payments ?? order.payments });
+      // Process earning when order is completed
+      earnLoyaltyForOrder(order).catch(e => console.error('Loyalty Earn Error:', e));
 
-    // Update Deal usage counters
-    try {
-      const orderDeals = await prisma.orderDeal.findMany({ where: { orderId: order.id } });
-      for (const od of orderDeals) {
-        if (od.dealId) {
-          await prisma.deal.updateMany({
-            where: { id: od.dealId },
-            data: { usedCount: { increment: 1 } }
-          });
-        }
+      // Process redemption if passed during payment completion
+      if (redeemedPointsAmount) {
+        redeemLoyaltyForOrder(order, redeemedPointsAmount).catch(e => console.error('Loyalty Redeem Error:', e));
       }
-    } catch (e) {
-      console.error('Failed to update deal usage:', e);
+
+      deductInventoryForOrder(order.id).catch(e => console.error('Inventory Deduction Error:', e));
+      await enqueueZapierEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
+      await erpSyncQueue.add('erp.sync', { tenantId }, {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 2000 },
+        removeOnComplete: true,
+        removeOnFail: true,
+      }).catch(() => {});
+      emitDashboardStatsUpdated(tenantId, order.branchId);
+
+      // Update Deal usage counters
+      try {
+        const orderDeals = await prisma.orderDeal.findMany({ where: { orderId: order.id } });
+        for (const od of orderDeals) {
+          if (od.dealId) {
+            await prisma.deal.updateMany({
+              where: { id: od.dealId },
+              data: { usedCount: { increment: 1 } }
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to update deal usage:', e);
+      }
     }
   } else if (payments && payments.length > 0) {
     emitDashboardStatsUpdated(tenantId, order.branchId);
