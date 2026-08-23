@@ -518,6 +518,7 @@ model Order {
   VoidRequest VoidRequest[]
   orderDeals  OrderDeal[]
 
+  @@unique([tenantId, orderNumber])
   @@index([tenantId])
   @@index([branchId])
   @@index([tableId])
@@ -789,6 +790,11 @@ model Shift {
   @@index([branchId])
   @@index([userId])
   @@index([status])
+  // Matches the exact where-clause shift.service.ts uses to find a
+  // cashier's currently-open shift (on login, on shift-open, on every
+  // "is there already a shift?" conflict check) — that lookup was falling
+  // back to the plain single-column indexes above.
+  @@index([tenantId, branchId, userId, status])
 }
 
 // Tracks mid-shift cash-in / cash-out entries (e.g., safe drops, paid-outs)

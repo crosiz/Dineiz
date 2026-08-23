@@ -1,11 +1,10 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import {
-  createOrder, listOrders, listOrderHistory, listLiveOrders, getOrder, updateOrder, enqueueOrderEvents, getActiveCount, assignOrder, appendOrderItems, deleteOrderItem, listActiveOrders
+  createOrder, listOrders, listOrderHistory, listLiveOrders, getOrder, updateOrder, enqueueOrderEvents, applyOrderStatusSideEffects, getActiveCount, assignOrder, appendOrderItems, deleteOrderItem, listActiveOrders
 } from './order.service';
 import {
-  emitNewOrder, emitOrderUpdated, emitOrderCancelled, emitTableStatusChanged,
+  emitNewOrder, emitOrderUpdated, emitTableStatusChanged,
 } from '../../lib/socket';
-import { reverseOrDiscardInventoryForCancelledOrder } from '../inventory/inventory.service';
 import { prisma } from '@dineiz/db';
 
 
@@ -123,46 +122,14 @@ export async function handleUpdateOrder(request: FastifyRequest, reply: FastifyR
 
   const order = await updateOrder(tenantId, id, request.body);
 
-  if (order.status === 'CANCELLED' && priorOrder && priorOrder.status !== 'CANCELLED') {
-    reverseOrDiscardInventoryForCancelledOrder(order.id, priorOrder.status).catch((e: any) => console.error('Inventory Reversal Error:', e));
-  }
-
-  if (order.status === 'CANCELLED') {
-    emitOrderCancelled(tenantId, order.branchId, order.id);
-  } else {
-    emitOrderUpdated(tenantId, order.branchId, order);
-  }
-
-  if (order.tableId) {
-    // Fire-and-forget: don't make the client wait on this write before it sees
-    // its order update confirmed — emit as soon as the DB write resolves.
-    // Lowercase to match the Table.status column's documented convention
-    // (schema.prisma: "free", "occupied", "dirty", "ready", "reserved") and
-    // emitTableStatusChanged's own signature — the previous uppercase values
-    // here were a pre-existing type/casing mismatch against both.
-    let newTableStatus: 'occupied' | 'free' | null = null;
-    if (order.status === 'READY') newTableStatus = 'occupied';
-    else if (order.status === 'COMPLETED' || order.status === 'CANCELLED') newTableStatus = 'free';
-
-    if (newTableStatus) {
-      prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: newTableStatus } })
-        .then(() => {
-          emitTableStatusChanged(order.branchId, {
-            tableId: order.tableId,
-            status: newTableStatus,
-            ...(newTableStatus === 'occupied' ? { orderId: order.id, since: order.createdAt.toISOString() } : {}),
-          }, tenantId);
-        })
-        .catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
-    }
-  }
-
-  await enqueueOrderEvents(
-    tenantId, 
-    order, 
-    (request.body as any).payments, 
-    (request.body as any).redeemedPointsAmount
-  );
+  // Table status (free/occupied), inventory reversal on cancel, cache
+  // invalidation, and the COMPLETED/CANCELLED event bundle — shared with
+  // the KDS and mobile status-update paths (order.service.ts) so all three
+  // behave identically instead of each reimplementing a subset of this.
+  await applyOrderStatusSideEffects(tenantId, order, priorOrder?.status ?? null, {
+    payments: (request.body as any).payments,
+    redeemedPointsAmount: (request.body as any).redeemedPointsAmount,
+  });
   return order;
 }
 
