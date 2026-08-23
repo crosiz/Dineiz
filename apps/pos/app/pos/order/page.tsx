@@ -18,7 +18,7 @@ import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import { queueOfflineOrder, queueItemAdd } from '@/lib/offlineHelpers';
 import * as commands from '@/lib/core/commands';
-import { reconcileServerId } from '@/lib/core/views';
+import { useViews, reconcileServerId } from '@/lib/core/views';
 import { registerOrderSync } from '@/lib/syncRegistration';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -646,41 +646,12 @@ function OrderEntryPageContent() {
     }
     await commands.sendToKitchen(localId);
 
-    const optimisticOrder = {
-      id: localId,
-      orderNumber,
-      tokenNumber: null,
-      status: 'IN_KITCHEN',
-      type: orderTypeStr,
-      tableId,
-      tableLabel: selectedTableLabel || undefined,
-      items: cartItems.map(c => ({
-        id: `${localId}-${c.itemId}`,
-        itemId: c.itemId,
-        name: c.name,
-        quantity: c.quantity,
-        unitPrice: c.unitPrice,
-        subtotal: c.subtotal,
-        item: { name: c.name },
-      })),
-      subtotal,
-      taxAmount,
-      discountAmount,
-      netAmount: total,
-      totalAmount: subtotal,
-      total,
-      notes,
-      createdAt: new Date().toISOString(),
-      cashierId: sessionObj.userId || sessionObj.cashierId,
-      shiftId: shift.shiftId ?? null,
-    };
-
-    // Prepend even if this query has no data yet (e.g. its first-ever fetch
-    // never landed because we're fully offline) — otherwise the ticket
-    // would silently fail to appear anywhere until a later successful sync.
-    menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-      [optimisticOrder, ...(Array.isArray(old) ? old : [])]
-    );
+    // Tickets/Home now read live orders straight from lib/core/views.ts
+    // (populated synchronously by the commands above) — no separate
+    // TanStack cache to paint here anymore, which also removes the class of
+    // bug where that cache and the view store could disagree about an
+    // order's real id.
+    const localOrder = useViews.getState().orders[localId];
 
     // Print the KOT NOW, from data we already have — the kitchen needs the
     // ticket the instant this is tapped, not after a round trip to the
@@ -689,7 +660,7 @@ function OrderEntryPageContent() {
     // prints with the temp one. This used to wait for the POST to resolve,
     // which silently reintroduced the exact "kitchen waits on the network"
     // problem this whole optimistic flow exists to remove.
-    printKOT(optimisticOrder, orderTypeStr, sessionObj, cartItems, notes);
+    printKOT(localOrder ?? { orderNumber }, orderTypeStr, sessionObj, cartItems, notes);
 
     toast.success('Order sent to kitchen!');
     if (isHeld && rawOrderId) {
@@ -738,29 +709,21 @@ function OrderEntryPageContent() {
       if (!res.ok) throw new Error(await res.text());
 
       const order = await res.json();
-      // Reconcile against the real order: id MUST become the real server
-      // id — every other screen (Tickets, Home, KDS) reads this cache and
-      // uses `id` to PUT/PATCH against /api/orders/:id, which the server
-      // has never heard of under the client-generated id. Only orderNumber
-      // stays the client-owned permanent one; everything else (including
-      // id) takes the server's values. reconcileServerId still records the
-      // mapping in views.ts for anything reading the event-sourced store
-      // directly instead of this cache.
+      // id stays the permanent client-generated one everywhere in the view
+      // — reconcileServerId just records the real server id separately, for
+      // whatever later PUTs/PATCHes this order (payment, append-items,
+      // mark ready). orderNumber was already correct from creation.
       reconcileServerId(localId, order.id);
-      menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-        Array.isArray(old) ? old.map((o: any) => (o.id === localId ? { ...order, orderNumber } : o)) : old
-      );
     } catch (err) {
-      // Never silently drop an order the cashier already walked away from —
-      // queue it the same way an upfront-detected offline failure already
-      // does, regardless of whether navigator.onLine agrees (a request can
-      // fail for reasons other than being offline, e.g. a cold Neon DB
-      // timing out). The ticket already on screen gets removed and
-      // re-added via the offline queue's own sync, so the visible list
-      // stays consistent with what's actually pending.
-      menuQueryClient.setQueriesData({ queryKey: ['swr-active-orders'] }, (old: any) =>
-        Array.isArray(old) ? old.filter((o: any) => o.id !== localId) : old
-      );
+      // Never silently drop an order the cashier already walked away from.
+      // The order stays visible in the view (it's real — items were sent to
+      // the kitchen) but flagged as not yet confirmed by the server, same
+      // signal the offline-payment/item-add badges already use elsewhere.
+      const s = useViews.getState();
+      const stillThere = s.orders[localId];
+      if (stillThere) {
+        s._setSnapshot({ orders: { ...s.orders, [localId]: { ...stillThere, syncState: 'DEGRADED' } } });
+      }
 
       let offlineModeEnabled = true;
       try {

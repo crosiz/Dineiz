@@ -6,7 +6,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { getDB } from '@/lib/db';
 import { startBackgroundSync } from '@/lib/sync';
-import { rebuildViews, seedTablesFromServer } from '@/lib/core/views';
+import { useViews, rebuildViews, seedTablesFromServer, refreshOrders } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
@@ -150,9 +150,22 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // no network) so orders created earlier this session are already there
     // before any screen reads from it, then seed table reference data from
     // the server the same way ClientTableMap/useSWRTables already do.
-    rebuildViews().catch(console.error);
-    const s = getPosSession();
-    if (s?.branchId) seedTablesFromServer(s.branchId).catch(console.error);
+    rebuildViews().then(() => {
+      const s = getPosSession();
+      if (!s?.branchId) return;
+      // Views must be replayed first (above) before merging server data in
+      // — refreshOrders needs to see any locally-pending orders already in
+      // the store so it doesn't drop them while merging the server's list.
+      seedTablesFromServer(s.branchId).catch(console.error);
+      refreshOrders(s.branchId).catch(console.error);
+    }).catch(console.error);
+
+    // Prefetch every POS route bundle right after login so tab switching
+    // doesn't pay Next.js's lazy-chunk-load cost the first time each tab is
+    // visited — the data is already instant via useViews; this removes the
+    // remaining bundle-fetch latency too.
+    ['/pos/home', '/pos/order', '/pos/tickets', '/pos/tables', '/pos/stock', '/pos/admin', '/pos/kds']
+      .forEach((r) => router.prefetch(r));
 
     return () => {
       cleanupSync && cleanupSync();
@@ -220,16 +233,56 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       socket.emit('join_tenant', s.tenantId);
     }
 
+    // No inbox yet (that's the multi-terminal phase, not built) — until
+    // then, the simplest correct thing a remote order/table event can do is
+    // trigger a full refetch-and-merge rather than try to hand-apply a
+    // partial remote event to local view state.
+    const branchId = s?.branchId;
+    const onOrderChanged = () => { if (branchId) refreshOrders(branchId).catch(console.error); };
+    const onTableChanged = () => { if (branchId) seedTablesFromServer(branchId).catch(console.error); };
+
+    // Waiter assignment (from AssignWaiterSheet, possibly on another
+    // terminal) is a remote fact — patched directly into the table view,
+    // same as seedTablesFromServer, not routed through commands.assignWaiter
+    // (that would incorrectly record it as *this* terminal's own action).
+    const onOrderAssigned = (data: { tableId: string; assignedWaiterId: string; assignedWaiterName: string; assignedWaiterColor?: string }) => {
+      const t = useViews.getState().tables[data.tableId];
+      if (!t) return;
+      useViews.getState()._setSnapshot({
+        tables: {
+          ...useViews.getState().tables,
+          [data.tableId]: {
+            ...t,
+            assignedWaiterId: data.assignedWaiterId,
+            assignedWaiterName: data.assignedWaiterName,
+            assignedWaiterColor: data.assignedWaiterColor ?? t.assignedWaiterColor,
+          },
+        },
+      });
+    };
+
     socket.on('menu:published', handleMenuPublished);
     socket.on('menu:price_changed', handleMenuPriceChanged);
     socket.on('tenant:branding_updated', handleBrandingUpdated);
     socket.on('tenant:settings_updated', handleSettingsUpdated);
+    socket.on('order:assigned', onOrderAssigned);
+    socket.on('order:created', onOrderChanged);
+    socket.on('order:status_changed', onOrderChanged);
+    socket.on('order:updated', onOrderChanged);
+    socket.on('order:cancelled', onOrderChanged);
+    socket.on('table:status_changed', onTableChanged);
 
     return () => {
       socket.off('menu:published', handleMenuPublished);
       socket.off('menu:price_changed', handleMenuPriceChanged);
       socket.off('tenant:branding_updated', handleBrandingUpdated);
       socket.off('tenant:settings_updated', handleSettingsUpdated);
+      socket.off('order:assigned', onOrderAssigned);
+      socket.off('order:created', onOrderChanged);
+      socket.off('order:status_changed', onOrderChanged);
+      socket.off('order:updated', onOrderChanged);
+      socket.off('order:cancelled', onOrderChanged);
+      socket.off('table:status_changed', onTableChanged);
     };
   }, [socket, queryClient]);
 

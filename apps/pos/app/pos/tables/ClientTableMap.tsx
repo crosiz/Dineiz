@@ -12,6 +12,8 @@ import { useCartStore } from '@/lib/store';
 import { getDB } from '@/lib/db';
 import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
+import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views';
+import { setTableStatus } from '@/lib/core/commands';
 import {
   ZoomIn,
   ZoomOut,
@@ -56,11 +58,28 @@ export default function ClientTableMap() {
 
   const { socket } = useSocket();
 
-  // Core Floor & Table State
-  const [tables, setTables] = useState<TableData[]>([]);
-  const [floors, setFloors] = useState<number[]>([1]);
+  // Phase 2: floor & table state reads from the shared event-derived store
+  // (lib/core/views.ts) instead of its own fetch+cache — the same store
+  // HomeDashboard's mini floor-plan now reads from too, so a table freed
+  // here shows up there instantly and vice versa, with no fetch either way.
+  const viewTables = useViews((s) => s.tables);
+  const tables: TableData[] = useMemo(
+    () => Object.values(viewTables).map((t) => ({
+      id: t.id, label: t.label, capacity: t.capacity, shape: t.shape,
+      x: t.x, y: t.y, width: t.width, height: t.height,
+      status: t.status, floor: t.floorNumber,
+      occupiedSince: t.occupiedSince,
+      assignedWaiterId: t.assignedWaiterId,
+      assignedWaiterName: t.assignedWaiterName,
+      assignedWaiterColor: t.assignedWaiterColor,
+    })),
+    [viewTables]
+  );
+  const floors = useMemo(() => {
+    const extracted = Array.from(new Set(tables.map((t) => t.floor || 1))).sort((a, b) => a - b);
+    return extracted.length > 0 ? extracted : [1];
+  }, [tables]);
   const [activeFloor, setActiveFloor] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Canvas Zoom & Pan State
   const [zoomLevel, setZoomLevel] = useState<number>(1.0);
@@ -118,126 +137,27 @@ export default function ClientTableMap() {
     showBackButton: false,
   });
 
-  // Fetch tables and initial statuses
-  const fetchTables = useCallback(async () => {
-    if (!branchId) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const token = getToken();
-
-      const res = await fetch(`${API_URL}/api/floor-plan/${branchId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => null);
-
-      let data: any = null;
-      if (res?.ok) {
-        const plan = await res.json();
-        data = plan.tables || [];
-      }
-
-      if (data) {
-        const rawTables: TableData[] = (Array.isArray(data) ? data : data.tables || []).map((t: any) => ({
-          id: t.id,
-          label: t.label,
-          capacity: t.capacity || 4,
-          shape: t.shape || 'square',
-          x: t.positionX ?? t.x ?? 100,
-          y: t.positionY ?? t.y ?? 100,
-          width: t.width || 88,
-          height: t.height || 88,
-          status: (t.status || 'FREE').toUpperCase(),
-          floor: t.floorNumber || t.floor || 1,
-          occupiedSince: t.occupiedSince || t.since,
-          assignedWaiterId: t.assignedWaiterId,
-          assignedWaiterName: t.assignedWaiterName,
-          assignedWaiterColor: t.assignedWaiterColor,
-        }));
-
-        setTables(rawTables);
-
-        const extractedFloors = Array.from(new Set(rawTables.map((t) => t.floor || 1))).sort((a, b) => a - b);
-        if (extractedFloors.length > 0) {
-          setFloors(extractedFloors);
-        }
-
-        // Cache for instant paint on the next visit to this branch's floor plan
-        getDB().ordersCache.put({
-          cacheKey: `floor-plan-${branchId}`,
-          data: rawTables,
-          cachedAt: Date.now(),
-        }).catch(() => {});
-      }
-    } catch (err) {
-      console.error('Failed to fetch table map:', err);
-    } finally {
-      setIsLoading(false);
-    }
+  // Refresh table reference data from the server into the shared store —
+  // same function POSLayout.tsx calls at bootstrap and on table:status_changed;
+  // called again here on mount so opening this screen doesn't wait on the
+  // bootstrap timing, but it's still the shared seeder, not a screen-local
+  // fetch. Remote-driven updates (table:status_changed, order:assigned) are
+  // now handled centrally in POSLayout.tsx so every screen — not just this
+  // one — stays in sync from a single listener.
+  useEffect(() => {
+    if (branchId) seedTablesFromServer(branchId).catch(console.error);
   }, [branchId]);
 
-  // Paint instantly from the IndexedDB cache (if any) while the network
-  // fetch below runs in the background — avoids a fresh blank load every time.
+  // Keep the selected table's popup live if its underlying view data
+  // changes while the popup is open (e.g. another terminal frees it, or a
+  // waiter gets assigned) — replaces the old per-socket-event manual patch.
   useEffect(() => {
-    if (!branchId) return;
-    let cancelled = false;
-    getDB().ordersCache.get(`floor-plan-${branchId}`).then((cached) => {
-      if (cancelled || !cached || !Array.isArray(cached.data) || cached.data.length === 0) return;
-      setTables(cached.data);
-      const extractedFloors = Array.from(new Set(cached.data.map((t: any) => t.floor || 1))).sort((a: number, b: number) => a - b);
-      if (extractedFloors.length > 0) setFloors(extractedFloors);
-      setIsLoading(false);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [branchId]);
-
-  useEffect(() => {
-    fetchTables();
-  }, [fetchTables]);
-
-  // Real-Time Socket.IO Listener for table:status_changed
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleStatusChanged = (data: { tableId: string; status: string; occupiedSince?: any }) => {
-      const newStatus = (data.status || 'FREE').toUpperCase();
-      setTables((prev) =>
-        prev.map((t) =>
-          t.id === data.tableId
-            ? { ...t, status: newStatus, occupiedSince: data.occupiedSince ?? t.occupiedSince }
-            : t
-        )
-      );
-
-      if (selectedTable && selectedTable.id === data.tableId) {
-        setSelectedTable((prev) =>
-          prev ? { ...prev, status: newStatus, occupiedSince: data.occupiedSince ?? prev.occupiedSince } : null
-        );
-      }
-    };
-
-    socket.on('table:status_changed', handleStatusChanged);
-    
-    const handleOrderAssigned = (data: { tableId: string, assignedWaiterId: string, assignedWaiterName: string, assignedWaiterColor?: string }) => {
-      setTables(prev => prev.map(t => 
-        t.id === data.tableId 
-          ? { ...t, assignedWaiterId: data.assignedWaiterId, assignedWaiterName: data.assignedWaiterName, assignedWaiterColor: data.assignedWaiterColor } 
-          : t
-      ));
-      if (selectedTable && selectedTable.id === data.tableId) {
-        setSelectedTable(prev => prev ? { ...prev, assignedWaiterId: data.assignedWaiterId, assignedWaiterName: data.assignedWaiterName, assignedWaiterColor: data.assignedWaiterColor } : null);
-      }
-      setPopupOrder((prev: any) => prev && prev.tableId === data.tableId ? { ...prev, assignedWaiterId: data.assignedWaiterId, assignedWaiterName: data.assignedWaiterName, assignedWaiterColor: data.assignedWaiterColor } : prev);
-    };
-    
-    socket.on('order:assigned', handleOrderAssigned);
-    
-    return () => {
-      socket.off('table:status_changed', handleStatusChanged);
-      socket.off('order:assigned', handleOrderAssigned);
-    };
-  }, [socket, selectedTable]);
+    if (!selectedTable) return;
+    const live = tables.find((t) => t.id === selectedTable.id);
+    if (live && (live.status !== selectedTable.status || live.assignedWaiterId !== selectedTable.assignedWaiterId)) {
+      setSelectedTable(live);
+    }
+  }, [tables, selectedTable]);
 
   // Fetch active order for occupied tables — paints instantly from cache
   // (if this table's order was already viewed this session) while the
@@ -325,9 +245,7 @@ export default function ClientTableMap() {
       });
 
       if (res.ok) {
-        setTables((prev) =>
-          prev.map((t) => (t.id === tableId ? { ...t, status: 'FREE', occupiedSince: undefined } : t))
-        );
+        await setTableStatus(tableId, 'FREE');
         toast.success('Table marked as Free');
         setSelectedTable(null);
       } else {
@@ -409,9 +327,7 @@ export default function ClientTableMap() {
         body: JSON.stringify({ status: 'BILL_REQUESTED' }),
       });
 
-      setTables((prev) =>
-        prev.map((t) => (t.id === selectedTable.id ? { ...t, status: 'BILL_REQUESTED' } : t))
-      );
+      await setTableStatus(selectedTable.id, 'BILL_REQUESTED');
 
       toast.success('Table updated to Bill Requested');
     } catch {
@@ -619,15 +535,6 @@ export default function ClientTableMap() {
           </button>
         </div>
 
-        {/* Loading Spinner */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center z-50">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="w-8 h-8 text-amber-600 animate-spin" />
-              <span className="text-sm font-semibold text-slate-700">Loading Floor Plan...</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── ASSIGN WAITER SHEET ────────────────────────────────────────────── */}

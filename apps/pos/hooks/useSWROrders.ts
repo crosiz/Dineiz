@@ -41,6 +41,14 @@ interface UseSWROrdersOptions {
   historySearch: string;
   /** Poll interval in ms while live mode is active (default: 15 000) */
   refetchIntervalMs?: number;
+  /**
+   * Set false to skip fetching/polling entirely (e.g. TicketsDashboard now
+   * reads live orders from lib/core/views.ts's shared store instead — this
+   * hook is only still needed there for history mode, and would otherwise
+   * keep polling '/api/orders/live' in the background for nothing).
+   * Defaults true — no behavior change for existing callers.
+   */
+  enabled?: boolean;
 }
 
 interface UseSWROrdersResult {
@@ -66,6 +74,7 @@ export function useSWROrders({
   sortOrder,
   historySearch,
   refetchIntervalMs = 15_000,
+  enabled = true,
 }: UseSWROrdersOptions): UseSWROrdersResult {
   // Composite key — one cache slot per (mode × branch)
   const cacheKey = `${dataMode}-${branchId ?? 'none'}`;
@@ -174,7 +183,7 @@ export function useSWROrders({
       writeCache(cacheKey, fresh);
       return fresh;
     },
-    enabled: idbChecked && !!branchId,
+    enabled: enabled && idbChecked && !!branchId,
     initialData,
     initialDataUpdatedAt,
     // 30 s freshness window — if IDB data is < 30 s old, no immediate refetch
