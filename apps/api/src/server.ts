@@ -56,6 +56,7 @@ import { initSmsWorker } from './jobs/sms.worker';
 import { processAbandonedShifts } from './jobs/abandonedShifts';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
+import { startKeepAlive } from './jobs/keep-alive.job';
 import { anomalyQueue, reportsQueue, inventoryQueue } from './lib/queue';
 import { sendManagerInviteEmail, sendPasswordResetEmail, sendAnomalyAlertEmail, sendScheduledReportEmail } from './lib/email.service';
 
@@ -333,6 +334,12 @@ async function start() {
     }, 60 * 60 * 1000);
     // Also run once on startup
     processAbandonedShifts().catch(e => app.log.error('Abandoned shifts job failed on startup', e));
+
+    // Written and documented (CLAUDE.md: "Keep-alive ping every 4 minutes
+    // to prevent Neon DB cold starts") but never actually called — the dev
+    // DB's repeated cold-start/connection-pool-exhaustion symptoms this
+    // session line up exactly with that.
+    startKeepAlive();
 
   } catch (err) {
     fastify.log.error(err);

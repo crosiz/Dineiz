@@ -2,6 +2,7 @@ import { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { prisma } from "@dineiz/db";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
+import { applyOrderStatusSideEffects } from "../order/order.service";
 
 export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('preHandler', mobileAuthMiddleware);
@@ -95,8 +96,7 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return reply.status(400).send({ success: false, error: "No valid menu items in order payload" });
       }
 
-      const count = await prisma.order.count({ where: { tenantId: mobileUserReq.tenantId } });
-      const orderNumber = `ORD-${1000 + count + 1}`;
+      let orderNumber = `ORD-${1000 + (await prisma.order.count({ where: { tenantId: mobileUserReq.tenantId } })) + 1}`;
 
       // Resolve table if tableName provided
       let resolvedTableId = data.tableId;
@@ -115,34 +115,50 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         notesContent = `${notesContent} [Payment:${data.paymentMethod}]`.trim();
       }
 
-      const order = await prisma.order.create({
-        data: {
-          tenantId: mobileUserReq.tenantId,
-          branchId: mobileUserReq.branchId,
-          orderNumber,
-          totalAmount: data.totalAmount,
-          discountAmount: data.discountAmount,
-          taxAmount: data.taxAmount,
-          netAmount: data.netAmount,
-          type: data.type as any,
-          status: data.status || 'PENDING',
-          tableId: resolvedTableId,
-          notes: idempotencyKey ? `${notesContent} [Idemp:${idempotencyKey}]` : notesContent,
-          createdAt,
-          items: {
-            create: validItems.map((i: any) => ({
-              itemId: i.itemId,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-              subtotal: i.subtotal,
-              notes: i.notes
-            }))
-          }
-        },
-        include: { items: { include: { item: true } }, table: true }
-      });
+      // orderNumber has a @@unique([tenantId, orderNumber]) constraint —
+      // this count()-based scheme is a classic TOCTOU race under concurrent
+      // creates, and shares the same "ORD-" prefix as the POS's Redis-based
+      // generator, so it can also collide with a POS-created order. Retry
+      // with a freshly recomputed number on that specific violation.
+      let order;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          order = await prisma.order.create({
+            data: {
+              tenantId: mobileUserReq.tenantId,
+              branchId: mobileUserReq.branchId,
+              orderNumber,
+              totalAmount: data.totalAmount,
+              discountAmount: data.discountAmount,
+              taxAmount: data.taxAmount,
+              netAmount: data.netAmount,
+              type: data.type as any,
+              status: data.status || 'PENDING',
+              tableId: resolvedTableId,
+              notes: idempotencyKey ? `${notesContent} [Idemp:${idempotencyKey}]` : notesContent,
+              createdAt,
+              items: {
+                create: validItems.map((i: any) => ({
+                  itemId: i.itemId,
+                  quantity: i.quantity,
+                  unitPrice: i.unitPrice,
+                  subtotal: i.subtotal,
+                  notes: i.notes
+                }))
+              }
+            },
+            include: { items: { include: { item: true } }, table: true }
+          });
+          break;
+        } catch (e: any) {
+          const isOrderNumberCollision = e?.code === 'P2002' && e?.meta?.target?.includes?.('orderNumber');
+          if (!isOrderNumberCollision || attempt >= 2) throw e;
+          orderNumber = `ORD-${1000 + (await prisma.order.count({ where: { tenantId: mobileUserReq.tenantId } })) + 1}`;
+        }
+      }
 
       // Create Payment entry if paymentMethod is supplied and status is COMPLETED
+      let paymentsForSideEffects: Array<{ method: string; amount: number; status: string }> | undefined;
       if (data.paymentMethod && data.status === 'COMPLETED') {
         try {
           const pm = (data.paymentMethod === 'CARD' ? 'CARD' : 'CASH') as any;
@@ -154,9 +170,20 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
               status: 'COMPLETED'
             }
           });
+          paymentsForSideEffects = [{ method: pm, amount: data.totalAmount, status: 'COMPLETED' }];
         } catch (e) {
           console.warn("Failed to create payment record:", e);
         }
+      }
+
+      // A mobile order can be created already COMPLETED (e.g. a walk-in
+      // logged after the fact) — nothing else will ever PUT this order
+      // afterward, so this is the only chance for inventory/loyalty/deal
+      // side effects to run for it.
+      if (order.status === 'COMPLETED') {
+        await applyOrderStatusSideEffects(mobileUserReq.tenantId, order, null, {
+          payments: paymentsForSideEffects,
+        });
       }
 
       return { success: true, data: order };
@@ -280,21 +307,34 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         include: { items: { include: { item: true } }, table: true, payments: true }
       });
 
+      let paymentsForSideEffects: Array<{ method: string; amount: number; status: string }> | undefined;
       if (paymentMethod && status === 'COMPLETED') {
         try {
           const pm = (paymentMethod === 'CARD' ? 'CARD' : 'CASH') as any;
+          const amount = typeof totalAmount === 'number' ? totalAmount : order.totalAmount;
           await prisma.payment.create({
             data: {
               orderId: order.id,
-              amount: typeof totalAmount === 'number' ? totalAmount : order.totalAmount,
+              amount,
               method: pm,
               status: 'COMPLETED'
             }
           });
+          paymentsForSideEffects = [{ method: pm, amount, status: 'COMPLETED' }];
         } catch (e) {
           console.warn("Payment entry error:", e);
         }
       }
+
+      // This used to be a raw prisma.order.update() with no follow-up at
+      // all — an order marked COMPLETED from the mobile app never got
+      // inventory deducted, loyalty earned, deal counters bumped, or
+      // Zapier/ERP notified, and one marked CANCELLED never had its
+      // inventory reversed. Same shared helper the POS PUT path and KDS
+      // now both go through.
+      await applyOrderStatusSideEffects(mobileUserReq.tenantId, updated, order.status, {
+        payments: paymentsForSideEffects,
+      });
 
       return {
         success: true,

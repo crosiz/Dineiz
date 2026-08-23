@@ -1,5 +1,6 @@
 import { prisma } from '@dineiz/db';
-import { emitOrderUpdated, emitOrderCancelled } from '../../lib/socket';
+import { emitOrderUpdated } from '../../lib/socket';
+import { applyOrderStatusSideEffects } from '../order/order.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -272,7 +273,13 @@ async function transitionOrder(tenantId: string, id: string, fromStatus: string 
     data: { status: toStatus as any },
     include: ORDER_INCLUDE,
   });
-  emitOrderUpdated(tenantId, order.branchId, order);
+  // Table status, cache invalidation, and — when this transition reaches
+  // COMPLETED (deliverOrder below) — the inventory/loyalty/deal/Zapier/ERP
+  // bundle that used to only ever run from the PUT /api/orders/:id path.
+  // applyOrderStatusSideEffects already emits order:updated/order:cancelled
+  // itself, so the standalone emitOrderUpdated call this used to end with
+  // is gone — it's now inside the shared helper.
+  await applyOrderStatusSideEffects(tenantId, order, existing.status, {});
   return order;
 }
 
@@ -325,7 +332,7 @@ export async function bumpOrder(tenantId: string, fullId: string) {
       data: { status: 'READY' },
       include: ORDER_INCLUDE,
     });
-    emitOrderUpdated(tenantId, order.branchId, order);
+    await applyOrderStatusSideEffects(tenantId, order, existing.status, {});
     return order;
   } else {
     const order = await prisma.order.findUnique({
@@ -341,11 +348,12 @@ export const recallOrder  = (tenantId: string, id: string) => transitionOrder(te
 export const deliverOrder = (tenantId: string, id: string) => transitionOrder(tenantId, id, 'READY',      'COMPLETED');
 
 export async function cancelOrderKds(tenantId: string, id: string, reason?: string) {
+  const existing = await prisma.order.findUnique({ where: { id, tenantId }, select: { status: true } });
   const order = await prisma.order.update({
     where: { id, tenantId },
     data: { status: 'CANCELLED', notes: reason },
   });
-  emitOrderCancelled(tenantId, order.branchId, order.id);
+  await applyOrderStatusSideEffects(tenantId, order, existing?.status ?? null, {});
   return order;
 }
 

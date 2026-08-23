@@ -1,12 +1,12 @@
 import { prisma } from '@dineiz/db';
 import { upstash } from '../../lib/redis';
 import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerator';
-import { emitDashboardStatsUpdated } from '../../lib/socket';
+import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled, emitTableStatusChanged } from '../../lib/socket';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
 import { enqueueZapierEvent } from '../../lib/webhooks';
 import { erpSyncQueue, analyticsQueue } from '../../lib/queue';
 import { redeemLoyaltyForOrder, earnLoyaltyForOrder } from '../loyalty/loyalty.service';
-import { deductInventoryForOrder } from '../inventory/inventory.service';
+import { deductInventoryForOrder, reverseOrDiscardInventoryForCancelledOrder } from '../inventory/inventory.service';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { getTodayOrdersWhere } from '../../lib/date-utils';
 import { recordOrderCompleted, recordOrderVoided } from '../shift/shift-activity';
@@ -241,20 +241,39 @@ export async function createOrder(
   // round-trips a single order create + include triggers can exceed that
   // and abort the whole order with a P2028 error. Calling create() directly
   // keeps the same atomicity guarantee without either problem.
-  const order = await prisma.order.create({
-    data: {
-      ...orderData,
-      tenantId,
-      branchId,
-      orderNumber,
-      tokenNumber,
-      ...taxAuditFields,
-      items: { create: routedItems },
-      ...(payments?.length > 0 && { payments: { create: payments } }),
-      ...(orderDeals?.length > 0 && { orderDeals: { create: orderDeals } }),
-    },
-    include: { items: true, payments: true, orderDeals: true },
-  });
+  //
+  // orderNumber now has a @@unique([tenantId, orderNumber]) constraint —
+  // generateOrderNumber()'s Redis INCR is collision-free on its own, but its
+  // fallback (used when Redis is unreachable) truncates Date.now() to a few
+  // digits and can collide under concurrent orders. Retry with a freshly
+  // generated number on that specific violation rather than surface a raw
+  // 500 to the cashier for what's really just a naming collision.
+  let currentOrderNumber = orderNumber;
+  let order;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      order = await prisma.order.create({
+        data: {
+          ...orderData,
+          tenantId,
+          branchId,
+          orderNumber: currentOrderNumber,
+          tokenNumber,
+          ...taxAuditFields,
+          items: { create: routedItems },
+          ...(payments?.length > 0 && { payments: { create: payments } }),
+          ...(orderDeals?.length > 0 && { orderDeals: { create: orderDeals } }),
+        },
+        include: { items: true, payments: true, orderDeals: true },
+      });
+      break;
+    } catch (e: any) {
+      const isOrderNumberCollision = e?.code === 'P2002' && e?.meta?.target?.includes?.('orderNumber');
+      if (!isOrderNumberCollision || attempt >= 2) throw e;
+      console.warn(`[createOrder] orderNumber collision on "${currentOrderNumber}", regenerating (attempt ${attempt + 1})`);
+      currentOrderNumber = await generateOrderNumber(tenantId);
+    }
+  }
 
   // Auto-create/update customer profile — fire-and-forget, doesn't need to
   // complete before the order is returned and sent to the kitchen.
@@ -858,17 +877,24 @@ export async function enqueueOrderEvents(
       }).catch(() => {});
       emitDashboardStatsUpdated(tenantId, order.branchId);
 
-      // Update Deal usage counters
+      // Update Deal usage counters — one round trip per deal line
+      // sequentially used to serialize N DB calls that don't depend on each
+      // other; running them concurrently is safe since each is its own
+      // atomic increment (Postgres handles concurrent increments on the
+      // same row correctly, so two lines using the same deal just both add
+      // 1, same net result as before).
       try {
         const orderDeals = await prisma.orderDeal.findMany({ where: { orderId: order.id } });
-        for (const od of orderDeals) {
-          if (od.dealId) {
-            await prisma.deal.updateMany({
-              where: { id: od.dealId },
-              data: { usedCount: { increment: 1 } }
-            });
-          }
-        }
+        await Promise.all(
+          orderDeals
+            .filter((od) => od.dealId)
+            .map((od) =>
+              prisma.deal.updateMany({
+                where: { id: od.dealId! },
+                data: { usedCount: { increment: 1 } },
+              })
+            )
+        );
       } catch (e) {
         console.error('Failed to update deal usage:', e);
       }
@@ -876,6 +902,59 @@ export async function enqueueOrderEvents(
   } else if (payments && payments.length > 0) {
     emitDashboardStatsUpdated(tenantId, order.branchId);
   }
+}
+
+// Everything that has to happen after ANY order status write, regardless of
+// which route drove it. Originally only handleUpdateOrder (PUT
+// /api/orders/:id) ran this — the KDS "deliver"/"cancel" transitions
+// (kds.service.ts) and the mobile app's status-update endpoint
+// (mobile/orders.ts) each did their own raw prisma.order.update() and
+// skipped all of it. Concretely, that meant: an order marked COMPLETED via
+// KDS never got inventory deducted, loyalty earned, deal counters bumped,
+// or Zapier/ERP notified; an order CANCELLED via KDS never got its
+// inventory reversed or a cancellation event recorded; and neither path
+// invalidated the live-orders cache, so other terminals could keep seeing
+// stale data after a KDS action. Unifying on this one function is the fix —
+// every order-mutating path now funnels through the same side effects.
+export async function applyOrderStatusSideEffects(
+  tenantId: string,
+  order: any,
+  priorStatus: string | null,
+  options: { payments?: any[]; redeemedPointsAmount?: number } = {}
+) {
+  if (order.status === 'CANCELLED' && priorStatus && priorStatus !== 'CANCELLED') {
+    reverseOrDiscardInventoryForCancelledOrder(order.id, priorStatus).catch((e: any) => console.error('Inventory Reversal Error:', e));
+  }
+
+  if (order.status === 'CANCELLED') {
+    emitOrderCancelled(tenantId, order.branchId, order.id);
+  } else {
+    emitOrderUpdated(tenantId, order.branchId, order);
+  }
+
+  if (order.tableId) {
+    // Fire-and-forget: don't make the caller wait on this write before it
+    // sees the order update confirmed.
+    let newTableStatus: 'occupied' | 'free' | null = null;
+    if (order.status === 'READY') newTableStatus = 'occupied';
+    else if (order.status === 'COMPLETED' || order.status === 'CANCELLED') newTableStatus = 'free';
+
+    if (newTableStatus) {
+      prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: newTableStatus } })
+        .then(() => {
+          emitTableStatusChanged(order.branchId, {
+            tableId: order.tableId,
+            status: newTableStatus,
+            ...(newTableStatus === 'occupied' ? { orderId: order.id, since: order.createdAt.toISOString() } : {}),
+          }, tenantId);
+        })
+        .catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
+    }
+  }
+
+  invalidateLiveOrdersCache(tenantId, order.branchId);
+
+  await enqueueOrderEvents(tenantId, order, options.payments, options.redeemedPointsAmount);
 }
 
 export async function assignOrder(tenantId: string, id: string, data: { waiterId: string; waiterName: string }) {
