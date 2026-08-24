@@ -17,24 +17,17 @@ const POS_LOGIN_ROLES = ['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF',
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 export const staffSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email address').optional().or(z.literal('')),
-  phone: z.string().optional().or(z.literal('')),
+  name: z.string().min(2, 'Name is required'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
   role: z.enum(['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF', 'RIDER', 'WORKER', 'COOK', 'GUARD']),
   branchId: z.string().min(1, 'Branch assignment is required'),
   // Dashboard password (Branch Manager only)
-  password: z.string().optional().or(z.literal('')),
+  password: z.string().optional(),
   // POS PIN (all other roles)
-  posPin: z.string().optional().or(z.literal('')),
+  posPin: z.string().optional(),
 }).superRefine((data, ctx) => {
   if ((DASHBOARD_LOGIN_ROLES as readonly string[]).includes(data.role)) {
-    if (!data.email || !data.email.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Email is required for branch managers',
-        path: ['email'],
-      });
-    }
     if (!data.password || data.password.length < 8) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -43,7 +36,7 @@ export const staffSchema = z.object({
       });
     }
   }
-  
+
   if ((POS_LOGIN_ROLES as readonly string[]).includes(data.role)) {
     if (!data.posPin || data.posPin.length !== 4) {
       ctx.addIssue({
@@ -81,17 +74,15 @@ function PasswordStrengthBar({ password }: { password: string }) {
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-              i <= score ? color : 'bg-slate-200'
-            }`}
+            className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= score ? color : 'bg-slate-200'
+              }`}
           />
         ))}
       </div>
-      <p className={`text-xs font-medium ${
-        label === 'Weak' ? 'text-red-500' :
+      <p className={`text-xs font-medium ${label === 'Weak' ? 'text-red-500' :
         label === 'Fair' ? 'text-amber-500' :
-        label === 'Good' ? 'text-yellow-600' : 'text-green-600'
-      }`}>{label}</p>
+          label === 'Good' ? 'text-yellow-600' : 'text-green-600'
+        }`}>{label}</p>
     </div>
   );
 }
@@ -111,10 +102,10 @@ function DashboardPasswordField() {
         <input
           {...register('password')}
           type={showPw ? 'text' : 'password'}
+          placeholder="Min. 8 characters"
           autoComplete="new-password"
-          className={`w-full h-10 px-4 pr-11 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
-            errors.password ? 'border-red-300' : 'border-slate-200'
-          }`}
+          className={`w-full h-10 px-4 pr-11 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.password ? 'border-red-300' : 'border-slate-200'
+            }`}
         />
         <button
           type="button"
@@ -195,11 +186,10 @@ function POSPINField() {
             value={pin[index] || ''}
             onChange={(e) => handleChange(index, e)}
             onKeyDown={(e) => handleKeyDown(index, e)}
-            className={`w-12 h-14 border-2 rounded-xl text-center text-xl font-bold outline-none transition-colors ${
-              errors.posPin
-                ? 'border-red-300 focus:border-red-500 bg-red-50'
-                : 'border-slate-200 focus:border-[#ff5722]'
-            }`}
+            className={`w-12 h-14 border-2 rounded-xl text-center text-xl font-bold outline-none transition-colors ${errors.posPin
+              ? 'border-red-300 focus:border-red-500 bg-red-50'
+              : 'border-slate-200 focus:border-[#ff5722]'
+              }`}
           />
         ))}
       </div>
@@ -308,9 +298,9 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 </label>
                 <input
                   {...register('name')}
-                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
-                    errors.name ? 'border-red-300' : 'border-slate-200'
-                  }`}
+                  placeholder="e.g. John Doe"
+                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.name ? 'border-red-300' : 'border-slate-200'
+                    }`}
                 />
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
               </div>
@@ -323,9 +313,9 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 <input
                   {...register('email')}
                   type="email"
-                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
-                    errors.email ? 'border-red-300' : 'border-slate-200'
-                  }`}
+                  placeholder="john@example.com"
+                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.email ? 'border-red-300' : 'border-slate-200'
+                    }`}
                 />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
@@ -337,9 +327,9 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 </label>
                 <input
                   {...register('phone')}
-                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${
-                    errors.phone ? 'border-red-300' : 'border-slate-200'
-                  }`}
+                  placeholder="+1 (555) 000-0000"
+                  className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.phone ? 'border-red-300' : 'border-slate-200'
+                    }`}
                 />
               </div>
 

@@ -24,7 +24,7 @@ interface EditStaffModalProps {
 
 export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) {
   const { updateStaff } = useStaff();
-  
+
   const methods = useForm<EditStaffFormData>({
     resolver: zodResolver(editStaffSchema),
     defaultValues: {
@@ -66,14 +66,14 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Edit Staff Member</h2>
             <p className="text-sm text-slate-500 mt-1">Update details for {staff.name}</p>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
           >
@@ -85,7 +85,7 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
         <div className="p-6 overflow-y-auto">
           <FormProvider {...methods}>
             <form id="edit-staff-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
@@ -94,6 +94,7 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
                   <input
                     {...register('name')}
                     type="text"
+                    placeholder="e.g. Ali Khan"
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium"
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
@@ -106,6 +107,7 @@ export function EditStaffModal({ isOpen, onClose, staff }: EditStaffModalProps) 
                   <input
                     {...register('phone')}
                     type="tel"
+                    placeholder="e.g. +92 300 1234567"
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-sm font-medium"
                   />
                   {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
