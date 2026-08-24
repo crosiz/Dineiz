@@ -48,16 +48,17 @@ export default function AllClientsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Active Dropdown & Modal States
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [selectedClientForEditPlan, setSelectedClientForEditPlan] = useState<ClientItem | null>(null);
   const [newPlanValue, setNewPlanValue] = useState('STARTER');
   const [selectedClientForMessage, setSelectedClientForMessage] = useState<ClientItem | null>(null);
   const [messageSubject, setMessageSubject] = useState('');
   const [messageBodyText, setMessageBodyText] = useState('');
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const fetchClients = () => {
     setLoading(true);
+    setFetchError(null);
     const query = new URLSearchParams({
       search,
       plan: planFilter,
@@ -83,6 +84,7 @@ export default function AllClientsPage() {
       })
       .catch((err) => {
         console.error('Fetch clients error:', err);
+        setFetchError(err.message || 'Failed to load clients');
       })
       .finally(() => setLoading(false));
   };
@@ -208,6 +210,21 @@ export default function AllClientsPage() {
           </Link>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="p-4 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-200 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            onClick={fetchClients}
+            className="px-3 py-1.5 bg-red-800 hover:bg-red-700 text-white rounded-lg font-bold text-xs transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Filters Bar */}
       <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-2xl shadow-xl flex flex-col lg:flex-row gap-4 items-center justify-between">

@@ -8,10 +8,14 @@ export default function ChurnedPage() {
 
   useEffect(() => {
     fetch('/api/clients?status=CANCELLED')
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return res.json().catch(() => null);
+      })
       .then((d) => {
-        if (d.clients) setClients(d.clients);
-      });
+        if (d?.clients) setClients(d.clients);
+      })
+      .catch(() => {});
   }, []);
 
   return (

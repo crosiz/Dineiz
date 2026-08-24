@@ -111,7 +111,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ clients: formattedClients });
   } catch (error: any) {
     console.error('Clients API error:', error);
-    return NextResponse.json({ error: error?.message || 'Failed to fetch clients' }, { status: 500 });
+    return NextResponse.json({
+      error: error?.message || 'Failed to fetch clients',
+      details: error?.stack || String(error),
+    }, { status: 500 });
   }
 }
 
