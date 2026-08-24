@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       billingCycle = 'MONTHLY',
       trialDays = 14,
       trialEndsAt: customTrialEndsAt,
-      branchesCount = 1,
+      branchesCount = 0,
       city = 'Lahore',
       notes,
     } = body;
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
     else if (plan === 'PRO') planAmount = 15000;
     else if (plan === 'ENTERPRISE') planAmount = 35000;
 
-    // Transaction to create Tenant, Branches, User, Subscription
+    // Transaction to create Tenant, User, Subscription, Branding (and optional branches only if requested)
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
@@ -234,11 +234,12 @@ export async function POST(request: Request) {
         },
       });
 
-      // Generate branches with guaranteed unique codes
+      // Generate branches only if explicitly requested (default 0)
       const branches = [];
       const branchAccessCodes: { branchName: string; code: string }[] = [];
+      const numBranches = Math.max(0, Number(branchesCount) || 0);
 
-      for (let i = 1; i <= Math.max(1, Number(branchesCount)); i++) {
+      for (let i = 1; i <= numBranches; i++) {
         const branchCode = makeBranchCode(city);
         const branchName = i === 1 ? `${name.trim()} - Main Branch` : `${name.trim()} - Branch ${i}`;
 
@@ -256,11 +257,11 @@ export async function POST(request: Request) {
         branchAccessCodes.push({ branchName: branch.name, code: branchCode });
       }
 
-      // Create Tenant Admin User
+      // Create Tenant Admin User (branchId is null for organization owner)
       const user = await tx.user.create({
         data: {
           tenantId: tenant.id,
-          branchId: branches[0].id,
+          branchId: branches[0]?.id || null,
           name: ownerName.trim(),
           email: cleanEmail,
           password: hashedPassword,

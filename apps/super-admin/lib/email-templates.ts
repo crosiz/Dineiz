@@ -166,27 +166,42 @@ export function generateWelcomeEmailHtml(data: WelcomeEmailData): string {
             </td>
           </tr>
 
-          <!-- Branches & POS Access Codes Card -->
+          <!-- Branches & POS Access Codes Card (Conditional) -->
           <tr>
             <td class="content-padding" style="padding: 0 36px 28px 36px;">
               <div style="background-color: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 24px;">
-                <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">
-                  🏪 Initial Branch & POS Access Codes
-                </h3>
-                <p style="margin: 0 0 16px 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
-                  Use these access codes when connecting your POS terminal or KDS screens:
-                </p>
-
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; overflow: hidden;">
-                  ${branchItems}
-                </table>
-
-                <!-- Self-Serve Branches Clarification Banner -->
-                <div style="margin-top: 16px; background: #0f172a; border-left: 3px solid #ff5722; padding: 12px 14px; border-radius: 6px;">
-                  <p style="margin: 0; font-size: 12px; color: #e2e8f0; line-height: 1.5;">
-                    💡 <strong>Manage & Add More Branches:</strong> You have full control! You can create additional branches, update addresses, manage tables, and generate new POS terminals at any time from your <strong>Dashboard &gt; Branches</strong> page.
+                ${
+                  data.branches && data.branches.length > 0
+                    ? `
+                  <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">
+                    🏪 Initial Branch & POS Access Codes
+                  </h3>
+                  <p style="margin: 0 0 16px 0; font-size: 12px; color: #94a3b8; line-height: 1.5;">
+                    Use these access codes when connecting your POS terminal or KDS screens:
                   </p>
-                </div>
+                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; overflow: hidden; margin-bottom: 16px;">
+                    ${branchItems}
+                  </table>
+                  <div style="background: #0f172a; border-left: 3px solid #ff5722; padding: 12px 14px; border-radius: 6px;">
+                    <p style="margin: 0; font-size: 12px; color: #e2e8f0; line-height: 1.5;">
+                      💡 <strong>Manage & Add More Branches:</strong> You can create additional branches, update addresses, and generate new POS terminals at any time from your <strong>Dashboard &gt; Branches</strong> page.
+                    </p>
+                  </div>
+                `
+                    : `
+                  <h3 style="margin: 0 0 12px 0; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">
+                    🏪 Set Up Your Branches & POS Terminals
+                  </h3>
+                  <p style="margin: 0 0 16px 0; font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+                    Your account is fully activated. You have complete self-serve freedom to add your restaurant branches, configure floor tables, and generate POS access codes directly from your dashboard.
+                  </p>
+                  <div style="background: #0f172a; border-left: 3px solid #ff5722; padding: 12px 16px; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 12px; color: #f8fafc; line-height: 1.5;">
+                      💡 <strong>First Step:</strong> After signing in, go to <strong>Dashboard &gt; Branches</strong> and click <strong>"Add Branch"</strong> to set up your first location and get instant POS connection codes.
+                    </p>
+                  </div>
+                `
+                }
               </div>
             </td>
           </tr>

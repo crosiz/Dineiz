@@ -47,7 +47,6 @@ export default function AddNewClientPage() {
   const [billingCycle, setBillingCycle] = useState('MONTHLY');
   const [trialDays, setTrialDays] = useState('14');
   const [customTrialEndDate, setCustomTrialEndDate] = useState('');
-  const [branchesCount, setBranchesCount] = useState('1');
   const [city, setCity] = useState('Lahore');
   const [notes, setNotes] = useState('');
 
@@ -89,7 +88,7 @@ export default function AddNewClientPage() {
           billingCycle,
           trialDays: Number(trialDays),
           trialEndsAt: customTrialEndDate || undefined,
-          branchesCount: Number(branchesCount),
+          branchesCount: 0,
           city,
           notes,
         }),
@@ -109,9 +108,17 @@ export default function AddNewClientPage() {
         throw new Error(data.error || 'Failed to create client account');
       }
 
-      setCreatedCredentials(data.credentials);
+      setCreatedCredentials({
+        tenantId: data.client?.id,
+        restaurantName: data.client?.name,
+        ownerEmail: data.client?.ownerEmail,
+        password: data.client?.temporaryPassword,
+        plan: data.client?.plan,
+        loginUrl: data.client?.loginUrl || 'http://localhost:3000/login',
+        branches: data.client?.branches || [],
+      });
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -119,15 +126,18 @@ export default function AddNewClientPage() {
 
   if (createdCredentials) {
     return (
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-8 text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
-            <Check className="w-8 h-8" />
+      <div className="max-w-2xl mx-auto py-12">
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-8 text-center shadow-2xl space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+            <ShieldCheck className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Client Successfully Onboarded!</h2>
-          <p className="text-sm text-slate-300">
-            Account created for <strong className="text-emerald-400">{createdCredentials.restaurantName}</strong>. Welcome email with login details has been sent.
-          </p>
+
+          <div>
+            <h2 className="text-xl font-bold text-white">Client Account Successfully Created!</h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Account provisioned for <strong className="text-amber-400">{createdCredentials.restaurantName}</strong>. A welcome email with credentials has been dispatched.
+            </p>
+          </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-left space-y-3 mt-6">
             <h4 className="text-xs font-bold text-amber-500 uppercase tracking-wider">Account Credentials Summary</h4>
@@ -155,15 +165,24 @@ export default function AddNewClientPage() {
             </div>
 
             <div className="border-t border-slate-800 pt-3 mt-3">
-              <span className="text-slate-500 text-xs block mb-1">Generated Branch POS Access Codes:</span>
-              <div className="space-y-1">
-                {createdCredentials.branches?.map((b: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-xs bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-                    <span className="text-slate-300">{b.branchName}</span>
-                    <code className="text-amber-400 font-bold">{b.code}</code>
+              {createdCredentials.branches && createdCredentials.branches.length > 0 ? (
+                <>
+                  <span className="text-slate-500 text-xs block mb-1">Generated Branch POS Access Codes:</span>
+                  <div className="space-y-1">
+                    {createdCredentials.branches.map((b: any, idx: number) => (
+                      <div key={idx} className="flex justify-between text-xs bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                        <span className="text-slate-300">{b.branchName}</span>
+                        <code className="text-amber-400 font-bold">{b.code}</code>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-slate-300 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+                  <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span><strong>Self-Serve Branches Enabled:</strong> The tenant admin can create their branches, configure tables, and launch POS terminals from their dashboard.</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -420,42 +439,36 @@ export default function AddNewClientPage() {
           </div>
         </div>
 
-        {/* Section 4: Branches & Location */}
+        {/* Section 4: Location & Notes */}
         <div className="space-y-4">
           <h3 className="text-xs font-bold text-amber-500 uppercase tracking-wider border-b border-slate-800 pb-2">
-            4. Branch & Location Configuration
+            4. Location & Internal Notes
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Branches to Create</label>
-              <input
-                type="number"
-                min="1"
-                max="20"
-                value={branchesCount}
-                onChange={(e) => setBranchesCount(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none"
-              />
-              <span className="text-[10px] text-slate-500">Automatically creates branch records with unique codes</span>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Primary City</label>
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none"
-              >
-                <option value="Lahore">Lahore (LHR)</option>
-                <option value="Karachi">Karachi (KHI)</option>
-                <option value="Islamabad">Islamabad (ISL)</option>
-                <option value="Rawalpindi">Rawalpindi (RWP)</option>
-                <option value="Faisalabad">Faisalabad (FSD)</option>
-                <option value="Peshawar">Peshawar (PEW)</option>
-                <option value="Multan">Multan (MUX)</option>
-                <option value="Quetta">Quetta (UET)</option>
-              </select>
+          <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-3">
+            <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-slate-300">
+              <span className="font-bold text-white block mb-0.5">Self-Serve Branches & POS Setup</span>
+              No dummy branches are generated automatically. The restaurant owner can configure their real branch names, physical addresses, tables, and POS terminals directly from their dashboard.
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">Primary City / Region</label>
+            <select
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none"
+            >
+              <option value="Lahore">Lahore (LHR)</option>
+              <option value="Karachi">Karachi (KHI)</option>
+              <option value="Islamabad">Islamabad (ISL)</option>
+              <option value="Rawalpindi">Rawalpindi (RWP)</option>
+              <option value="Faisalabad">Faisalabad (FSD)</option>
+              <option value="Peshawar">Peshawar (PEW)</option>
+              <option value="Multan">Multan (MUX)</option>
+              <option value="Quetta">Quetta (UET)</option>
+            </select>
           </div>
 
           <div>
