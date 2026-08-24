@@ -1,6 +1,9 @@
-import { NextResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {

@@ -1,10 +1,13 @@
-import { NextResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma, Role, UserStatus } from '@dineiz/db';
 import { getCurrentSuperAdmin, hashPassword } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 import { Resend } from 'resend';
 import { generateWelcomeEmailHtml } from '@/lib/email-templates';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_dev');
 
@@ -14,7 +17,7 @@ function makeBranchCode(city?: string | null): string {
   return `SS-${prefix}-${rand}`;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const admin = await getCurrentSuperAdmin();
     if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
