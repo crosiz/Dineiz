@@ -1,4 +1,5 @@
 import { NextResponse } from 'next';
+import crypto from 'crypto';
 import { prisma, Role, UserStatus } from '@dineiz/db';
 import { getCurrentSuperAdmin, hashPassword } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
@@ -6,6 +7,12 @@ import { Resend } from 'resend';
 import { generateWelcomeEmailHtml } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_dev');
+
+function makeBranchCode(city?: string | null): string {
+  const prefix = (city || 'LHR').replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'LHR';
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `SS-${prefix}-${rand}`;
+}
 
 export async function GET(request: Request) {
   try {
@@ -106,14 +113,6 @@ export async function GET(request: Request) {
     console.error('Clients API error:', error);
     return NextResponse.json({ error: error?.message || 'Failed to fetch clients' }, { status: 500 });
   }
-}
-
-import crypto from 'crypto';
-
-function makeBranchCode(city?: string | null): string {
-  const prefix = (city || 'LHR').replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'LHR';
-  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
-  return `SS-${prefix}-${rand}`;
 }
 
 export async function POST(request: Request) {

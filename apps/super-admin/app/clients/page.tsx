@@ -68,11 +68,21 @@ export default function AllClientsPage() {
 
     fetch(`/api/clients?${query.toString()}`)
       .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json().catch(() => null);
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return null;
+        }
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.error || `Failed to fetch clients (${res.status})`);
+        }
+        return res.json();
       })
       .then((d) => {
         if (d?.clients) setClients(d.clients);
+      })
+      .catch((err) => {
+        console.error('Fetch clients error:', err);
       })
       .finally(() => setLoading(false));
   };
