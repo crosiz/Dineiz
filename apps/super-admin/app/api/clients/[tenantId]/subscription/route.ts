@@ -1,7 +1,10 @@
-import { NextResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function PATCH(
   request: Request,

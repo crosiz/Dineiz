@@ -1,8 +1,11 @@
-import { NextResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { prisma, Role } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 import { Resend } from 'resend';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key');
 

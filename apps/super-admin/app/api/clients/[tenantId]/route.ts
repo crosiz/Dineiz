@@ -61,7 +61,7 @@ export async function GET(
 
     const totalRevenueAggregate = await prisma.order.aggregate({
       where: { tenantId, status: 'COMPLETED' },
-      _sum: { total: true },
+      _sum: { netAmount: true },
     });
 
     const monthRevenueAggregate = await prisma.order.aggregate({
@@ -70,7 +70,7 @@ export async function GET(
         status: 'COMPLETED',
         createdAt: { gte: startOfMonth },
       },
-      _sum: { total: true },
+      _sum: { netAmount: true },
     });
 
     // Recent 10 orders across branches
@@ -81,12 +81,13 @@ export async function GET(
       select: {
         id: true,
         orderNumber: true,
-        total: true,
-        paymentMethod: true,
+        totalAmount: true,
+        netAmount: true,
         status: true,
         createdAt: true,
-        table: { select: { name: true, tableNumber: true } },
+        table: { select: { label: true } },
         branch: { select: { name: true } },
+        payments: { select: { method: true } },
       },
     });
 
@@ -136,8 +137,8 @@ export async function GET(
         stats: {
           totalOrdersAllTime: totalOrdersCount,
           ordersThisMonth: monthOrdersCount,
-          totalRevenueAllTime: totalRevenueAggregate?._sum?.total || 0,
-          revenueThisMonth: monthRevenueAggregate?._sum?.total || 0,
+          totalRevenueAllTime: totalRevenueAggregate?._sum?.netAmount || 0,
+          revenueThisMonth: monthRevenueAggregate?._sum?.netAmount || 0,
           activeBranchesCount: tenant.branches?.filter((b) => b.isActive)?.length || 0,
           totalStaffCount: tenant.users?.length || 0,
         },
@@ -154,12 +155,12 @@ export async function GET(
         recentOrders: (recentOrders || []).map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,
-          total: o.total,
-          paymentMethod: o.paymentMethod || 'CASH',
+          total: o.netAmount || o.totalAmount || 0,
+          paymentMethod: o.payments?.[0]?.method || 'CASH',
           status: o.status,
           time: o.createdAt ? new Date(o.createdAt).toISOString() : new Date().toISOString(),
           branchName: o.branch?.name || 'Main Branch',
-          tableName: o.table ? `Table ${o.table.tableNumber || o.table.name}` : 'Takeaway / Delivery',
+          tableName: o.table?.label ? `Table ${o.table.label}` : 'Takeaway / Delivery',
         })),
         featureOverrides: (tenant.featureOverrides || []).map((fo) => ({
           featureKey: fo.featureKey,
@@ -169,7 +170,10 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('Fetch Client Detail Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch client detail' }, { status: 500 });
+    return NextResponse.json({
+      error: error?.message || 'Failed to fetch client detail',
+      details: error?.stack || String(error),
+    }, { status: 500 });
   }
 }
 

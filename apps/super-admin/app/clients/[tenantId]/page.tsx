@@ -114,14 +114,24 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
     setLoading(true);
     fetch(`/api/clients/${tenantId}`)
       .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json().catch(() => null);
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return null;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err?.error || `Failed to fetch client detail (${res.status})`);
+        }
+        return res.json();
       })
       .then((d) => {
         if (d?.tenant) {
           setData(d.tenant);
           if (d.tenant.subscription) setNewPlan(d.tenant.subscription.plan);
         }
+      })
+      .catch((err) => {
+        console.error('Fetch client detail error:', err);
       })
       .finally(() => setLoading(false));
   };
