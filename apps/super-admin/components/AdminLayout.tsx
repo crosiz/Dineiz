@@ -94,6 +94,25 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+const ALL_NAV_HREFS = NAV_SECTIONS.flatMap((s) => s.items.map((i) => i.href));
+
+function isNavItemActive(currentPath: string, targetHref: string): boolean {
+  if (targetHref === '/') return currentPath === '/';
+  if (currentPath === targetHref) return true;
+
+  if (currentPath.startsWith(targetHref + '/')) {
+    const hasMoreSpecificItem = ALL_NAV_HREFS.some(
+      (href) =>
+        href !== targetHref &&
+        href.startsWith(targetHref + '/') &&
+        (currentPath === href || currentPath.startsWith(href + '/'))
+    );
+    return !hasMoreSpecificItem;
+  }
+
+  return false;
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -170,11 +189,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {section.items.map((item) => {
                   if (item.ownerOnly && user?.role !== 'OWNER') return null;
 
-                  const isActive =
-                    item.href === '/'
-                      ? pathname === '/'
-                      : pathname.startsWith(item.href);
-
+                  const isActive = isNavItemActive(pathname, item.href);
                   const Icon = item.icon;
 
                   return (

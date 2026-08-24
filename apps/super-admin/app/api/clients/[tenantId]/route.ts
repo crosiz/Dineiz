@@ -99,7 +99,7 @@ export async function GET(
         colorPrimary: tenant.colorPrimary,
         status: tenant.status,
         notes: tenant.notes,
-        createdAt: tenant.createdAt.toISOString(),
+        createdAt: tenant.createdAt ? new Date(tenant.createdAt).toISOString() : new Date().toISOString(),
         owner: owner
           ? {
               id: owner.id,
@@ -117,42 +117,48 @@ export async function GET(
               amount: tenant.subscription.amount,
               trialDays: tenant.subscription.trialDays,
               trialEndsAt: tenant.subscription.trialEndsAt
-                ? tenant.subscription.trialEndsAt.toISOString()
+                ? new Date(tenant.subscription.trialEndsAt).toISOString()
                 : null,
-              currentPeriodStart: tenant.subscription.currentPeriodStart.toISOString(),
-              currentPeriodEnd: tenant.subscription.currentPeriodEnd.toISOString(),
-              nextRenewalDate: tenant.subscription.nextRenewalDate.toISOString(),
+              currentPeriodStart: tenant.subscription.currentPeriodStart
+                ? new Date(tenant.subscription.currentPeriodStart).toISOString()
+                : new Date().toISOString(),
+              currentPeriodEnd: tenant.subscription.currentPeriodEnd
+                ? new Date(tenant.subscription.currentPeriodEnd).toISOString()
+                : new Date().toISOString(),
+              nextRenewalDate: tenant.subscription.nextRenewalDate
+                ? new Date(tenant.subscription.nextRenewalDate).toISOString()
+                : new Date().toISOString(),
             }
           : null,
         stats: {
           totalOrdersAllTime: totalOrdersCount,
           ordersThisMonth: monthOrdersCount,
-          totalRevenueAllTime: totalRevenueAggregate._sum.total || 0,
-          revenueThisMonth: monthRevenueAggregate._sum.total || 0,
-          activeBranchesCount: tenant.branches.filter((b) => b.isActive).length,
-          totalStaffCount: tenant.users.length,
+          totalRevenueAllTime: totalRevenueAggregate?._sum?.total || 0,
+          revenueThisMonth: monthRevenueAggregate?._sum?.total || 0,
+          activeBranchesCount: tenant.branches?.filter((b) => b.isActive)?.length || 0,
+          totalStaffCount: tenant.users?.length || 0,
         },
-        branches: tenant.branches.map((b) => ({
+        branches: (tenant.branches || []).map((b) => ({
           id: b.id,
           name: b.name,
           branchCode: b.branchCode,
           city: b.city,
-          tableCount: b.tables.length,
+          tableCount: b.tables?.length || 0,
           isActive: b.isActive,
           todayOrders: 0, // Placeholder populated via real-time query
           todayRevenue: 0,
         })),
-        recentOrders: recentOrders.map((o) => ({
+        recentOrders: (recentOrders || []).map((o) => ({
           id: o.id,
           orderNumber: o.orderNumber,
           total: o.total,
           paymentMethod: o.paymentMethod || 'CASH',
           status: o.status,
-          time: o.createdAt.toISOString(),
-          branchName: o.branch.name,
+          time: o.createdAt ? new Date(o.createdAt).toISOString() : new Date().toISOString(),
+          branchName: o.branch?.name || 'Main Branch',
           tableName: o.table ? `Table ${o.table.tableNumber || o.table.name}` : 'Takeaway / Delivery',
         })),
-        featureOverrides: tenant.featureOverrides.map((fo) => ({
+        featureOverrides: (tenant.featureOverrides || []).map((fo) => ({
           featureKey: fo.featureKey,
           enabled: fo.enabled,
         })),

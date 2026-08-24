@@ -78,8 +78,8 @@ export async function GET() {
       name: t.name,
       ownerEmail: t.users[0]?.email || 'N/A',
       plan: t.subscription?.plan || t.plan || 'STARTER',
-      signedUpDate: t.createdAt.toISOString(),
-      trialEndDate: t.subscription?.trialEndsAt ? t.subscription.trialEndsAt.toISOString() : null,
+      signedUpDate: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+      trialEndDate: t.subscription?.trialEndsAt ? new Date(t.subscription.trialEndsAt).toISOString() : null,
       status: t.subscription?.status || t.status,
     }));
 
@@ -106,14 +106,14 @@ export async function GET() {
     });
 
     const expiringSoon = expiringSoonRaw.map((sub) => ({
-      id: sub.tenant.id,
+      id: sub.tenant?.id || '',
       subscriptionId: sub.id,
-      name: sub.tenant.name,
-      ownerName: sub.tenant.users[0]?.name || 'Owner',
-      ownerEmail: sub.tenant.users[0]?.email || '',
-      ownerPhone: sub.tenant.users[0]?.phone || '',
+      name: sub.tenant?.name || 'Unknown',
+      ownerName: sub.tenant?.users?.[0]?.name || 'Owner',
+      ownerEmail: sub.tenant?.users?.[0]?.email || '',
+      ownerPhone: sub.tenant?.users?.[0]?.phone || '',
       plan: sub.plan,
-      expiryDate: sub.nextRenewalDate.toISOString(),
+      expiryDate: sub.nextRenewalDate ? new Date(sub.nextRenewalDate).toISOString() : new Date().toISOString(),
       amount: sub.amount || (sub.plan === 'PRO' ? 15000 : 8000),
     }));
 

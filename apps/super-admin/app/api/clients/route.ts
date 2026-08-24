@@ -72,7 +72,7 @@ export async function GET(request: Request) {
 
     // Format clients for table view
     const formattedClients = tenants.map((t) => {
-      const owner = t.users[0] || { name: 'N/A', email: 'N/A', phone: 'N/A' };
+      const owner = t.users?.[0] || { name: 'N/A', email: 'N/A', phone: 'N/A' };
       const sub = t.subscription;
 
       let mrr = sub?.amount || 0;
@@ -86,25 +86,25 @@ export async function GET(request: Request) {
       return {
         id: t.id,
         name: t.name,
-        ownerName: owner.name,
-        ownerEmail: owner.email,
+        ownerName: owner.name || 'N/A',
+        ownerEmail: owner.email || 'N/A',
         ownerPhone: owner.phone || t.primaryPhone || 'N/A',
         plan: sub?.plan || t.plan || 'STARTER',
         status: t.status === 'SUSPENDED' ? 'SUSPENDED' : (sub?.status || t.status || 'ACTIVE'),
-        branchesCount: t._count.branches,
-        ordersThisMonth: t._count.orders,
+        branchesCount: t._count?.branches ?? (t.branches?.length || 0),
+        ordersThisMonth: t._count?.orders ?? 0,
         mrr: mrr,
         billingCycle: sub?.billingCycle || 'MONTHLY',
-        joinedDate: t.createdAt.toISOString(),
-        renewalDate: sub?.nextRenewalDate ? sub.nextRenewalDate.toISOString() : null,
-        city: t.branches[0]?.city || 'Lahore',
+        joinedDate: t.createdAt ? new Date(t.createdAt).toISOString() : new Date().toISOString(),
+        renewalDate: sub?.nextRenewalDate ? new Date(sub.nextRenewalDate).toISOString() : null,
+        city: t.branches?.[0]?.city || 'Lahore',
       };
     });
 
     return NextResponse.json({ clients: formattedClients });
   } catch (error: any) {
     console.error('Clients API error:', error);
-    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to fetch clients' }, { status: 500 });
   }
 }
 

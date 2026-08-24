@@ -32,10 +32,14 @@ export async function verifySuperAdminToken(token: string): Promise<SuperAdminJw
 }
 
 export async function getCurrentSuperAdmin(): Promise<SuperAdminJwtPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SUPERADMIN_COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verifySuperAdminToken(token);
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SUPERADMIN_COOKIE_NAME)?.value;
+    if (!token) return null;
+    return await verifySuperAdminToken(token);
+  } catch {
+    return null;
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {
