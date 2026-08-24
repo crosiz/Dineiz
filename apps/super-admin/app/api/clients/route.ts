@@ -3,6 +3,7 @@ import { prisma, Role, UserStatus } from '@dineiz/db';
 import { getCurrentSuperAdmin, hashPassword } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 import { Resend } from 'resend';
+import { generateWelcomeEmailHtml } from '@/lib/email-templates';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_dev');
 
@@ -310,32 +311,30 @@ export async function POST(request: Request) {
     });
 
     // Send Welcome Email via Resend (async failure non-blocking)
+    const hostHeader = request.headers.get('host') || '';
+    const isLocal = hostHeader.includes('localhost') || hostHeader.includes('127.0.0.1');
+    const loginUrl = isLocal ? 'http://localhost:3000/login' : 'https://console.dineiz.com';
+
     try {
       if (process.env.RESEND_API_KEY) {
+        const emailHtml = generateWelcomeEmailHtml({
+          restaurantName: name.trim(),
+          ownerName: ownerName.trim(),
+          ownerEmail: cleanEmail,
+          password,
+          plan: result.subscription.plan,
+          billingCycle: result.subscription.billingCycle,
+          trialDays: Number(trialDays),
+          trialEndsAt: result.subscription.trialEndsAt,
+          branches: result.branchAccessCodes,
+          loginUrl,
+        });
+
         await resend.emails.send({
           from: 'Dineiz Onboarding <welcome@dineiz.com>',
-          to: ownerEmail,
-          subject: `Welcome to Dineiz POS — ${name}`,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-              <h2 style="color: #ff5722;">Welcome to Dineiz Platform!</h2>
-              <p>Hi <strong>${ownerName}</strong>,</p>
-              <p>Your restaurant <strong>${name}</strong> has been successfully onboarded on the Dineiz platform.</p>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">Your Account Credentials</h3>
-                <p><strong>Login URL:</strong> <a href="https://console.dineiz.com">https://console.dineiz.com</a></p>
-                <p><strong>Email:</strong> ${ownerEmail}</p>
-                <p><strong>Temporary Password:</strong> <code>${password}</code></p>
-                <p><strong>Plan:</strong> ${plan} (${billingCycle})</p>
-              </div>
-              <h3>Branch POS Access Codes:</h3>
-              <ul>
-                ${result.branchAccessCodes.map((b) => `<li><strong>${b.branchName}:</strong> <code>${b.code}</code></li>`).join('')}
-              </ul>
-              <p style="margin-top: 30px;">Getting Started Guide: <a href="https://dineiz.com/docs/getting-started">dineiz.com/docs/getting-started</a></p>
-              <p>Need help? Contact support@dineiz.com</p>
-            </div>
-          `,
+          to: cleanEmail,
+          subject: `Welcome to Dineiz — ${name.trim()} Account Credentials`,
+          html: emailHtml,
         });
       }
     } catch (emailErr) {
@@ -350,7 +349,7 @@ export async function POST(request: Request) {
         ownerName: result.user.name,
         ownerEmail: result.user.email,
         password: password,
-        loginUrl: 'https://console.dineiz.com',
+        loginUrl: loginUrl,
         plan: result.subscription.plan,
         trialEndsAt: result.subscription.trialEndsAt,
         branches: result.branchAccessCodes,
