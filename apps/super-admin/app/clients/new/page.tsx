@@ -18,6 +18,9 @@ import {
   ArrowLeft,
   Sparkles,
   ShieldCheck,
+  AlertTriangle,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
 
 export default function AddNewClientPage() {
@@ -50,6 +53,13 @@ export default function AddNewClientPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [conflictDetails, setConflictDetails] = useState<{
+    type: 'email' | 'phone';
+    value: string;
+    userName: string;
+    role: string;
+    restaurantName: string;
+  } | null>(null);
   const [copiedPass, setCopiedPass] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<any>(null);
 
@@ -62,6 +72,7 @@ export default function AddNewClientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setConflictDetails(null);
     setSubmitting(true);
 
     try {
@@ -92,6 +103,9 @@ export default function AddNewClientPage() {
       }
 
       if (!res.ok) {
+        if (data.conflictDetails) {
+          setConflictDetails(data.conflictDetails);
+        }
         throw new Error(data.error || 'Failed to create client account');
       }
 
@@ -191,9 +205,45 @@ export default function AddNewClientPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-950/60 border border-red-800 rounded-xl p-4 text-xs text-red-200">
-          {error}
+      {conflictDetails && (
+        <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-5 text-amber-200 space-y-3 shadow-lg animate-in fade-in duration-300">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <h4 className="font-bold text-amber-400 text-sm">
+                {conflictDetails.type === 'email' ? 'Owner Email Already Linked' : 'Owner Phone Already Linked'}
+              </h4>
+              <p className="text-xs text-amber-200/90 leading-relaxed">
+                The {conflictDetails.type} <code className="bg-amber-900/60 px-1.5 py-0.5 rounded text-amber-300 font-mono font-bold">{conflictDetails.value}</code> is already linked to an existing account on the platform:
+              </p>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-950/90 p-3 rounded-xl border border-amber-500/20 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Linked User</span>
+                  <span className="text-white font-medium">{conflictDetails.userName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Role</span>
+                  <span className="text-amber-400 font-mono">{conflictDetails.role}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] uppercase font-bold">Restaurant</span>
+                  <span className="text-white font-semibold">{conflictDetails.restaurantName}</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-amber-300/80 pt-1">
+                Please enter a distinct {conflictDetails.type} for this new client, or edit the existing staff member in their respective dashboard.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && !conflictDetails && (
+        <div className="bg-red-950/60 border border-red-800 rounded-xl p-4 text-xs text-red-200 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
@@ -247,8 +297,15 @@ export default function AddNewClientPage() {
                   required
                   placeholder="owner@restaurant.com"
                   value={ownerEmail}
-                  onChange={(e) => setOwnerEmail(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => {
+                    setOwnerEmail(e.target.value);
+                    if (conflictDetails?.type === 'email') setConflictDetails(null);
+                  }}
+                  className={`w-full pl-9 pr-4 py-2.5 bg-slate-900 border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all ${
+                    conflictDetails?.type === 'email'
+                      ? 'border-amber-500 ring-2 ring-amber-500/20'
+                      : 'border-slate-800 focus:ring-1 focus:ring-amber-500'
+                  }`}
                 />
               </div>
             </div>
@@ -263,8 +320,15 @@ export default function AddNewClientPage() {
                   type="text"
                   placeholder="+92-300-1234567"
                   value={ownerPhone}
-                  onChange={(e) => setOwnerPhone(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  onChange={(e) => {
+                    setOwnerPhone(e.target.value);
+                    if (conflictDetails?.type === 'phone') setConflictDetails(null);
+                  }}
+                  className={`w-full pl-9 pr-4 py-2.5 bg-slate-900 border rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none transition-all ${
+                    conflictDetails?.type === 'phone'
+                      ? 'border-amber-500 ring-2 ring-amber-500/20'
+                      : 'border-slate-800 focus:ring-1 focus:ring-amber-500'
+                  }`}
                 />
               </div>
             </div>

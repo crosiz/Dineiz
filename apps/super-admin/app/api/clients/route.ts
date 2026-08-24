@@ -146,19 +146,55 @@ export async function POST(request: Request) {
     // Check unique email
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanEmail },
+      include: {
+        tenant: { select: { name: true } },
+      },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: `A user with email "${cleanEmail}" already exists` }, { status: 409 });
+      const restaurantName = existingUser.tenant?.name ? `"${existingUser.tenant.name}"` : 'an existing organization';
+      const roleDisplay = existingUser.role.replace(/_/g, ' ');
+      return NextResponse.json(
+        {
+          error: `Email "${cleanEmail}" is already linked to staff member "${existingUser.name}" (${roleDisplay}) at ${restaurantName}. Please use a different email address.`,
+          field: 'email',
+          conflictDetails: {
+            type: 'email',
+            value: cleanEmail,
+            userName: existingUser.name,
+            role: existingUser.role,
+            restaurantName: existingUser.tenant?.name || 'N/A',
+          },
+        },
+        { status: 409 }
+      );
     }
 
     // Check unique phone if provided
     if (cleanPhone) {
       const existingPhone = await prisma.user.findUnique({
         where: { phone: cleanPhone },
+        include: {
+          tenant: { select: { name: true } },
+        },
       });
       if (existingPhone) {
-        return NextResponse.json({ error: `A user with phone number "${cleanPhone}" already exists` }, { status: 409 });
+        const restaurantName = existingPhone.tenant?.name ? `"${existingPhone.tenant.name}"` : 'an existing organization';
+        const roleDisplay = existingPhone.role.replace(/_/g, ' ');
+        return NextResponse.json(
+          {
+            error: `Phone number "${cleanPhone}" is already linked to staff member "${existingPhone.name}" (${roleDisplay}) at ${restaurantName}. Please use a different phone number or leave it blank.`,
+            field: 'phone',
+            conflictDetails: {
+              type: 'phone',
+              value: cleanPhone,
+              userName: existingPhone.name,
+              role: existingPhone.role,
+              restaurantName: existingPhone.tenant?.name || 'N/A',
+            },
+          },
+          { status: 409 }
+        );
       }
     }
 
