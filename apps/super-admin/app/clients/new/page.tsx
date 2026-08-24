@@ -84,7 +84,12 @@ export default function AddNewClientPage() {
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: `Server error (${res.status})` };
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to create client account');

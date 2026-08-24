@@ -107,6 +107,14 @@ export async function GET(request: Request) {
   }
 }
 
+import crypto from 'crypto';
+
+function makeBranchCode(city?: string | null): string {
+  const prefix = (city || 'LHR').replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'LHR';
+  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `SS-${prefix}-${rand}`;
+}
+
 export async function POST(request: Request) {
   try {
     const admin = await getCurrentSuperAdmin();
@@ -132,13 +140,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const cleanEmail = ownerEmail.toLowerCase().trim();
+    const cleanPhone = ownerPhone?.trim() ? ownerPhone.trim() : null;
+
     // Check unique email
     const existingUser = await prisma.user.findUnique({
-      where: { email: ownerEmail.toLowerCase().trim() },
+      where: { email: cleanEmail },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'A user with this owner email already exists' }, { status: 409 });
+      return NextResponse.json({ error: `A user with email "${cleanEmail}" already exists` }, { status: 409 });
+    }
+
+    // Check unique phone if provided
+    if (cleanPhone) {
+      const existingPhone = await prisma.user.findUnique({
+        where: { phone: cleanPhone },
+      });
+      if (existingPhone) {
+        return NextResponse.json({ error: `A user with phone number "${cleanPhone}" already exists` }, { status: 409 });
+      }
     }
 
     const hashedPassword = await hashPassword(password);
@@ -163,28 +184,27 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
-          name,
+          name: name.trim(),
           plan,
-          primaryPhone: ownerPhone || null,
-          status: trialDays > 0 ? 'TRIALING' : 'ACTIVE',
-          notes: notes || null,
+          primaryPhone: cleanPhone,
+          status: Number(trialDays) > 0 ? 'TRIALING' : 'ACTIVE',
+          notes: notes?.trim() || null,
         },
       });
 
-      // Generate branches with codes
-      const cityPrefix = city.slice(0, 3).toUpperCase();
+      // Generate branches with guaranteed unique codes
       const branches = [];
       const branchAccessCodes: { branchName: string; code: string }[] = [];
 
       for (let i = 1; i <= Math.max(1, Number(branchesCount)); i++) {
-        const branchCode = `${cityPrefix}-${String(i).padStart(3, '0')}`;
-        const branchName = i === 1 ? `${name} - Main Branch` : `${name} - Branch ${i}`;
+        const branchCode = makeBranchCode(city);
+        const branchName = i === 1 ? `${name.trim()} - Main Branch` : `${name.trim()} - Branch ${i}`;
 
         const branch = await tx.branch.create({
           data: {
             tenantId: tenant.id,
             name: branchName,
-            city,
+            city: city.trim(),
             branchCode,
             currency: 'PKR',
             isActive: true,
@@ -199,10 +219,10 @@ export async function POST(request: Request) {
         data: {
           tenantId: tenant.id,
           branchId: branches[0].id,
-          name: ownerName,
-          email: ownerEmail.toLowerCase().trim(),
+          name: ownerName.trim(),
+          email: cleanEmail,
           password: hashedPassword,
-          phone: ownerPhone || null,
+          phone: cleanPhone,
           role: Role.TENANT_ADMIN,
           status: UserStatus.ACTIVE,
         },
