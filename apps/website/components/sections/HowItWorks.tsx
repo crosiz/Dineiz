@@ -1,6 +1,3 @@
-"use client";
-import { motion } from "framer-motion";
-
 const steps = [
   {
     step: "01",
@@ -27,10 +24,10 @@ const steps = [
 export function HowItWorks() {
   return (
     <section className="bg-white py-24 lg:py-32">
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-6 lg:px-8">
 
-        <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-[#FF6B35] tracking-wide mb-4">Getting Started</p>
+        <div className="mb-16 max-w-xl">
+          <p className="text-sm font-semibold text-brand-500 tracking-wide mb-4">Getting started</p>
           <h2
             className="font-bold text-[#1d1d1f]"
             style={{ fontSize: "clamp(2rem, 4vw, 2.8rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
@@ -39,28 +36,21 @@ export function HowItWorks() {
           </h2>
         </div>
 
-        <div className="relative">
-          {/* Connecting line — desktop only */}
-          <div className="hidden md:block absolute top-[19px] left-[calc(12.5%+20px)] right-[calc(12.5%+20px)] h-px bg-[#e5e5ea]" />
-
-          <div className="grid md:grid-cols-4 gap-10">
-            {steps.map((s, i) => (
-              <motion.div
-                key={s.step}
-                initial={{ opacity: 0, y: 14 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.35, delay: i * 0.08 }}
-                className="relative text-center"
+        <div className="divide-y divide-[#eceef1] border-t border-b border-[#eceef1]">
+          {steps.map((s) => (
+            <div key={s.step} className="sm:flex gap-2 sm:gap-8 py-8 sm:items-baseline">
+              <span
+                className="block sm:w-24 shrink-0 text-[#d2d2d7] font-bold tabular-nums"
+                style={{ fontSize: "2.75rem", letterSpacing: "-0.02em", lineHeight: 1 }}
               >
-                <div className="relative z-10 w-12 h-12 rounded-full bg-[#f5f5f7] border border-[#d2d2d7] flex items-center justify-center mx-auto mb-6">
-                  <span className="text-sm font-bold text-[#1d1d1f]">{s.step}</span>
-                </div>
-                <h3 className="text-lg font-bold text-[#1d1d1f] mb-3">{s.title}</h3>
-                <p className="text-[15px] text-[#6e6e73] leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
+                {s.step}
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-[#1d1d1f] mb-2">{s.title}</h3>
+                <p className="text-[15px] text-[#6e6e73] leading-relaxed max-w-md">{s.desc}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

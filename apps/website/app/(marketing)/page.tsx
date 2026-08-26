@@ -1,9 +1,11 @@
 import React from "react";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { LogoBar } from "@/components/sections/LogoBar";
+import { ProblemStatement } from "@/components/sections/ProblemStatement";
 import { CoreFeatures } from "@/components/sections/CoreFeatures";
 import { ProductCards } from "@/components/sections/ProductCards";
 import { HowItWorks } from "@/components/sections/HowItWorks";
+import { OfflineFirst } from "@/components/sections/OfflineFirst";
 import { PricingPreview } from "@/components/sections/PricingPreview";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
 import { generateSEOMetadata } from "@/lib/seo";
@@ -22,12 +24,13 @@ export default function Homepage() {
     <>
       <HeroSection />
       <LogoBar />
+      <ProblemStatement />
       <CoreFeatures />
       <ProductCards />
       <HowItWorks />
+      <OfflineFirst />
       <PricingPreview />
       <FinalCTASection />
     </>
   );
 }
-
