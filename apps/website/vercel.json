@@ -3,7 +3,7 @@
     { "source": "/signup", "destination": "https://console.dineiz.com/signup", "permanent": false },
     { "source": "/login", "destination": "https://console.dineiz.com/login", "permanent": false },
     { "source": "/app", "destination": "https://play.google.com/store/apps/details?id=pk.dineiz.go", "permanent": false },
-    { "source": "/whatsapp", "destination": "https://wa.me/923001234567?text=Hi%2C%20I%20want%20to%20know%20more%20about%20Dineiz", "permanent": false }
+    { "source": "/whatsapp", "destination": "https://wa.me/923141986044?text=Hi%2C%20I%20want%20to%20know%20more%20about%20Dineiz", "permanent": false }
   ],
   "headers": [
     {

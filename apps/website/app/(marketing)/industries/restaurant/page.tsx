@@ -8,7 +8,7 @@ import { InternalLinks } from "@/components/seo/InternalLinks";
 export const metadata = generateSEOMetadata({
   title: 'Restaurant POS Pakistan — Dineiz Management Software',
   description: 'The premier restaurant POS and management software in Pakistan. Prevent theft, manage tables, run KDS, and track real-time analytics. Multi-branch ready.',
-  keywords: ['restaurant POS Pakistan', 'restaurant management software Pakistan', 'multi branch POS system', 'FBR restaurant POS'],
+  keywords: ['restaurant POS Pakistan', 'restaurant management software Pakistan', 'multi branch POS system', 'GST restaurant POS Pakistan'],
   canonical: 'https://dineiz.com/industries/restaurant',
 });
 

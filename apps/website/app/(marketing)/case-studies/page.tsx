@@ -27,13 +27,18 @@ export default async function CaseStudiesPage() {
             How Pakistani restaurants <span className="text-brand-500">win with Dineiz</span>
           </h1>
           <p className="text-base sm:text-lg text-gray-500">
-            Real stories, real Pakistani restaurants, and measurable business growth metrics.
+            Real stories from real Pakistani restaurants, as our customer base grows.
           </p>
         </div>
       </section>
 
       <section className="bg-gray-50 py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {caseStudies.length === 0 ? (
+            <p className="text-center text-gray-500 text-base">
+              We&apos;re just getting started — check back soon for real customer stories.
+            </p>
+          ) : (
           <div className="grid md:grid-cols-2 gap-6">
             {caseStudies.map((cs) => (
               <div
@@ -79,6 +84,7 @@ export default async function CaseStudiesPage() {
               </div>
             ))}
           </div>
+          )}
         </div>
       </section>
     </>

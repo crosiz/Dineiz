@@ -36,8 +36,8 @@ export function HeroSection() {
           transition={{ duration: 0.45, delay: 0.12 }}
           className="text-center text-[#6e6e73] text-lg leading-relaxed max-w-2xl mx-auto mb-10"
         >
-          Complete POS, billing, kitchen display, analytics, and WhatsApp ordering — 
-          with FBR compliance and local payments built in.
+          Complete POS, billing, kitchen display, analytics, and WhatsApp ordering —
+          with GST tax handling and local payments built in.
         </motion.p>
 
         {/* CTAs */}
@@ -55,7 +55,7 @@ export function HeroSection() {
             <ArrowRight size={15} />
           </Link>
           <a
-            href="https://wa.me/923001234567?text=Hi%2C%20I%27d%20like%20a%20demo%20of%20Dineiz"
+            href="https://wa.me/923141986044?text=Hi%2C%20I%27d%20like%20a%20demo%20of%20Dineiz"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-7 py-3.5 text-[#1d1d1f] text-[15px] font-semibold rounded-full border border-[#d2d2d7] hover:border-[#FF6B35] hover:text-[#FF6B35] transition-colors"
@@ -133,7 +133,7 @@ export function HeroSection() {
 
               <div className="mt-4 space-y-2">
                 <div className="text-[11px] font-semibold text-[#6e6e73] bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg px-3 py-2">
-                  FBR Receipt — Auto-generated
+                  GST Receipt — Auto-generated
                 </div>
                 <button className="w-full py-3 bg-[#FF6B35] text-white text-sm font-semibold rounded-xl hover:bg-[#e65a25] transition-colors">
                   Print Receipt &amp; Charge

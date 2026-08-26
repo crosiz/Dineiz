@@ -6,14 +6,14 @@ import { generateSEOMetadata, generateSoftwareApplicationSchema } from "@/lib/se
 export const metadata = generateSEOMetadata({
   title: "WhatsApp AI Ordering — Automated Restaurant Orders via WhatsApp in Pakistan",
   description:
-    "Dineiz WhatsApp AI takes restaurant orders automatically via WhatsApp — in Urdu and English. 24/7 ordering without any staff. JazzCash and EasyPaisa payment links included.",
+    "Dineiz WhatsApp AI takes restaurant orders automatically via WhatsApp — in Urdu and English. 24/7 ordering without any staff.",
   path: "/product/whatsapp",
 });
 
 const features = [
   { icon: Clock, title: "24/7 Ordering — No Staff", desc: "The AI never sleeps. Take orders at midnight, on weekends, and during rush hour — simultaneously." },
   { icon: Languages, title: "Roman Urdu & English", desc: "Customers can message in Roman Urdu, English, or a mix. The AI understands and responds naturally." },
-  { icon: CreditCard, title: "Built-in Payment Links", desc: "Sends a JazzCash or EasyPaisa payment link with every order. Customer pays, kitchen gets the order." },
+  { icon: CreditCard, title: "Cash on Delivery Confirmation", desc: "Confirms payment method with the customer before the order is sent to the kitchen." },
   { icon: Zap, title: "Instant Kitchen Routing", desc: "Confirmed orders go straight to the kitchen display. No staff needed in the loop." },
   { icon: MessageCircle, title: "Order Status Updates", desc: "Customers get WhatsApp updates when their order is confirmed, in preparation, and ready." },
   { icon: TrendingUp, title: "WhatsApp Order Analytics", desc: "See how many orders come from WhatsApp, average value, peak times, and most popular items." },

@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import Script from "next/script";
 import "./globals.css";
@@ -9,10 +9,10 @@ import { Footer } from "@/components/layout/Footer";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { generateSEOMetadata } from "@/lib/seo";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-plus-jakarta",
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -26,7 +26,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata = generateSEOMetadata({
   title: "Restaurant POS System Pakistan & WhatsApp Ordering",
   description:
-    "The #1 restaurant POS, billing software, and WhatsApp AI ordering system in Pakistan. Billing for cafes, food carts, and multi-branch restaurant groups. FBR compliant.",
+    "The #1 restaurant POS, billing software, and WhatsApp AI ordering system in Pakistan. Billing for cafes, food carts, and multi-branch restaurant groups.",
   canonical: "https://dineiz.com",
 });
 
@@ -54,17 +54,12 @@ export default function RootLayout({
       priceCurrency: 'PKR',
       description: 'Free plan available',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '200',
-    },
   }
 
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${jetbrainsMono.variable}`}
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />

@@ -5,18 +5,25 @@ import { Mail, CheckCircle2 } from 'lucide-react';
 
 export function NewsletterForm() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    
+
     setStatus('loading');
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) throw new Error('Subscription failed');
       setStatus('success');
       setEmail('');
-    }, 1000);
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (
@@ -26,9 +33,13 @@ export function NewsletterForm() {
       </div>
       <h3 className="text-xl font-bold text-gray-900 mb-2">Get POS tips in your inbox</h3>
       <p className="text-gray-600 text-sm mb-6 max-w-sm mx-auto">
-        Join 5,000+ restaurant owners in Pakistan receiving our weekly insights on growth and compliance.
+        Weekly insights on restaurant growth and GST compliance for Pakistani restaurant owners.
       </p>
-      
+
+      {status === 'error' && (
+        <p className="text-red-600 text-sm mb-4">Something went wrong — please try again.</p>
+      )}
+
       {status === 'success' ? (
         <div className="flex items-center justify-center gap-2 text-green-700 bg-green-50 py-3 rounded-xl font-medium">
           <CheckCircle2 size={20} />

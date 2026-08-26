@@ -2,12 +2,8 @@
 import { motion } from "framer-motion";
 
 const integrations = [
-  { name: "JazzCash", category: "Payments", color: "bg-red-50 text-red-600" },
-  { name: "EasyPaisa", category: "Payments", color: "bg-green-50 text-green-700" },
   { name: "Foodpanda", category: "Delivery", color: "bg-pink-50 text-pink-600" },
   { name: "Careem Food", category: "Delivery", color: "bg-teal-50 text-teal-700" },
-  { name: "FBR Pakistan", category: "Compliance", color: "bg-blue-50 text-blue-700" },
-  { name: "PRA Punjab", category: "Compliance", color: "bg-indigo-50 text-indigo-700" },
   { name: "HBL Konnect", category: "Banking", color: "bg-emerald-50 text-emerald-700" },
   { name: "ZKTeco", category: "Hardware", color: "bg-gray-100 text-gray-700" },
   { name: "MCB Bank", category: "Banking", color: "bg-orange-50 text-orange-700" },

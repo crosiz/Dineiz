@@ -9,9 +9,9 @@ const products = [
     name: "Dineiz POS",
     tagline: "Full-service billing terminal",
     description:
-      "Tablet-based POS for dine-in restaurants with table management, kitchen display, FBR receipt printing, and multi-payment support.",
+      "Tablet-based POS for dine-in restaurants with table management, kitchen display, GST receipt printing, and multi-payment support.",
     href: "/product/pos",
-    features: ["Table & takeaway modes", "FBR receipt with QR code", "KDS integration", "JazzCash & EasyPaisa"],
+    features: ["Table & takeaway modes", "Itemized GST receipts", "KDS integration", "Split bills & discounts"],
   },
   {
     icon: Smartphone,

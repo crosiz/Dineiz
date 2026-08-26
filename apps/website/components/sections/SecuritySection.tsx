@@ -20,8 +20,8 @@ const items = [
   },
   {
     icon: Server,
-    title: "99.9% Uptime SLA",
-    desc: "Dineiz runs on enterprise-grade infrastructure with daily backups and offline-first order taking.",
+    title: "Encrypted Cloud Database",
+    desc: "Order and payment data is stored in a managed, encrypted PostgreSQL database — not a local file that can be lost or tampered with.",
   },
 ];
 
@@ -63,19 +63,6 @@ export function SecuritySection() {
               </motion.div>
             );
           })}
-        </div>
-
-        {/* SLA banner */}
-        <div className="mt-8 bg-brand-50 border border-brand-100 rounded-xl px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-            <span className="text-sm font-semibold text-brand-800">
-              Dineiz maintains a 99.9% uptime SLA — your restaurant never goes down
-            </span>
-          </div>
-          <span className="text-xs text-brand-600 font-medium whitespace-nowrap">
-            Guaranteed in writing
-          </span>
         </div>
       </div>
     </section>

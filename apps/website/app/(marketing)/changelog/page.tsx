@@ -15,9 +15,7 @@ const entries = [
     tagColor: "bg-brand-100 text-brand-700",
     changes: [
       "WhatsApp AI now understands Roman Urdu mix naturally",
-      "FBR integration updated for 2025 POS scheme",
       "New table map with drag-and-drop floor plan editor",
-      "JazzCash QR on every receipt (no internet needed)",
     ],
   },
   {

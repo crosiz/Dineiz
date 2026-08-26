@@ -6,7 +6,7 @@ const features = [
     label: "Point of Sale",
     icon: Monitor,
     headline: "Billing in seconds.",
-    desc: "A single screen for dine-in, takeaway, and delivery. Split bills, apply discounts, and generate FBR receipts with QR codes instantly. Works fully offline.",
+    desc: "A single screen for dine-in, takeaway, and delivery. Split bills, apply discounts, and generate itemized GST receipts instantly. Works fully offline.",
   },
   {
     label: "Kitchen Display",

@@ -4,9 +4,7 @@ import { LogoBar } from "@/components/sections/LogoBar";
 import { CoreFeatures } from "@/components/sections/CoreFeatures";
 import { ProductCards } from "@/components/sections/ProductCards";
 import { HowItWorks } from "@/components/sections/HowItWorks";
-import { Testimonials } from "@/components/sections/Testimonials";
 import { PricingPreview } from "@/components/sections/PricingPreview";
-import { CompareCompetitors } from "@/components/sections/CompareCompetitors";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
 import { generateSEOMetadata } from "@/lib/seo";
 
@@ -27,9 +25,7 @@ export default function Homepage() {
       <CoreFeatures />
       <ProductCards />
       <HowItWorks />
-      <Testimonials />
       <PricingPreview />
-      <CompareCompetitors />
       <FinalCTASection />
     </>
   );

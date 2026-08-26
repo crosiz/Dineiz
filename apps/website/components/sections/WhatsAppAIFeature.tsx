@@ -7,7 +7,7 @@ const messages = [
   { from: "customer", text: "Assalamualaikum, 2 biryani aur 1 doodh pati chaiye" },
   { from: "bot", text: "Wa alaikum salam! Aapka order confirm kar raha hoon:\n• 2× Biryani Full — Rs. 800\n• 1× Doodh Pati — Rs. 60\n\nTotal: Rs. 860\n\nDeliver karein ya khud lene aayenge? 🍛" },
   { from: "customer", text: "Delivery please, Gulshan Block 6" },
-  { from: "bot", text: "Shukriya! Aapka order kitchen ko bhej diya. Estimated time: 35 minutes.\n\nPayment: JazzCash ya EasyPaisa pe Rs. 860 transfer karein:\n📱 0300-1234567\n\nOrder ID: #DNZ-4821" },
+  { from: "bot", text: "Shukriya! Aapka order kitchen ko bhej diya. Estimated time: 35 minutes.\n\nPayment: Cash on delivery.\n\nOrder ID: #DNZ-4821" },
 ];
 
 export function WhatsAppAIFeature() {
@@ -39,7 +39,6 @@ export function WhatsAppAIFeature() {
               {[
                 "Works 24/7 — even when you're closed",
                 "Understands Roman Urdu naturally",
-                "Sends JazzCash / EasyPaisa payment link",
                 "Routes order directly to kitchen display",
                 "Zero per-order cost",
               ].map((f) => (

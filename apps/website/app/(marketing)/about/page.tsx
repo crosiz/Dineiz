@@ -40,7 +40,7 @@ export default function AboutPage() {
               Dineiz is a product by <strong className="text-gray-700">Crosiz Technologies</strong>, a Pakistani SaaS company on a mission to give every restaurant owner — from a small food cart to a premium dining chain — the same tools that global restaurant chains use.
             </p>
             <p className="text-base text-gray-500 leading-relaxed">
-              We started Dineiz because we saw restaurant owners using paper receipts, WhatsApp voice notes, and Excel spreadsheets to run businesses doing millions of rupees a month. We knew there had to be a better way — one that was affordable, worked without reliable internet, supported local payments, and was compliant with FBR regulations.
+              We started Dineiz because we saw restaurant owners using paper receipts, WhatsApp voice notes, and Excel spreadsheets to run businesses doing millions of rupees a month. We knew there had to be a better way — one that was affordable, worked without reliable internet, supported local payments, and got GST right every time.
             </p>
           </div>
         </div>

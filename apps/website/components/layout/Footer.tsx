@@ -48,7 +48,7 @@ export function Footer() {
               <a href="https://linkedin.com/company/dineiz" aria-label="LinkedIn" className="text-gray-400 hover:text-[#FF6B35] transition-colors duration-200">
                 <Linkedin size={20} />
               </a>
-              <a href="https://wa.me/923001234567" aria-label="WhatsApp" className="text-gray-400 hover:text-[#FF6B35] transition-colors duration-200">
+              <a href="https://wa.me/923141986044" aria-label="WhatsApp" className="text-gray-400 hover:text-[#FF6B35] transition-colors duration-200">
                 <MessageCircle size={20} />
               </a>
               <a href="https://youtube.com/@dineiz" aria-label="YouTube" className="text-gray-400 hover:text-[#FF6B35] transition-colors duration-200">

@@ -14,9 +14,8 @@ const allFeatures = [
   "Shift schedule",
   "Offline mode",
   "24/7 support",
-  "Tax integrations (FBR/GST)",
+  "GST tax configuration",
   "FoodPanda integration",
-  "JazzCash & EasyPaisa",
   "WhatsApp AI ordering",
   "Kitchen Display (KDS)",
   "Multi-branch management",
@@ -44,7 +43,6 @@ const plans = [
       "email", // Support
       false,  // Tax
       false,  // FoodPanda
-      false,  // JazzCash
       false,  // WhatsApp
       false,  // KDS
       false,  // Multi-branch
@@ -71,7 +69,6 @@ const plans = [
       true,   // Support 24/7
       true,   // Tax
       false,  // FoodPanda
-      true,   // JazzCash
       true,   // WhatsApp
       true,   // KDS
       false,  // Multi-branch
@@ -98,7 +95,6 @@ const plans = [
       true,  // Support 24/7
       true,  // Tax
       true,  // FoodPanda
-      true,  // JazzCash
       true,  // WhatsApp
       true,  // KDS
       true,  // Multi-branch

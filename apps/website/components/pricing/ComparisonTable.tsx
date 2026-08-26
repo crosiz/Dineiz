@@ -32,8 +32,7 @@ const TABLE_DATA: TableCategory[] = [
     features: [
       { name: "Cash", goFree: true, goPro: true, starter: true, pro: true, enterprise: true },
       { name: "Card Terminal", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
-      { name: "JazzCash & EasyPaisa", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
-      { name: "FBR Compliance", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
+      { name: "GST Tax Configuration", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
     ]
   },
   {

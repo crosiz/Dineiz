@@ -5,7 +5,7 @@ import { PricingClient } from "@/components/pricing/PricingClient";
 
 export const metadata = generateSEOMetadata({
   title: 'Pricing — Restaurant POS Plans Starting at PKR 0',
-  description: 'Dineiz pricing plans for every restaurant size. Free forever plan for dhabas. Pro plans from PKR 999/month. 14-day free trial on all paid plans. FBR compliant.',
+  description: 'Dineiz pricing plans for every restaurant size. Free forever plan for dhabas. Pro plans from PKR 999/month. 14-day free trial on all paid plans.',
   keywords: ['restaurant POS price Pakistan', 'billing software price', 'POS system cost Pakistan'],
   canonical: 'https://dineiz.com/pricing',
 });

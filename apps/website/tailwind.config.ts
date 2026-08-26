@@ -29,8 +29,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "sans-serif"],
-        display: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "sans-serif"],
+        display: ["var(--font-inter)", "Inter", "sans-serif"],
         mono: ["var(--font-jetbrains-mono)", "JetBrains Mono", "monospace"],
       },
       boxShadow: {

@@ -7,7 +7,7 @@ import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Food Cart Billing App Pakistan — Free POS for Street Food',
-  description: 'The best free billing app for food carts and street food in Pakistan. No printer needed—send receipts via WhatsApp. Accept JazzCash easily. 100% Free.',
+  description: 'The best free billing app for food carts and street food in Pakistan. No printer needed—send receipts via WhatsApp. 100% Free.',
   keywords: ['food cart billing Pakistan', 'street food billing app', 'thela billing software', 'mobile POS Pakistan'],
   canonical: 'https://dineiz.com/industries/food-cart',
 });
@@ -53,7 +53,7 @@ export default function FoodCartPage() {
           </h1>
           
           <p className="text-[20px] text-[#6e6e73] font-medium leading-relaxed max-w-2xl mx-auto mb-10">
-            No expensive hardware. No printers needed. Send digital receipts via WhatsApp and accept JazzCash instantly on your Android phone.
+            No expensive hardware. No printers needed. Send digital receipts via WhatsApp straight from your Android phone.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -119,9 +119,9 @@ export default function FoodCartPage() {
               <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mb-6">
                 <Wallet size={24} className="text-[#1d1d1f]" />
               </div>
-              <h3 className="text-[18px] font-bold text-[#1d1d1f] mb-2">JazzCash & EasyPaisa</h3>
+              <h3 className="text-[18px] font-bold text-[#1d1d1f] mb-2">Split & Custom Payments</h3>
               <p className="text-[15px] text-[#6e6e73] leading-relaxed mb-8 flex-grow">
-                Customers don't have exact change? No problem. Record digital payments directly in the app so your daily total is always 100% accurate.
+                Customers don't have exact change? No problem. Split a bill or record a custom amount so your daily total is always 100% accurate.
               </p>
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mt-auto flex justify-around">
                 <div className="text-center">
@@ -131,7 +131,7 @@ export default function FoodCartPage() {
                 <div className="w-px bg-gray-300"></div>
                 <div className="text-center">
                   <div className="font-bold text-[#FF6B35]">Rs 1,200</div>
-                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">JazzCash</div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Split</div>
                 </div>
               </div>
             </div>

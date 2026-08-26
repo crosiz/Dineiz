@@ -16,7 +16,7 @@ export function FinalCTASection() {
           Ready to transform your restaurant?
         </h2>
         <p className="text-[#6e6e73] text-lg mb-10 max-w-lg mx-auto leading-relaxed">
-          Join 500+ restaurants across Pakistan. 14-day free trial, no credit card required.
+          Set up in minutes and start taking orders the same day. 14-day free trial, no credit card required.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-3 items-center">
           <Link
@@ -27,7 +27,7 @@ export function FinalCTASection() {
             <ArrowRight size={15} />
           </Link>
           <a
-            href="https://wa.me/923001234567?text=Dineiz%20ka%20demo%20chahiye"
+            href="https://wa.me/923141986044?text=Dineiz%20ka%20demo%20chahiye"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-8 py-3.5 text-[15px] font-semibold border border-[#d2d2d7] text-[#1d1d1f] rounded-full hover:border-[#1d1d1f] transition-colors"

@@ -28,7 +28,7 @@ const features = [
   },
   {
     title: "Multi-Payment Collection",
-    desc: "Accept Cash, Card, JazzCash, EasyPaisa, and split payments in seconds.",
+    desc: "Accept cash and split payments in seconds.",
     icon: CreditCard,
   },
   {

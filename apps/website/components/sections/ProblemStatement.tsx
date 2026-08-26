@@ -4,17 +4,17 @@ import { motion } from "framer-motion";
 
 const before = [
   "Manual paper receipts — errors daily",
-  "No FBR tax compliance",
-  "Cash only — losing JazzCash orders",
+  "No digital GST records",
+  "Cash only — no digital payment records",
   "No visibility into daily sales",
   "Staff theft goes undetected",
   "WhatsApp orders tracked on a notepad",
 ];
 
 const after = [
-  "Digital FBR receipts printed instantly",
+  "Digital GST receipts printed instantly",
   "Automatic GST calculation and filing",
-  "JazzCash, EasyPaisa, and card accepted",
+  "Every payment logged automatically",
   "Live dashboard with hourly sales reports",
   "Role-based access and full audit trail",
   "WhatsApp AI takes orders automatically",

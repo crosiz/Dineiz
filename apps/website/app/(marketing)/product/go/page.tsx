@@ -6,16 +6,16 @@ import { generateSEOMetadata, generateSoftwareApplicationSchema } from "@/lib/se
 export const metadata = generateSEOMetadata({
   title: "Dineiz Go — Free Mobile POS App for Food Carts & Small Restaurants in Pakistan",
   description:
-    "Dineiz Go is a free mobile POS app for small food businesses in Pakistan. Take orders, print receipts, and accept JazzCash/EasyPaisa — all on an Android phone.",
+    "Dineiz Go is a free mobile POS app for small food businesses in Pakistan. Take orders and print receipts — all on an Android phone.",
   path: "/product/go",
 });
 
 const features = [
   { icon: Smartphone, title: "Runs on Any Android Phone", desc: "No expensive hardware needed. Just install the app on your existing Android phone and start billing." },
   { icon: WifiOff, title: "Works Offline", desc: "Internet cuts out? No problem. Dineiz Go keeps taking orders and syncs when you're back online." },
-  { icon: ReceiptText, title: "FBR Receipts on Mobile", desc: "Print FBR-valid receipts via Bluetooth thermal printer directly from your phone." },
+  { icon: ReceiptText, title: "GST Receipts on Mobile", desc: "Print itemized GST receipts via Bluetooth thermal printer directly from your phone." },
   { icon: Zap, title: "Ultra-Fast Checkout", desc: "Counter and cart mode designed for speed — perfect for high-volume street food situations." },
-  { icon: CreditCard, title: "JazzCash & EasyPaisa", desc: "Accept digital payments instantly without a card machine. Customers scan, you get paid." },
+  { icon: CreditCard, title: "Flexible Payments", desc: "Record cash and split payments without needing a card machine." },
   { icon: Globe, title: "Multi-Language UI", desc: "Switch between English and Urdu interface — whichever your staff is comfortable with." },
 ];
 

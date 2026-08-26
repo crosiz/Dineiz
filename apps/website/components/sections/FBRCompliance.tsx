@@ -1,23 +1,23 @@
 "use client";
-import { ShieldCheck } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { motion } from "framer-motion";
 
 const features = [
   {
-    title: "FBR Certified POS",
-    desc: "Dineiz is an approved FBR-integrated POS. All receipts carry a unique FBR QR code valid for tax audits.",
+    title: "Dual GST Rates",
+    desc: "Set separate GST rates for cash and card/digital payments per branch. The rate applied is recalculated on the server at checkout, never trusted from the client.",
   },
   {
-    title: "PRA & SRB Support",
-    desc: "Punjab Revenue Authority and Sindh Revenue Board tax calculations are supported out of the box — no extra configuration.",
+    title: "Sindh Revenue Board Toggle",
+    desc: "Branches registered with SRB can enable SRB tax handling from Settings — no extra configuration.",
   },
   {
-    title: "Automatic GST Calculation",
-    desc: "GST is calculated automatically at checkout based on your registered rate. No manual math, no errors.",
+    title: "NTN On Every Receipt",
+    desc: "Your registered NTN is printed on customer bills and paid receipts automatically.",
   },
   {
-    title: "Compliance Reports",
-    desc: "Export monthly GST summary reports in FBR-accepted format for filing — directly from Dineiz Console.",
+    title: "Exportable Tax Summaries",
+    desc: "Generate monthly GST summary reports from Dineiz Console for your own filing and record-keeping.",
   },
 ];
 
@@ -34,14 +34,14 @@ export function FBRCompliance() {
             transition={{ duration: 0.45 }}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-6">
-              <ShieldCheck size={13} />
-              FBR Certified
+              <Receipt size={13} />
+              Built for Pakistani Tax Rules
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mb-4">
-              100% FBR compliant<br />out of the box
+              GST handled the way<br />your restaurant needs it
             </h2>
             <p className="text-base text-gray-500 leading-relaxed mb-8">
-              Don&apos;t risk fines or FBR notices. Dineiz is a certified FBR-integrated POS system, approved for use in Pakistan under the POS integration scheme. Every transaction is logged and every receipt is valid.
+              Configure your cash and card GST rates once, and Dineiz applies them automatically at checkout. Every receipt carries your NTN, and SRB-registered branches can turn on SRB handling with a single toggle.
             </p>
 
             <div className="space-y-5">
@@ -86,22 +86,8 @@ export function FBRCompliance() {
                 <div className="flex justify-between text-gray-500"><span>GST (17%)</span><span>Rs. 145</span></div>
                 <div className="flex justify-between font-bold text-gray-900 text-sm pt-1"><span>Total</span><span>Rs. 995</span></div>
               </div>
-              <div className="border-t border-dashed border-gray-200 pt-3 text-center space-y-2">
-                <div className="inline-block bg-gray-100 p-2 rounded">
-                  <div className="grid grid-cols-8 gap-px">
-                    {Array.from({ length: 64 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-2 h-2 rounded-sm ${(i * 17 + 5) % 3 === 0 ? "bg-gray-800" : "bg-white"}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="text-gray-400 text-xs">FBR Verified Receipt</div>
-                <div className="flex items-center justify-center gap-1">
-                  <ShieldCheck size={10} className="text-blue-500" />
-                  <span className="text-blue-600 font-semibold text-xs">FBR#: 202412041234</span>
-                </div>
+              <div className="border-t border-dashed border-gray-200 pt-3 text-center">
+                <div className="text-gray-400 text-xs">Thank you for dining with us</div>
               </div>
             </div>
           </motion.div>

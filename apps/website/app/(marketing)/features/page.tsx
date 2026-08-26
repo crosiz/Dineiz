@@ -5,7 +5,7 @@ import { generateSEOMetadata } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({
   title: "Dineiz Features — Complete Restaurant Software Platform",
-  description: "Explore all features of Dineiz: Tablet POS, KDS, inventory, WhatsApp AI ordering, FBR tax sync, and multi-branch analytics.",
+  description: "Explore all features of Dineiz: Tablet POS, KDS, inventory, WhatsApp AI ordering, GST tax handling, and multi-branch analytics.",
   path: "/features",
 });
 
@@ -13,10 +13,10 @@ const featureList = [
   { title: "Tablet POS Order Punching", icon: Tablet, desc: "Lightning fast checkout with dish variation pickers & offline sync." },
   { title: "Kitchen Display System (KDS)", icon: ChefHat, desc: "Digital station routing & preparation timer alerts for kitchen staff." },
   { title: "Real-time Sales Analytics", icon: TrendingUp, desc: "Hourly revenue breakdown, dish popularity metrics, and cash flow." },
-  { title: "WhatsApp AI Ordering Bot", icon: MessageSquare, desc: "24/7 automated order taking with JazzCash & EasyPaisa QR payment." },
+  { title: "WhatsApp AI Ordering Bot", icon: MessageSquare, desc: "24/7 automated order taking sent straight to your kitchen." },
   { title: "Recipe Raw Inventory", icon: Boxes, desc: "Automatic ingredient deduction per dish sold & low stock alerts." },
   { title: "Multi-branch Command", icon: Building2, desc: "Central web admin to compare revenue across all restaurant locations." },
-  { title: "FBR GST Compliance", icon: ShieldCheck, desc: "Automatic FBR QR code invoice printing & STRN tax reports." },
+  { title: "GST Tax Configuration", icon: ShieldCheck, desc: "Configurable cash & card GST rates, NTN on every receipt, and exportable tax summaries." },
   { title: "Staff Shift Reconciliation", icon: Zap, desc: "Opening float, cashier drawer reconciliation, and manager PIN overrides." },
 ];
 

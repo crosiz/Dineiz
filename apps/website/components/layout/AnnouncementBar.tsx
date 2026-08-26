@@ -27,7 +27,7 @@ export function AnnouncementBar() {
   return (
     <div className="relative bg-[#f5f5f7] border-b border-[#d2d2d7] py-2.5 px-4 text-center text-[13px] text-[#6e6e73] font-medium">
       <span>
-        Dineiz is now FBR-certified.{" "}
+        Dineiz now supports configurable GST rates and SRB tax settings.{" "}
         <a href="/product/pos" className="font-semibold text-[#1d1d1f] hover:text-[#FF6B35] transition-colors">
           Learn more →
         </a>
