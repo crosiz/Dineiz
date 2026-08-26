@@ -1,6 +1,7 @@
 import { edb, type PosEvent } from './event-log';
 import { useViews, reconcileServerId } from './views';
 import { getToken, getPosSession } from '@/lib/pos-session';
+import { toast } from 'sonner';
 
 // ─── The outbox: ships confirmed local events to the server ────────────────
 //
@@ -81,14 +82,33 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
 // request reached it and it said no — retrying the same body won't help).
 class TaskError extends Error {
   permanent: boolean;
-  constructor(message: string, permanent: boolean) {
+  // A 401 means this terminal's session token itself is invalid/expired —
+  // POS sessions are a 12h opaque token with no refresh mechanism
+  // (apps/api/src/middleware/auth.ts). Retrying with the SAME token can
+  // never succeed, no matter how many times or how long we wait — this is
+  // categorically different from a 5xx/timeout, which genuinely might
+  // resolve on its own. Events stuck here need a fresh login, not more
+  // retries; see hasUnsyncedEvents()'s note on why the sign-out guard
+  // treats these specially.
+  authExpired: boolean;
+  constructor(message: string, permanent: boolean, authExpired = false) {
     super(message);
     this.permanent = permanent;
+    this.authExpired = authExpired;
   }
 }
 
+const AUTH_EXPIRED_ERROR = 'AUTH_EXPIRED';
+
 function classifyHttpError(status: number): TaskError {
-  if (status === 401 || status === 403 || status === 408 || status === 429 || status >= 500) {
+  if (status === 401) {
+    // Not "permanent" in the POISON sense (the DATA is fine — the order,
+    // the payment, whatever — only the credential is stale), but also not
+    // a connectivity blip that just needs patience. Tagged distinctly so
+    // callers can tell "will resolve on its own" from "needs a fresh login".
+    return new TaskError(AUTH_EXPIRED_ERROR, false, true);
+  }
+  if (status === 403 || status === 408 || status === 429 || status >= 500) {
     return new TaskError(`HTTP ${status}`, false);
   }
   return new TaskError(`HTTP ${status}`, true);
@@ -427,10 +447,23 @@ async function reportDeadLetter(e: PosEvent, attempts: number): Promise<void> {
   }
 }
 
+// Fires once per re-login, not once per retry — the outbox can hit this
+// same 401 dozens of times a minute while stuck, and the point is to tell
+// the cashier once ("go log back in"), not to spam them every time it
+// retries with the same doomed token.
+let authExpiredToastShownAt = 0;
+function notifyAuthExpiredOnce() {
+  const now = Date.now();
+  if (now - authExpiredToastShownAt < 10 * 60 * 1000) return;
+  authExpiredToastShownAt = now;
+  toast.warning('Your session has expired — sign out and back in to sync pending changes.', { duration: 8000 });
+}
+
 async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> {
   const now = new Date().toISOString();
   const events = (await edb.events.bulkGet(eventIds)).filter(Boolean) as PosEvent[];
   let anyPoisoned = false;
+  if (err.authExpired) notifyAuthExpiredOnce();
   for (const e of events) {
     const attempts = e.attempts + 1;
     // A permanent rejection (400/404/409/422 — the request reached the
@@ -540,7 +573,12 @@ async function runChain(aggregateId: string, chain: OutboxTask[]): Promise<void>
       if (poisoned && task.kind === 'CREATE_ORDER') {
         await cascadePoisonOrder(aggregateId, 'Order create was rejected by the server — see lastError on the original event');
       }
-      if (!te.permanent) {
+      // An expired session isn't a signal the server is unhealthy — tripping
+      // the circuit breaker (and starting /health probes) over it would be
+      // chasing the wrong problem. It also can't be fixed by waiting, so it
+      // shouldn't feed the "maybe it'll recover" backoff-then-trip logic at
+      // all.
+      if (!te.permanent && !te.authExpired) {
         consecutiveFailures++;
         if (consecutiveFailures >= CIRCUIT_TRIP_THRESHOLD) tripCircuit();
       }
@@ -608,15 +646,28 @@ export interface UnsyncedSummary {
   count: number;
   poisoned: number;
   oldestAt: string | null;
+  // How many of `count` failed specifically because this terminal's
+  // session token is expired/invalid (a 401) — retrying those with the
+  // same token can never succeed; only a fresh login (which mints a new
+  // token that the next drain pass will pick up automatically) fixes them.
+  authExpiredCount: number;
+  // True when EVERY pending event is stuck on auth expiry — i.e. nothing
+  // else is actually blocking, and waiting longer here will never help.
+  // The sign-out guard uses this to stop pretending "keep waiting" is a
+  // real option: signing out and back in IS the fix.
+  blockedOnAuthOnly: boolean;
 }
 
 export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
   const pending = await edb.events.where('syncState').anyOf(['QUEUED', 'BLOCKED', 'INFLIGHT', 'DEGRADED']).toArray();
   const poisoned = await edb.events.where('syncState').equals('POISONED').count();
   pending.sort((a, b) => a.seq - b.seq);
+  const authExpiredCount = pending.filter((e) => e.lastError === AUTH_EXPIRED_ERROR).length;
   return {
     count: pending.length,
     poisoned,
     oldestAt: pending[0]?.clientTime ?? null,
+    authExpiredCount,
+    blockedOnAuthOnly: pending.length > 0 && authExpiredCount === pending.length,
   };
 }

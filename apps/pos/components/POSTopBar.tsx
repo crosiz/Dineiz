@@ -174,9 +174,12 @@ export function POSTopBar() {
     }
 
     setShowSignOutConfirm(false);
-    setUnsyncedInfo(await getUnsyncedSummary());
+    const summary = await getUnsyncedSummary();
+    setUnsyncedInfo(summary);
     setSignOutSyncing(true);
-    kickOutbox();
+    // blockedOnAuthOnly events wait on a fresh login token, not on network
+    // retries — kicking the outbox won't move them, so don't bother.
+    if (!summary.blockedOnAuthOnly) kickOutbox();
 
     signOutPollRef.current = setInterval(async () => {
       const stillPending = await hasUnsyncedEvents();
@@ -185,7 +188,8 @@ export function POSTopBar() {
         finishSignOut();
         return;
       }
-      setUnsyncedInfo(await getUnsyncedSummary());
+      const latest = await getUnsyncedSummary();
+      setUnsyncedInfo(latest);
     }, 1500);
   };
 
@@ -405,8 +409,45 @@ export function POSTopBar() {
         </div>
       )}
 
-      {/* Blocks sign-out while unsynced events are still in flight */}
-      {signOutSyncing && (
+      {/* Blocks sign-out while unsynced events are still in flight. When
+          every one of them is stuck purely on an expired session token
+          (blockedOnAuthOnly), waiting longer is never going to help — the
+          only fix is a fresh login, which is exactly what signing out and
+          back in does, so that's offered directly instead of demanding a
+          manager PIN for something that isn't actually an override. */}
+      {signOutSyncing && unsyncedInfo?.blockedOnAuthOnly && (
+        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <Clock size={20} />
+            </div>
+
+            <h3 className="font-bold text-slate-900 text-base mb-1">Session Expired</h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              This terminal has <strong className="text-slate-700">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> saved
+              locally that couldn't reach the server because this session timed out. They're safe and will sync
+              automatically the next time anyone signs in here — go ahead and sign out.
+            </p>
+
+            <div className="flex gap-2.5 w-full">
+              <button
+                onClick={cancelSignOutWait}
+                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                Stay Signed In
+              </button>
+              <button
+                onClick={() => { setSignOutSyncing(false); finishSignOut(); }}
+                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {signOutSyncing && unsyncedInfo && !unsyncedInfo.blockedOnAuthOnly && (
         <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
           <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
@@ -415,11 +456,11 @@ export function POSTopBar() {
 
             <h3 className="font-bold text-slate-900 text-base mb-1">Finishing Sync…</h3>
             <p className="text-slate-500 text-xs leading-relaxed mb-4">
-              This terminal has <strong className="text-slate-700">{unsyncedInfo?.count ?? 0} change{unsyncedInfo?.count === 1 ? '' : 's'}</strong> still
+              This terminal has <strong className="text-slate-700">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> still
               being sent to the server. Signing out now would leave them queued until someone logs back in here.
-              {(unsyncedInfo?.poisoned ?? 0) > 0 && (
+              {unsyncedInfo.poisoned > 0 && (
                 <span className="block mt-2 text-rose-600 font-semibold">
-                  {unsyncedInfo!.poisoned} of these were rejected by the server and need a manager to review them.
+                  {unsyncedInfo.poisoned} of these were rejected by the server and need a manager to review them.
                 </span>
               )}
             </p>
