@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { io } from 'socket.io-client';
+import { apiFetch, API_URL } from '@/lib/api';
 import { useUser } from '@/contexts/user-context';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 
@@ -54,7 +55,7 @@ function getDateRange(preset: DatePreset, customFrom?: string, customTo?: string
 }
 
 export function useOrders() {
-  const { role } = useUser();
+  const { role, tenantId } = useUser();
   const isBranchManager = role === 'BRANCH_MANAGER';
   const qc = useQueryClient();
 
@@ -110,6 +111,29 @@ export function useOrders() {
     queryFn: () => apiFetch<HistoryResponse>(`/api/orders/history?${params.toString()}`),
     staleTime: 1000 * 60 * 2, // 2 minutes (respect global default or explicit here)
   });
+
+  // ── Live refresh ──────────────────────────────────────────────────────────────
+  // Without this, a payment collected on the POS updates the KPI tiles
+  // (tenant-admin-dashboard.tsx listens for the same events) but this list
+  // sits on its cached page for up to the 2-minute staleTime above — a
+  // manager watching Order History would not see a table flip to COMPLETED
+  // until they manually refresh. Same namespace/room convention as
+  // useKDS.ts and tenant-admin-dashboard.tsx.
+  useEffect(() => {
+    const socket = io(`${API_URL}/kds`, { withCredentials: true, transports: ['websocket', 'polling'] });
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['order-history'] });
+
+    socket.on('connect', () => {
+      if (selectedBranchId) socket.emit('join_branch', selectedBranchId);
+      else if (role === 'TENANT_ADMIN' && tenantId) socket.emit('join_tenant', tenantId);
+    });
+    socket.on('kds:new_order', invalidate);
+    socket.on('kds:order_updated', invalidate);
+    socket.on('kds:order_cancelled', invalidate);
+    socket.on('dashboard:stats_updated', invalidate);
+
+    return () => { socket.disconnect(); };
+  }, [selectedBranchId, role, tenantId, qc]);
 
   // ── Reverse / cancel order ────────────────────────────────────────────────────
   const reverseOrder = useCallback(async (orderId: string) => {

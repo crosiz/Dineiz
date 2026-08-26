@@ -39,7 +39,6 @@ export function POSTopBar() {
   const [pendingBackConfirm, setPendingBackConfirm] = useState(false);
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
-  const [isValidatingClose, setIsValidatingClose] = useState(false);
 
   // Sign-out sync guard — blocks signing out while this terminal still has
   // events queued for the server, instead of silently abandoning them.
@@ -47,6 +46,10 @@ export function POSTopBar() {
   const [unsyncedInfo, setUnsyncedInfo] = useState<UnsyncedSummary | null>(null);
   const [showForcePin, setShowForcePin] = useState(false);
   const signOutPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Captured once when the sync-wait modal opens so the progress bar has a
+  // fixed denominator to shrink towards — unsyncedInfo.count itself keeps
+  // changing every poll tick.
+  const signOutInitialCountRef = useRef(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -64,7 +67,15 @@ export function POSTopBar() {
       return;
     }
 
-    setIsValidatingClose(true);
+    // Open immediately — CloseShiftModal has its own "Calculating totals…"
+    // loading state, so the cashier sees feedback the instant they tap
+    // instead of a frozen menu while this validation call is in flight
+    // (previously this fetch had to resolve, cold Neon connection and all,
+    // before the modal appeared at all). The can-close check still runs, in
+    // the background — if it turns out the shift is blocked, swap to the
+    // blocker modal instead.
+    setIsCloseShiftOpen(true);
+
     try {
       const token = localStorage.getItem('pos_token');
       // Every other POS call falls back to :3001; this one said :8080, so on a
@@ -78,16 +89,13 @@ export function POSTopBar() {
       const data = await res.json();
 
       if (!data.canClose) {
+        setIsCloseShiftOpen(false);
         setBlockers(data.blockers || []);
         setIsBlockerOpen(true);
-      } else {
-        setIsCloseShiftOpen(true);
       }
     } catch (e) {
       console.warn('Shift close validation error', e);
       toast.error('Could not validate shift status. Please try again.');
-    } finally {
-      setIsValidatingClose(false);
     }
   };
 
@@ -174,7 +182,9 @@ export function POSTopBar() {
     }
 
     setShowSignOutConfirm(false);
-    setUnsyncedInfo(await getUnsyncedSummary());
+    const summary = await getUnsyncedSummary();
+    signOutInitialCountRef.current = summary.count;
+    setUnsyncedInfo(summary);
     setSignOutSyncing(true);
     kickOutbox();
 
@@ -335,9 +345,8 @@ export function POSTopBar() {
                     </button>
 
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold disabled:opacity-50"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
                       onClick={handleCloseShiftClick}
-                      disabled={isValidatingClose}
                     >
                       <Clock size={15} className="text-slate-500" />
                       <span>Close Shift</span>
@@ -414,7 +423,7 @@ export function POSTopBar() {
             </div>
 
             <h3 className="font-bold text-slate-900 text-base mb-1">Finishing Sync…</h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-4">
+            <p className="text-slate-500 text-xs leading-relaxed mb-3">
               This terminal has <strong className="text-slate-700">{unsyncedInfo?.count ?? 0} change{unsyncedInfo?.count === 1 ? '' : 's'}</strong> still
               being sent to the server. Signing out now would leave them queued until someone logs back in here.
               {(unsyncedInfo?.poisoned ?? 0) > 0 && (
@@ -423,6 +432,15 @@ export function POSTopBar() {
                 </span>
               )}
             </p>
+
+            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mb-4">
+              <div
+                className="h-full bg-[var(--pos-primary,#F59E0B)] transition-all duration-500 ease-out"
+                style={{
+                  width: `${Math.max(0, Math.min(100, Math.round((1 - (unsyncedInfo?.count ?? 0) / Math.max(signOutInitialCountRef.current, 1)) * 100)))}%`,
+                }}
+              />
+            </div>
 
             <div className="flex gap-2.5 w-full mb-2">
               <button
