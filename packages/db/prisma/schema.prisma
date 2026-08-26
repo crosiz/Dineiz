@@ -39,6 +39,42 @@ enum SuperAdminRole {
   SALES
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum EmailTemplate {
+  WELCOME
+  TRIAL_REMINDER_7
+  TRIAL_REMINDER_3
+  TRIAL_REMINDER_1
+  TRIAL_EXTENDED
+  TRIAL_ENDED
+  PAYMENT_RECEIVED
+  RENEWAL_REMINDER
+  PAYMENT_FAILED
+  SUSPENSION_WARNING
+  SUSPENDED
+  REACTIVATED
+  PLAN_CHANGED
+  MANAGER_INVITE
+  PASSWORD_RESET
+  BRANCH_CREATED
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  BOUNCED
+  FAILED
+}
+
 // -----------------------------------------------------------------------------
 // CORE TENANT & ORGANIZATION MODELS
 // -----------------------------------------------------------------------------
@@ -112,6 +148,7 @@ model Tenant {
   // Billing
   subscription     TenantSubscription?
   paymentHistories PaymentHistory[]
+  emailLogs        EmailLog[]
 
   // Super Admin Extensions
   featureOverrides TenantFeatureOverride[]
@@ -2018,23 +2055,45 @@ model SuperAdmin {
 }
 
 model TenantSubscription {
-  id                 String    @id @default(cuid())
-  tenantId           String    @unique
-  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan               String    @default("STARTER") // FREE, PRO_GO, STARTER, PRO, ENTERPRISE
-  billingCycle       String    @default("MONTHLY") // MONTHLY, ANNUAL
-  status             String    @default("ACTIVE") // TRIALING, ACTIVE, PAST_DUE, CANCELLED
-  amount             Float     @default(0) // MRR amount in PKR
-  trialDays          Int       @default(14)
+  id                 String             @id @default(cuid())
+  tenantId           String             @unique
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan               String             @default("STARTER") // GO_FREE, GO_PRO, STARTER, PRO, ENTERPRISE
+  billingCycle       String             @default("MONTHLY") // MONTHLY, ANNUAL
+  status             SubscriptionStatus @default(TRIALING)
+  amount             Float              @default(0) // MRR amount in PKR
+  trialDays          Int                @default(14)
+  trialStartedAt     DateTime?
   trialEndsAt        DateTime?
-  currentPeriodStart DateTime  @default(now())
-  currentPeriodEnd   DateTime  @default(now())
-  nextRenewalDate    DateTime  @default(now())
+  trialExtendedCount Int                @default(0)
+  trialExtendedBy    String? // super admin id who last extended
+  trialExtensionReason String?
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime           @default(now())
+  nextRenewalDate    DateTime           @default(now())
+
+  // Plan ceilings (set from plan defaults at creation/plan-change, overridable via TenantFeatureOverride)
+  maxBranches Int @default(1)
+  maxStaff    Int @default(5)
+
+  // Grace period & suspension
+  gracePeriodDays    Int       @default(7)
+  suspendedAt        DateTime?
+  suspensionDeferred Boolean   @default(false)
+
+  // Last recorded payment
+  lastPaymentAt        DateTime?
+  lastPaymentAmount    Float?
+  lastPaymentMethod    String? // JAZZCASH, EASYPAISA, BANK_TRANSFER, CASH, CARD
+  lastPaymentReference String?
+
   cancelledAt        DateTime?
+  cancellationReason String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   @@index([tenantId])
+  @@index([status])
 }
 
 model PaymentHistory {
@@ -2056,14 +2115,17 @@ model PaymentHistory {
 }
 
 model TenantFeatureOverride {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  featureKey String
-  enabled    Boolean  @default(true) // For boolean features
-  limit      Int?     // For numeric limits (e.g. dailyOrders, branches)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  featureKey String // e.g. "maxBranches", "maxStaff", "whatsappBot"
+  enabled    Boolean   @default(true) // For boolean features
+  limit      Int? // For numeric limits (e.g. maxBranches, maxStaff, dailyOrders)
+  reason     String? // Why this override was granted
+  grantedBy  String? // Super admin id
+  expiresAt  DateTime? // Optional — temporary overrides
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([tenantId, featureKey])
   @@index([tenantId])
@@ -2118,6 +2180,27 @@ model AuditLog {
 
   @@index([superAdminId])
   @@index([targetTenantId])
+}
+
+model EmailLog {
+  id                String        @id @default(cuid())
+  tenantId          String?
+  tenant            Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  recipientEmail    String
+  template          EmailTemplate
+  subject           String
+  status            EmailStatus   @default(QUEUED)
+  providerMessageId String?
+  errorMessage      String?
+  attempts          Int           @default(0)
+  dedupeKey         String? // tenantId:template:referenceDate — prevents duplicate sends
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([dedupeKey])
+  @@index([status])
 }
 
 model FeatureFlag {

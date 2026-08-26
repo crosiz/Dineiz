@@ -1,9 +1,10 @@
 import { prisma } from '@dineiz/db';
-import { CreateBranchInput, UpdateBranchInput } from '@dineiz/schemas';
+import { CreateBranchInput, UpdateBranchInput, getPlanLimits } from '@dineiz/schemas';
 import crypto from 'crypto';
 import { startOfDay, endOfDay } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { uploadImage } from '../../lib/cloudinary';
+import { sendBranchCreatedEmail } from '../../lib/email.service';
 
 const BRANCH_COLORS = [
   '#FF5722', '#3B82F6', '#10B981', '#8B5CF6', 
@@ -120,50 +121,88 @@ export async function listBranches(tenantId: string) {
   };
 }
 
+const NEXT_PLAN_FOR_MORE_BRANCHES: Record<string, string> = {
+  GO_FREE: 'GO_PRO',
+  GO_PRO: 'STARTER',
+  STARTER: 'PRO',
+  PRO: 'ENTERPRISE',
+};
+
 export async function checkPlanLimit(tenantId: string) {
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
   if (!tenant) throw new Error("Tenant not found");
 
-  const PLAN_LIMITS: Record<string, { maxBranches: number }> = {
-    'STARTER': { maxBranches: 1 },
-    'PRO': { maxBranches: 3 },
-    'ENTERPRISE': { maxBranches: 999 }
-  };
+  const subscription = await prisma.tenantSubscription.findUnique({ where: { tenantId } });
+  const planLimit = subscription?.maxBranches ?? getPlanLimits(tenant.plan).maxBranches;
 
-  const limit = PLAN_LIMITS[tenant.plan]?.maxBranches || 1;
+  // A non-expired override supersedes the plan/subscription ceiling
+  const override = await prisma.tenantFeatureOverride.findUnique({
+    where: { tenantId_featureKey: { tenantId, featureKey: 'maxBranches' } },
+  });
+  const hasActiveOverride = override && override.limit != null && (!override.expiresAt || override.expiresAt > new Date());
+  const limit = hasActiveOverride ? override!.limit! : planLimit;
+
   const existingCount = await prisma.branch.count({ where: { tenantId, deletedAt: null } });
 
-  if (existingCount >= limit) {
+  if (limit !== -1 && existingCount >= limit) {
     throw {
       isLimitError: true,
       error: 'PLAN_LIMIT_REACHED',
-      message: `Your plan allows ${limit} branches. Upgrade to add more.`,
-      currentCount: existingCount,
-      limit
+      limit: 'maxBranches',
+      planLimit: limit,
+      currentUsage: existingCount,
+      currentPlan: tenant.plan,
+      requiredPlan: NEXT_PLAN_FOR_MORE_BRANCHES[tenant.plan] ?? 'ENTERPRISE',
+      message: `You have reached your plan limit of ${limit} branch${limit === 1 ? '' : 'es'}.`,
     };
   }
   return { existingCount, tenant };
 }
 
+function makeBranchCode(city: string | undefined) {
+  const cityCode = city ? city.substring(0, 3).toUpperCase() : 'BRN';
+  const randomStr = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `SS-${cityCode}-${randomStr}`;
+}
+
 export async function createBranch(tenantId: string, data: CreateBranchInput) {
-  const { existingCount } = await checkPlanLimit(tenantId);
+  const { existingCount, tenant } = await checkPlanLimit(tenantId);
 
   const colorIndex = existingCount % BRANCH_COLORS.length;
   const colorHex = BRANCH_COLORS[colorIndex];
   const initial = data.name.trim()[0].toUpperCase();
-  const cityCode = data.city ? data.city.substring(0, 3).toUpperCase() : 'BRN';
-  const randomStr = crypto.randomBytes(3).toString('hex').toUpperCase();
-  const branchCode = `SS-${cityCode}-${randomStr}`;
 
-  const branch = await prisma.branch.create({
-    data: {
-      ...data,
-      tenantId,
-      colorHex,
-      initial,
-      branchCode
+  let branch;
+  let attempt = 0;
+  for (;;) {
+    const branchCode = makeBranchCode(data.city);
+    try {
+      branch = await prisma.branch.create({
+        data: { ...data, tenantId, colorHex, initial, branchCode },
+      });
+      break;
+    } catch (err: any) {
+      // P2002 = unique constraint violation on branchCode — regenerate and retry
+      attempt += 1;
+      if (err.code !== 'P2002' || attempt >= 5) throw err;
     }
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { tenantId, role: 'TENANT_ADMIN' },
+    select: { email: true, name: true },
   });
+  if (admin?.email) {
+    sendBranchCreatedEmail({
+      to: admin.email,
+      ownerName: admin.name || 'there',
+      restaurantName: tenant.name,
+      branchName: branch.name,
+      branchCode: branch.branchCode || '',
+      address: [branch.address, branch.city].filter(Boolean).join(', '),
+      tenantId,
+    }).catch((err) => console.error('[Email] BRANCH_CREATED failed:', err));
+  }
 
   return branch;
 }

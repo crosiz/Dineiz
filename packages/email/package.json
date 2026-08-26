@@ -1,0 +1,17 @@
+{
+  "name": "@dineiz/email",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "pnpm run build",
+    "lint": "eslint \"**/*.ts*\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@dineiz/config": "workspace:*",
+    "typescript": "^5.4.5"
+  }
+}

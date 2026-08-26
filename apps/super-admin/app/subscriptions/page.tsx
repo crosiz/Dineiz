@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  CreditCard,
   Clock,
   CheckCircle2,
   AlertTriangle,
@@ -11,7 +10,6 @@ import {
   Send,
   Check,
   Slash,
-  DollarSign,
   RefreshCw,
 } from 'lucide-react';
 
@@ -127,12 +125,12 @@ export default function SubscriptionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Subscriptions Management</h1>
-          <p className="text-sm text-slate-400">Overview of all subscription states, trial periods, and dunning</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Subscriptions Management</h1>
+          <p className="text-sm text-slate-500">Overview of all subscription states, trial periods, and dunning</p>
         </div>
         <button
           onClick={fetchSubscriptions}
-          className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+          className="p-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-600 border border-slate-200"
         >
           <RefreshCw className="w-4 h-4" />
         </button>
@@ -140,79 +138,79 @@ export default function SubscriptionsPage() {
 
       {/* 4 Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between text-blue-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Trialing</span>
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between text-blue-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Trialing</span>
             <Clock className="w-5 h-5" />
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-extrabold text-white">{trialing.length}</span>
-            <span className="text-xs text-slate-400 ml-2">clients</span>
+            <span className="text-3xl font-extrabold text-slate-900">{trialing.length}</span>
+            <span className="text-xs text-slate-500 ml-2">clients</span>
           </div>
         </div>
 
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between text-emerald-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active</span>
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between text-emerald-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Active</span>
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-extrabold text-white">{active.length}</span>
-            <span className="text-xs text-emerald-400 font-bold ml-2">PKR {totalActiveMRR.toLocaleString()} MRR</span>
+            <span className="text-3xl font-extrabold text-slate-900">{active.length}</span>
+            <span className="text-xs text-emerald-600 font-bold ml-2">PKR {totalActiveMRR.toLocaleString()} MRR</span>
           </div>
         </div>
 
-        <div className="bg-rose-950/40 border border-rose-800/80 p-5 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between text-rose-400">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-300">Past Due (Urgent)</span>
+        <div className="bg-rose-50 border border-rose-200 p-5 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between text-rose-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-600">Past Due (Urgent)</span>
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-extrabold text-rose-400">{pastDue.length}</span>
-            <span className="text-xs text-rose-300 ml-2">require action</span>
+            <span className="text-3xl font-extrabold text-rose-600">{pastDue.length}</span>
+            <span className="text-xs text-rose-600 ml-2">require action</span>
           </div>
         </div>
 
-        <div className="bg-slate-950/60 border border-slate-800/80 p-5 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between text-slate-400">
+        <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-between text-slate-500">
             <span className="text-xs font-bold uppercase tracking-wider">Cancelled</span>
             <UserMinus className="w-5 h-5" />
           </div>
           <div className="mt-3">
-            <span className="text-3xl font-extrabold text-slate-300">{cancelled.length}</span>
-            <span className="text-xs text-slate-500 ml-2">this month</span>
+            <span className="text-3xl font-extrabold text-slate-700">{cancelled.length}</span>
+            <span className="text-xs text-slate-400 ml-2">this month</span>
           </div>
         </div>
       </div>
 
       {/* HIGHLIGHTED PAST DUE SECTION */}
-      <div className="bg-rose-950/30 border border-rose-800/80 p-6 rounded-2xl shadow-2xl space-y-4">
-        <div className="flex items-center gap-3 border-b border-rose-900/60 pb-3">
-          <AlertTriangle className="w-5 h-5 text-rose-400" />
-          <h2 className="text-base font-bold text-rose-200">Past Due Accounts — Immediate Attention Needed</h2>
+      <div className="bg-rose-50 border border-rose-200 p-6 rounded-2xl shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b border-rose-200 pb-3">
+          <AlertTriangle className="w-5 h-5 text-rose-600" />
+          <h2 className="text-base font-bold text-rose-800">Past Due Accounts — Immediate Attention Needed</h2>
         </div>
 
         <div className="space-y-3">
           {pastDue.map((client) => (
             <div
               key={client.id}
-              className="bg-slate-900/90 border border-rose-800/60 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="bg-white border border-rose-200 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div>
-                <Link href={`/clients/${client.id}`} className="font-bold text-white text-sm hover:text-amber-400">
+                <Link href={`/clients/${client.id}`} className="font-bold text-slate-900 text-sm hover:text-orange-600">
                   {client.name}
                 </Link>
-                <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
-                  <span>Plan: <strong className="text-amber-400">{client.plan}</strong></span>
-                  <span className="text-rose-400 font-bold">{client.daysOverdue || 3} Days Overdue</span>
-                  <span className="text-white font-bold">Owes: PKR {(client.amount || 8000).toLocaleString()}</span>
+                <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                  <span>Plan: <strong className="text-orange-600">{client.plan}</strong></span>
+                  <span className="text-rose-600 font-bold">{client.daysOverdue || 3} Days Overdue</span>
+                  <span className="text-slate-900 font-bold">Owes: PKR {(client.amount || 8000).toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleSendReminder(client)}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold flex items-center gap-1"
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Send Reminder</span>
@@ -220,7 +218,7 @@ export default function SubscriptionsPage() {
 
                 <button
                   onClick={() => handleMarkAsPaid(client)}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Mark as Paid</span>
@@ -228,7 +226,7 @@ export default function SubscriptionsPage() {
 
                 <button
                   onClick={() => handleSuspend(client)}
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold flex items-center gap-1"
                 >
                   <Slash className="w-3.5 h-3.5" />
                   <span>Suspend</span>
@@ -238,7 +236,7 @@ export default function SubscriptionsPage() {
           ))}
 
           {pastDue.length === 0 && (
-            <p className="text-xs text-slate-400 text-center py-6">No past due clients! All subscriptions are paid up.</p>
+            <p className="text-xs text-slate-500 text-center py-6">No past due clients! All subscriptions are paid up.</p>
           )}
         </div>
       </div>

@@ -4,17 +4,24 @@ import { prisma, Role, UserStatus } from '@dineiz/db';
 import { getCurrentSuperAdmin, hashPassword } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
 import { Resend } from 'resend';
-import { generateWelcomeEmailHtml } from '@/lib/email-templates';
+import { welcomeEmail } from '@dineiz/email';
+import { getPlanDefinition } from '@dineiz/schemas';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_dev');
 
-function makeBranchCode(city?: string | null): string {
+async function makeUniqueBranchCode(tx: any, city?: string | null): Promise<string> {
   const prefix = (city || 'LHR').replace(/[^A-Za-z]/g, '').substring(0, 3).toUpperCase() || 'LHR';
-  const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
-  return `SS-${prefix}-${rand}`;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const rand = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const code = `SS-${prefix}-${rand}`;
+    const existing = await tx.branch.findUnique({ where: { branchCode: code } });
+    if (!existing) return code;
+  }
+  // Extremely unlikely fallback: timestamp suffix guarantees uniqueness
+  return `SS-${prefix}-${Date.now().toString(36).toUpperCase()}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -86,11 +93,8 @@ export async function GET(request: NextRequest) {
       const sub = t.subscription;
 
       let mrr = sub?.amount || 0;
-      if (!mrr) {
-        if (sub?.plan === 'PRO') mrr = 15000;
-        else if (sub?.plan === 'STARTER') mrr = 8000;
-        else if (sub?.plan === 'ENTERPRISE') mrr = 35000;
-        else if (sub?.plan === 'PRO_GO') mrr = 12000;
+      if (!mrr && sub?.plan) {
+        mrr = getPlanDefinition(sub.plan).monthlyPrice || 0;
       }
 
       return {
@@ -137,13 +141,25 @@ export async function POST(request: Request) {
       billingCycle = 'MONTHLY',
       trialDays = 14,
       trialEndsAt: customTrialEndsAt,
-      branchesCount = 0,
+      branches: requestedBranches,
       city = 'Lahore',
       notes,
-    } = body;
+    } = body as {
+      name: string; ownerName: string; ownerEmail: string; ownerPhone?: string; password: string;
+      plan?: string; billingCycle?: string; trialDays?: number; trialEndsAt?: string;
+      branches?: { name: string; city?: string; address?: string }[];
+      city?: string; notes?: string;
+    };
 
     if (!name || !ownerName || !ownerEmail || !password) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const planDef = getPlanDefinition(plan);
+    if (requestedBranches && requestedBranches.length > 0 && planDef.limits.maxBranches !== -1 && requestedBranches.length > planDef.limits.maxBranches) {
+      return NextResponse.json({
+        error: `The ${planDef.name} plan allows up to ${planDef.limits.maxBranches} branches. You listed ${requestedBranches.length}.`,
+      }, { status: 400 });
     }
 
     const cleanEmail = ownerEmail.toLowerCase().trim();
@@ -214,13 +230,8 @@ export async function POST(request: Request) {
       trialEndDate.setDate(trialEndDate.getDate() + Number(trialDays));
     }
 
-    // Compute default plan amount in PKR
-    let planAmount = 8000;
-    if (plan === 'FREE' || plan === 'FREE_GO') planAmount = 0;
-    else if (plan === 'PRO_GO') planAmount = 12000;
-    else if (plan === 'STARTER') planAmount = 8000;
-    else if (plan === 'PRO') planAmount = 15000;
-    else if (plan === 'ENTERPRISE') planAmount = 35000;
+    // Default plan amount in PKR, from the canonical plan definition
+    const planAmount = billingCycle === 'ANNUAL' ? (planDef.annualPrice ?? 0) : (planDef.monthlyPrice ?? 0);
 
     // Transaction to create Tenant, User, Subscription, Branding (and optional branches only if requested)
     const result = await prisma.$transaction(async (tx) => {
@@ -234,20 +245,25 @@ export async function POST(request: Request) {
         },
       });
 
-      // Generate branches only if explicitly requested (default 0)
+      // Default: exactly one "Main Branch". Only create a named, multi-location
+      // list when the super admin explicitly provided one (chain onboarding) —
+      // a plan's branch count is a ceiling, never an instruction to pre-create rows.
+      const branchesToCreate = requestedBranches && requestedBranches.length > 0
+        ? requestedBranches
+        : [{ name: 'Main Branch', city, address: undefined }];
+
       const branches = [];
       const branchAccessCodes: { branchName: string; code: string }[] = [];
-      const numBranches = Math.max(0, Number(branchesCount) || 0);
 
-      for (let i = 1; i <= numBranches; i++) {
-        const branchCode = makeBranchCode(city);
-        const branchName = i === 1 ? `${name.trim()} - Main Branch` : `${name.trim()} - Branch ${i}`;
-
+      for (const b of branchesToCreate) {
+        const branchCity = (b.city || city).trim();
+        const branchCode = await makeUniqueBranchCode(tx, branchCity);
         const branch = await tx.branch.create({
           data: {
             tenantId: tenant.id,
-            name: branchName,
-            city: city.trim(),
+            name: b.name.trim(),
+            city: branchCity,
+            address: b.address?.trim() || null,
             branchCode,
             currency: 'PKR',
             isActive: true,
@@ -271,7 +287,8 @@ export async function POST(request: Request) {
         },
       });
 
-      // Create Subscription
+      // Create Subscription — maxBranches/maxStaff are a ceiling from the plan,
+      // never an instruction to pre-create rows (see branch creation above).
       const subscription = await tx.tenantSubscription.create({
         data: {
           tenantId: tenant.id,
@@ -280,10 +297,13 @@ export async function POST(request: Request) {
           status: Number(trialDays) > 0 ? 'TRIALING' : 'ACTIVE',
           amount: planAmount,
           trialDays: Number(trialDays),
+          trialStartedAt: new Date(),
           trialEndsAt: Number(trialDays) > 0 ? trialEndDate : null,
           currentPeriodStart: new Date(),
           currentPeriodEnd: trialEndDate,
           nextRenewalDate: trialEndDate,
+          maxBranches: planDef.limits.maxBranches,
+          maxStaff: planDef.limits.maxStaff,
         },
       });
 
@@ -310,7 +330,7 @@ export async function POST(request: Request) {
         name: result.tenant.name,
         plan: result.subscription.plan,
         ownerEmail: result.user.email,
-        branchesCount,
+        branchesCount: result.branches.length,
       },
       ipAddress,
       notes: `Created new client ${result.tenant.name} (${result.subscription.plan})`,
@@ -322,29 +342,54 @@ export async function POST(request: Request) {
     const loginUrl = isLocal ? 'http://localhost:3000/login' : 'https://console.dineiz.com';
 
     try {
-      if (process.env.RESEND_API_KEY) {
-        const emailHtml = generateWelcomeEmailHtml({
-          restaurantName: name.trim(),
-          ownerName: ownerName.trim(),
-          ownerEmail: cleanEmail,
-          password,
-          plan: result.subscription.plan,
-          billingCycle: result.subscription.billingCycle,
-          trialDays: Number(trialDays),
-          trialEndsAt: result.subscription.trialEndsAt,
-          branches: result.branchAccessCodes,
-          loginUrl,
-        });
+      const email = welcomeEmail({
+        ownerName: ownerName.trim(),
+        restaurantName: name.trim(),
+        email: cleanEmail,
+        password,
+        plan: result.subscription.plan,
+        trialEndsAt: result.subscription.trialEndsAt ? result.subscription.trialEndsAt.toDateString() : undefined,
+        branchCodes: result.branchAccessCodes,
+      });
 
-        await resend.emails.send({
-          from: 'Dineiz Onboarding <welcome@dineiz.com>',
-          to: cleanEmail,
-          subject: `Welcome to Dineiz — ${name.trim()} Account Credentials`,
-          html: emailHtml,
-        });
+      let sendStatus: 'SENT' | 'FAILED' = 'SENT';
+      let providerMessageId: string | undefined;
+      let errorMessage: string | undefined;
+
+      if (process.env.RESEND_API_KEY) {
+        try {
+          const sendResult = await resend.emails.send({
+            from: 'Dineiz Onboarding <welcome@dineiz.com>',
+            to: cleanEmail,
+            subject: email.subject,
+            html: email.html,
+            text: email.text,
+          });
+          providerMessageId = sendResult.data?.id;
+        } catch (sendErr: any) {
+          sendStatus = 'FAILED';
+          errorMessage = sendErr?.message || String(sendErr);
+        }
+      } else {
+        sendStatus = 'FAILED';
+        errorMessage = 'RESEND_API_KEY not configured';
       }
+
+      await prisma.emailLog.create({
+        data: {
+          tenantId: result.tenant.id,
+          recipientEmail: cleanEmail,
+          template: 'WELCOME',
+          subject: email.subject,
+          status: sendStatus,
+          providerMessageId,
+          errorMessage,
+          attempts: 1,
+          sentAt: sendStatus === 'SENT' ? new Date() : null,
+        },
+      });
     } catch (emailErr) {
-      console.warn('Resend email failed:', emailErr);
+      console.warn('Welcome email failed:', emailErr);
     }
 
     return NextResponse.json({

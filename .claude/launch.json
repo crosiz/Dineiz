@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "pos", "dev"],
       "port": 3001
+    },
+    {
+      "name": "super-admin",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "--filter", "super-admin", "dev"],
+      "port": 3003
     }
   ]
 }

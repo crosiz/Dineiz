@@ -132,6 +132,16 @@ export async function GET(
               nextRenewalDate: tenant.subscription.nextRenewalDate
                 ? new Date(tenant.subscription.nextRenewalDate).toISOString()
                 : new Date().toISOString(),
+              maxBranches: tenant.subscription.maxBranches,
+              maxStaff: tenant.subscription.maxStaff,
+              trialExtendedCount: tenant.subscription.trialExtendedCount,
+              gracePeriodDays: tenant.subscription.gracePeriodDays,
+              lastPaymentAt: tenant.subscription.lastPaymentAt
+                ? new Date(tenant.subscription.lastPaymentAt).toISOString()
+                : null,
+              lastPaymentAmount: tenant.subscription.lastPaymentAmount,
+              lastPaymentMethod: tenant.subscription.lastPaymentMethod,
+              cancellationReason: tenant.subscription.cancellationReason,
             }
           : null,
         stats: {

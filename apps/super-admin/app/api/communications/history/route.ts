@@ -1,4 +1,4 @@
-import { NextResponse } from 'next';
+import { NextResponse } from 'next/server';
 import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
 

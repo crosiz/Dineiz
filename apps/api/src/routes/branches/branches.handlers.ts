@@ -50,7 +50,8 @@ export async function handleCreateBranch(request: FastifyRequest, reply: Fastify
     return reply.status(201).send({ branch });
   } catch (err: any) {
     if (err.isLimitError) {
-      return reply.status(403).send(err);
+      const { isLimitError, ...body } = err;
+      return reply.status(402).send(body);
     }
     throw err;
   }

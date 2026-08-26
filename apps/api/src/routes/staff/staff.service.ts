@@ -3,6 +3,45 @@ import { CreateStaff, StaffQuery, UpdateStaff, ResetPin } from './staff.schema';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { sendManagerInviteEmail } from '../../lib/email.service';
+import { getPlanLimits } from '@dineiz/schemas';
+
+const NEXT_PLAN_FOR_MORE_STAFF: Record<string, string> = {
+  GO_FREE: 'GO_PRO',
+  GO_PRO: 'STARTER',
+  STARTER: 'PRO',
+  PRO: 'ENTERPRISE',
+};
+
+export async function checkStaffLimit(tenantId: string) {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) throw new Error('Tenant not found');
+
+  const subscription = await prisma.tenantSubscription.findUnique({ where: { tenantId } });
+  const planLimit = subscription?.maxStaff ?? getPlanLimits(tenant.plan).maxStaff;
+
+  const override = await prisma.tenantFeatureOverride.findUnique({
+    where: { tenantId_featureKey: { tenantId, featureKey: 'maxStaff' } },
+  });
+  const hasActiveOverride = override && override.limit != null && (!override.expiresAt || override.expiresAt > new Date());
+  const limit = hasActiveOverride ? override!.limit! : planLimit;
+
+  const existingCount = await prisma.user.count({
+    where: { tenantId, role: { notIn: ['TENANT_ADMIN'] }, status: { not: 'INACTIVE' } },
+  });
+
+  if (limit !== -1 && existingCount >= limit) {
+    throw {
+      isLimitError: true,
+      error: 'PLAN_LIMIT_REACHED',
+      limit: 'maxStaff',
+      planLimit: limit,
+      currentUsage: existingCount,
+      currentPlan: tenant.plan,
+      requiredPlan: NEXT_PLAN_FOR_MORE_STAFF[tenant.plan] ?? 'ENTERPRISE',
+      message: `You have reached your plan limit of ${limit} staff account${limit === 1 ? '' : 's'}.`,
+    };
+  }
+}
 
 export class StaffService {
   static async getSummary(tenantId: string, branchId?: string) {
@@ -124,6 +163,8 @@ export class StaffService {
     if (existing) {
       throw new Error('This email is already registered');
     }
+
+    await checkStaffLimit(tenantId);
 
     const avatarColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
 
