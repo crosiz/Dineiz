@@ -805,6 +805,7 @@ async function main() {
     data: {
       tenantId: tenant.id,
       branchId: clifton.id,
+      poNumber: 'PO-2026-001',
       supplierName: 'Sysco Food Services',
       status: 'SENT',
       lines: {
@@ -820,8 +821,9 @@ async function main() {
     data: {
       tenantId: tenant.id,
       branchId: clifton.id,
+      poNumber: 'PO-2026-002',
       supplierName: 'Artisan Bakery Suppliers',
-      status: 'RECEIVED',
+      status: 'FULLY_RECEIVED',
       lines: {
         create: [
           { ingredientId: riceIng.id, orderedQty: 50, receivedQty: 50 },
