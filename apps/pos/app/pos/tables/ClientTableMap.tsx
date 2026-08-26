@@ -625,13 +625,28 @@ export default function ClientTableMap() {
 
               <button
                 onClick={() => {
-                  if (popupOrder) {
-                    setIsPaymentOpen(true);
-                  } else {
+                  if (!popupOrder) {
                     toast.error('No active order to collect payment for');
+                    return;
                   }
+                  if (popupLoading) {
+                    toast.error('Still loading this order — try again in a moment');
+                    return;
+                  }
+                  // PaymentModal computes the charge entirely from the
+                  // `items` it's given, falling back to the shared cart
+                  // store (empty, since this isn't the order-builder screen)
+                  // when it's handed none — opening it against a
+                  // stale/empty item list is how "Collect Payment" ends up
+                  // showing PKR 0 for a real order.
+                  if (!popupOrder.items || popupOrder.items.length === 0) {
+                    toast.error("Couldn't load this order's items — close and reopen the table to retry");
+                    return;
+                  }
+                  setIsPaymentOpen(true);
                 }}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs"
+                disabled={popupLoading}
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Collect Payment</span>
