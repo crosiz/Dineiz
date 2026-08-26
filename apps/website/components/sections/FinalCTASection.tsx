@@ -16,7 +16,7 @@ export function FinalCTASection() {
           Ready to transform your restaurant?
         </h2>
         <p className="text-[#6e6e73] text-lg mb-10 max-w-lg mx-auto leading-relaxed">
-          Join 500+ restaurants across Pakistan. 14-day free trial, no credit card required.
+          14-day free trial, no credit card required. Set up your menu and start billing today.
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-3 items-center">
           <Link

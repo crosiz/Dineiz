@@ -54,11 +54,6 @@ export default function RootLayout({
       priceCurrency: 'PKR',
       description: 'Free plan available',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '200',
-    },
   }
 
   return (

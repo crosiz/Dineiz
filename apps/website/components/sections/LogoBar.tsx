@@ -1,6 +1,4 @@
-"use client";
-
-const logos = [
+const categories = [
   "Cafés & Coffee Shops",
   "Fine Dining",
   "Dhabas & Street Food",
@@ -12,23 +10,15 @@ const logos = [
 ];
 
 export function LogoBar() {
-  const doubled = [...logos, ...logos];
-
   return (
-    <section className="bg-gray-50 border-y border-gray-100 py-10 overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 text-center mb-6">
-        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-          Built for food businesses across Pakistan
+    <section className="bg-[#fafafa] border-y border-[#eceef1] py-8">
+      <div className="max-w-5xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[#9a9a9f] shrink-0">
+          Built for
         </p>
-      </div>
-      <div className="flex overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-        <div className="flex gap-10 animate-marquee whitespace-nowrap">
-          {doubled.map((name, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 shrink-0"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+        <div className="flex flex-wrap justify-center sm:justify-start gap-x-5 gap-y-2">
+          {categories.map((name) => (
+            <span key={name} className="text-sm text-[#4a4a4f]">
               {name}
             </span>
           ))}

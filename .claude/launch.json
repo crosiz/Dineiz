@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "pos", "dev"],
       "port": 3001
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "--filter", "website", "dev"],
+      "port": 3006
     }
   ]
 }
