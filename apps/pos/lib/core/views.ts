@@ -23,6 +23,12 @@ export type OrderStatus =
   | 'PENDING' | 'IN_KITCHEN' | 'READY' | 'SERVED' | 'COMPLETED'
   | 'CANCELLED' | 'VOIDED' | 'WALKED_OUT';
 
+// Once an order reaches one of these, nothing server-side can legitimately
+// move it backward — used by refreshOrders() below to refuse a stale
+// "still active" answer from /api/orders/live for an order this terminal
+// already knows is done.
+const TERMINAL_ORDER_STATUSES = new Set<OrderStatus>(['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT']);
+
 export interface OrderView {
   id: string;
   // The server (Part I, not yet built) doesn't accept client-supplied order
@@ -725,6 +731,18 @@ export async function refreshOrders(branchId: string): Promise<void> {
     for (const raw of list) {
       const localId = bySeverId.get(raw.id);
       const existing = localId ? cur[localId] : undefined;
+      // GET /api/orders/live only ever returns PENDING/IN_KITCHEN/READY
+      // orders. If this terminal already marked the same order COMPLETED
+      // (or CANCELLED/VOIDED/WALKED_OUT) locally — e.g. it just collected
+      // payment and the outbox's PUT is still in flight to the server —
+      // this list entry is stale by definition, not newer truth. Letting it
+      // overwrite the local terminal status is exactly why a completed
+      // order flickers back onto Tickets for a few seconds before the real
+      // PUT confirms and it disappears again.
+      if (existing && TERMINAL_ORDER_STATUSES.has(existing.status)) {
+        merged[localId!] = existing;
+        continue;
+      }
       const mapped = mapServerOrderToView(raw);
       // A locally-created order keeps its permanent client-owned id and
       // order number forever — this merge only exists to pick up

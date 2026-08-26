@@ -119,6 +119,18 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
     }
   }, [defaultBranchId]);
 
+  // Warm the two routes every successful PIN entry lands on next, before the
+  // cashier ever taps a key. POSLayout (apps/pos/app/pos/POSLayout.tsx)
+  // already prefetches the main POS tabs, but only after first mounting
+  // under /pos — which means the very first hop out of /login (to either
+  // /pos/shift/open or /pos/home) is always a cold Next.js dev-mode route
+  // compile with nothing warming it in advance. This is the one navigation
+  // every cashier hits daily that the existing prefetch never reaches.
+  useEffect(() => {
+    router.prefetch('/pos/shift/open');
+    router.prefetch('/pos/home');
+  }, [router]);
+
   // Fetch Staff and Shift status
   useEffect(() => {
     if (!activeBranchId) return;

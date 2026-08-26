@@ -145,6 +145,16 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
           eventIds: statusEvents.map((e) => e.id),
         });
       }
+      // TABLE_MERGED / TABLE_SPLIT have a command in commands.ts but no
+      // server endpoint or task type yet (there's no /api/tables/merge or
+      // /split route to ship them to). Left QUEUED they'd sit forever with
+      // no retry and no path to POISONED, permanently blocking
+      // hasUnsyncedEvents() the moment a screen starts calling them — same
+      // failure mode the ORDER branch below already guards against for its
+      // own not-yet-wired event types. Confirm them as local-only instead.
+      const handledTable = new Set(statusEvents.map((e) => e.id));
+      const leftoverTable = events.filter((e) => !handledTable.has(e.id));
+      if (leftoverTable.length) markConfirmed(leftoverTable.map((e) => e.id));
     } else if (aggType === 'SHIFT') {
       // Shift-lifecycle events (open/close/break/cash) already ship
       // synchronously from their own call sites (shift-open flow, break

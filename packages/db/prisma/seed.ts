@@ -648,9 +648,18 @@ async function main() {
   // ── ORDERS (30 days of realistic orders) ─────────────────────────────────────
   const orderTypes: ('DINE_IN' | 'TAKEAWAY' | 'DELIVERY')[] = ['DINE_IN', 'TAKEAWAY', 'DELIVERY']
   const paymentMethods: ('CASH' | 'CARD' | 'ONLINE')[] = ['CASH', 'CARD', 'ONLINE']
-  const orderStatuses: ('PENDING' | 'IN_KITCHEN' | 'READY' | 'DELIVERED' | 'CANCELLED')[] = [
-    'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED', 'DELIVERED',
-    'DELIVERED', 'DELIVERED', 'DELIVERED', 'CANCELLED', 'IN_KITCHEN'
+  // 'DELIVERED' is not a value of the Prisma OrderStatus enum (PENDING |
+  // IN_KITCHEN | READY | COMPLETED | CANCELLED — schema.prisma:410) — every
+  // create() below using this distribution's 80% share was throwing a
+  // validation error, caught and silently discarded by the bare catch at
+  // the bottom of this loop. In practice that meant ~80% of intended
+  // historical orders were never actually inserted, and of the ~20% that
+  // did survive (CANCELLED or IN_KITCHEN), half sat in IN_KITCHEN forever
+  // with no terminal transition — exactly the seed data behind tables
+  // showing occupied by a years-old "order" with nothing to actually view.
+  const orderStatuses: ('PENDING' | 'IN_KITCHEN' | 'READY' | 'COMPLETED' | 'CANCELLED')[] = [
+    'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED', 'COMPLETED',
+    'COMPLETED', 'COMPLETED', 'COMPLETED', 'CANCELLED', 'IN_KITCHEN'
   ]
 
   // Popular items for realistic order distribution
@@ -685,7 +694,21 @@ async function main() {
         const createdAt = daysAgo(day, hour)
         const orderType = orderTypes[randomBetween(0, 2)]
         const payMethod = paymentMethods[randomBetween(0, 2)]
-        const status = day === 0 ? 'IN_KITCHEN' : orderStatuses[randomBetween(0, 9)]
+        // Previously every single "today" order (day === 0) was forced to
+        // IN_KITCHEN regardless of its randomized hour (12-23) — on a
+        // freshly seeded DB opened any time after that, dozens of orders
+        // several hours old still read as actively cooking. The floor plan
+        // (apps/api/.../floor-plan.routes.ts) correctly treats any
+        // PENDING/IN_KITCHEN/READY order as occupying its table and computes
+        // elapsed time from createdAt, so this is the seed data behind the
+        // documented "table shows occupied with a huge timer, no real order"
+        // bug. Only orders from the last 45 minutes should still look live;
+        // anything older resolves through the same realistic distribution
+        // every other day already uses.
+        const minutesSinceCreated = (Date.now() - createdAt.getTime()) / 60000
+        const status = day === 0 && minutesSinceCreated < 45
+          ? (['PENDING', 'IN_KITCHEN', 'READY'] as const)[randomBetween(0, 2)]
+          : orderStatuses[randomBetween(0, 9)]
 
         // Select 1-4 random items
         const numItems = randomBetween(1, 4)
@@ -738,7 +761,7 @@ async function main() {
           })
 
           // Add rider assignment for delivery orders
-          if (orderType === 'DELIVERY' && status === 'DELIVERED') {
+          if (orderType === 'DELIVERY' && status === 'COMPLETED') {
             const rider = riders[randomBetween(0, riders.length - 1)]
             await prisma.riderAssignment.create({
               data: {
@@ -754,8 +777,15 @@ async function main() {
           }
 
           totalOrdersCreated++
-        } catch (e) {
-          // Skip duplicate errors silently
+        } catch (e: any) {
+          // Only a duplicate orderNumber (P2002) is an expected, safe-to-skip
+          // outcome here. This used to catch everything, which is exactly
+          // how an invalid enum value (see orderStatuses above) silently
+          // dropped ~80% of intended orders for months without a single
+          // error ever surfacing.
+          if (e?.code !== 'P2002') {
+            console.error(`   Order create failed (day ${day}, branch ${branch.id}):`, e?.message ?? e)
+          }
         }
       }
     }
