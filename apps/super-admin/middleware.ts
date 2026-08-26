@@ -16,6 +16,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Cron endpoints are called by Vercel's scheduler, not a browser session —
+  // they authenticate via a bearer token checked inside the route itself.
+  if (pathname.startsWith('/api/cron/')) {
+    return NextResponse.next();
+  }
+
+  // Resend's webhook is called by Resend's servers, not a browser session —
+  // it authenticates via the Svix signature checked inside the route itself.
+  if (pathname === '/api/webhooks/resend') {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(SUPERADMIN_COOKIE_NAME)?.value;
 
   if (!token) {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
+import { getPlanDefinition } from '@dineiz/schemas';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -27,15 +28,8 @@ export async function GET() {
     });
 
     const totalMRR = activeSubscriptions.reduce((acc, sub) => {
-      let monthlyVal = sub.amount;
-      if (!monthlyVal || monthlyVal === 0) {
-        // Fallback default MRR estimation if amount wasn't set
-        if (sub.plan === 'PRO') monthlyVal = 15000;
-        else if (sub.plan === 'STARTER') monthlyVal = 8000;
-        else if (sub.plan === 'ENTERPRISE') monthlyVal = 35000;
-        else if (sub.plan === 'PRO_GO') monthlyVal = 12000;
-        else monthlyVal = 0;
-      }
+      // Fallback to the canonical plan price if amount wasn't set
+      const monthlyVal = sub.amount || getPlanDefinition(sub.plan).monthlyPrice || 0;
       return acc + (sub.billingCycle === 'ANNUAL' ? monthlyVal / 12 : monthlyVal);
     }, 0);
 
@@ -117,8 +111,27 @@ export async function GET() {
       ownerPhone: sub.tenant?.users?.[0]?.phone || '',
       plan: sub.plan,
       expiryDate: sub.nextRenewalDate ? new Date(sub.nextRenewalDate).toISOString() : new Date().toISOString(),
-      amount: sub.amount || (sub.plan === 'PRO' ? 15000 : 8000),
+      amount: sub.amount || getPlanDefinition(sub.plan).monthlyPrice || 0,
     }));
+
+    // Needs attention: past due subscriptions, trials expiring tomorrow, bounced emails
+    const [pastDueSubs, tomorrowExpiringCount, bouncedEmailsCount] = await Promise.all([
+      prisma.tenantSubscription.aggregate({
+        where: { status: 'PAST_DUE' },
+        _count: true,
+        _sum: { amount: true },
+      }),
+      prisma.tenantSubscription.count({
+        where: {
+          status: 'TRIALING',
+          trialEndsAt: {
+            gte: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
+            lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2),
+          },
+        },
+      }),
+      prisma.emailLog.count({ where: { status: 'BOUNCED' } }),
+    ]);
 
     return NextResponse.json({
       activeClients: activeClientsCount,
@@ -128,6 +141,12 @@ export async function GET() {
       mrrHistory,
       recentSignups,
       expiringSoon,
+      needsAttention: {
+        pastDueCount: pastDueSubs._count,
+        pastDueAmount: pastDueSubs._sum.amount || 0,
+        trialsExpiringTomorrow: tomorrowExpiringCount,
+        bouncedEmails: bouncedEmailsCount,
+      },
     });
   } catch (error: any) {
     console.error('Dashboard API Error:', error);

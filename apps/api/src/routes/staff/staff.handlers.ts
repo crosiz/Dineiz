@@ -84,6 +84,10 @@ export class StaffHandlers {
       const newStaff = await StaffService.createStaff(user.tenantId, body);
       return reply.status(201).send(newStaff);
     } catch (error: any) {
+      if (error.isLimitError) {
+        const { isLimitError, ...limitBody } = error;
+        return reply.status(402).send(limitBody);
+      }
       req.log.error(error);
       if (error.message === 'This email is already registered') {
         return reply.status(409).send({ error: error.message });

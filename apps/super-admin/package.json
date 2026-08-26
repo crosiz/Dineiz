@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@dineiz/db": "workspace:*",
+    "@dineiz/email": "workspace:*",
     "@dineiz/schemas": "workspace:*",
     "@dineiz/ui": "workspace:*",
     "bcryptjs": "^2.4.3",

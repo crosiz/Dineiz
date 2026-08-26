@@ -1,5 +1,7 @@
 import { Resend } from 'resend';
+import { prisma } from '@dineiz/db';
 import { env } from '../env';
+import { managerInviteEmail, passwordResetEmail, branchCreatedEmail } from '@dineiz/email';
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -16,6 +18,7 @@ async function sendEmail(params: {
   to: string | string[];
   subject: string;
   html: string;
+  text?: string;
   from?: string;
   attachments?: Array<{ filename: string; content: Buffer }>;
   replyTo?: string;
@@ -26,6 +29,7 @@ async function sendEmail(params: {
       to: Array.isArray(params.to) ? params.to : [params.to],
       subject: params.subject,
       html: params.html,
+      text: params.text,
       attachments: params.attachments?.map(a => ({
         filename: a.filename,
         content: a.content,
@@ -94,6 +98,35 @@ function baseTemplate(content: string, restaurantName?: string): string {
 }
 
 // ─────────────────────────────────────────────
+// EMAIL LOG — best-effort audit row for every transactional send
+// ─────────────────────────────────────────────
+async function logEmail(params: {
+  tenantId?: string | null;
+  recipientEmail: string;
+  template: 'MANAGER_INVITE' | 'PASSWORD_RESET' | 'BRANCH_CREATED';
+  subject: string;
+  result: EmailResult;
+}) {
+  try {
+    await prisma.emailLog.create({
+      data: {
+        tenantId: params.tenantId ?? null,
+        recipientEmail: params.recipientEmail,
+        template: params.template,
+        subject: params.subject,
+        status: params.result.success ? 'SENT' : 'FAILED',
+        providerMessageId: params.result.messageId,
+        errorMessage: params.result.error,
+        attempts: 1,
+        sentAt: params.result.success ? new Date() : null,
+      },
+    });
+  } catch (err) {
+    console.error('[EmailLog] Failed to write log row:', err);
+  }
+}
+
+// ─────────────────────────────────────────────
 // MANAGER CREDENTIALS (when a branch manager / tenant admin is added as staff)
 // ─────────────────────────────────────────────
 export async function sendManagerInviteEmail(params: {
@@ -103,37 +136,19 @@ export async function sendManagerInviteEmail(params: {
   branchName: string;
   loginUrl: string;
   temporaryPassword: string;
+  tenantId?: string;
 }): Promise<EmailResult> {
-  const html = baseTemplate(`
-    <h2>You've been added as Branch Manager</h2>
-    <p>Hi ${params.managerName},</p>
-    <p>You have been added as a Branch Manager for <strong>${params.restaurantName}</strong> at <strong>${params.branchName}</strong>.</p>
-
-    <div class="info-box">
-      <div class="info-row">
-        <span class="info-label">Login URL</span>
-        <span class="info-value"><a href="${params.loginUrl}" style="color: #FF6B35;">console.dineiz.com</a></span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Email</span>
-        <span class="info-value">${params.to}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">Temporary Password</span>
-        <span class="info-value" style="font-family: monospace;">${params.temporaryPassword}</span>
-      </div>
-    </div>
-
-    <div class="warning-box">Change your password after first login.</div>
-
-    <a href="${params.loginUrl}" class="button">Open Dashboard →</a>
-  `, params.restaurantName);
-
-  return sendEmail({
-    to: params.to,
-    subject: `You've been added as Branch Manager — ${params.restaurantName}`,
-    html,
+  const email = managerInviteEmail({
+    managerName: params.managerName,
+    restaurantName: params.restaurantName,
+    branchName: params.branchName,
+    email: params.to,
+    temporaryPassword: params.temporaryPassword,
   });
+
+  const result = await sendEmail({ to: params.to, subject: email.subject, html: email.html, text: email.text });
+  await logEmail({ tenantId: params.tenantId, recipientEmail: params.to, template: 'MANAGER_INVITE', subject: email.subject, result });
+  return result;
 }
 
 // ─────────────────────────────────────────────
@@ -144,24 +159,42 @@ export async function sendPasswordResetEmail(params: {
   name: string;
   resetUrl: string;
   expiresInMinutes: number;
+  tenantId?: string;
 }): Promise<EmailResult> {
-  const html = baseTemplate(`
-    <h2>Reset Your Password</h2>
-    <p>Hi ${params.name},</p>
-    <p>You requested a password reset. Click the button below to set a new password.</p>
-    <p>This link expires in <strong>${params.expiresInMinutes} minutes</strong>.</p>
-
-    <a href="${params.resetUrl}" class="button">Reset Password →</a>
-
-    <p style="margin-top: 24px; color: #6b7280; font-size: 14px;">If you did not request this, ignore this email. Your password will not change.</p>
-  `);
-
-  return sendEmail({
-    to: params.to,
-    subject: 'Reset Your Dineiz Password',
-    html,
-    from: NOREPLY_EMAIL,
+  const email = passwordResetEmail({
+    name: params.name,
+    resetUrl: params.resetUrl,
+    expiresInMinutes: params.expiresInMinutes,
   });
+
+  const result = await sendEmail({ to: params.to, subject: email.subject, html: email.html, text: email.text, from: NOREPLY_EMAIL });
+  await logEmail({ tenantId: params.tenantId, recipientEmail: params.to, template: 'PASSWORD_RESET', subject: email.subject, result });
+  return result;
+}
+
+// ─────────────────────────────────────────────
+// BRANCH CREATED (tenant self-serves a new branch)
+// ─────────────────────────────────────────────
+export async function sendBranchCreatedEmail(params: {
+  to: string;
+  ownerName: string;
+  restaurantName: string;
+  branchName: string;
+  branchCode: string;
+  address: string;
+  tenantId?: string;
+}): Promise<EmailResult> {
+  const email = branchCreatedEmail({
+    ownerName: params.ownerName,
+    restaurantName: params.restaurantName,
+    branchName: params.branchName,
+    branchCode: params.branchCode,
+    address: params.address,
+  });
+
+  const result = await sendEmail({ to: params.to, subject: email.subject, html: email.html, text: email.text });
+  await logEmail({ tenantId: params.tenantId, recipientEmail: params.to, template: 'BRANCH_CREATED', subject: email.subject, result });
+  return result;
 }
 
 // ─────────────────────────────────────────────

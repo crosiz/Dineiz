@@ -3,10 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Users,
   Search,
   Download,
-  Filter,
   Plus,
   MoreVertical,
   Eye,
@@ -14,13 +12,13 @@ import {
   MessageSquare,
   Slash,
   Trash2,
-  Calendar,
   X,
   CheckCircle2,
   AlertTriangle,
-  Clock,
+  Send,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { PLANS } from '@dineiz/schemas';
 
 interface ClientItem {
   id: string;
@@ -190,20 +188,21 @@ export default function AllClientsPage() {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">All Clients</h1>
-          <p className="text-sm text-slate-400">Manage all registered restaurant tenants on Dineiz</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">All Clients</h1>
+          <p className="text-sm text-slate-500">Manage all registered restaurant tenants on Dineiz</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold shadow-sm transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold shadow-sm transition-all"
           >
-            <Download className="w-4 h-4 text-emerald-400" />
+            <Download className="w-4 h-4 text-emerald-600" />
             <span>Export Excel</span>
           </button>
           <Link
             href="/clients/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"
+            style={{ background: 'linear-gradient(135deg, #FF6B35 0%, #E63946 100%)' }}
           >
             <Plus className="w-4 h-4" />
             <span>Add New Client</span>
@@ -212,14 +211,14 @@ export default function AllClientsPage() {
       </div>
 
       {fetchError && (
-        <div className="p-4 rounded-xl bg-red-950/60 border border-red-800 text-xs text-red-200 flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
             <span>{fetchError}</span>
           </div>
           <button
             onClick={fetchClients}
-            className="px-3 py-1.5 bg-red-800 hover:bg-red-700 text-white rounded-lg font-bold text-xs transition-colors"
+            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs transition-colors"
           >
             Retry
           </button>
@@ -227,7 +226,7 @@ export default function AllClientsPage() {
       )}
 
       {/* Filters Bar */}
-      <div className="bg-slate-950/60 border border-slate-800/80 p-4 rounded-2xl shadow-xl flex flex-col lg:flex-row gap-4 items-center justify-between">
+      <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm flex flex-col lg:flex-row gap-4 items-center justify-between">
         {/* Search */}
         <div className="relative w-full lg:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -236,7 +235,7 @@ export default function AllClientsPage() {
             placeholder="Search restaurant, email, or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
           />
         </div>
 
@@ -246,11 +245,11 @@ export default function AllClientsPage() {
           <select
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-semibold"
           >
             <option value="ALL">All Plans</option>
-            <option value="FREE">Free</option>
-            <option value="PRO_GO">Go Pro</option>
+            <option value="GO_FREE">Go Free</option>
+            <option value="GO_PRO">Go Pro</option>
             <option value="STARTER">Starter</option>
             <option value="PRO">Pro</option>
             <option value="ENTERPRISE">Enterprise</option>
@@ -260,7 +259,7 @@ export default function AllClientsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 font-semibold"
           >
             <option value="ALL">All Statuses</option>
             <option value="TRIALING">Trialing</option>
@@ -276,25 +275,25 @@ export default function AllClientsPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none"
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none"
             />
-            <span className="text-xs text-slate-500">to</span>
+            <span className="text-xs text-slate-400">to</span>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none"
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 focus:outline-none"
             />
           </div>
         </div>
       </div>
 
       {/* Main Clients Data Table */}
-      <div className="bg-slate-950/60 border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-slate-900/80 border-b border-slate-800 text-slate-400 font-semibold uppercase tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
                 <th className="py-3.5 px-4">Restaurant Name</th>
                 <th className="py-3.5 px-4">Owner Email</th>
                 <th className="py-3.5 px-4">Plan</th>
@@ -307,37 +306,37 @@ export default function AllClientsPage() {
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 text-slate-300">
+            <tbody className="divide-y divide-slate-100 text-slate-600">
               {loading ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                       <span>Loading client data...</span>
                     </div>
                   </td>
                 </tr>
               ) : clients.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-500">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     No clients found matching your search or filters.
                   </td>
                 </tr>
               ) : (
                 clients.map((client) => (
-                  <tr key={client.id} className="hover:bg-slate-900/50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-white">
-                      <Link href={`/clients/${client.id}`} className="hover:text-amber-400 transition-colors">
+                  <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <Link href={`/clients/${client.id}`} className="hover:text-orange-600 transition-colors">
                         {client.name}
                       </Link>
                       <span className="block text-[10px] text-slate-400 font-normal">{client.city}</span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-300">
+                    <td className="py-3.5 px-4 text-slate-600">
                       <div>{client.ownerEmail}</div>
-                      <div className="text-[10px] text-slate-500">{client.ownerName}</div>
+                      <div className="text-[10px] text-slate-400">{client.ownerName}</div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="inline-block px-2.5 py-1 rounded-lg font-bold text-[10px] bg-slate-900 text-amber-400 border border-amber-500/20">
+                      <span className="inline-block px-2.5 py-1 rounded-lg font-bold text-[10px] bg-orange-50 text-orange-700 border border-orange-200">
                         {client.plan}
                       </span>
                     </td>
@@ -345,33 +344,33 @@ export default function AllClientsPage() {
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           client.status === 'ACTIVE'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : client.status === 'TRIALING'
-                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
                             : client.status === 'PAST_DUE'
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
                             : client.status === 'SUSPENDED'
-                            ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                            : 'bg-slate-800 text-slate-400'
+                            ? 'bg-orange-50 text-orange-700 border border-orange-200'
+                            : 'bg-slate-100 text-slate-500'
                         }`}
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         <span>{client.status}</span>
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center font-semibold text-slate-200">
+                    <td className="py-3.5 px-4 text-center font-semibold text-slate-700">
                       {client.branchesCount}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-slate-200">
+                    <td className="py-3.5 px-4 text-right font-semibold text-slate-700">
                       {client.ordersThisMonth.toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-amber-400">
+                    <td className="py-3.5 px-4 text-right font-bold text-orange-600">
                       PKR {client.mrr.toLocaleString()}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400">
+                    <td className="py-3.5 px-4 text-slate-500">
                       {new Date(client.joinedDate).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400">
+                    <td className="py-3.5 px-4 text-slate-500">
                       {client.renewalDate
                         ? new Date(client.renewalDate).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', year: 'numeric' })
                         : 'N/A'}
@@ -379,7 +378,7 @@ export default function AllClientsPage() {
                     <td className="py-3.5 px-4 text-right relative">
                       <button
                         onClick={() => setOpenDropdownId(openDropdownId === client.id ? null : client.id)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                       >
                         <MoreVertical className="w-4 h-4" />
                       </button>
@@ -387,14 +386,14 @@ export default function AllClientsPage() {
                       {/* Dropdown Menu */}
                       {openDropdownId === client.id && (
                         <div
-                          className="absolute right-4 top-10 w-44 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl z-30 py-1 text-left"
+                          className="absolute right-4 top-10 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 text-left"
                           onMouseLeave={() => setOpenDropdownId(null)}
                         >
                           <Link
                             href={`/clients/${client.id}`}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                           >
-                            <Eye className="w-3.5 h-3.5 text-blue-400" />
+                            <Eye className="w-3.5 h-3.5 text-blue-600" />
                             <span>View Details</span>
                           </Link>
                           <button
@@ -403,9 +402,9 @@ export default function AllClientsPage() {
                               setNewPlanValue(client.plan);
                               setOpenDropdownId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                           >
-                            <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                            <Edit3 className="w-3.5 h-3.5 text-orange-600" />
                             <span>Edit Plan</span>
                           </button>
                           <button
@@ -413,9 +412,9 @@ export default function AllClientsPage() {
                               setSelectedClientForMessage(client);
                               setOpenDropdownId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 hover:text-white"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                           >
-                            <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Send Message</span>
                           </button>
                           <button
@@ -423,18 +422,18 @@ export default function AllClientsPage() {
                               handleSuspend(client);
                               setOpenDropdownId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-amber-400 hover:bg-slate-800"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-orange-600 hover:bg-slate-50"
                           >
                             <Slash className="w-3.5 h-3.5" />
                             <span>{client.status === 'SUSPENDED' ? 'Reactivate' : 'Suspend Account'}</span>
                           </button>
-                          <div className="border-t border-slate-800 my-1" />
+                          <div className="border-t border-slate-100 my-1" />
                           <button
                             onClick={() => {
                               handleDelete(client);
                               setOpenDropdownId(null);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             <span>Delete Account</span>
@@ -452,41 +451,41 @@ export default function AllClientsPage() {
 
       {/* Edit Plan Modal */}
       {selectedClientForEditPlan && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Edit Plan — {selectedClientForEditPlan.name}</h3>
-              <button onClick={() => setSelectedClientForEditPlan(null)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Edit Plan — {selectedClientForEditPlan.name}</h3>
+              <button onClick={() => setSelectedClientForEditPlan(null)} className="text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">Select Subscription Plan</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-2">Select Subscription Plan</label>
               <select
                 value={newPlanValue}
                 onChange={(e) => setNewPlanValue(e.target.value)}
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
               >
-                <option value="FREE">Free Go (PKR 0/mo)</option>
-                <option value="PRO_GO">Pro Go (PKR 12,000/mo)</option>
-                <option value="STARTER">Starter (PKR 8,000/mo)</option>
-                <option value="PRO">Pro (PKR 15,000/mo)</option>
-                <option value="ENTERPRISE">Enterprise (PKR 35,000/mo)</option>
+                {PLANS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.monthlyPrice === null ? 'Custom pricing' : p.monthlyPrice === 0 ? 'PKR 0/mo' : `PKR ${p.monthlyPrice.toLocaleString()}/mo`})
+                  </option>
+                ))}
               </select>
             </div>
-            <div className="text-xs text-amber-400/80 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+            <div className="text-xs text-orange-700 bg-orange-50 p-3 rounded-xl border border-orange-200">
               Note: Changing plan takes effect immediately and updates billing defaults.
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setSelectedClientForEditPlan(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePlanChange}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"
+                className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs"
               >
                 Save Plan Change
               </button>
@@ -497,46 +496,46 @@ export default function AllClientsPage() {
 
       {/* Send Message Modal */}
       {selectedClientForMessage && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-white">Send Direct Message — {selectedClientForMessage.name}</h3>
-              <button onClick={() => setSelectedClientForMessage(null)} className="text-slate-400 hover:text-white">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900">Send Direct Message — {selectedClientForMessage.name}</h3>
+              <button onClick={() => setSelectedClientForMessage(null)} className="text-slate-400 hover:text-slate-700">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Subject (for Email)</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Subject (for Email)</label>
                 <input
                   type="text"
                   placeholder="e.g., Important account update"
                   value={messageSubject}
                   onChange={(e) => setMessageSubject(e.target.value)}
-                  className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Message Body</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Message Body</label>
                 <textarea
                   rows={5}
                   placeholder="Write your message here..."
                   value={messageBodyText}
                   onChange={(e) => setMessageBodyText(e.target.value)}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button
                 onClick={() => setSelectedClientForMessage(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSendMessage}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Send Message Now</span>

@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased bg-slate-900 text-slate-100">
+      <body className="antialiased bg-surface-base text-slate-900">
         <AdminLayout>{children}</AdminLayout>
       </body>
     </html>
