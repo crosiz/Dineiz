@@ -85,9 +85,10 @@ export function HeroSection() {
             </h1>
 
             <p className="text-[#6e6e73] text-lg leading-relaxed mb-9 max-w-lg">
-              Billing, kitchen display, and table management in one system that keeps
-              working through load-shedding — then syncs the moment you're back online,
-              with GST calculated automatically.
+              Billing, kitchen display, tables, staff, and inventory — everything a
+              restaurant runs on, in one system that keeps working when the internet
+              drops, then syncs the moment you're back online, with GST calculated
+              automatically.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 mb-10">
