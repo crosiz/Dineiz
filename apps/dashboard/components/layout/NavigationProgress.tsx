@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useNavProgress } from '@/lib/nav-progress-store';
 
+const MIN_VISIBLE_MS = 420; // stay up long enough to be perceived on a fast (cache-hit) navigation
+
 /**
- * The one and only loading indicator shown during navigation — a 2px bar that
+ * The one and only loading indicator shown during navigation — a 3px bar that
  * pins to the very top of the viewport, trickles forward while the next route's
  * JS and first data load, then snaps to 100% and fades. Replaces the ~20
  * per-screen spinners that each sat at a different offset.
@@ -13,7 +15,8 @@ import { useNavProgress } from '@/lib/nav-progress-store';
  * How a navigation is detected without touching every <Link>/router.push call:
  * Next performs all client navigations through `history.pushState` /
  * `replaceState` (and `popstate` for back/forward). We wrap those once to fire
- * `start()`, and end on the resulting `pathname` / `searchParams` change.
+ * `start()`, and end on the resulting `pathname` / `searchParams` change. The
+ * sidebar also calls `start()` directly on click.
  */
 export function NavigationProgress() {
   const active = useNavProgress((s) => s.active);
@@ -26,9 +29,15 @@ export function NavigationProgress() {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
 
+  const visibleRef = useRef(false);
+  const shownAtRef = useRef(0);
   const trickleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
 
   const reducedMotion =
     typeof window !== 'undefined' &&
@@ -55,9 +64,13 @@ export function NavigationProgress() {
         return original.apply(this, args as any);
       } as History['pushState'];
       (wrapped as any).__navProgressWrapped = true;
-      history[key] = wrapped;
+      try {
+        history[key] = wrapped;
+      } catch {
+        /* non-writable — the sidebar's direct start() call still covers clicks */
+      }
       return () => {
-        history[key] = original;
+        try { history[key] = original; } catch { /* ignore */ }
       };
     };
 
@@ -76,7 +89,6 @@ export function NavigationProgress() {
   // ── Route settled → finish ───────────────────────────────────────────────
   useEffect(() => {
     done();
-    // pathname / searchParams are the deps that matter; values themselves unused
   }, [pathname, searchParams, done]);
 
   // ── React to active flips ────────────────────────────────────────────────
@@ -87,21 +99,21 @@ export function NavigationProgress() {
     };
 
     if (active) {
-      if (safetyRef.current) clearTimeout(safetyRef.current);
-      if (hideRef.current) clearTimeout(hideRef.current);
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
+      if (hideRef.current) { clearTimeout(hideRef.current); hideRef.current = null; }
+      if (!visibleRef.current) shownAtRef.current = Date.now();
       setVisible(true);
-      setProgress((p) => (p > 0 && p < 90 ? p : 8));
+      setProgress((p) => (p > 0 && p < 90 ? p : 12));
 
       if (!reducedMotion) {
         clearTrickle();
         trickleRef.current = setInterval(() => {
           setProgress((p) => {
             if (p >= 90) return p;
-            // Ease off as it approaches the cap so it never visually stalls.
-            const step = p < 40 ? 9 : p < 65 ? 4 : p < 80 ? 2 : 0.6;
+            const step = p < 40 ? 10 : p < 65 ? 4 : p < 80 ? 2 : 0.6;
             return Math.min(90, p + step);
           });
-        }, 240);
+        }, 200);
       } else {
         setProgress(80);
       }
@@ -110,18 +122,22 @@ export function NavigationProgress() {
       safetyRef.current = setTimeout(() => done(), 8000);
     } else {
       clearTrickle();
-      if (safetyRef.current) clearTimeout(safetyRef.current);
-      if (!visible) return;
-      setProgress(100);
-      hideRef.current = setTimeout(() => {
-        setVisible(false);
-        setProgress(0);
-      }, 280);
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
+      if (!visibleRef.current) return;
+
+      const finish = () => {
+        setProgress(100);
+        hideRef.current = setTimeout(() => {
+          setVisible(false);
+          setProgress(0);
+        }, 260);
+      };
+      const wait = Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAtRef.current));
+      if (wait === 0) finish();
+      else hideRef.current = setTimeout(finish, wait);
     }
 
     return clearTrickle;
-    // `visible` intentionally omitted — including it would restart the trickle
-    // on the same navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, reducedMotion, done]);
 
@@ -130,8 +146,8 @@ export function NavigationProgress() {
   return (
     <div
       aria-hidden
-      className="fixed inset-x-0 top-0 z-[1000] h-[2.5px] pointer-events-none"
-      style={{ opacity: progress >= 100 ? 0 : 1, transition: 'opacity 240ms ease 120ms' }}
+      className="fixed inset-x-0 top-0 z-[1000] h-[3px] pointer-events-none"
+      style={{ opacity: progress >= 100 ? 0 : 1, transition: 'opacity 220ms ease 100ms' }}
     >
       <div
         className="relative h-full origin-left"
@@ -139,10 +155,10 @@ export function NavigationProgress() {
           width: `${progress}%`,
           background: 'var(--color-primary, #FF5722)',
           boxShadow:
-            '0 0 8px color-mix(in srgb, var(--color-primary, #FF5722) 70%, transparent), 0 0 2px var(--color-primary, #FF5722)',
+            '0 0 10px color-mix(in srgb, var(--color-primary, #FF5722) 75%, transparent), 0 0 3px var(--color-primary, #FF5722)',
           transition: reducedMotion
             ? 'width 120ms linear'
-            : 'width 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+            : 'width 200ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
         {/* leading glow ("peg") */}
@@ -152,7 +168,7 @@ export function NavigationProgress() {
             transform: 'rotate(2deg) translateY(-1px)',
             background:
               'linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-primary, #FF5722) 90%, white))',
-            boxShadow: '0 0 12px var(--color-primary, #FF5722)',
+            boxShadow: '0 0 14px var(--color-primary, #FF5722)',
             opacity: reducedMotion ? 0 : 0.9,
           }}
         />

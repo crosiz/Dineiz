@@ -4,16 +4,17 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useNavProgress } from '@/lib/nav-progress-store';
 
+const MIN_VISIBLE_MS = 420; // stay up long enough to be perceived on a fast (local) screen switch
+
 /**
- * The one loading indicator shown during a screen change — a 2.5px bar pinned
- * to the very top of the terminal that trickles while the next screen's chunk
- * and first data load, then snaps to 100% and fades. Replaces the per-screen
- * "Loading…" spinners.
+ * The one loading indicator shown during a screen change — a 3px bar pinned to
+ * the very top of the terminal that trickles while the next screen loads, then
+ * snaps to 100% and fades. Replaces the per-screen "Loading…" spinners.
  *
- * Detection without touching every nav call: Next runs every client
- * navigation through `history.pushState` / `replaceState` (and `popstate`).
- * We wrap those once to fire `start()`, and end on the resulting
- * `pathname` / `searchParams` change.
+ * Detection without touching every nav call: Next runs every client navigation
+ * through `history.pushState` / `replaceState` (and `popstate`). We wrap those
+ * once to fire `start()`; the resulting `pathname` / `searchParams` change ends
+ * it. The bottom nav also calls `start()` directly on tap.
  */
 export function NavigationProgress() {
   const active = useNavProgress((s) => s.active);
@@ -26,9 +27,15 @@ export function NavigationProgress() {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
 
+  const visibleRef = useRef(false);
+  const shownAtRef = useRef(0);
   const trickleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
 
   const reducedMotion =
     typeof window !== 'undefined' &&
@@ -52,9 +59,13 @@ export function NavigationProgress() {
         return original.apply(this, args as any);
       } as History['pushState'];
       (wrapped as any).__navProgressWrapped = true;
-      history[key] = wrapped;
+      try {
+        history[key] = wrapped;
+      } catch {
+        /* non-writable — the bottom nav's direct start() call still covers taps */
+      }
       return () => {
-        history[key] = original;
+        try { history[key] = original; } catch { /* ignore */ }
       };
     };
 
@@ -83,20 +94,21 @@ export function NavigationProgress() {
     };
 
     if (active) {
-      if (safetyRef.current) clearTimeout(safetyRef.current);
-      if (hideRef.current) clearTimeout(hideRef.current);
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
+      if (hideRef.current) { clearTimeout(hideRef.current); hideRef.current = null; }
+      if (!visibleRef.current) shownAtRef.current = Date.now();
       setVisible(true);
-      setProgress((p) => (p > 0 && p < 90 ? p : 8));
+      setProgress((p) => (p > 0 && p < 90 ? p : 12));
 
       if (!reducedMotion) {
         clearTrickle();
         trickleRef.current = setInterval(() => {
           setProgress((p) => {
             if (p >= 90) return p;
-            const step = p < 40 ? 9 : p < 65 ? 4 : p < 80 ? 2 : 0.6;
+            const step = p < 40 ? 10 : p < 65 ? 4 : p < 80 ? 2 : 0.6;
             return Math.min(90, p + step);
           });
-        }, 240);
+        }, 200);
       } else {
         setProgress(80);
       }
@@ -104,13 +116,19 @@ export function NavigationProgress() {
       safetyRef.current = setTimeout(() => done(), 8000);
     } else {
       clearTrickle();
-      if (safetyRef.current) clearTimeout(safetyRef.current);
-      if (!visible) return;
-      setProgress(100);
-      hideRef.current = setTimeout(() => {
-        setVisible(false);
-        setProgress(0);
-      }, 280);
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null; }
+      if (!visibleRef.current) return;
+
+      const finish = () => {
+        setProgress(100);
+        hideRef.current = setTimeout(() => {
+          setVisible(false);
+          setProgress(0);
+        }, 260);
+      };
+      const wait = Math.max(0, MIN_VISIBLE_MS - (Date.now() - shownAtRef.current));
+      if (wait === 0) finish();
+      else hideRef.current = setTimeout(finish, wait);
     }
 
     return clearTrickle;
@@ -122,8 +140,8 @@ export function NavigationProgress() {
   return (
     <div
       aria-hidden
-      className="fixed inset-x-0 top-0 z-[60] h-[2.5px] pointer-events-none"
-      style={{ opacity: progress >= 100 ? 0 : 1, transition: 'opacity 240ms ease 120ms' }}
+      className="fixed inset-x-0 top-0 z-[100] h-[3px] pointer-events-none"
+      style={{ opacity: progress >= 100 ? 0 : 1, transition: 'opacity 220ms ease 100ms' }}
     >
       <div
         className="relative h-full origin-left"
@@ -131,10 +149,10 @@ export function NavigationProgress() {
           width: `${progress}%`,
           background: 'var(--pos-primary, #F59E0B)',
           boxShadow:
-            '0 0 8px color-mix(in srgb, var(--pos-primary, #F59E0B) 70%, transparent), 0 0 2px var(--pos-primary, #F59E0B)',
+            '0 0 10px color-mix(in srgb, var(--pos-primary, #F59E0B) 75%, transparent), 0 0 3px var(--pos-primary, #F59E0B)',
           transition: reducedMotion
             ? 'width 120ms linear'
-            : 'width 220ms cubic-bezier(0.22, 1, 0.36, 1)',
+            : 'width 200ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
         <div
@@ -143,7 +161,7 @@ export function NavigationProgress() {
             transform: 'rotate(2deg) translateY(-1px)',
             background:
               'linear-gradient(90deg, transparent, color-mix(in srgb, var(--pos-primary, #F59E0B) 90%, white))',
-            boxShadow: '0 0 12px var(--pos-primary, #F59E0B)',
+            boxShadow: '0 0 14px var(--pos-primary, #F59E0B)',
             opacity: reducedMotion ? 0 : 0.9,
           }}
         />
