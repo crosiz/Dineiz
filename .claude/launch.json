@@ -2,12 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dashboard",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["pnpm", "--filter", "dashboard", "exec", "next", "dev", "--port", "3004"],
-      "port": 3004
-    },
-    {
       "name": "pos",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "pos", "dev"],
