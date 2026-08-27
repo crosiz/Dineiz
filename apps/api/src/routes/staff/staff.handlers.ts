@@ -89,7 +89,11 @@ export class StaffHandlers {
         return reply.status(402).send(limitBody);
       }
       req.log.error(error);
-      if (error.message === 'This email is already registered') {
+      if (
+        error.message === 'This email is already registered' ||
+        error.message === 'This phone number is already registered' ||
+        error.message === 'A staff member with these details already exists'
+      ) {
         return reply.status(409).send({ error: error.message });
       }
       return reply.status(500).send({ error: error.message });
@@ -111,6 +115,9 @@ export class StaffHandlers {
       return reply.send(updated);
     } catch (error: any) {
       req.log.error(error);
+      if (error.message === 'This phone number is already registered') {
+        return reply.status(409).send({ error: error.message });
+      }
       return reply.status(500).send({ error: error.message });
     }
   }

@@ -18,7 +18,13 @@ const POS_LOGIN_ROLES = ['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF',
 // ─── Schema ───────────────────────────────────────────────────────────────────
 export const staffSchema = z.object({
   name: z.string().min(2, 'Name is required'),
-  email: z.string().email('Invalid email address'),
+  // Genuinely optional for POS roles (the label says so); a valid email is
+  // still required for dashboard roles — enforced in superRefine below.
+  email: z
+    .string()
+    .email('Invalid email address')
+    .optional()
+    .or(z.literal('')),
   phone: z.string().optional(),
   role: z.enum(['BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF', 'RIDER', 'WORKER', 'COOK', 'GUARD']),
   branchId: z.string().min(1, 'Branch assignment is required'),
@@ -28,6 +34,13 @@ export const staffSchema = z.object({
   posPin: z.string().optional(),
 }).superRefine((data, ctx) => {
   if ((DASHBOARD_LOGIN_ROLES as readonly string[]).includes(data.role)) {
+    if (!data.email || !data.email.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email is required for this role',
+        path: ['email'],
+      });
+    }
     if (!data.password || data.password.length < 8) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -298,7 +311,6 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 </label>
                 <input
                   {...register('name')}
-                  placeholder="e.g. John Doe"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.name ? 'border-red-300' : 'border-slate-200'
                     }`}
                 />
@@ -313,7 +325,6 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
                 <input
                   {...register('email')}
                   type="email"
-                  placeholder="john@example.com"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.email ? 'border-red-300' : 'border-slate-200'
                     }`}
                 />
@@ -323,11 +334,11 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
               {/* Phone */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                  PHONE NUMBER
+                  PHONE NUMBER <span className="normal-case font-medium">(optional)</span>
                 </label>
                 <input
                   {...register('phone')}
-                  placeholder="+1 (555) 000-0000"
+                  type="tel"
                   className={`w-full h-10 px-4 rounded-lg border bg-white text-sm focus:outline-none focus:border-[#ff5722] focus:ring-2 focus:ring-orange-100 transition-all ${errors.phone ? 'border-red-300' : 'border-slate-200'
                     }`}
                 />
@@ -399,7 +410,7 @@ export function AddStaffModal({ isOpen, onClose }: AddStaffModalProps) {
               {/* Branch */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                  ASSIGN TO BRANCH
+                  ASSIGN TO BRANCH *
                 </label>
                 {user.role === 'BRANCH_MANAGER' ? (
                   <div className="w-full h-10 px-3 border border-slate-200 rounded-lg bg-slate-50 flex items-center text-sm text-slate-500">

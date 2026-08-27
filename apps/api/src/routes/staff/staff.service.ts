@@ -156,12 +156,22 @@ export class StaffService {
   }
 
   static async createStaff(tenantId: string, data: CreateStaff) {
-    // Check email uniqueness across tenant
-    const existing = await prisma.user.findUnique({
-      where: { email: data.email }
-    });
-    if (existing) {
-      throw new Error('This email is already registered');
+    // `email` and `phone` are UNIQUE columns. An empty string is a *value*, so
+    // the second staff member saved with a blank phone collides with the first
+    // one's "" — not with "nothing". Normalise blanks to null so any number of
+    // staff can have no phone / no email.
+    const email = data.email?.trim() || null;
+    const phone = data.phone?.trim() || null;
+
+    // Pre-check with a message a manager can act on, rather than surfacing a
+    // raw Prisma constraint error.
+    if (email) {
+      const clash = await prisma.user.findUnique({ where: { email } });
+      if (clash) throw new Error('This email is already registered');
+    }
+    if (phone) {
+      const clash = await prisma.user.findFirst({ where: { phone } });
+      if (clash) throw new Error('This phone number is already registered');
     }
 
     await checkStaffLimit(tenantId);
@@ -173,26 +183,38 @@ export class StaffService {
     // email/password login path.
     const hashedPassword = data.password ? await bcrypt.hash(data.password, 12) : undefined;
 
-    const user = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        role: data.role as any,
-        tenantId,
-        branchId: data.branchId,
-        password: hashedPassword,
-        posPin: data.posPin, // Already hashed in handler
-        status: 'ACTIVE',
-        avatarColor,
-      },
-      include: { branch: true },
-    });
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: {
+          name: data.name,
+          email,
+          phone,
+          role: data.role as any,
+          tenantId,
+          branchId: data.branchId,
+          password: hashedPassword,
+          posPin: data.posPin, // Already hashed in handler
+          status: 'ACTIVE',
+          avatarColor,
+        },
+        include: { branch: true },
+      });
+    } catch (err: any) {
+      // A race (two creates in flight) can still slip past the checks above.
+      if (err?.code === 'P2002') {
+        const target = Array.isArray(err.meta?.target) ? err.meta.target.join(',') : String(err.meta?.target ?? '');
+        if (target.includes('phone')) throw new Error('This phone number is already registered');
+        if (target.includes('email')) throw new Error('This email is already registered');
+        throw new Error('A staff member with these details already exists');
+      }
+      throw err;
+    }
 
-    if (data.email && data.password && ['BRANCH_MANAGER', 'TENANT_ADMIN'].includes(data.role)) {
+    if (email && data.password && ['BRANCH_MANAGER', 'TENANT_ADMIN'].includes(data.role)) {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
       await sendManagerInviteEmail({
-        to: data.email,
+        to: email,
         managerName: data.name,
         restaurantName: tenant?.name ?? 'your restaurant',
         branchName: user.branch?.name ?? 'your branch',
@@ -208,14 +230,29 @@ export class StaffService {
     const user = await prisma.user.findFirst({ where: { id, tenantId } });
     if (!user) throw new Error('Staff member not found');
 
-    return prisma.user.update({
-      where: { id },
-      data: {
-        name: data.name,
-        phone: data.phone,
-        branchId: data.branchId,
-      }
-    });
+    // undefined = leave as-is; "" = clear it (null), never store a blank in the
+    // UNIQUE phone column.
+    const phone =
+      data.phone === undefined ? undefined : (data.phone.trim() || null);
+
+    if (phone) {
+      const clash = await prisma.user.findFirst({ where: { phone, id: { not: id } } });
+      if (clash) throw new Error('This phone number is already registered');
+    }
+
+    try {
+      return await prisma.user.update({
+        where: { id },
+        data: {
+          name: data.name,
+          phone,
+          branchId: data.branchId,
+        },
+      });
+    } catch (err: any) {
+      if (err?.code === 'P2002') throw new Error('This phone number is already registered');
+      throw err;
+    }
   }
 
   static async toggleStatus(tenantId: string, id: string) {
@@ -279,7 +316,8 @@ export class StaffService {
       data: {
         status: 'INACTIVE' as any,
         posPin: null,
-        email: `deleted_${id}@dineiz.invalid`, // prevent email reuse conflicts
+        email: `deleted_${id}@dineiz.invalid`, // free up the email for reuse
+        phone: null,                           // …and the phone (both are UNIQUE)
       }
     });
     return { success: true };
