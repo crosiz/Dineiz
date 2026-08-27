@@ -1,10 +1,10 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { Home, UtensilsCrossed, ClipboardList, LayoutGrid, ShieldCheck, Package } from 'lucide-react'
 import { useCartStore } from '@/lib/store'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { ConfirmModal } from '@/components/ui/ConfirmModal'
+import { navProgress } from '@/lib/nav-progress-store'
 
 const NAV_ITEMS = [
   { id: 'home',    label: 'HOME',    icon: Home,            path: '/pos/home' },
@@ -21,10 +21,24 @@ export function BottomNav() {
   const session = useCartStore(s => s.session)
   const [mounted, setMounted] = useState(false)
   const [pendingNavPath, setPendingNavPath] = useState<string | null>(null)
+  const [navTarget, setNavTarget] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // The tapped tab is "active" the instant it's tapped (optimistic); the real
+  // pathname catching up clears it.
+  useEffect(() => {
+    setNavTarget(null)
+  }, [pathname])
+
+  const go = (path: string) => {
+    navProgress.start()
+    setNavTarget(path)
+    startTransition(() => router.push(path))
+  }
 
   // Hide bottom nav on KDS screen — kitchen staff cannot navigate
   if (pathname.includes('/pos/kds')) return null
@@ -50,8 +64,10 @@ export function BottomNav() {
           let path = item.path;
           if (isWaiter && item.id === 'home') path = '/pos/tables';
 
-          const isActive = pathname.startsWith(path.split('?')[0])
+          const base = path.split('?')[0]
+          const isActive = pathname.startsWith(base) || navTarget === path
           const Icon = item.icon
+          const color = isActive ? 'var(--pos-primary, #F59E0B)' : '#64748B'
 
           return (
             <a
@@ -59,17 +75,18 @@ export function BottomNav() {
               href={path}
               onClick={(e) => {
                 e.preventDefault()
+                if (isActive && !navTarget) return
                 const cart = useCartStore.getState().cart
                 if (pathname.startsWith('/pos/order') && !path.startsWith('/pos/order') && cart.length > 0) {
                   setPendingNavPath(path)
                 } else {
-                  router.push(path)
+                  go(path)
                 }
               }}
               className="flex flex-col items-center gap-1 min-w-[60px] py-2 transition-colors duration-150 cursor-pointer"
             >
-              <Icon size={22} style={{ color: isActive ? 'var(--pos-primary, #F59E0B)' : '#64748B' }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: isActive ? 'var(--pos-primary, #F59E0B)' : '#64748B' }}>
+              <Icon size={22} style={{ color }} />
+              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
                 {item.label}
               </span>
             </a>
@@ -85,7 +102,7 @@ export function BottomNav() {
         variant="danger"
         onConfirm={() => {
           useCartStore.getState().clearCart()
-          if (pendingNavPath) router.push(pendingNavPath)
+          if (pendingNavPath) go(pendingNavPath)
           setPendingNavPath(null)
         }}
         onCancel={() => setPendingNavPath(null)}

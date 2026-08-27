@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -29,12 +30,70 @@ export default function AdminPage() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
 
-  const [stats, setStats] = useState({ revenue: 0, orders: 0 });
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeShifts, setActiveShifts] = useState<any[]>([]);
-  const [shiftsLoading, setShiftsLoading] = useState(true);
-  const [openTables, setOpenTables] = useState(0);
+  const queryClient = useQueryClient();
+  const branchId = session?.branchId;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('pos_token') : null;
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+
+  // Cached reads — revisiting the Manager Panel renders instantly from cache
+  // instead of a cold "Loading active shifts…". Each keeps its own refresh
+  // cadence (the 20s poll the screen used to run by hand).
+  const statsQuery = useQuery({
+    queryKey: ['pos-admin-stats', branchId ?? null],
+    enabled: !!branchId,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/analytics/today?branchId=${branchId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('stats');
+      const d = await res.json();
+      return { revenue: d.revenue || 0, orders: d.orders || 0 };
+    },
+  });
+  const stats = statsQuery.data ?? { revenue: 0, orders: 0 };
+
+  const shiftsQuery = useQuery<any[]>({
+    queryKey: ['pos-admin-shifts', branchId ?? null],
+    enabled: !!branchId,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/shifts/active`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('shifts');
+      const d = await res.json();
+      return Array.isArray(d) ? d.filter((s: any) => s.branchId === branchId) : [];
+    },
+  });
+  const activeShifts = shiftsQuery.data ?? [];
+  const shiftsLoading = shiftsQuery.isLoading;
+
+  const openTablesQuery = useQuery({
+    queryKey: ['pos-admin-open-tables', branchId ?? null],
+    enabled: !!branchId,
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const [tablesRes, statusesRes] = await Promise.all([
+        fetch(`${API_URL}/api/floor-plan/${branchId}/tables`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+        fetch(`${API_URL}/api/floor-plan/${branchId}/table-orders`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+      ]);
+      const occupiedIds = new Set(Array.isArray(statusesRes) ? statusesRes.map((s: any) => s.tableId) : []);
+      return Array.isArray(tablesRes)
+        ? tablesRes.filter((t: any) => occupiedIds.has(t.id) || t.status === 'OCCUPIED').length
+        : 0;
+    },
+  });
+  const openTables = openTablesQuery.data ?? 0;
+
+  const isRefreshing = statsQuery.isFetching || shiftsQuery.isFetching || openTablesQuery.isFetching;
+  const refreshAdmin = () => {
+    queryClient.invalidateQueries({ queryKey: ['pos-admin-stats'] });
+    queryClient.invalidateQueries({ queryKey: ['pos-admin-shifts'] });
+    queryClient.invalidateQueries({ queryKey: ['pos-admin-open-tables'] });
+  };
 
   const [forceCloseTarget, setForceCloseTarget] = useState<{ id: string; name: string } | null>(null);
   const [forceCloseReason, setForceCloseReason] = useState('');
@@ -84,88 +143,25 @@ export default function AdminPage() {
     breadcrumb: session?.branchName ? `Branch: ${session.branchName}` : 'Manager Full Access',
   });
 
-  const fetchStats = async () => {
-    if (!session?.branchId) return;
-    setIsRefreshing(true);
-    try {
-      const res = await fetch(`${API_URL}/api/analytics/today?branchId=${session.branchId}`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setStats(prev => ({
-          ...prev,
-          revenue: data.revenue || 0,
-          orders: data.orders || 0
-        }));
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500); // Visual feedback delay
-    }
-  };
-
-  // Real active shifts for this branch — was previously a hardcoded demo
-  // array that never reflected who was actually clocked in.
-  const fetchActiveShifts = async () => {
-    if (!session?.branchId) return;
-    try {
-      const res = await fetch(`${API_URL}/api/shifts/active`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setActiveShifts(Array.isArray(data) ? data.filter((s: any) => s.branchId === session.branchId) : []);
-      }
-    } catch (e) {
-      // Keep showing the last known list on transient failures
-    } finally {
-      setShiftsLoading(false);
-    }
-  };
-
-  // Real open-table count — was previously hardcoded to 5 forever.
-  const fetchOpenTables = async () => {
-    if (!session?.branchId) return;
-    try {
-      const [tablesRes, statusesRes] = await Promise.all([
-        fetch(`${API_URL}/api/floor-plan/${session.branchId}/tables`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
-        }).then(r => (r.ok ? r.json() : [])).catch(() => []),
-        fetch(`${API_URL}/api/floor-plan/${session.branchId}/table-orders`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
-        }).then(r => (r.ok ? r.json() : [])).catch(() => []),
-      ]);
-      const occupiedIds = new Set(Array.isArray(statusesRes) ? statusesRes.map((s: any) => s.tableId) : []);
-      const occupied = Array.isArray(tablesRes)
-        ? tablesRes.filter((t: any) => occupiedIds.has(t.id) || t.status === 'OCCUPIED').length
-        : 0;
-      setOpenTables(occupied);
-    } catch (e) {}
-  };
-
+  // Void-approval queue stays a fast hand-rolled 3s poll — it's the one truly
+  // real-time list here and it carries optimistic add/remove on approve/reject.
   useEffect(() => {
-    fetchStats();
-    fetchActiveShifts();
-    fetchOpenTables();
+    if (!session?.branchId) return;
     let interval: NodeJS.Timeout;
-    let shiftsInterval: NodeJS.Timeout;
-    if (session?.branchId) {
-      const fetchVoids = async () => {
-        try {
-          const res = await fetch(`${API_URL}/api/pos/void-requests?branchId=${session.branchId}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            setPendingApprovals(data);
-          }
-        } catch(e) {}
-      };
-      fetchVoids();
-      interval = setInterval(fetchVoids, 3000);
-      shiftsInterval = setInterval(() => { fetchActiveShifts(); fetchOpenTables(); }, 20000);
-    }
-    return () => { clearInterval(interval); clearInterval(shiftsInterval); };
+    const fetchVoids = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/pos/void-requests?branchId=${session.branchId}`, {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('pos_token')}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPendingApprovals(data);
+        }
+      } catch (e) {}
+    };
+    fetchVoids();
+    interval = setInterval(fetchVoids, 3000);
+    return () => { clearInterval(interval); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.branchId]);
 
@@ -209,7 +205,10 @@ export default function AdminPage() {
         throw new Error(body?.error || `Failed to force close shift (${res.status})`);
       }
       toast.success(`${forceCloseTarget.name}'s shift was force closed`);
-      setActiveShifts(prev => prev.filter(s => s.id !== forceCloseTarget.id));
+      queryClient.setQueryData<any[]>(['pos-admin-shifts', branchId ?? null], (prev) =>
+        (prev ?? []).filter((s) => s.id !== forceCloseTarget.id),
+      );
+      queryClient.invalidateQueries({ queryKey: ['pos-admin-shifts'] });
       setForceCloseTarget(null);
       setForceCloseReason('');
     } catch (e: any) {
@@ -268,8 +267,8 @@ export default function AdminPage() {
         <section>
           <div className="flex justify-between items-end mb-3">
             <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider">Today at a Glance</h2>
-            <button 
-              onClick={fetchStats}
+            <button
+              onClick={refreshAdmin}
               className={`p-1.5 rounded-full text-[#64748B] hover:bg-[#E2E8F0] transition-colors ${isRefreshing ? 'animate-spin text-[var(--pos-primary)]' : ''}`}
             >
               <RefreshCw size={18} />

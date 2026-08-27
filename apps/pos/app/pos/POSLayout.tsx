@@ -9,6 +9,7 @@ import { startOutbox } from '@/lib/core/outbox';
 import { startBackgroundSync } from '@/lib/sync';
 import { useViews, rebuildViews, seedTablesFromServer, refreshOrders } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { NavigationProgress } from '@/components/NavigationProgress';
 import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
 import { SocketProvider, useSocket } from '@/contexts/SocketContext';
@@ -359,6 +360,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-col h-screen select-none bg-[var(--pos-bg-base)] text-[#0F172A] overflow-hidden font-body-md">
+      <NavigationProgress />
       {!hideTopBar && <POSTopBar />}
       {/* Dynamic Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col relative">

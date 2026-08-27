@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
 import { getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { useTopBar } from '@/hooks/useTopBar';
 import { toast } from 'sonner';
+import { ScreenLoader } from '@/components/ui/ScreenLoader';
 import {
   AlertTriangle,
   AlertCircle,
@@ -82,13 +84,37 @@ export default function StockPage() {
   const { posSocket } = useSocket();
   const isManager = session?.role === 'BRANCH_MANAGER' || session?.role === 'TENANT_ADMIN';
 
-  const [data, setData] = useState<StockStatusResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterKey>('PROBLEMS');
-  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  // Stock status shares the app-wide React Query cache, so coming back to this
+  // tab within staleTime is instant instead of a cold "Loading stock status…".
+  const branchId = session?.branchId;
+  const stockQuery = useQuery<StockStatusResponse>({
+    queryKey: ['pos-stock-status', branchId ?? null],
+    enabled: !!branchId,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/pos/stock-status?branchId=${branchId}`, {
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error('Failed to load stock status');
+      return res.json() as Promise<StockStatusResponse>;
+    },
+  });
+  const data = stockQuery.data ?? null;
+  const loading = stockQuery.isLoading;
+  const refreshing = stockQuery.isFetching;
+  const lastFetchedAt = stockQuery.dataUpdatedAt ? new Date(stockQuery.dataUpdatedAt) : null;
+  const refetchStock = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['pos-stock-status'] });
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (stockQuery.isError) toast.error('Could not load stock status');
+  }, [stockQuery.isError]);
 
   // Quick Adjust flow: capture the new quantity first, then gate the actual
   // write behind the manager PIN + reason (ManagerOverrideModal).
@@ -101,45 +127,16 @@ export default function StockPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchStock = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!session?.branchId) return;
-    if (!opts?.silent) setLoading(true);
-    setRefreshing(true);
-    try {
-      const res = await fetch(`${API_URL}/api/pos/stock-status?branchId=${session.branchId}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
-      if (!res.ok) throw new Error('Failed to load stock status');
-      const json: StockStatusResponse = await res.json();
-      setData(json);
-      setLastFetchedAt(new Date());
-    } catch {
-      toast.error('Could not load stock status');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.branchId, session?.token]);
-
-  useEffect(() => {
-    fetchStock();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.branchId]);
-
   // Auto-refresh whenever the backend says inventory moved for this branch.
   useEffect(() => {
     if (!posSocket) return;
     const handler = (payload: any) => {
       if (payload?.branchId && session?.branchId && payload.branchId !== session.branchId) return;
-      fetchStock({ silent: true });
+      refetchStock();
     };
     posSocket.on('inventory:updated', handler);
     return () => { posSocket.off('inventory:updated', handler); };
-  }, [posSocket, session?.branchId, fetchStock]);
+  }, [posSocket, session?.branchId, refetchStock]);
 
   const mostRecentUpdate = useMemo(() => {
     if (!data || data.items.length === 0) return lastFetchedAt;
@@ -155,7 +152,7 @@ export default function StockPage() {
     breadcrumb: `${session?.branchName ? `${session.branchName} • ` : ''}Updated ${timeAgo(mostRecentUpdate, now)}`,
     rightActions: (
       <button
-        onClick={() => fetchStock()}
+        onClick={() => refetchStock()}
         className={`p-1.5 rounded-full text-[#64748B] hover:bg-[#E2E8F0] transition-colors ${refreshing ? 'animate-spin text-[var(--pos-primary)]' : ''}`}
         title="Refresh"
       >
@@ -275,18 +272,11 @@ export default function StockPage() {
 
     toast.success(`${adjustItem.name} updated to ${formatQty(qtyNum)} ${formatUnit(adjustItem.unit)}`);
     closeQuickAdjust();
-    fetchStock({ silent: true });
+    refetchStock();
   };
 
   if (loading && !data) {
-    return (
-      <div className="h-full flex items-center justify-center bg-[#F8FAFC]">
-        <div className="flex flex-col items-center gap-3 text-[#94A3B8]">
-          <RefreshCw size={28} className="animate-spin" />
-          <p className="text-[13px] font-semibold">Loading stock status…</p>
-        </div>
-      </div>
-    );
+    return <ScreenLoader label="Loading stock status…" />;
   }
 
   const items = data?.items ?? [];
