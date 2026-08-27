@@ -20,7 +20,6 @@ export const PLANS = [
       excluded: [
         'Tablet POS',
         'Admin dashboard',
-        'WhatsApp AI ordering',
         'Analytics',
         'Inventory tracking',
         'Multi-branch',
@@ -41,7 +40,6 @@ export const PLANS = [
       included: [
         'Everything in Go Free',
         'Unlimited daily orders',
-        'WhatsApp AI ordering bot',
         '30-day report history',
         'Customer loyalty program',
         'Deals and promotions',

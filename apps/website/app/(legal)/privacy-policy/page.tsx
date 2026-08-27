@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
             { title: "4. Data Security", body: "We implement industry-standard security measures to protect your data. All data is encrypted in transit using TLS and at rest using AES-256. We conduct regular security audits and maintain backups." },
             { title: "5. Data Retention", body: "We retain your data for as long as your account is active or as needed to provide services. Transaction records are retained for 7 years as required by Pakistani tax law (FBR regulations)." },
             { title: "6. Your Rights", body: "You have the right to access, correct, or delete your personal data. You may also request a copy of your data in a portable format. To exercise these rights, contact us at privacy@dineiz.com." },
-            { title: "7. Contact Us", body: "If you have any questions about this Privacy Policy, please contact us at privacy@dineiz.com or via WhatsApp at +92 300 1234567." },
+            { title: "7. Contact Us", body: "If you have any questions about this Privacy Policy, please contact us at privacy@dineiz.com or via WhatsApp at +92 314 1986044." },
           ].map((section) => (
             <div key={section.title}>
               <h2 className="text-base font-bold text-gray-900 mb-2">{section.title}</h2>

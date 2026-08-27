@@ -23,7 +23,6 @@ const legalLinks = [
   { label: "Terms of Service", href: "/terms-of-service" },
   { label: "Refund Policy", href: "/refund-policy" },
   { label: "Cookie Policy", href: "/cookie-policy" },
-  { label: "System Status", href: "/status" },
 ];
 
 export function Footer() {

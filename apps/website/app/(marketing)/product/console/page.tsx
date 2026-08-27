@@ -12,7 +12,7 @@ export const metadata = generateSEOMetadata({
 
 const features = [
   { icon: PieChart, title: "Real-Time Sales Dashboard", desc: "Hourly, daily, weekly, and monthly sales — see exactly what's happening in your restaurant right now." },
-  { icon: Globe, title: "Multi-Branch View", desc: "Manage up to 10 branches from a single login. Compare performance, spot outliers, act fast." },
+  { icon: Globe, title: "Multi-Branch View", desc: "Manage every branch on your plan from a single login. Compare performance, spot outliers, act fast." },
   { icon: Users, title: "Staff Performance Reports", desc: "See which staff members are fastest, most accurate, and highest-selling — with full shift history." },
   { icon: TrendingUp, title: "Menu Analytics", desc: "Know your bestsellers, slow movers, and profit drivers. Make menu decisions with actual data." },
   { icon: Download, title: "Export to Excel & PDF", desc: "Download any report as Excel or PDF for accountants, investors, or your own tax records." },

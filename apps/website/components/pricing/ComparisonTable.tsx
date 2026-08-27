@@ -70,7 +70,6 @@ const TABLE_DATA: TableCategory[] = [
       { name: "CRM", goFree: false, goPro: false, starter: false, pro: true, enterprise: true },
       { name: "Loyalty Program", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
       { name: "Deals & Promotions", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
-      { name: "WhatsApp Bot", goFree: false, goPro: true, starter: true, pro: true, enterprise: true },
       { name: "QR Ordering", goFree: false, goPro: false, starter: false, pro: true, enterprise: true },
     ]
   },

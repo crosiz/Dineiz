@@ -96,11 +96,6 @@ export function generateSoftwareApplicationSchema(
       priceCurrency: 'PKR',
       description: 'Free plan available',
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      reviewCount: '200',
-    },
   }
 }
 
