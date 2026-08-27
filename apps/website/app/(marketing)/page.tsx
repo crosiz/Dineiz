@@ -1,7 +1,6 @@
 import React from "react";
 import { HeroSection } from "@/components/sections/HeroSection";
-import { LogoBar } from "@/components/sections/LogoBar";
-import { ProblemStatement } from "@/components/sections/ProblemStatement";
+import { ValueStrip } from "@/components/sections/ValueStrip";
 import { CoreFeatures } from "@/components/sections/CoreFeatures";
 import { ProductCards } from "@/components/sections/ProductCards";
 import { HowItWorks } from "@/components/sections/HowItWorks";
@@ -23,8 +22,7 @@ export default function Homepage() {
   return (
     <>
       <HeroSection />
-      <LogoBar />
-      <ProblemStatement />
+      <ValueStrip />
       <CoreFeatures />
       <ProductCards />
       <HowItWorks />

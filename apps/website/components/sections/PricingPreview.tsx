@@ -16,7 +16,6 @@ const allFeatures = [
   "24/7 support",
   "GST tax configuration",
   "FoodPanda integration",
-  "WhatsApp AI ordering",
   "Kitchen Display (KDS)",
   "Multi-branch management",
 ];
@@ -43,7 +42,6 @@ const plans = [
       "email", // Support
       false,  // Tax
       false,  // FoodPanda
-      false,  // WhatsApp
       false,  // KDS
       false,  // Multi-branch
     ],
@@ -69,7 +67,6 @@ const plans = [
       true,   // Support 24/7
       true,   // Tax
       false,  // FoodPanda
-      true,   // WhatsApp
       true,   // KDS
       false,  // Multi-branch
     ],
@@ -95,7 +92,6 @@ const plans = [
       true,  // Support 24/7
       true,  // Tax
       true,  // FoodPanda
-      true,  // WhatsApp
       true,  // KDS
       true,  // Multi-branch
     ],
@@ -113,7 +109,7 @@ export function PricingPreview() {
   const [view, setView] = useState<"cards" | "table">("cards");
 
   return (
-    <section className="bg-white py-24 lg:py-32" id="pricing">
+    <section className="bg-[#fafafa] py-24 lg:py-32" id="pricing">
       <div className="max-w-6xl mx-auto px-6 lg:px-8">
 
         {/* Header */}
