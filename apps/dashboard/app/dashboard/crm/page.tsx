@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/components/card';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
@@ -23,8 +24,9 @@ type CustomerProfile = {
 };
 
 export default function CRMPage() {
+  const queryClient = useQueryClient();
   const [q, setQ] = useState('');
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [qDebounced, setQDebounced] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,20 +42,23 @@ export default function CRMPage() {
 
   const { branchId, queryParam } = useBranchFilter();
 
-  async function refresh() {
-    setLoading(true);
-    setError(null);
-    try {
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q.trim()), 350);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const { data: customers = [] } = useQuery<Customer[]>({
+    queryKey: ['crm-customers', branchId ?? null, qDebounced],
+    queryFn: async () => {
       const qs = new URLSearchParams(queryParam || '');
-      if (q) qs.set('search', q);
+      if (qDebounced) qs.set('search', qDebounced);
       const res = await apiFetch<{ data: Customer[] }>(`/api/customers?${qs.toString()}`);
-      setCustomers(res.data);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load customers');
-    } finally {
-      setLoading(false);
-    }
-  }
+      return res.data;
+    },
+    placeholderData: keepPreviousData,
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-customers'] });
 
   async function openCustomer(id: string) {
     setSelectedId(id);
@@ -114,10 +119,6 @@ export default function CRMPage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    refresh();
-  }, [q, branchId]);
 
   return (
     <AdminOnly>

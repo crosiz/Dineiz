@@ -1,5 +1,6 @@
 import { prisma, Prisma } from '@dineiz/db';
 import { upstash } from '../../lib/redis';
+import { cached } from '../../lib/cache';
 import { runAnalyticsAggregationJob } from '../../jobs/analyticsSync';
 import { format, addDays, differenceInDays } from 'date-fns';
 
@@ -183,7 +184,18 @@ export async function getBranchPerformance(tenantId: string, scopedBranchId?: st
   `;
 }
 
+// The dashboard home hits this on every visit and polls it every 60s; the
+// client already treats it as up-to-30s stale. A short server cache absorbs
+// the burst (login + tab returns) without the widget ever being visibly behind.
 export async function getDashboardSummary(tenantId: string, branchId?: string, period: string = 'today') {
+  return cached(
+    `dash:summary:${tenantId}:${branchId ?? 'all'}:${period}`,
+    15,
+    () => computeDashboardSummary(tenantId, branchId, period),
+  );
+}
+
+async function computeDashboardSummary(tenantId: string, branchId?: string, period: string = 'today') {
   const days = period === '30d' ? 30 : period === '7d' ? 7 : 1;
   const { todayStart, tomorrowStart, yesterdayStart } = getDayBoundaries();
   const todayStr = todayStart.toISOString().split('T')[0];
@@ -359,6 +371,14 @@ export async function getDashboardSummary(tenantId: string, branchId?: string, p
 }
 
 export async function getRevenueTrend(tenantId: string, branchId?: string, period: string = 'today') {
+  return cached(
+    `dash:revtrend:${tenantId}:${branchId ?? 'all'}:${period}`,
+    30,
+    () => computeRevenueTrend(tenantId, branchId, period),
+  );
+}
+
+async function computeRevenueTrend(tenantId: string, branchId?: string, period: string = 'today') {
   const days = period === '30d' ? 30 : period === '7d' ? 7 : 1;
   const trendDays = period === 'today' ? 7 : days;
 

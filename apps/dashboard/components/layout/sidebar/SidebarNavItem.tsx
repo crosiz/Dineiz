@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import { navProgress } from '@/lib/nav-progress-store';
 
 interface NavItemProps {
   href: string;
@@ -14,22 +16,47 @@ interface NavItemProps {
 
 export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }: NavItemProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
   const exactOnlyRoutes = ['/dashboard', '/dashboard/settings'];
-  
-  const isActive = exactOnlyRoutes.includes(href)
+  const isCurrent = exactOnlyRoutes.includes(href)
     ? pathname === href
     : pathname === href || pathname.startsWith(href + '/');
+
+  // Light up on click, not when the route finally resolves — the highlight and
+  // the top progress bar both move on the same frame as the click.
+  const isActive = isCurrent || isPending;
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (
+      e.defaultPrevented ||
+      e.button !== 0 ||
+      e.metaKey ||
+      e.ctrlKey ||
+      e.shiftKey ||
+      e.altKey
+    ) {
+      return; // let the browser handle new-tab / modified clicks
+    }
+    e.preventDefault();
+    if (isCurrent) return; // re-clicking the active tab is a no-op
+    navProgress.start();
+    startTransition(() => router.push(href));
+  };
 
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
       onMouseEnter={onHover}
+      onClick={handleClick}
+      aria-current={isCurrent ? 'page' : undefined}
       className={`group relative flex items-center transition-colors duration-150 rounded-lg text-[13px] select-none outline-none border ${
         collapsed
           ? `justify-center w-9 h-9 mx-auto p-0 my-0.5 ${
-              isActive 
-                ? 'bg-white/[0.09] text-[#FF5722] border-white/[0.08] font-bold' 
+              isActive
+                ? 'bg-white/[0.09] text-[#FF5722] border-white/[0.08] font-bold'
                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] border-transparent'
             }`
           : `px-2.5 h-[34px] justify-between my-0.5 ${
@@ -52,8 +79,15 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
         )}
       </div>
 
-      {!collapsed && badge && (
-        <span className="shrink-0 ml-2">{badge}</span>
+      {!collapsed && (
+        isPending ? (
+          <span
+            className="shrink-0 ml-2 w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ background: 'var(--color-primary, #FF5722)' }}
+          />
+        ) : badge ? (
+          <span className="shrink-0 ml-2">{badge}</span>
+        ) : null
       )}
 
       {/* Floating Tooltip (Collapsed Mode) */}
@@ -72,7 +106,3 @@ export function SidebarNavItem({ href, icon, label, collapsed, badge, onHover }:
     </Link>
   );
 }
-
-
-
-

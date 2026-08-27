@@ -1,32 +1,27 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { AdminOnly } from '@/components/admin-only';
 import { WhatsAppTabs } from './_components/WhatsAppTabs';
 import { PageLoader } from '@/components/ui/Spinner';
 
 export default function WhatsAppBotPage() {
-  const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<any>(null);
+  const queryClient = useQueryClient();
 
-  const fetchConfig = async () => {
-    try {
+  const { data: config, isLoading: loading } = useQuery<any>({
+    queryKey: ['whatsapp', 'config'],
+    queryFn: async () => {
       const res = await apiFetch<{ config: any }>('/api/whatsapp/config');
-      setConfig(res.config);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return res.config;
+    },
+  });
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
+  const fetchConfig = () => queryClient.invalidateQueries({ queryKey: ['whatsapp', 'config'] });
 
   if (loading) {
-    return <PageLoader label="Loading WhatsApp bot settings..." />;
+    return <PageLoader label="Loading WhatsApp bot settings..." variant="form" />;
   }
 
   return (

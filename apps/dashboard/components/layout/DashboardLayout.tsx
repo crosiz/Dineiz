@@ -7,6 +7,8 @@ import { DashboardProvider } from '@/contexts/dashboard-context';
 import { Sidebar } from '@/components/layout/sidebar/Sidebar';
 import { Header } from '@/components/layout/header/Header';
 import { PlanBanner } from '@/components/layout/PlanBanner';
+import { NavigationProgress } from '@/components/layout/NavigationProgress';
+import { PrefetchWarmup } from '@/components/layout/PrefetchWarmup';
 import { useUIStore } from '@/store/ui.store';
 import { useErrorStore } from '@/store/error.store';
 import { useBranches } from '@/hooks/useBranches';
@@ -63,6 +65,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <DashboardProvider>
+      <NavigationProgress />
+      <PrefetchWarmup />
       <div className="min-h-screen" style={{ background: '#F8FAFC' }}>
         {!isKDS && <Sidebar />}
         {showHeader && <Header />}

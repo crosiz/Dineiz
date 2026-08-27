@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getCustomers, createCustomer } from '@/lib/api/customers';
 import { AdminOnly } from '@/components/admin-only';
 import { toast } from 'sonner';
@@ -13,41 +14,46 @@ import { PageLoader } from '@/components/ui/Spinner';
 
 export default function CRMCustomersPage() {
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
   const [segment, setSegment] = useState('ALL');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
     () => searchParams.get('customerId')
   );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isError, setIsError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
-    setIsError(false);
-    try {
-      const res = await getCustomers({
+  // Debounce search so each keystroke isn't its own request / cache entry.
+  useEffect(() => {
+    const t = setTimeout(() => { setSearchDebounced(search.trim()); setCurrentPage(1); }, 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const {
+    data,
+    isLoading: loading,
+    isError,
+  } = useQuery<any>({
+    queryKey: ['customers', 'list', currentPage, pageSize, searchDebounced, segment],
+    queryFn: () =>
+      getCustomers({
         page: currentPage,
         limit: pageSize,
-        ...(search && { search }),
-        ...(segment !== 'ALL' && { segment })
-      });
-      setData(res);
-    } catch (e) {
-      console.error(e);
-      setIsError(true);
-      toast.error('Failed to load customers');
-    } finally {
-      setLoading(false);
-    }
+        ...(searchDebounced && { search: searchDebounced }),
+        ...(segment !== 'ALL' && { segment }),
+      }),
+    placeholderData: keepPreviousData,
+  });
+
+  const fetchCustomers = () => {
+    queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
   };
 
   useEffect(() => {
-    fetchCustomers();
-  }, [search, segment, currentPage, pageSize]);
+    if (isError) toast.error('Failed to load customers');
+  }, [isError]);
 
   const stats = data?.stats || { totalCustomers: 0, activeCustomers: 0, newCustomers: 0, avgLtv: 0 };
   const customers = data?.data || [];
@@ -302,7 +308,7 @@ export default function CRMCustomersPage() {
         <CustomerDetailSlideOver
           customerId={selectedCustomerId}
           onClose={() => setSelectedCustomerId(null)}
-          onCustomerUpdated={fetchCustomers}
+          onUpdate={fetchCustomers}
         />
       )}
 

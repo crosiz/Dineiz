@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import compress from '@fastify/compress';
 import fastifyMultipart from '@fastify/multipart';
 import { serializerCompiler, type ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { FastifySchemaCompiler } from 'fastify';
@@ -115,6 +116,15 @@ async function build() {
       return cb(new Error(`CORS blocked for origin: ${origin}`), false);
     },
     credentials: true,
+  });
+
+  // Compress JSON responses (dashboard list/analytics payloads are the big
+  // ones). brotli when the client offers it, gzip otherwise; skip anything
+  // under 1KB where the framing overhead isn't worth it.
+  await fastify.register(compress, {
+    global: true,
+    threshold: 1024,
+    encodings: ['br', 'gzip', 'deflate'],
   });
 
   await fastify.register(fastifyMultipart, {

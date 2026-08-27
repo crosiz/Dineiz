@@ -2,6 +2,7 @@
 import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
 
 import { useEffect, useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/contexts/user-context";
 import { apiFetch, API_URL } from "@/lib/api";
 import { toast } from "sonner";
@@ -484,12 +485,29 @@ export default function SettingsPage() {
   const [pwStatus, setPwStatus] = useState<{ type: "error" | "success"; msg: string } | null>(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
+  // One cached bundle instead of a fresh sequential fetch chain on every visit.
+  // The four reads run in parallel; hydration into the local form state below
+  // runs once, the first time the bundle arrives.
+  const { data: settingsBundle } = useQuery({
+    queryKey: ["settings", "bundle", isBranchManager],
+    queryFn: async () => {
+      const [s, b, u, se] = await Promise.all([
+        isBranchManager ? Promise.resolve(null) : apiFetch<any>("/api/settings").catch(() => null),
+        isBranchManager ? Promise.resolve(null) : apiFetch<any>("/api/settings/branding").catch(() => null),
+        apiFetch<any>("/api/settings/user").catch(() => null),
+        apiFetch<any>("/api/settings/sessions").catch(() => null),
+      ]);
+      return { s, b, u, se };
+    },
+  });
 
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    (async () => {
-      try {
+    if (!settingsBundle || hydratedRef.current) return;
+    hydratedRef.current = true;
+    const { s, b, u, se } = settingsBundle;
+    try {
         if (!isBranchManager) {
-          const s = await apiFetch<any>("/api/settings").catch(() => null);
           if (s?.settings) {
             const st = s.settings;
             if (st.general) {
@@ -503,7 +521,6 @@ export default function SettingsPage() {
           } else if (s?.name) {
             setGeneralForm(p => ({ ...p, businessName: s.name }));
           }
-          const b = await apiFetch<any>("/api/settings/branding").catch(() => null);
           if (b) {
             const restName = (b.restaurantName || "").trim() ? b.restaurantName : (s?.name || "");
             setBranding(p => ({ ...p, restaurantName: restName, primaryColor: b.primaryColor || p.primaryColor, secondaryColor: b.secondaryColor || p.secondaryColor, logoUrl: b.logoUrl || "" }));
@@ -543,13 +560,10 @@ export default function SettingsPage() {
             }
           }
         }
-        const u = await apiFetch<any>("/api/settings/user").catch(() => null);
         if (u?.notificationPreferences) setNotifications(p => ({ ...p, ...u.notificationPreferences }));
-        const se = await apiFetch<any>("/api/settings/sessions").catch(() => null);
         setSessions(se?.sessions || []);
       } catch (err) { console.error(err); }
-    })();
-  }, [isBranchManager]);
+  }, [settingsBundle, isBranchManager]);
 
   // ── Auto-save general ─────────────────────────────────────────────────────
 

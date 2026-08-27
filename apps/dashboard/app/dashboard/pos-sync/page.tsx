@@ -1,6 +1,8 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiGet, apiPut } from '@/lib/api-client';
+import { InlineLoader } from '@/components/ui/Spinner';
 import { WifiOff, RefreshCw, CheckCircle2, AlertOctagon, Clock } from 'lucide-react';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { toast } from 'sonner';
@@ -27,43 +29,40 @@ interface DeadLetter {
 // itself here. This page is that report: things a terminal tried to send
 // to the server and the server refused, that nothing since has resolved.
 export default function PosSyncPage() {
-  const [items, setItems] = useState<DeadLetter[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [includeResolved, setIncludeResolved] = useState(false);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const { branchId, queryParam } = useBranchFilter();
 
-  const fetchDeadLetters = async () => {
-    try {
-      setLoading(true);
+  const queryKey = ['pos-dead-letters', branchId ?? null, includeResolved] as const;
+  const { data: items = [], isLoading: loading, isError } = useQuery<DeadLetter[]>({
+    queryKey,
+    queryFn: () => {
       const params = new URLSearchParams(queryParam);
       if (includeResolved) params.set('includeResolved', 'true');
-      const res = await apiGet<DeadLetter[]>(`/api/pos/dead-letters?${params.toString()}`);
-      setItems(res);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load sync issues');
-    } finally {
-      setLoading(false);
-    }
-  };
+      return apiGet<DeadLetter[]>(`/api/pos/dead-letters?${params.toString()}`);
+    },
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchDeadLetters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId, includeResolved]);
+  React.useEffect(() => {
+    if (isError) toast.error('Failed to load sync issues');
+  }, [isError]);
+
+  const fetchDeadLetters = () => queryClient.invalidateQueries({ queryKey: ['pos-dead-letters'] });
 
   const handleResolve = async (id: string) => {
     setResolvingId(id);
     try {
       await apiPut(`/api/pos/dead-letters/${id}/resolve`);
-      setItems((prev) => prev.filter((i) => i.id !== id));
+      queryClient.setQueryData<DeadLetter[]>(queryKey, (prev) => (prev ?? []).filter((i) => i.id !== id));
       toast.success('Marked resolved');
     } catch (err) {
       console.error(err);
       toast.error('Failed to resolve');
     } finally {
       setResolvingId(null);
+      fetchDeadLetters();
     }
   };
 
@@ -114,7 +113,7 @@ export default function PosSyncPage() {
       )}
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400 text-sm">Loading…</div>
+        <InlineLoader />
       ) : items.length === 0 ? (
         <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
           <CheckCircle2 className="mx-auto text-emerald-500 mb-2" size={28} />

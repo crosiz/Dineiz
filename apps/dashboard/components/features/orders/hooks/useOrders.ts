@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import { apiFetch, API_URL } from '@/lib/api';
 import { useUser } from '@/contexts/user-context';
@@ -110,6 +110,9 @@ export function useOrders() {
     queryKey,
     queryFn: () => apiFetch<HistoryResponse>(`/api/orders/history?${params.toString()}`),
     staleTime: 1000 * 60 * 2, // 2 minutes (respect global default or explicit here)
+    // Keep the current table on screen (dimmed via isFetching) while a new
+    // page / filter / branch loads, instead of collapsing to skeletons.
+    placeholderData: keepPreviousData,
   });
 
   // ── Live refresh ──────────────────────────────────────────────────────────────

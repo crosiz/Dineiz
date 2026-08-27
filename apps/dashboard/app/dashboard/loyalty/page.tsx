@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { LoyaltyTabs } from './_components/LoyaltyTabs';
 import { AdminOnly } from '@/components/admin-only';
@@ -8,26 +9,16 @@ import { PageLoader } from '@/components/ui/Spinner';
 import { Sparkles, PauseCircle } from 'lucide-react';
 
 export default function LoyaltyPage() {
-  const [settings, setSettings] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchSettings = async () => {
-    try {
-      const res = await apiFetch<any>('/api/loyalty/settings');
-      setSettings(res);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: settings, isLoading } = useQuery<any>({
+    queryKey: ['loyalty', 'settings'],
+    queryFn: () => apiFetch<any>('/api/loyalty/settings'),
+  });
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['loyalty', 'settings'] });
 
   const handleEnable = async () => {
-    setLoading(true);
     try {
       await apiFetch('/api/loyalty/settings', {
         method: 'PUT',
@@ -38,15 +29,14 @@ export default function LoyaltyPage() {
           expiryDays: 365,
         }),
       });
-      await fetchSettings();
+      refresh();
     } catch (e) {
       alert('Failed to enable loyalty program');
-      setLoading(false);
     }
   };
 
-  if (loading) {
-    return <PageLoader label="Loading loyalty program..." />;
+  if (isLoading) {
+    return <PageLoader label="Loading loyalty program..." variant="cards" />;
   }
 
   if (!settings?.isActive) {
@@ -92,7 +82,7 @@ export default function LoyaltyPage() {
                     method: 'PUT',
                     body: JSON.stringify({ ...settings, isActive: false })
                   });
-                  fetchSettings();
+                  refresh();
                 }
               }}
               className="h-9 px-3.5 bg-red-50 text-red-600 border border-red-200 text-xs font-semibold rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1.5"
@@ -103,7 +93,7 @@ export default function LoyaltyPage() {
           </div>
         </div>
 
-        <LoyaltyTabs settings={settings} onRefresh={fetchSettings} />
+        <LoyaltyTabs settings={settings} onRefresh={refresh} />
       </div>
     </AdminOnly>
   );

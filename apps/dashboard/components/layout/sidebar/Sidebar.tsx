@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/user-context';
+import { useDashboardContext } from '@/contexts/dashboard-context';
 import { authClient } from '@/lib/auth-client';
-import { apiGet } from '@/lib/api-client';
 import { useQueryClient } from '@tanstack/react-query';
+import { prefetchRouteData } from '@/lib/prefetch-map';
 import { useUIStore } from '@/store/ui.store';
 import { useErrorStore } from '@/store/error.store';
 import { SidebarNavItem } from './SidebarNavItem';
@@ -56,9 +57,9 @@ export function Sidebar() {
   const { data: session } = authClient.useSession();
   const user = session?.user;
   
-  const { name: userName, email: userEmail, branch } = useUser();
+  const { name: userName, email: userEmail, branch, tenantId } = useUser();
+  const { selectedBranchId } = useDashboardContext();
   const branchName = branch?.name || 'Main Branch';
-  const branchId   = (branch as any)?.id;
 
   const isBranchManager = user?.role === 'BRANCH_MANAGER';
   const navConfig = isBranchManager ? BRANCH_MANAGER_NAV(branchName) : TENANT_ADMIN_NAV;
@@ -86,22 +87,18 @@ export function Sidebar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleSidebar]);
 
+  // Hover prefetch: after a 100ms dwell (so a fast pass down the list doesn't
+  // fire), warm both the route's JS chunk and its primary data. A new hover
+  // cancels the previous pending one.
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handlePrefetch = (href: string) => {
-    const prefetch = (queryKey: string[], url: string) => {
-      queryClient.prefetchQuery({
-        queryKey,
-        queryFn: () => apiGet(url),
-        staleTime: 1000 * 60 * 2,
-      });
-    };
-
-    if (href === '/dashboard/menu') prefetch(['menu', branchId], `/api/menu${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/orders') prefetch(['orders', branchId, 1, 10, ''], `/api/orders?page=1&limit=10${branchId ? `&branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/staff') prefetch(['staff', branchId], `/api/staff${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/inventory') prefetch(['inventory', 'summary', branchId], `/api/inventory/summary${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/forecast') prefetch(['inventory-forecast', branchId], `/api/forecast/inventory${branchId ? `?branchId=${branchId}` : ''}`);
-    if (href === '/dashboard/deals') prefetch(['deals', branchId], `/api/deals${branchId ? `?branchId=${branchId}` : ''}`);
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => {
+      router.prefetch(href);
+      prefetchRouteData(href, { branchId: selectedBranchId, tenantId }, queryClient);
+    }, 100);
   };
+  useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
 
   const collapsed = hasHydrated ? storeCollapsed : false;
 
@@ -115,7 +112,7 @@ export function Sidebar() {
 
   const renderBadge = (badgeType?: string) => {
     if (badgeType === 'live_orders_count') {
-      return <LiveOrdersBadge branchId={isBranchManager ? branchId : undefined} />;
+      return <LiveOrdersBadge branchId={isBranchManager ? (selectedBranchId ?? undefined) : undefined} />;
     }
     return undefined;
   };

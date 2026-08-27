@@ -5,7 +5,7 @@ import { useUser } from '@/contexts/user-context';
 import { apiGet } from '@/lib/api-client';
 import { formatPKR } from '@/lib/formatters';
 import { Receipt } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
+import { InlineLoader } from '@/components/ui/Spinner';
 
 function todayISO() {
   const d = new Date();
@@ -42,7 +42,7 @@ export default function TodaysReportPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-12"><Spinner size={16} />Loading…</div>
+        <InlineLoader />
       ) : isError ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-red-500">Couldn't load today's report.</p>

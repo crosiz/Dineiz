@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -69,7 +69,8 @@ export function useStaff(initialFilters: Partial<StaffFilters> = {}) {
       q.set('limit', filters.limit.toString());
       
       return apiFetch<{ staff: StaffMember[], pagination: any }>(`/api/staff?${q.toString()}`);
-    }
+    },
+    placeholderData: keepPreviousData,
   });
 
   const createStaff = useMutation({

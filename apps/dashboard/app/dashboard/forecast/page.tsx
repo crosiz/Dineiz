@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api-client';
 import { LineChart, RefreshCw, AlertCircle, Package, Calendar } from 'lucide-react';
 import { RevenueForecastChart } from './_components/RevenueForecastChart';
@@ -11,45 +12,35 @@ import { AllBranchesBanner } from '@/components/AllBranchesBanner';
 import { PageLoader } from '@/components/ui/Spinner';
 
 export default function ForecastPage() {
-  const [revenueData, setRevenueData] = useState<any>(null);
-  const [busyPeriods, setBusyPeriods] = useState<any>(null);
-  const [itemsData, setItemsData] = useState<any>(null);
-  const [inventoryData, setInventoryData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const { branchId, queryParam, isAllBranches } = useBranchFilter();
 
-  const fetchAll = async () => {
-    try {
-      setLoading(true);
-      const suffix = queryParam ? `?${queryParam}` : '';
+  const suffix = queryParam ? `?${queryParam}` : '';
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['forecast', branchId ?? null],
+    queryFn: async () => {
       const [rev, busy, items, inv] = await Promise.all([
-        apiGet(`/api/forecast/revenue${suffix}`).catch(() => null),
-        apiGet(`/api/forecast/busy-periods${suffix}`).catch(() => null),
-        apiGet(`/api/forecast/items${suffix}`).catch(() => null),
-        apiGet(`/api/forecast/inventory${suffix}`).catch(() => null),
+        apiGet<any>(`/api/forecast/revenue${suffix}`).catch(() => null),
+        apiGet<any>(`/api/forecast/busy-periods${suffix}`).catch(() => null),
+        apiGet<any>(`/api/forecast/items${suffix}`).catch(() => null),
+        apiGet<any>(`/api/forecast/inventory${suffix}`).catch(() => null),
       ]);
-      setRevenueData(rev);
-      setBusyPeriods(busy);
-      setItemsData(items);
-      setInventoryData(inv);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return { revenueData: rev, busyPeriods: busy, itemsData: items, inventoryData: inv };
+    },
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchAll();
-  }, [branchId]);
+  const revenueData = data?.revenueData ?? null;
+  const busyPeriods = data?.busyPeriods ?? null;
+  const itemsData = data?.itemsData ?? null;
+  const inventoryData = data?.inventoryData ?? null;
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      const suffix = queryParam ? `?${queryParam}` : '';
       await apiPost(`/api/forecast/refresh${suffix}`, {});
-      await fetchAll();
+      await queryClient.invalidateQueries({ queryKey: ['forecast'] });
     } catch (err) {
       alert('Failed to refresh forecast');
     } finally {

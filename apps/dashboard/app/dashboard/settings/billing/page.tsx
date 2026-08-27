@@ -1,7 +1,7 @@
 "use client";
 import { formatPKR } from '@/lib/formatters';
 import { useState } from 'react';
-import useSWR from 'swr';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AdminOnly } from '@/components/admin-only';
 import { apiFetch, API_URL } from '@/lib/api';
 import { toast } from 'sonner';
@@ -12,10 +12,22 @@ export default function BillingSettingsPage() {
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
   const [switchingToPlan, setSwitchingToPlan] = useState<string | null>(null);
 
-  const { data: sub, mutate: mutateSub } = useSWR<any>('/api/billing/subscription', apiFetch);
-  const { data: historyRes } = useSWR<any>('/api/billing/history', apiFetch);
-  const { data: plans } = useSWR<any>('/api/billing/plans', apiFetch);
+  const queryClient = useQueryClient();
+  const { data: sub } = useQuery<any>({
+    queryKey: ['billing', 'subscription'],
+    queryFn: () => apiFetch<any>('/api/billing/subscription'),
+  });
+  const { data: historyRes } = useQuery<any>({
+    queryKey: ['billing', 'history'],
+    queryFn: () => apiFetch<any>('/api/billing/history'),
+  });
+  const { data: plans } = useQuery<any>({
+    queryKey: ['billing', 'plans'],
+    queryFn: () => apiFetch<any>('/api/billing/plans'),
+    staleTime: 1000 * 60 * 30, // plan catalogue barely changes
+  });
 
+  const mutateSub = () => queryClient.invalidateQueries({ queryKey: ['billing'] });
   const history = historyRes?.payments || [];
 
   const handlePlanChange = async () => {

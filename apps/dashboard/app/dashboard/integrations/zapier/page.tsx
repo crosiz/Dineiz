@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@dineiz/ui/src/components/card';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Button } from '@dineiz/ui/src/components/button';
 import { apiFetch } from '../../../../lib/api';
-import { Spinner } from '@/components/ui/Spinner';
+import { InlineLoader } from '@/components/ui/Spinner';
 
 type ZapierSub = {
   id: string;
@@ -20,8 +21,7 @@ type ZapierSub = {
 };
 
 export default function ZapierIntegrationsPage() {
-  const [subs, setSubs] = useState<ZapierSub[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   const [event, setEvent] = useState('order.created');
@@ -31,18 +31,13 @@ export default function ZapierIntegrationsPage() {
 
   const canCreate = useMemo(() => event.trim() && url.trim(), [event, url]);
 
-  async function refresh() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await apiFetch<ZapierSub[]>('/api/integrations/zapier/subscriptions');
-      setSubs(data);
-    } catch (e: any) {
-      setError(String(e?.message ?? e));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: subs = [], isLoading: loading, error: queryError } = useQuery<ZapierSub[]>({
+    queryKey: ['zapier', 'subscriptions'],
+    queryFn: () => apiFetch<ZapierSub[]>('/api/integrations/zapier/subscriptions'),
+  });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['zapier', 'subscriptions'] });
+  const shownError = error ?? (queryError ? String((queryError as any)?.message ?? queryError) : null);
 
   async function create() {
     setError(null);
@@ -84,8 +79,6 @@ export default function ZapierIntegrationsPage() {
     }
   }
 
-  useEffect(() => { refresh(); }, []);
-
   return (
     <div className="space-y-6">
       <div>
@@ -93,10 +86,10 @@ export default function ZapierIntegrationsPage() {
         <p className="text-sm text-text-secondary">Send Dineiz events (orders, etc.) to Zapier catch hooks.</p>
       </div>
 
-      {error && (
+      {shownError && (
         <Card>
           <CardHeader><CardTitle>Error</CardTitle></CardHeader>
-          <CardContent className="text-sm text-red-600">{error}</CardContent>
+          <CardContent className="text-sm text-red-600">{shownError}</CardContent>
         </Card>
       )}
 
@@ -124,7 +117,7 @@ export default function ZapierIntegrationsPage() {
       <Card>
         <CardHeader><CardTitle>Subscriptions</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {loading && <div className="flex items-center gap-2 text-sm text-text-secondary"><Spinner size={14} />Loading…</div>}
+          {loading && <InlineLoader className="!py-4" />}
           {!loading && subs.length === 0 && <div className="text-sm text-text-secondary">No subscriptions yet.</div>}
           {subs.map((s) => (
             <div key={s.id} className="rounded-lg border border-border p-3 space-y-2">

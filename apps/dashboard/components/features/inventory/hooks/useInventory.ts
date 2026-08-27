@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { toast } from 'sonner';
@@ -94,6 +94,7 @@ export function useInventory() {
       return apiFetch<{ ingredients: any[]; pagination: any }>(`/api/inventory/ingredients?${q.toString()}`);
     },
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
   const inventoryList: InventoryItem[] = (ingredientsData?.ingredients ?? []).map((ing: any) => ({

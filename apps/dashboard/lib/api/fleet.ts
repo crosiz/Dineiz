@@ -1,34 +1,41 @@
-import useSWR from 'swr';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
-const fetcher = (url: string) => apiFetch(url);
-
+// Fleet reads share the app-wide React Query cache (see components/providers.tsx)
+// like every other screen, so revisiting the page is a cache hit. Deliveries
+// still poll every 10s because that view tracks riders live.
 export function useDeliveries(branchId?: string) {
-  const { data, error, mutate } = useSWR(
-    branchId ? `/api/fleet/deliveries?branchId=${branchId}` : null,
-    fetcher,
-    { refreshInterval: 10000 }
-  );
+  const queryClient = useQueryClient();
+  const queryKey = ['fleet', 'deliveries', branchId ?? null] as const;
+  const { data, error } = useQuery<any>({
+    queryKey,
+    queryFn: () => apiFetch<any>(`/api/fleet/deliveries?branchId=${branchId}`),
+    enabled: !!branchId,
+    refetchInterval: 10_000,
+  });
 
   return {
     deliveries: data || [],
-    isLoading: !error && !data,
+    isLoading: !!branchId && !error && !data,
     isError: error,
-    mutate,
+    mutate: () => queryClient.invalidateQueries({ queryKey: ['fleet', 'deliveries'] }),
   };
 }
 
 export function useRiders(branchId?: string) {
-  const { data, error, mutate } = useSWR(
-    branchId ? `/api/fleet/riders/dashboard?branchId=${branchId}` : null,
-    fetcher
-  );
+  const queryClient = useQueryClient();
+  const queryKey = ['fleet', 'riders', branchId ?? null] as const;
+  const { data, error } = useQuery<any>({
+    queryKey,
+    queryFn: () => apiFetch<any>(`/api/fleet/riders/dashboard?branchId=${branchId}`),
+    enabled: !!branchId,
+  });
 
   return {
     riders: data || [],
-    isLoading: !error && !data,
+    isLoading: !!branchId && !error && !data,
     isError: error,
-    mutate,
+    mutate: () => queryClient.invalidateQueries({ queryKey: ['fleet', 'riders'] }),
   };
 }
 

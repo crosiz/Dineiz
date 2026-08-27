@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { AdminOnly } from '@/components/admin-only';
 import { CreateDealSlideOver } from './_components/CreateDealSlideOver';
@@ -20,39 +21,29 @@ type Deal = {
 type Tab = 'all' | 'promo' | 'combo' | 'scheduled';
 
 export default function DealsPage() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('all');
-  const [items, setItems] = useState<Item[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
   const [isSlideOverOpen, setSlideOverOpen] = useState(false);
   const { branchId, queryParam } = useBranchFilter();
 
-  async function bootstrap() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [menu, ds] = await Promise.all([
-        apiFetch<Category[]>('/api/menu'),
-        apiFetch<Deal[]>(`/api/deals${queryParam ? `?${queryParam}` : ''}`),
-      ]);
-      setCategories(menu);
-      setItems(menu.flatMap(cat => cat.items ?? []));
-      setDeals(ds);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load deals');
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['deals', 'menu'],
+    queryFn: () => apiFetch<Category[]>('/api/menu'),
+  });
+  const items: Item[] = categories.flatMap((cat) => cat.items ?? []);
 
-  useEffect(() => {
-    bootstrap();
-  }, [branchId]);
+  const dealsKey = ['deals', 'list', branchId ?? null] as const;
+  const { data: deals = [], isLoading: loading, isError, error: qError } = useQuery<Deal[]>({
+    queryKey: dealsKey,
+    queryFn: () => apiFetch<Deal[]>(`/api/deals${queryParam ? `?${queryParam}` : ''}`),
+    placeholderData: keepPreviousData,
+  });
+  const error = isError ? ((qError as any)?.message || 'Failed to load deals') : null;
+
+  const refreshDeals = () => queryClient.invalidateQueries({ queryKey: ['deals', 'list'] });
 
   const handleCreateDeal = async (dealData: any) => {
     try {
@@ -60,33 +51,38 @@ export default function DealsPage() {
         method: 'POST',
         body: JSON.stringify(dealData),
       });
-      await bootstrap();
+      refreshDeals();
     } catch (e: any) {
       alert(e?.message || 'Failed to create deal');
     }
   };
 
   const toggleDealStatus = async (dealId: string, currentStatus: boolean) => {
+    // Optimistic — flip in cache, then reconcile.
+    queryClient.setQueryData<Deal[]>(dealsKey, (prev) =>
+      (prev ?? []).map((d) => (d.id === dealId ? { ...d, isActive: !currentStatus } : d)),
+    );
     try {
       await apiFetch(`/api/deals/${dealId}`, {
         method: 'PUT',
         body: JSON.stringify({ isActive: !currentStatus }),
       });
-      setDeals(deals.map(d => d.id === dealId ? { ...d, isActive: !currentStatus } : d));
     } catch (e: any) {
       alert(e?.message || 'Failed to update deal');
+    } finally {
+      refreshDeals();
     }
   };
 
   const handleDeleteDeal = async (dealId: string) => {
     if (!confirm('Are you sure you want to delete this deal?')) return;
+    queryClient.setQueryData<Deal[]>(dealsKey, (prev) => (prev ?? []).filter((d) => d.id !== dealId));
     try {
-      await apiFetch(`/api/deals/${dealId}`, {
-        method: 'DELETE',
-      });
-      setDeals(deals.filter(d => d.id !== dealId));
+      await apiFetch(`/api/deals/${dealId}`, { method: 'DELETE' });
     } catch (e: any) {
       alert(e?.message || 'Failed to delete deal');
+    } finally {
+      refreshDeals();
     }
   };
 

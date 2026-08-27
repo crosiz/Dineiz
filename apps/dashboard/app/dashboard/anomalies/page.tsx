@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api-client';
 import { AlertTriangle, Settings, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { AnomalyList } from './_components/AnomalyList';
@@ -7,27 +8,18 @@ import { AnomalySettingsPanel } from './_components/AnomalySettingsPanel';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 
 export default function AnomaliesPage() {
-  const [anomalies, setAnomalies] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showSettings, setShowSettings] = useState(false);
   const [filter, setFilter] = useState<string>('ALL'); // ALL, CRITICAL, HIGH, MEDIUM, RESOLVED
   const { branchId, queryParam } = useBranchFilter();
 
-  const fetchAnomalies = async () => {
-    try {
-      setLoading(true);
-      const res = await apiGet(`/api/anomalies${queryParam ? `?${queryParam}` : ''}`);
-      setAnomalies(res as any[]);
-    } catch (err: any) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: anomalies = [], isLoading: loading } = useQuery<any[]>({
+    queryKey: ['anomalies', branchId ?? null],
+    queryFn: () => apiGet<any[]>(`/api/anomalies${queryParam ? `?${queryParam}` : ''}`),
+    placeholderData: keepPreviousData,
+  });
 
-  useEffect(() => {
-    fetchAnomalies();
-  }, [branchId]);
+  const fetchAnomalies = () => queryClient.invalidateQueries({ queryKey: ['anomalies'] });
 
   const criticalCount = anomalies.filter(a => a.severity === 'CRITICAL' && a.status === 'OPEN').length;
   const highCount = anomalies.filter(a => a.severity === 'HIGH' && a.status === 'OPEN').length;

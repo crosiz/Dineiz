@@ -1,28 +1,26 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import ws from 'ws';
 
-// Required for neon serverless in Node environments
-neonConfig.webSocketConstructor = ws;
-
+// One PrismaClient for the whole process, reused across dev hot-reloads via a
+// global. Without this, `tsx watch` / Next fast-refresh spawns a fresh client
+// (and a fresh connection pool) on every file save and eventually exhausts the
+// database's connection limit — the "login hangs after a few edits" symptom.
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
+  prisma: PrismaClient | undefined;
 };
 
 function createPrismaClient() {
-  if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
-    return new PrismaClient({ log: ['query', 'error'] });
-  }
-  
-  // Standard Postgres Connection (Local Docker Development)
-  return new PrismaClient({
-    log: ['query', 'error'],
-  });
+  // Query-level logging is very chatty and measurably slows every request; keep
+  // it off unless explicitly asked for. Warnings + errors are always on.
+  const log: ('query' | 'info' | 'warn' | 'error')[] =
+    process.env.PRISMA_LOG_QUERIES === 'true'
+      ? ['query', 'warn', 'error']
+      : ['warn', 'error'];
+
+  return new PrismaClient({ log });
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
-export * from '@prisma/client'
+export * from '@prisma/client';
