@@ -1,7 +1,6 @@
 import { Metadata } from 'next'
 
 const BASE_URL = 'https://dineiz.com'
-const DEFAULT_OG = `${BASE_URL}/api/og`
 
 interface SEOProps {
   title: string
@@ -20,7 +19,7 @@ export function generateSEOMetadata({
   title,
   description,
   keywords = [],
-  ogImage = DEFAULT_OG,
+  ogImage,
   canonical,
   path,
   noIndex = false,
@@ -30,6 +29,9 @@ export function generateSEOMetadata({
 }: SEOProps): Metadata {
   const fullTitle = `${title} | Dineiz`
   const finalUrl = canonical ?? (path ? `${BASE_URL}${path}` : BASE_URL)
+  // Falls back to a per-page dynamic OG image (title baked in) rather than
+  // one generic image shared across every page/post on social shares.
+  const finalOgImage = ogImage ?? `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`
 
   return {
     title: fullTitle,
@@ -54,7 +56,7 @@ export function generateSEOMetadata({
       description,
       url: finalUrl,
       siteName: 'Dineiz',
-      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: finalOgImage, width: 1200, height: 630, alt: title }],
       locale: 'en_PK',
       type: type,
       ...(type === 'article' && publishedTime ? { publishedTime } : {}),
@@ -63,7 +65,7 @@ export function generateSEOMetadata({
       card: 'summary_large_image',
       title: fullTitle,
       description,
-      images: [ogImage],
+      images: [finalOgImage],
       creator: '@dineizpk',
     },
     verification: {
@@ -122,16 +124,46 @@ export function generateArticleSchema(
       name: 'Dineiz',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://dineiz.com/logo.png'
+        url: 'https://dineiz.com/logo.svg'
       }
     }
   }
 }
 
 export function generateOrganizationSchema() {
-  return {}
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Dineiz',
+    legalName: 'Crosiz Technologies',
+    url: BASE_URL,
+    logo: `${BASE_URL}/logo.svg`,
+    description: 'Restaurant POS and management software built in Pakistan.',
+    email: 'hello@dineiz.com',
+    contactPoint: {
+      '@type': 'ContactPoint',
+      telephone: '+92-314-1986044',
+      contactType: 'customer service',
+      areaServed: 'PK',
+      availableLanguage: ['en', 'ur'],
+    },
+    sameAs: [
+      'https://instagram.com/dineiz.com',
+      'https://linkedin.com/company/dineiz',
+      'https://youtube.com/@dineiz',
+    ],
+  }
 }
 
 export function generateWebSiteSchema() {
-  return {}
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Dineiz',
+    url: BASE_URL,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Dineiz',
+    },
+  }
 }

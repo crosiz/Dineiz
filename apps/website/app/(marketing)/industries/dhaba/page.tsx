@@ -118,7 +118,7 @@ export default function DhabaPage() {
                 Puraani khata book ko choro, <br/><span className="text-[#FF6B35]">digital hisaab rakho.</span>
               </h2>
               <p className="text-[18px] text-[#6e6e73] mb-8 leading-relaxed">
-                We know how hard you work. 14-hour shifts, managing staff, ensuring the khana is fresh. You shouldn't be worrying about manual ledger errors or staff taking extra money.
+                We know how hard you work. 14-hour shifts, managing staff, ensuring the khana is fresh. You shouldn't be worrying about manual ledger errors or cash going missing.
               </p>
               
               <ul className="space-y-6">
@@ -146,7 +146,7 @@ export default function DhabaPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-[#1d1d1f] text-[16px]">Stop Cash Leakage</h4>
-                    <p className="text-[15px] text-[#6e6e73] mt-1 leading-relaxed">Customers ask for printed receipts. Staff must punch orders to print them. Theft stops immediately.</p>
+                    <p className="text-[15px] text-[#6e6e73] mt-1 leading-relaxed">Customers ask for printed receipts. Staff must punch orders to print them, so every sale is accounted for.</p>
                   </div>
                 </li>
               </ul>

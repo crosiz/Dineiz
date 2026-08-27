@@ -4,7 +4,7 @@ declare global {
   }
 }
 
-export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID || "GTM-DINEIZ";
+export const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID;
 
 export const trackEvent = (eventName: string, eventParams: Record<string, any> = {}) => {
   if (typeof window !== "undefined" && window.dataLayer) {

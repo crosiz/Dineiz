@@ -11,9 +11,9 @@ import { event } from "@/lib/gtag";
 
 const products = [
   { name: "Dineiz POS", desc: "Tablet-based billing terminal", href: "/product/pos" },
-  { name: "Dineiz Go", desc: "Mobile PWA for counter service", href: "/product/go" },
+  { name: "Dineiz Go", desc: "Native Android app for counter service", href: "/product/go" },
   { name: "Dineiz Console", desc: "Analytics dashboard for owners", href: "/product/console" },
-  { name: "WhatsApp Orders", desc: "Automated WhatsApp ordering", href: "/product/whatsapp" },
+  { name: "WhatsApp Orders", desc: "AI-assisted WhatsApp ordering", href: "/product/whatsapp" },
 ];
 
 const industries = [

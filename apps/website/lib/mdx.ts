@@ -60,7 +60,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
         authorRole: frontmatter.authorRole || 'POS Specialist',
         category: frontmatter.category || 'Guide',
         readTime: frontmatter.readTime || readTime,
-        image: frontmatter.ogImage || frontmatter.image || '/images/blog-placeholder.jpg',
+        image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.title || 'Dineiz Blog')}`,
         content,
       };
     })
@@ -87,7 +87,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
     authorRole: frontmatter.authorRole || 'POS Specialist',
     category: frontmatter.category || 'Guide',
     readTime: frontmatter.readTime || readTime,
-    image: frontmatter.ogImage || frontmatter.image || '/images/blog-placeholder.jpg',
+    image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.title || 'Dineiz Blog')}`,
     content,
   };
 }
@@ -113,13 +113,13 @@ export async function getAllCaseStudies(): Promise<CaseStudy[]> {
         challenge: frontmatter.challenge || '',
         solution: frontmatter.solution || '',
         results: [
-          { metric: frontmatter.metric1 || '+35%', label: frontmatter.label1 || 'Revenue Growth' },
-          { metric: frontmatter.metric2 || '15 min', label: frontmatter.label2 || 'Daily Reconciliation' },
-          { metric: frontmatter.metric3 || '0', label: frontmatter.label3 || 'Cash Discrepancies' },
+          { metric: frontmatter.metric1 || '—', label: frontmatter.label1 || 'Key Result' },
+          { metric: frontmatter.metric2 || '—', label: frontmatter.label2 || 'Key Result' },
+          { metric: frontmatter.metric3 || '—', label: frontmatter.label3 || 'Key Result' },
         ],
         quote: frontmatter.quote || '',
         author: frontmatter.author || 'Owner',
-        image: frontmatter.image || '/images/case-study-placeholder.jpg',
+        image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.restaurantName || 'Dineiz Case Study')}`,
         content,
       };
     });
@@ -144,13 +144,13 @@ export async function getCaseStudyBySlug(slug: string): Promise<CaseStudy | null
     challenge: frontmatter.challenge || '',
     solution: frontmatter.solution || '',
     results: [
-      { metric: frontmatter.metric1 || '+35%', label: frontmatter.label1 || 'Revenue Growth' },
-      { metric: frontmatter.metric2 || '15 min', label: frontmatter.label2 || 'Daily Reconciliation' },
-      { metric: frontmatter.metric3 || '0', label: frontmatter.label3 || 'Cash Discrepancies' },
+      { metric: frontmatter.metric1 || '—', label: frontmatter.label1 || 'Key Result' },
+      { metric: frontmatter.metric2 || '—', label: frontmatter.label2 || 'Key Result' },
+      { metric: frontmatter.metric3 || '—', label: frontmatter.label3 || 'Key Result' },
     ],
     quote: frontmatter.quote || '',
     author: frontmatter.author || 'Owner',
-    image: frontmatter.image || '/images/case-study-placeholder.jpg',
+    image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.restaurantName || 'Dineiz Case Study')}`,
     content,
   };
 }
