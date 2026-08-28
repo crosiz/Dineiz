@@ -288,7 +288,7 @@ export function emitOrderCancelled(tenantId: string, branchId: string, orderId: 
 /** Broadcast a shift lifecycle event to all POS terminals in a branch */
 export function emitShiftEvent(
   branchId: string,
-  event: 'opened' | 'closed',
+  event: 'opened' | 'closed' | 'pending_sync',
   shiftId: string,
 ): void {
   const socket = getIO();
@@ -318,8 +318,12 @@ export function emitToStation(stationId: string, event: string, data: unknown): 
 
 /** Broadcast table status change to POS terminals in a branch and Dashboard in tenant */
 export function emitTableStatusChanged(
-  branchId: string, 
-  data: { tableId: string, status: 'free' | 'occupied' | 'ready', orderId?: string, since?: string },
+  branchId: string,
+  // Part 3 — the derived status can be any of the lowercase forms of
+  // DerivedTableStatus (free / occupied / bill_requested / dirty / reserved /
+  // inactive / merged); kept as a plain string so this helper doesn't have to
+  // track the union.
+  data: { tableId: string, status: string, orderId?: string, since?: string },
   tenantId?: string
 ): void {
   const socket = getIO();
@@ -369,11 +373,15 @@ export function emitDeliveryStageUpdated(branchId: string, data: { riderId: stri
   socket.of('/fleet').to(`branch:${branchId}`).emit('delivery:stage_updated', data);
 }
 
-export function emitDashboardStatsUpdated(tenantId: string, branchId: string): void {
+export function emitDashboardStatsUpdated(tenantId: string, branchId: string, totals?: unknown): void {
   const socket = getIO();
   if (!socket) { return; }
-  socket.of('/kds').to(`branch:${branchId}`).emit('dashboard:stats_updated');
-  socket.of('/kds').to(`tenant:${tenantId}`).emit('dashboard:stats_updated');
+  // `totals` (spec Part 7) is the freshly-summed ShiftAggregate for the
+  // branch's current shifts — a listener can update the number in place; the
+  // bare event (no payload) still works as a "refetch now" trigger.
+  const payload = totals ? { branchId, totals } : undefined;
+  socket.of('/kds').to(`branch:${branchId}`).emit('dashboard:stats_updated', payload);
+  socket.of('/kds').to(`tenant:${tenantId}`).emit('dashboard:stats_updated', payload);
 }
 
 /** Broadcast that one or more ingredients' stock changed for a branch (any cause). */

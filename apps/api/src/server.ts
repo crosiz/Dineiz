@@ -55,6 +55,8 @@ import { zktecoService } from './services/zkteco.service';
 import { processPunch } from './services/attendance.service';
 import { initSmsWorker } from './jobs/sms.worker';
 import { processAbandonedShifts } from './jobs/abandonedShifts';
+import { reconcileTableStatuses } from './jobs/tableStatusReconcile';
+import { reconcileShiftAggregates } from './jobs/shiftAggregateReconcile';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
 import { startKeepAlive } from './jobs/keep-alive.job';
@@ -344,6 +346,18 @@ async function start() {
     }, 60 * 60 * 1000);
     // Also run once on startup
     processAbandonedShifts().catch(e => app.log.error('Abandoned shifts job failed on startup', e));
+
+    // Table-status drift sweep every 5 minutes (spec Part 3). recomputeTableStatus
+    // keeps it right on every order event; this catches anything that wrote
+    // table status outside the derivation.
+    setInterval(() => {
+      reconcileTableStatuses().catch(e => app.log.error('Table status reconcile failed', e));
+    }, 5 * 60 * 1000);
+
+    // Shift-aggregate drift sweep every 15 minutes (spec Part 7).
+    setInterval(() => {
+      reconcileShiftAggregates().catch(e => app.log.error('Shift aggregate reconcile failed', e));
+    }, 15 * 60 * 1000);
 
     // Written and documented (CLAUDE.md: "Keep-alive ping every 4 minutes
     // to prevent Neon DB cold starts") but never actually called — the dev

@@ -1,9 +1,6 @@
 import { prisma, AggregatorWebhookEvent, OrderSource, OrderType, OrderStatus } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
-
-function generateOrderNumber() {
-  return `AGG-${Date.now().toString().slice(-6)}`;
-}
+import { nextNonPosOrderNumber, type OrderNumberFormat } from '../../lib/orderNumber';
 
 export async function handleWebhookPayload(event: AggregatorWebhookEvent) {
   const { tenantId, provider, payload } = event;
@@ -76,15 +73,29 @@ export async function handleWebhookPayload(event: AggregatorWebhookEvent) {
     careem: 'CAREEM',
     talabat: 'TALABAT'
   };
+  const orderSource = sourceMap[provider] || 'POS';
 
   const status = integration.autoAccept ? 'CONFIRMED' : 'PENDING';
+
+  // Part 4 — one generator. Non-POS sources run through the shared formatter
+  // so a Foodpanda order reads "F-0912-001", same shape as everything else.
+  const branding = await prisma.tenantBranding.findUnique({
+    where: { tenantId },
+    select: { orderNumberFormat: true, tenantShortCode: true },
+  });
+  const orderNumber = await nextNonPosOrderNumber({
+    tenantId,
+    source: orderSource,
+    format: (branding?.orderNumberFormat as OrderNumberFormat) ?? 'STANDARD',
+    shortCode: branding?.tenantShortCode,
+  });
 
   const order = await prisma.order.create({
     data: {
       tenantId,
       branchId: targetBranchId,
-      orderNumber: generateOrderNumber(),
-      source: sourceMap[provider] || 'POS',
+      orderNumber,
+      source: orderSource,
       type: 'DELIVERY',
       status: status as OrderStatus,
       totalAmount,

@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import {
-  getCurrentShift, listShifts, getShift, openShift, closeShift, addCashEntry, getShiftSummary,
+  getCurrentShift, listShifts, getShift, openShift, closeShift, completeShiftSync, addCashEntry, getShiftSummary,
   getShiftOrders, getShiftActivity, getActiveShiftStats,
   startBreak, endBreak, canCloseShift, getShiftReport,
 } from './shift.service';
@@ -59,6 +59,13 @@ export async function handleCloseShift(request: FastifyRequest, reply: FastifyRe
   if (!parsed.success) return reply.status(400).send({ error: 'Invalid body', issues: parsed.error.issues });
   const result = await closeShift(request.user!.tenantId!, id, parsed.data);
   if (!result) return reply.status(404).send({ error: 'Open shift not found' });
+  if ('error' in result) return reply.status(400).send({ error: result.error });
+  return result;
+}
+
+export async function handleCompleteShiftSync(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.params as any;
+  const result = await completeShiftSync(request.user!.tenantId!, id);
   if ('error' in result) return reply.status(400).send({ error: result.error });
   return result;
 }
