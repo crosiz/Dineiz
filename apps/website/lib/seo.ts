@@ -29,8 +29,7 @@ export function generateSEOMetadata({
 }: SEOProps): Metadata {
   const fullTitle = `${title} | Dineiz`
   const finalUrl = canonical ?? (path ? `${BASE_URL}${path}` : BASE_URL)
-  // High-reliability static OG image for WhatsApp/Instagram or dynamic route image for subpages
-  const finalOgImage = ogImage ?? (path === '/' || !path ? `${BASE_URL}/og-image.png` : `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`)
+  const finalOgImage = ogImage ?? `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`
 
   return {
     title: fullTitle,
