@@ -165,12 +165,6 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Spec Part 9 — terminal-local display scale (Settings → Display). The POS
-     lays out in fixed px, so `zoom` on the root is what actually makes every
-     screen bigger/smaller uniformly. Set by POSLayout from useTerminalSettings. */
-  :root[data-pos-font-scale="small"]  { zoom: 0.92; }
-  :root[data-pos-font-scale="large"]  { zoom: 1.12; }
-
   /* Scrollbars */
   ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }

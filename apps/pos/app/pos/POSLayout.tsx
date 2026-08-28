@@ -252,13 +252,10 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Spec Part 9 — apply the terminal-local display settings to the shell.
-  // fontScale → a data attribute the global CSS keys off; keepAwake → the
-  // Screen Wake Lock so the tablet doesn't dim mid-service.
+  // Spec Part 9 — terminal-local display settings. keepAwake → the Screen
+  // Wake Lock so the tablet doesn't dim mid-service. (fontScale is stored but
+  // not applied to the shell yet — a root `zoom` broke the `h-screen` layout.)
   const termSettings = useTerminalSettings((s) => s.settings);
-  useEffect(() => {
-    document.documentElement.dataset.posFontScale = termSettings.fontScale;
-  }, [termSettings.fontScale]);
   useEffect(() => {
     if (!termSettings.keepAwake || !('wakeLock' in navigator)) return;
     let lock: any = null;

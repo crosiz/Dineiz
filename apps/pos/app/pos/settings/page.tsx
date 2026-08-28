@@ -191,13 +191,6 @@ export default function POSSettingsPage() {
       {section === 'display' && (
         <>
           <h2 className="text-[15px] font-bold text-slate-900 mb-3">Display</h2>
-          <Row label="Text size">
-            <select className={selectCls} value={settings.fontScale} onChange={(e) => set('fontScale', e.target.value as any)}>
-              <option value="small">Small</option>
-              <option value="normal">Normal</option>
-              <option value="large">Large</option>
-            </select>
-          </Row>
           <Row label="Keep screen awake" hint="Stops the terminal dimming during a shift.">
             <Toggle on={settings.keepAwake} onChange={(v) => set('keepAwake', v)} />
           </Row>
