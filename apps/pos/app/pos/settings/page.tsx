@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Lock, User, KeyRound, Languages, Printer, MonitorSmartphone,
@@ -94,8 +94,16 @@ export default function POSSettingsPage() {
   const { settings, loaded, load, set } = useTerminalSettings();
   useEffect(() => { void load(); }, [load]);
 
-  const [section, setSection] = useState<SectionId>('syncStatus');
-  const [mobileOpen, setMobileOpen] = useState(false); // mobile: is a detail open
+  // Opens on My Profile by default; deep-linkable via ?section= (the top-bar
+  // Settings item and the sync-health dot both point at specific sections).
+  const searchParams = useSearchParams();
+  const ALL_SECTIONS: SectionId[] = GROUPS.flatMap((g) => g.items.map((i) => i.id));
+  const initialSection = (() => {
+    const q = searchParams.get('section') as SectionId | null;
+    return q && ALL_SECTIONS.includes(q) ? q : 'account';
+  })();
+  const [section, setSection] = useState<SectionId>(initialSection);
+  const [mobileOpen, setMobileOpen] = useState(!!searchParams.get('section')); // mobile: is a detail open
 
   // ── Live sync data ─────────────────────────────────────────────────────
   const [summary, setSummary] = useState<UnsyncedSummary | null>(null);

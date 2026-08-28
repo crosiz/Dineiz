@@ -3,16 +3,27 @@ import autoTable from 'jspdf-autotable';
 import { getPersistedPrinter, sendToPrinter } from './printer/webusb';
 import { buildReceipt, buildKOT, buildCancellationKOT, type PrintOrder } from './printer/templates';
 import { useBrandingStore } from './branding-store';
+import { useTerminalSettings } from './terminal-settings';
 
 export type PrintDocumentType = 'KOT' | 'CUSTOMER_BILL' | 'PAID_RECEIPT' | 'CANCELLATION_KOT' | 'SHIFT_REPORT' | 'TEST_PRINT';
 
 // We reuse the PrintOrder type but can extend it for specific docs if needed
 export async function printDocument(type: PrintDocumentType, data: PrintOrder & { cancellationReason?: string, cancelledBy?: string, approvedBy?: string }): Promise<void> {
-  // 1. Resolve Print Mode
+  // 1. Resolve Print Mode.
+  // The printer + paper width are TERMINAL-LOCAL (spec Part 9) — a device
+  // with a thermal printer attached and one without can't share one setting.
+  // So the terminal's own choice (Settings → Printer) wins when it's been
+  // set to PRINTER; otherwise fall back to the tenant/branding default,
+  // which stays PDF unless the console explicitly turned it off.
   let printMode = 'PRINTER';
   const branding = useBrandingStore.getState().branding;
-  
-  if (branding.downloadPdfReceipt) {
+  const terminal = useTerminalSettings.getState().settings;
+
+  if (terminal.printMode === 'PRINTER') {
+    printMode = 'PRINTER';
+  } else if (terminal.printMode === 'PDF') {
+    printMode = 'PDF';
+  } else if (branding.downloadPdfReceipt) {
     printMode = 'PDF';
   } else {
     try {
@@ -78,8 +89,13 @@ async function executeUsbPrint(type: PrintDocumentType, data: PrintOrder) {
 
 async function executePdfPrint(type: PrintDocumentType, data: any) {
   const branding = useBrandingStore.getState().branding;
-  if (branding.receiptPaperSize === '58mm') PAPER_WIDTH = 58;
-  else if (branding.receiptPaperSize === 'A4') PAPER_WIDTH = 210;
+  // Terminal's own paper width wins (Settings → Printer); branding is the
+  // fallback (it also carries the tenant-wide A4 option, which the terminal
+  // setting doesn't expose).
+  const terminalPaper = useTerminalSettings.getState().settings.paperWidth;
+  const paper: string = terminalPaper || branding.receiptPaperSize || '80mm';
+  if (paper === '58mm') PAPER_WIDTH = 58;
+  else if (paper === 'A4') PAPER_WIDTH = 210;
   else PAPER_WIDTH = 80;
   
   let doc: jsPDF;

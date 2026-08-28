@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { useSocket } from '@/contexts/SocketContext';
 import { getPosSession, clearPosSession, getToken } from '@/lib/pos-session';
+import { useTerminalSettings } from '@/lib/terminal-settings';
 import { toast } from 'sonner';
 import { Check, Settings, RefreshCw, LogOut, X } from 'lucide-react';
 import { DineizLogo } from '@/components/ui/DineizLogo';
@@ -401,6 +402,12 @@ export default function KDSPage() {
 
 function playLoudRing() {
   try {
+    // Spec Part 9 — the terminal's own Sound setting gates the chime and sets
+    // its volume. Read straight from the store (already hydrated by POSLayout).
+    const snd = useTerminalSettings.getState().settings;
+    if (!snd.soundEnabled) return;
+    const vol = Math.max(0, Math.min(1, (snd.soundVolume ?? 70) / 100));
+
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
@@ -410,16 +417,16 @@ function playLoudRing() {
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      
+
       // A triangle wave gives that digital "pop" or "app notification bell" sound
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, startTime);
-      
+
       // Fast attack, punchy short decay (marimba/bell style)
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(isHigh ? 0.8 : 0.6, startTime + 0.01); 
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + (isHigh ? 0.4 : 0.2)); 
-      
+      gain.gain.linearRampToValueAtTime((isHigh ? 0.8 : 0.6) * vol, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + (isHigh ? 0.4 : 0.2));
+
       osc.start(startTime);
       osc.stop(startTime + 0.5);
     };

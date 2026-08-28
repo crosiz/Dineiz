@@ -20,6 +20,7 @@ import { QuickStockAlertModal, StockAlertPayload } from '@/components/QuickStock
 import { OrphanResolutionModal, OrphanOrder } from '@/components/shift/OrphanResolutionModal';
 import { ManagerOverlayBar } from '@/components/ManagerOverlayBar';
 import { useManagerOverlay } from '@/lib/manager-overlay';
+import { useTerminalSettings } from '@/lib/terminal-settings';
 import { ViewModeBanner } from '@/components/ViewModeBanner';
 import { allowsViewMode } from '@/lib/view-mode';
 
@@ -199,6 +200,11 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // (auto-exits itself if it went stale while the tab was closed).
     useManagerOverlay.getState().hydrate();
 
+    // Spec Part 9 — terminal-local settings (printer, sound, display, drawer).
+    // Loaded once here so print.service / the sound cue / the shell font-scale
+    // can read them from anywhere without each caller hydrating Dexie.
+    useTerminalSettings.getState().load();
+
     // lib/sync.ts's older queue still runs alongside it: the "add items to
     // an order already sent to the kitchen" flow (order/page.tsx's
     // isAppending branch) was deliberately NOT moved onto the outbox — it
@@ -245,6 +251,30 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       cleanupTableReconcile();
     };
   }, []);
+
+  // Spec Part 9 — apply the terminal-local display settings to the shell.
+  // fontScale → a data attribute the global CSS keys off; keepAwake → the
+  // Screen Wake Lock so the tablet doesn't dim mid-service.
+  const termSettings = useTerminalSettings((s) => s.settings);
+  useEffect(() => {
+    document.documentElement.dataset.posFontScale = termSettings.fontScale;
+  }, [termSettings.fontScale]);
+  useEffect(() => {
+    if (!termSettings.keepAwake || !('wakeLock' in navigator)) return;
+    let lock: any = null;
+    let released = false;
+    const acquire = () => (navigator as any).wakeLock.request('screen')
+      .then((l: any) => { if (released) l.release?.(); else lock = l; })
+      .catch(() => {});
+    acquire();
+    const onVisible = () => { if (document.visibilityState === 'visible' && !lock) acquire(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      released = true;
+      document.removeEventListener('visibilitychange', onVisible);
+      lock?.release?.().catch(() => {});
+    };
+  }, [termSettings.keepAwake]);
 
   // Spec Part 2 — orphan check. When a shift is open and the cashier lands on
   // a working screen, ask the server whether any still-active orders were

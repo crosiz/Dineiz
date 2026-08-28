@@ -16,6 +16,7 @@ import { AdminPinModal } from '@/components/AdminPinModal';
 import { DineizLogo } from './ui/DineizLogo';
 import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag } from 'lucide-react';
 import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
+import { SyncHealthDot } from '@/components/SyncHealthDot';
 import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startBreak } from '@/lib/core/commands';
@@ -364,6 +365,8 @@ export function POSTopBar() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Offline</span>
               </div>
             )}
+
+            {isMounted && <SyncHealthDot />}
 
             <span className="hidden md:inline font-mono text-[13px] font-semibold text-[#64748B] tabular-nums">{clockStr}</span>
 
