@@ -114,7 +114,7 @@ export function PricingPreview() {
 
         {/* Header */}
         <div className="text-center mb-14">
-          <p className="text-sm font-semibold text-[#FF6B35] tracking-wide mb-4">Pricing</p>
+          <p className="text-sm font-semibold text-brand-700 tracking-wide mb-4">Pricing</p>
           <h2
             className="font-bold text-[#1d1d1f] mb-4"
             style={{ fontSize: "clamp(2rem, 4vw, 2.8rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}

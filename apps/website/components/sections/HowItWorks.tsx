@@ -29,7 +29,7 @@ export function HowItWorks() {
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
 
         <div className="mb-16 max-w-xl">
-          <p className="text-sm font-semibold text-brand-500 tracking-wide mb-4">Getting started</p>
+          <p className="text-sm font-semibold text-brand-700 tracking-wide mb-4">Getting started</p>
           <h2
             className="font-bold text-[#1d1d1f]"
             style={{ fontSize: "clamp(2rem, 4vw, 2.8rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
