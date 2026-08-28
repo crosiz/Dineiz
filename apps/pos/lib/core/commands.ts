@@ -72,6 +72,31 @@ export async function addItem(orderId: string, item: {
   remember(orderId, e.id);
 }
 
+/**
+ * Add items to an order that's already been sent to the kitchen (spec Part 8 /
+ * offline-first). Same event as a first-time add — `ITEM_ADDED` — so it flows
+ * through the outbox's `ADD_ITEMS` op (POST /api/orders/:serverId/items), which
+ * waits for the order's server id if it isn't reconciled yet and retries a
+ * transient failure. Replaces the order screen's direct `fetch(.../items)`,
+ * which 404'd whenever the order was still keyed by its local client id.
+ * The caller prints the KOT immediately and navigates away optimistically.
+ */
+export async function appendItems(
+  orderId: string,
+  items: Array<{
+    itemId: string; itemName: string;
+    variationId?: string | null; variationName?: string | null;
+    qty: number; unitPrice: number; note?: string | null;
+    addOns?: Array<{ id: string; name: string; price: number }> | null;
+  }>,
+) {
+  for (const item of items) {
+    const e = await emit('ITEM_ADDED', 'ORDER', orderId,
+      { lineId: `ln_${nanoid(10)}`, appended: true, ...item }, chain(orderId));
+    remember(orderId, e.id);
+  }
+}
+
 export async function changeQty(orderId: string, lineId: string, qty: number) {
   const e = await emit('ITEM_QTY_CHANGED', 'ORDER', orderId, { lineId, qty }, chain(orderId));
   remember(orderId, e.id);

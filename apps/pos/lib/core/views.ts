@@ -729,6 +729,26 @@ export function reconcileServerId(orderId: string, serverId: string) {
 }
 
 /**
+ * Insert a server order object (the `/api/orders/:id` shape) into the view
+ * store so command-driven flows can operate on it — used by the order screen
+ * when it loads an order that predates this terminal's view store, so
+ * `commands.appendItems` and the outbox have something to work with. Keyed by
+ * the server id, with `serverId` set so the outbox ships item appends straight
+ * to `PUT /api/orders/:serverId/items` rather than trying to re-create it.
+ * Idempotent — returns the store key whether it inserted or found it.
+ */
+export function seedServerOrder(raw: any): string {
+  if (!raw?.id) return '';
+  const cur = useViews.getState().orders;
+  for (const [localId, o] of Object.entries(cur)) {
+    if (localId === raw.id || o.serverId === raw.id) return localId;
+  }
+  const mapped = { ...mapServerOrderToView(raw), serverId: raw.id, syncState: 'SYNCED' as any };
+  useViews.getState()._setSnapshot({ orders: { ...cur, [raw.id]: mapped } });
+  return raw.id;
+}
+
+/**
  * Seeds table view state from the existing floor-plan endpoint (same one
  * hooks/useSWRTables.ts and ClientTableMap.tsx already use). Without this,
  * useViews.tables starts empty and every ORDER_SENT_TO_KITCHEN/
