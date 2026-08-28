@@ -23,7 +23,7 @@
     "gray-matter": "^4.0.3",
     "lucide-react": "^0.439.0",
     "next": "15.5.23",
-    "next-mdx-remote": "^5.0.0",
+    "next-mdx-remote": "^6.0.0",
     "next-sitemap": "^4.2.3",
     "next-themes": "^0.3.0",
     "react": "19.0.0-rc-69d4b800-20241021",
