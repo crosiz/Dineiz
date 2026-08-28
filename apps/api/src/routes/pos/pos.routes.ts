@@ -43,29 +43,63 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // these two endpoints.
 
   fastify.get('/api/pos/orphans', {
-    schema: { querystring: z.object({ branchId: z.string() }) },
+    schema: {
+      querystring: z.object({
+        branchId: z.string(),
+        withinHours: z.coerce.number().min(1).max(168).optional(),
+      }),
+    },
     preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER']),
   }, async (request, reply) => {
     const tenantId = request.user!.tenantId!;
-    const { branchId } = request.query as { branchId: string };
+    const { branchId, withinHours } = request.query as { branchId: string; withinHours?: number };
 
-    const orphans = await prisma.order.findMany({
-      where: {
-        tenantId,
-        branchId,
-        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
-        shiftId: { not: null },
-        shift: { status: { not: 'OPEN' } },
-      },
-      select: {
-        id: true, orderNumber: true, status: true, type: true,
-        netAmount: true, totalAmount: true, createdAt: true, shiftId: true,
-        table: { select: { label: true } },
-        shift: { select: { id: true, status: true, closedAt: true, user: { select: { name: true } } } },
-        _count: { select: { items: true } },
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    // The orphan modal is a blocking, one-order-at-a-time (manager PIN each)
+    // gate on the home screen. Its purpose is "a shift closed and left food
+    // that may still be cooking" — a live operational hand-off, not a
+    // historical-data cleanup. Without a window it also surfaces every order
+    // ever abandoned in a non-terminal state (dev seed data alone leaves
+    // dozens), producing an un-clearable modal. Bound it to the recent past;
+    // anything older is stale and belongs to an admin cleanup path, not the
+    // next cashier. Also hard-cap the list so the modal can never be
+    // unbounded even inside the window.
+    const ORPHAN_WINDOW_HOURS = withinHours ?? 24;
+    const ORPHAN_LIMIT = 40;
+    const cutoff = new Date(Date.now() - ORPHAN_WINDOW_HOURS * 3600_000);
+
+    const [orphans, totalInWindow] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          tenantId,
+          branchId,
+          status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+          shiftId: { not: null },
+          shift: { status: { not: 'OPEN' } },
+          createdAt: { gte: cutoff },
+        },
+        select: {
+          id: true, orderNumber: true, status: true, type: true,
+          netAmount: true, totalAmount: true, createdAt: true, shiftId: true,
+          table: { select: { label: true } },
+          shift: { select: { id: true, status: true, closedAt: true, user: { select: { name: true } } } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: ORPHAN_LIMIT,
+      }),
+      prisma.order.count({
+        where: {
+          tenantId,
+          branchId,
+          status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+          shiftId: { not: null },
+          shift: { status: { not: 'OPEN' } },
+          createdAt: { gte: cutoff },
+        },
+      }),
+    ]);
+
+    reply.header('x-orphan-total', String(totalInWindow));
 
     return reply.send(orphans.map((o) => ({
       id: o.id,
