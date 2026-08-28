@@ -6,9 +6,19 @@ import { toast } from 'sonner';
 import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
 import {
+  getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox,
+  type SyncCategoryProgress,
+} from '@/lib/core/outbox';
+import { closeShift as emitShiftClosed } from '@/lib/core/commands';
+import { AdminPinModal } from '@/components/AdminPinModal';
+import { useBrandingStore } from '@/lib/branding-store';
+import {
   Clock, X, CheckCircle2, Printer, Download, AlertCircle, Timer, Receipt,
   Banknote, Coffee, TrendingUp, TrendingDown, FileEdit, CheckCheck, Loader2, Check,
+  RefreshCw, CloudOff,
 } from 'lucide-react';
+
+const DEFAULT_SYNC_TIMEOUT_MS = 45_000; // spec Part 6 — overridable in console settings
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -24,6 +34,12 @@ const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 
 export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const router = useRouter();
+  const branding = useBrandingStore((s) => s.branding);
+  const cfg = { ...(branding.pos ?? {}), ...branding };
+  const cashCountRequired = cfg.cashCountRequired ?? true;
+  const allowCloseWithUnsynced = cfg.allowCloseWithUnsynced ?? true;
+  const closeWithUnsyncedRequiresPin = cfg.closeWithUnsyncedRequiresPin ?? true;
+  const SYNC_TIMEOUT_MS = Math.max(5, Number(cfg.shiftCloseSyncTimeoutSec ?? 45)) * 1000 || DEFAULT_SYNC_TIMEOUT_MS;
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [summary, setSummary] = useState<any>(null);
@@ -35,6 +51,22 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [reportState, setReportState] = useState<'idle' | 'working' | 'saved' | 'failed'>('idle');
   const [savedFilename, setSavedFilename] = useState('');
+
+  // ── Sync step (spec Part 6) ──────────────────────────────────────────────
+  const [syncPhase, setSyncPhase] = useState<'none' | 'syncing' | 'incomplete'>('none');
+  const [syncNow, setSyncNow] = useState<SyncCategoryProgress>({ payments: 0, orders: 0, other: 0, total: 0 });
+  const [syncElapsed, setSyncElapsed] = useState(0);
+  const [showCloseAnywayPin, setShowCloseAnywayPin] = useState(false);
+  const syncBaseRef = useRef<SyncCategoryProgress>({ payments: 0, orders: 0, other: 0, total: 0 });
+  const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncDeadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncStartRef = useRef(0);
+
+  const stopSyncTimers = () => {
+    if (syncPollRef.current) { clearInterval(syncPollRef.current); syncPollRef.current = null; }
+    if (syncDeadlineRef.current) { clearTimeout(syncDeadlineRef.current); syncDeadlineRef.current = null; }
+  };
+  useEffect(() => stopSyncTimers, []);
 
   // Not read straight from localStorage: the shift the terminal thinks is
   // open can be stale — the inactivity sweeper auto-closes a shift after
@@ -113,12 +145,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (closingCash === '') {
-      toast.error('Enter the cash you counted in the drawer');
-      return;
-    }
-
+  // The actual close call. `pendingSync` = there are still-unsynced events; the
+  // shift goes to PENDING_SYNC and the terminal keeps shipping in the
+  // background (spec Part 6).
+  const doClose = async (pendingSync: boolean) => {
+    if (!shiftId) return;
     setIsSubmitting(true);
     try {
       const overridePin = localStorage.getItem('shift_override_pin');
@@ -128,12 +159,13 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         ? DENOMINATIONS.filter(d => (counts[d] || 0) > 0).map(d => ({ denomination: d, quantity: counts[d] }))
         : [];
 
+      const cat = pendingSync ? await getSyncCategoryProgress() : null;
       const payload: any = {
-        closingCash: Number(closingCash),
+        closingCash: closingCash === '' ? null : Number(closingCash),
         notes: notes.trim() ? notes : undefined,
         ...(denominations.length > 0 ? { denominations } : {}),
+        ...(pendingSync ? { pendingSync: true, pendingSyncCount: cat?.total ?? 0 } : {}),
       };
-
       if (overridePin && overrideReason) {
         payload.overridePin = overridePin;
         payload.overrideReason = overrideReason;
@@ -144,25 +176,80 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Failed to close shift');
       }
 
+      // Local audit: the shift is closed on this terminal now, whatever the
+      // sync state.
+      emitShiftClosed(shiftId, closingCash === '' ? 0 : Number(closingCash), closingCash === '' ? 0 : Number(closingCash) - expectedCash, notes.trim() || undefined).catch(() => {});
+
       localStorage.removeItem('shift_override_pin');
       localStorage.removeItem('shift_override_reason');
+      stopSyncTimers();
+
+      if (pendingSync) {
+        // Keep the token/session so the background outbox can finish
+        // shipping; hand off to the dedicated screen.
+        markShiftPendingSync(shiftId);
+        localStorage.removeItem('pos_shift');
+        kickOutbox('immediate');
+        toast.success('Shift closed — finishing sync in the background');
+        router.replace(`/pos/shift/synced?shiftId=${shiftId}`);
+        return;
+      }
+
       localStorage.removeItem('pos_shift');
       localStorage.removeItem('pos_session');
-
+      setSyncPhase('none');
       toast.success('Shift closed');
       setIsSuccess(true);
-      // The end-of-shift report saves itself — a cashier should not have to
-      // remember to click anything to end up with a record of their shift.
       void saveReport();
     } catch (err: any) {
       toast.error(err.message || 'An error occurred closing the shift');
       setIsSubmitting(false);
+      setSyncPhase('none');
+    }
+  };
+
+  const beginSyncWait = () => {
+    getSyncCategoryProgress().then((c) => {
+      syncBaseRef.current = c;
+      setSyncNow(c);
+    });
+    syncStartRef.current = Date.now();
+    setSyncElapsed(0);
+    setSyncPhase('syncing');
+    kickOutbox('immediate');
+
+    syncPollRef.current = setInterval(async () => {
+      setSyncElapsed(Math.round((Date.now() - syncStartRef.current) / 1000));
+      const summary = await getUnsyncedSummary();
+      const c = await getSyncCategoryProgress();
+      setSyncNow(c);
+      if (summary.count === 0) {
+        stopSyncTimers();
+        void doClose(false);
+      }
+    }, 1000);
+
+    syncDeadlineRef.current = setTimeout(() => {
+      if (syncPollRef.current) { clearInterval(syncPollRef.current); syncPollRef.current = null; }
+      setSyncPhase('incomplete');
+    }, SYNC_TIMEOUT_MS);
+  };
+
+  const handleSubmit = async () => {
+    if (closingCash === '' && cashCountRequired) {
+      toast.error('Enter the cash you counted in the drawer');
+      return;
+    }
+    const summary = await getUnsyncedSummary();
+    if (summary.count === 0) {
+      void doClose(false);
+    } else {
+      beginSyncWait();
     }
   };
 
@@ -170,7 +257,100 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
       <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-slide-up">
 
-        {isSuccess ? (
+        {syncPhase !== 'none' ? (
+          // ── Sync step (spec Part 6) ──────────────────────────────────────
+          (() => {
+            const base = syncBaseRef.current;
+            const done = Math.max(0, base.total - syncNow.total);
+            const pct = base.total > 0 ? Math.round((done / base.total) * 100) : 100;
+            const rate = syncElapsed > 0 ? done / syncElapsed : 0;
+            const etaSec = rate > 0 ? Math.ceil(syncNow.total / rate) : null;
+            const row = (label: string, b: number, n: number) => (
+              <div className="flex items-center justify-between text-xs py-1">
+                <span className="text-slate-600 font-medium">{label}</span>
+                <span className="flex items-center gap-2">
+                  <span className="tabular-nums font-semibold text-slate-900">{Math.max(0, b - n)} of {b}</span>
+                  {n === 0
+                    ? <Check size={13} className="text-emerald-600" />
+                    : <RefreshCw size={12} className="text-amber-500 animate-spin" style={{ animationDuration: '1.4s' }} />}
+                </span>
+              </div>
+            );
+            return (
+              <div className="p-6">
+                {syncPhase === 'syncing' ? (
+                  <>
+                    <div className="flex items-center gap-2.5 mb-4">
+                      <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                        <RefreshCw size={17} className="animate-spin" style={{ animationDuration: '1.5s' }} />
+                      </div>
+                      <h2 className="text-base font-bold text-slate-900">Syncing your shift</h2>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-1.5">
+                      <div className="h-full bg-[#FF5722] transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-medium tabular-nums mb-4">{done} of {base.total}</p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 mb-4">
+                      {row('Payments', base.payments, syncNow.payments)}
+                      {row('Orders', base.orders, syncNow.orders)}
+                      {row('Other', base.other, syncNow.other)}
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium mb-4 tabular-nums">
+                      Elapsed {syncElapsed}s{etaSec !== null && syncNow.total > 0 ? ` · Estimated ${etaSec}s remaining` : ''}
+                    </p>
+                    {allowCloseWithUnsynced && (
+                      <button
+                        onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
+                        disabled={isSubmitting}
+                        className="w-full h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                      >
+                        Close in Background
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                        <CloudOff size={17} />
+                      </div>
+                      <h2 className="text-base font-bold text-slate-900">Sync incomplete</h2>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed mb-1">
+                      <strong className="text-slate-900 tabular-nums">{syncNow.total} item{syncNow.total === 1 ? '' : 's'}</strong> could not sync.
+                    </p>
+                    <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                      Financial data is safe on this device and will sync automatically.
+                    </p>
+                    <div className="flex gap-2.5">
+                      <button
+                        onClick={beginSyncWait}
+                        disabled={isSubmitting}
+                        className={`h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 ${allowCloseWithUnsynced ? 'flex-1' : 'w-full'}`}
+                      >
+                        <RefreshCw size={13} /> Keep Trying
+                      </button>
+                      {allowCloseWithUnsynced && (
+                        <button
+                          onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
+                          disabled={isSubmitting}
+                          className="flex-1 h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                        >
+                          Close Anyway
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 text-center mt-3">
+                      {allowCloseWithUnsynced
+                        ? (closeWithUnsyncedRequiresPin ? 'Close Anyway needs a manager PIN and flags this shift for review.' : 'Closing now flags this shift for review; it keeps syncing in the background.')
+                        : 'Your administrator requires the queue to clear before this shift can close.'}
+                    </p>
+                  </>
+                )}
+              </div>
+            );
+          })()
+        ) : isSuccess ? (
           // ── Closed ────────────────────────────────────────────────────────
           <div className="p-8 text-center flex flex-col items-center">
             <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
@@ -424,7 +604,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
               <button
                 onClick={handleSubmit}
-                disabled={isLoading || isSubmitting || closingCash === ''}
+                disabled={isLoading || isSubmitting || (cashCountRequired && closingCash === '')}
                 className="w-full h-11 rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
               >
                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={15} />}
@@ -434,6 +614,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
           </>
         )}
       </div>
+
+      {showCloseAnywayPin && (
+        <AdminPinModal
+          onClose={() => setShowCloseAnywayPin(false)}
+          onSuccess={() => {
+            setShowCloseAnywayPin(false);
+            void doClose(true);
+          }}
+        />
+      )}
     </div>
   );
 }

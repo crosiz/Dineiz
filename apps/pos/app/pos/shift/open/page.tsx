@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { getToken, getPosSession, clearPosSession } from '@/lib/pos-session';
+import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 
 export default function ShiftOpenGate() {
   const router = useRouter();
@@ -18,8 +19,15 @@ export default function ShiftOpenGate() {
   const [timeStr, setTimeStr] = useState('00:00 AM');
   const [dateStr, setDateStr] = useState('Monday, January 1');
   const [greeting, setGreeting] = useState('Good Morning');
+  // Anything derived from localStorage (`allowsViewMode()`, `getPosSession()`)
+  // can only be trusted after mount — reading it during render makes the
+  // server output ("Branch", no View Mode button) disagree with the client
+  // and React throws a hydration mismatch. Gate all of it on `mounted`.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-  const branchName = session?.branchName || getPosSession()?.branchName || 'Branch';
+  const cashierName = mounted ? (session?.cashierName || getPosSession()?.name || 'Operator') : 'Operator';
+  const branchName = mounted ? (session?.branchName || getPosSession()?.branchName || 'Branch') : 'Branch';
 
   useEffect(() => {
     const checkExistingShift = () => {
@@ -86,6 +94,7 @@ export default function ShiftOpenGate() {
             openedAt: new Date().toISOString(), // Or fetch actual openedAt if needed
             openingFloat: floatAmount, // We might not know original float, but this works to unblock
           }));
+          localStorage.removeItem('pos_view_mode'); // leaving View Mode (Part 11)
           router.push('/pos/home');
           return;
         }
@@ -109,6 +118,7 @@ export default function ShiftOpenGate() {
         openedAt: new Date().toISOString(),
         openingFloat: floatAmount,
       }));
+      localStorage.removeItem('pos_view_mode'); // leaving View Mode (Part 11)
       toast.success('Shift opened successfully');
       router.push('/pos/home');
     } catch (err: any) {
@@ -149,10 +159,10 @@ export default function ShiftOpenGate() {
             {/* STAFF IDENTITY ROW */}
             <div className="flex items-center gap-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 mb-6">
               <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#D97706] font-bold text-[15px]">
-                {session?.cashierName?.substring(0, 2).toUpperCase() || 'AB'}
+                {cashierName.substring(0, 2).toUpperCase()}
               </div>
               <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-[#0F172A]">{session?.cashierName || 'Operator'}</span>
+                <span className="text-[15px] font-bold text-[#0F172A]">{cashierName}</span>
                 <span className="text-[12px] text-[#64748B] font-medium">Cashier • {branchName}</span>
               </div>
               <div className="ml-auto">
@@ -248,6 +258,22 @@ export default function ShiftOpenGate() {
               <p className="text-[11px] text-[#64748B] text-center px-4 font-medium">
                 Your shift record and all orders will be tracked from now
               </p>
+
+              {/* Spec Part 11 — VIEW MODE. Only when the console allows login
+                  without a shift. Read-only: view orders, reprint, tables,
+                  stock, reports. No new orders, no payments. */}
+              {mounted && allowsViewMode() && (
+                <button
+                  onClick={() => { enterViewMode(); router.replace('/pos/home'); }}
+                  className="w-full h-[46px] mt-2 border border-[#E2E8F0] bg-white text-[#475569] font-semibold text-[14px] rounded-xl hover:bg-[#F8FAFC] active:scale-[0.98] transition-all"
+                >
+                  Continue Without Shift
+                  <span className="block text-[11px] font-medium text-[#94A3B8] mt-0.5">
+                    View orders, print receipts, manage tables — no new orders
+                  </span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   // Ends the session without clearing pos_branch_id, so the

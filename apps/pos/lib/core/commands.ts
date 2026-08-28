@@ -1,7 +1,19 @@
 import { nanoid } from 'nanoid';
-import { append, nextOrderNumber, type EventType } from './event-log';
+import { append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
 import { useViews } from './views';
 import { kickOutbox } from './outbox';
+import { useManagerOverlay, type OverlayAction } from '@/lib/manager-overlay';
+
+// Spec Part 10 — if a manager overlay is active, use the manager as the
+// approver automatically (no per-action PIN) and log the action against the
+// overlay session. append() already stamps overrideBy* on the event itself.
+function overlayApprover(passed?: string): string | undefined {
+  return useManagerOverlay.getState().overlay?.managerId ?? passed;
+}
+function recordOverride(action: OverlayAction, targetId?: string, meta?: unknown) {
+  const o = useManagerOverlay.getState();
+  if (o.overlay) o.recordAction(action, targetId, meta).catch(() => {});
+}
 
 async function emit(
   type: EventType,
@@ -12,7 +24,10 @@ async function emit(
 ) {
   const e = await append(type, aggType, aggId, payload, dependsOn);
   useViews.getState()._applyEvent(e); // views update NOW
-  kickOutbox(); // ship it — debounced, so a burst of emits in one caller only drains once
+  // A CRITICAL (payment/void) or HIGH (create/send-to-kitchen) event ships
+  // right away; everything else coalesces over ~200ms (spec Part 5).
+  const lane = laneForEvent(type);
+  kickOutbox(lane === 'CRITICAL' || lane === 'HIGH' ? 'immediate' : undefined);
   return e;
 }
 
@@ -69,16 +84,18 @@ export async function removeItem(orderId: string, lineId: string) {
 
 export async function voidItem(orderId: string, lineId: string, reason: string, approverId?: string) {
   const e = await emit('ITEM_VOIDED', 'ORDER', orderId,
-    { lineId, reason, approverId: approverId ?? null }, chain(orderId));
+    { lineId, reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('VOID_ITEM', orderId, { lineId, reason });
 }
 
 export async function applyDiscount(
   orderId: string, amount: number, percent: number, reason: string, approverId?: string
 ) {
   const e = await emit('DISCOUNT_APPLIED', 'ORDER', orderId,
-    { amount, percent, reason, approverId: approverId ?? null }, chain(orderId));
+    { amount, percent, reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('DISCOUNT_OVERRIDE', orderId, { amount, percent, reason });
 }
 
 export async function sendToKitchen(orderId: string) {
@@ -111,8 +128,9 @@ export async function collectPayment(orderId: string, p: {
 }
 
 export async function voidOrder(orderId: string, reason: string, approverId: string) {
-  const e = await emit('ORDER_VOIDED', 'ORDER', orderId, { reason, approverId }, chain(orderId));
+  const e = await emit('ORDER_VOIDED', 'ORDER', orderId, { reason, approverId: overlayApprover(approverId) }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('VOID_ORDER', orderId, { reason });
 }
 
 export async function cancelOrder(orderId: string) {
@@ -120,8 +138,34 @@ export async function cancelOrder(orderId: string) {
   remember(orderId, e.id);
 }
 
+// Manager override ONLY — pass 'RESERVED' / 'INACTIVE' / 'MERGED', or a
+// falsy/"free" value to clear the override and let the derivation take over
+// (spec Part 3). occupied/dirty/bill_requested are derived, not settable.
 export async function setTableStatus(tableId: string, status: string) {
   await emit('TABLE_STATUS_CHANGED', 'TABLE', tableId, { status });
+  recordOverride('TABLE_OVERRIDE', tableId, { status });
+}
+
+// Guest asked for the bill — the table shows BILL_REQUESTED until payment.
+// Pass cancel:true to undo.
+export async function requestBill(orderId: string, cancel = false) {
+  const e = await emit('BILL_REQUESTED', 'ORDER', orderId, { cancel }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+// Manager marked a DIRTY table clean before the cleaning timer elapsed.
+export async function markTableCleaned(tableId: string) {
+  await emit('TABLE_CLEANED', 'TABLE', tableId, {});
+  recordOverride('TABLE_OVERRIDE', tableId, { cleaned: true });
+}
+
+// Orphan resolution (spec Part 2) — a manager pulled an order from a
+// now-closed shift into this one. Recorded locally for the audit trail; the
+// authoritative move is the POST /api/pos/orphans/:id/resolve call.
+export async function adoptOrder(orderId: string, fromShiftId: string, intoShiftId: string, approverId: string) {
+  const e = await emit('ORDER_ADOPTED', 'ORDER', orderId, { fromShiftId, intoShiftId, approverId: overlayApprover(approverId) }, chain(orderId));
+  remember(orderId, e.id);
+  recordOverride('ADOPT_ORPHAN', orderId, { fromShiftId, intoShiftId });
 }
 
 export async function changeItemNote(orderId: string, lineId: string, note: string) {
@@ -136,8 +180,9 @@ export async function changeOrderNote(orderId: string, note: string) {
 
 export async function removeDiscount(orderId: string, reason: string, approverId?: string) {
   const e = await emit('DISCOUNT_REMOVED', 'ORDER', orderId,
-    { reason, approverId: approverId ?? null }, chain(orderId));
+    { reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('REMOVE_DISCOUNT', orderId, { reason });
 }
 
 export async function markServed(orderId: string) {
@@ -146,8 +191,9 @@ export async function markServed(orderId: string) {
 }
 
 export async function walkOutOrder(orderId: string, reason: string, approverId: string) {
-  const e = await emit('ORDER_WALKED_OUT', 'ORDER', orderId, { reason, approverId }, chain(orderId));
+  const e = await emit('ORDER_WALKED_OUT', 'ORDER', orderId, { reason, approverId: overlayApprover(approverId) }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('WALK_OUT', orderId, { reason });
 }
 
 export async function attachCustomer(
@@ -162,6 +208,7 @@ export async function assignWaiter(
 ) {
   const e = await emit('WAITER_ASSIGNED', 'ORDER', orderId, { waiterId, waiterName, waiterColor }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('REASSIGN_WAITER', orderId, { waiterId, waiterName });
 }
 
 export async function moveOrderToTable(
@@ -209,6 +256,13 @@ export async function openShift(shiftId: string, openingFloat: number, denominat
 
 export async function closeShift(shiftId: string, closingCash: number, variance: number, notes?: string) {
   await emit('SHIFT_CLOSED', 'SHIFT', shiftId, { closingCash, variance, notes });
+}
+
+// Spec Part 6 — the terminal finished shipping a shift that was closed with a
+// queue still pending. Local audit marker; the server flip (POST
+// /api/shifts/:id/sync-complete) is the authoritative signal.
+export async function shiftSyncCompleted(shiftId: string) {
+  await emit('SHIFT_SYNC_COMPLETED', 'SHIFT', shiftId, {});
 }
 
 export async function startBreak(shiftId: string, breakType?: string) {

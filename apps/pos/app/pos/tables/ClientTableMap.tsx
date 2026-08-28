@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
 import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views';
 import { setTableStatus } from '@/lib/core/commands';
+import { isViewMode } from '@/lib/view-mode';
 import {
   ZoomIn,
   ZoomOut,
@@ -218,6 +219,16 @@ export default function ClientTableMap() {
     const status = table.status.toUpperCase();
 
     if (status === 'FREE' || status === 'AVAILABLE') {
+      // Spec Part 11 — starting an order needs an open shift. In View Mode
+      // a free table still opens its detail sheet (mark clean/reserved,
+      // assign waiter) but can't jump straight into order-building.
+      if (isViewMode()) {
+        toast.message('Open a shift to take orders', {
+          action: { label: 'Open Shift', onClick: () => router.push('/pos/shift/open') },
+        });
+        setSelectedTable(table);
+        return;
+      }
       router.push(
         `/pos/order?type=dine-in&tableId=${table.id}&tableLabel=${encodeURIComponent(table.label)}&guests=${table.capacity}`
       );
@@ -602,19 +613,31 @@ export default function ClientTableMap() {
           </div>
 
           <div className="grid grid-cols-1 gap-2 pt-1">
-            <button
-              onClick={() => {
-                router.push(
-                  `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
-                );
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Items</span>
-            </button>
+            {/* Spec Part 11 — View Mode: no add-items, no payment. Print Bill
+                and Assign Waiter stay; the rest becomes an "open a shift" prompt. */}
+            {isViewMode() ? (
+              <button
+                onClick={() => router.push('/pos/shift/open')}
+                className="w-full flex flex-col items-center justify-center gap-0.5 py-2 px-3 bg-sky-50 border border-sky-200 text-sky-700 font-bold text-xs rounded-xl transition-all leading-tight"
+              >
+                Open a shift to add items or take payment
+                <span className="text-[9px] font-medium text-sky-500">You’re in view-only mode</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  router.push(
+                    `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
+                  );
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Items</span>
+              </button>
+            )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid ${isViewMode() ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
               <button
                 onClick={handlePrintBill}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
@@ -623,6 +646,7 @@ export default function ClientTableMap() {
                 <span>Print Bill</span>
               </button>
 
+              {!isViewMode() && (
               <button
                 onClick={() => {
                   if (!popupOrder) {
@@ -651,8 +675,9 @@ export default function ClientTableMap() {
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Collect Payment</span>
               </button>
+              )}
             </div>
-            
+
             {/* Assign Waiter Button */}
             <button
               onClick={() => setIsAssignWaiterOpen(true)}

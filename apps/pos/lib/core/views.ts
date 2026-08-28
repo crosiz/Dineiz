@@ -1,5 +1,11 @@
 import { create } from 'zustand';
 import { edb, type PosEvent } from './event-log';
+import {
+  deriveTableStatus,
+  fromDbTableStatus,
+  type DerivedTableStatus,
+  type TableStatusOverride,
+} from '@dineiz/schemas';
 
 export interface OrderViewItem {
   lineId: string;
@@ -67,6 +73,8 @@ export interface OrderView {
   customerName: string | null;
   assignedWaiterId: string | null;
   assignedWaiterName: string | null;
+  /** Set when the guest asks for the bill — drives the table's BILL_REQUESTED status. */
+  billRequestedAt: string | null;
   notes: string | null;
   // Non-POS creation sources (QR ordering, WhatsApp bot, aggregators) never
   // go through this terminal's event log at all — this field only exists so
@@ -88,7 +96,14 @@ export interface OrderView {
 export interface TableView {
   id: string;
   label: string;
-  status: 'FREE' | 'OCCUPIED' | 'BILL_REQUESTED' | 'DIRTY' | 'RESERVED';
+  // DERIVED (spec Part 3) — never assigned a literal by an order event.
+  // deriveTableStatus() from @dineiz/schemas is the only thing that sets it,
+  // from the orders on the table + the three fields below.
+  status: DerivedTableStatus;
+  isActive: boolean;
+  statusOverride: TableStatusOverride;
+  /** Anchors the DIRTY→FREE timer; stamped when the table's last order completes. */
+  lastCompletedAt: string | null;
   occupiedSince: string | null;
   activeOrderId: string | null;
   floorNumber: number;
@@ -150,19 +165,34 @@ export const useViews = create<ViewStore>((set) => ({
 
 // ─── THE REDUCER: pure function, event → new state ──────────────────────────
 
+function readCleaningMinutes(): number {
+  try {
+    const b = JSON.parse(localStorage.getItem('pos_branding') ?? '{}');
+    const m = Number(b.tableCleaningMinutes ?? b.pos?.tableCleaningMinutes);
+    return Number.isFinite(m) && m >= 0 ? m : 5;
+  } catch {
+    return 5;
+  }
+}
+
 function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
   const orders = { ...state.orders };
   const tables = { ...state.tables };
   let shift = state.shift;
 
+  // Spec Part 3 — the reducer never assigns a table a literal status. Cases
+  // that affect a table just record its id here; a single pass at the end
+  // re-derives every touched table from the orders on it (+ its override)
+  // with the same deriveTableStatus() the server uses.
+  const touchedTables = new Set<string>();
+  const touch = (tableId: string | null | undefined) => {
+    if (tableId) touchedTables.add(tableId);
+  };
+
   const patchOrder = (patch: Partial<OrderView>) => {
     const o = orders[e.aggregateId];
     if (!o) return;
     orders[e.aggregateId] = { ...o, ...patch, updatedAt: e.clientTime };
-  };
-  const freeTable = (tableId: string | null, status: TableView['status'] = 'FREE') => {
-    if (!tableId || !tables[tableId]) return;
-    tables[tableId] = { ...tables[tableId], status, occupiedSince: null, activeOrderId: null };
   };
 
   switch (e.type) {
@@ -188,6 +218,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         customerName: null,
         assignedWaiterId: null,
         assignedWaiterName: null,
+        billRequestedAt: null,
         notes: e.payload.notes ?? null,
         source: null, // this terminal created it — never a QR/WhatsApp/aggregator order
         createdAt: e.clientTime,
@@ -200,6 +231,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         voidReason: null,
         walkOutReason: null,
       };
+      touch(e.payload.tableId ?? null);
       break;
     }
     case 'ITEM_ADDED': {
@@ -297,22 +329,17 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         items: o.items.map((i) => ({ ...i, sentToKitchen: true })),
         updatedAt: e.clientTime,
       };
-      if (o.tableId && tables[o.tableId]) {
-        tables[o.tableId] = {
-          ...tables[o.tableId],
-          status: 'OCCUPIED',
-          occupiedSince: tables[o.tableId].occupiedSince ?? e.clientTime,
-          activeOrderId: o.id,
-        };
-      }
+      touch(o.tableId);
       break;
     }
     case 'ORDER_MARKED_READY': {
       patchOrder({ status: 'READY' });
+      touch(orders[e.aggregateId]?.tableId);
       break;
     }
     case 'ORDER_SERVED': {
       patchOrder({ status: 'SERVED' });
+      touch(orders[e.aggregateId]?.tableId);
       break;
     }
     case 'PAYMENT_COLLECTED': {
@@ -330,9 +357,11 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         netAmount: e.payload.total ?? o.netAmount,
         updatedAt: e.clientTime,
       };
+      // Stamp the table's cleaning-timer anchor, then re-derive (→ DIRTY).
       if (o.tableId && tables[o.tableId]) {
-        tables[o.tableId] = { ...tables[o.tableId], status: 'DIRTY', occupiedSince: null, activeOrderId: null };
+        tables[o.tableId] = { ...tables[o.tableId], lastCompletedAt: e.clientTime };
       }
+      touch(o.tableId);
       break;
     }
     case 'ORDER_CANCELLED':
@@ -345,7 +374,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         voidReason: e.payload?.reason ?? null,
         updatedAt: e.clientTime,
       };
-      freeTable(o.tableId);
+      touch(o.tableId); // nobody ate — re-derive frees it (no lastCompletedAt stamp)
       break;
     }
     case 'ORDER_WALKED_OUT': {
@@ -354,7 +383,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
       orders[e.aggregateId] = {
         ...o, status: 'WALKED_OUT', walkOutReason: e.payload?.reason ?? null, updatedAt: e.clientTime,
       };
-      freeTable(o.tableId);
+      touch(o.tableId);
       break;
     }
     case 'CUSTOMER_ATTACHED': {
@@ -363,6 +392,13 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         customerPhone: e.payload.phone ?? null,
         customerName: e.payload.name ?? null,
       });
+      break;
+    }
+    case 'ORDER_ADOPTED': {
+      // Orphan pulled into a new shift (spec Part 2). Locally, re-home it so
+      // it shows on the adopting cashier's shift-scoped board straight away.
+      patchOrder({ shiftId: e.payload.intoShiftId ?? e.shiftId });
+      touch(orders[e.aggregateId]?.tableId);
       break;
     }
     case 'WAITER_ASSIGNED': {
@@ -384,50 +420,62 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
     case 'ORDER_MOVED_TO_TABLE': {
       const o = orders[e.aggregateId];
       if (!o) break;
-      freeTable(o.tableId, 'FREE');
+      const fromTableId = e.payload.fromTableId ?? o.tableId ?? null;
       const newTableId = e.payload.toTableId;
       orders[e.aggregateId] = { ...o, tableId: newTableId, tableLabel: e.payload.toTableLabel ?? o.tableLabel, updatedAt: e.clientTime };
-      if (newTableId && tables[newTableId]) {
-        tables[newTableId] = { ...tables[newTableId], status: 'OCCUPIED', activeOrderId: o.id, occupiedSince: tables[newTableId].occupiedSince ?? e.clientTime };
-      }
+      touch(fromTableId);
+      touch(newTableId);
+      break;
+    }
+    case 'BILL_REQUESTED': {
+      // Guest asked for the bill — mark the order, re-derive the table
+      // (→ BILL_REQUESTED). payload.cancel === true clears it.
+      const o = orders[e.aggregateId];
+      if (!o) break;
+      orders[e.aggregateId] = {
+        ...o,
+        billRequestedAt: e.payload?.cancel ? null : e.clientTime,
+        updatedAt: e.clientTime,
+      };
+      touch(o.tableId);
       break;
     }
     case 'TABLE_STATUS_CHANGED': {
+      // Manager override ONLY — RESERVED / INACTIVE / MERGED, or clearing it.
+      // Anything else (occupied, dirty, bill_requested) is derived, not set.
       const t = tables[e.aggregateId];
       if (!t) break;
-      tables[e.aggregateId] = {
-        ...t,
-        status: e.payload.status,
-        occupiedSince: e.payload.status === 'OCCUPIED' ? (t.occupiedSince ?? e.clientTime) : null,
-      };
+      const raw = String(e.payload.status ?? '').toUpperCase();
+      const override: TableStatusOverride =
+        raw === 'RESERVED' || raw === 'INACTIVE' || raw === 'MERGED' ? (raw as TableStatusOverride) : null;
+      tables[e.aggregateId] = { ...t, statusOverride: override };
+      touch(e.aggregateId);
+      break;
+    }
+    case 'TABLE_CLEANED': {
+      // Manager marked the table clean before the cleaning timer elapsed.
+      const t = tables[e.aggregateId];
+      if (!t) break;
+      tables[e.aggregateId] = { ...t, lastCompletedAt: null };
+      touch(e.aggregateId);
       break;
     }
     case 'TABLE_MERGED': {
-      // Fold the source table's occupancy into the destination; the source
-      // itself goes free (its physical seats are still there, just no
-      // longer tracking a separate order).
+      // The source table is folded into the destination: mark it MERGED
+      // (an override that beats derivation) and re-derive both.
       const from = tables[e.aggregateId];
-      const into = tables[e.payload.intoTableId];
-      if (from && into) {
-        tables[e.payload.intoTableId] = {
-          ...into,
-          status: from.status !== 'FREE' ? from.status : into.status,
-          activeOrderId: into.activeOrderId ?? from.activeOrderId,
-          occupiedSince: into.occupiedSince ?? from.occupiedSince,
-        };
-        tables[e.aggregateId] = { ...from, status: 'FREE', occupiedSince: null, activeOrderId: null };
-      }
+      if (from) tables[e.aggregateId] = { ...from, statusOverride: 'MERGED' };
+      touch(e.aggregateId);
+      touch(e.payload.intoTableId);
       break;
     }
     case 'TABLE_SPLIT': {
-      // Source table stays as-is; newly split-off tables start FREE — this
-      // terminal doesn't try to guess seat/order allocation, that's a
-      // follow-up TABLE_STATUS_CHANGED / ORDER_MOVED_TO_TABLE per new table.
-      for (const newTableId of e.payload.newTableIds ?? []) {
-        if (tables[newTableId]) {
-          tables[newTableId] = { ...tables[newTableId], status: 'FREE', occupiedSince: null, activeOrderId: null };
-        }
-      }
+      // Clear the source's MERGED override (if any) and re-derive every table
+      // involved; seat/order allocation is a follow-up ORDER_MOVED_TO_TABLE.
+      const from = tables[e.aggregateId];
+      if (from) tables[e.aggregateId] = { ...from, statusOverride: null };
+      touch(e.aggregateId);
+      for (const newTableId of e.payload.newTableIds ?? []) touch(newTableId);
       break;
     }
     case 'SHIFT_OPENED': {
@@ -489,7 +537,77 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
       break;
   }
 
+  // Spec Part 3 — single derivation pass for every table this event touched.
+  if (touchedTables.size > 0) {
+    const cleaningMinutes = readCleaningMinutes();
+    const now = Date.now();
+    for (const tableId of Array.from(touchedTables)) {
+      const t = tables[tableId];
+      if (t) tables[tableId] = deriveTableView(t, orders, cleaningMinutes, now);
+    }
+  }
+
   return { orders, tables, shift };
+}
+
+/** Re-derive one table's view row from the orders on it + its own fields. */
+function deriveTableView(
+  t: TableView,
+  orders: Record<string, OrderView>,
+  cleaningMinutes: number,
+  now: number,
+): TableView {
+  const onTable = Object.values(orders).filter((o) => o.tableId === t.id);
+  const status = deriveTableStatus({
+    isActive: t.isActive,
+    statusOverride: t.statusOverride,
+    activeOrders: onTable.map((o) => ({ status: o.status, billRequestedAt: o.billRequestedAt })),
+    lastCompletedAt: t.lastCompletedAt,
+    cleaningMinutes,
+    now,
+  });
+  const busy = status === 'OCCUPIED' || status === 'BILL_REQUESTED';
+  const activeOrderId = busy
+    ? (onTable.find((o) => ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status))?.id
+        ?? t.activeOrderId ?? null)
+    : null;
+  return {
+    ...t,
+    status,
+    occupiedSince: busy ? (t.occupiedSince ?? new Date(now).toISOString()) : null,
+    activeOrderId,
+  };
+}
+
+// ─── Client-side table reconciliation (spec Part 3, 60s) ───────────────────
+//
+// The reducer derives table status on every event, but the DIRTY→FREE
+// transition is purely time-based — no event fires when the cleaning window
+// elapses. This sweep re-derives every table so a table that's been DIRTY
+// long enough silently drops to FREE, and corrects any other drift.
+export function reconcileTables(): void {
+  const { tables, orders } = useViews.getState();
+  const cleaningMinutes = readCleaningMinutes();
+  const now = Date.now();
+  let changed = 0;
+  const next: Record<string, TableView> = {};
+  for (const [id, t] of Object.entries(tables)) {
+    const d = deriveTableView(t, orders, cleaningMinutes, now);
+    next[id] = d;
+    if (d.status !== t.status || d.activeOrderId !== t.activeOrderId) {
+      changed++;
+      if (d.status !== t.status) {
+        console.warn(`[reconcileTables] ${t.label}: ${t.status} → ${d.status}`);
+      }
+    }
+  }
+  if (changed > 0) useViews.getState()._setSnapshot({ tables: next });
+}
+
+export function startTableReconcile(intervalMs = 60_000): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const h = setInterval(() => reconcileTables(), intervalMs);
+  return () => clearInterval(h);
 }
 
 function recalc(orders: Record<string, OrderView>, orderId: string) {
@@ -551,6 +669,35 @@ export async function snapshotViews(): Promise<void> {
     .delete();
 }
 
+// ─── Emergency prune (spec Part 12: IndexedDB quota exceeded) ──────────────
+//
+// Called when a write to the event log fails with QuotaExceededError. Take a
+// fresh snapshot so the terminal states can be rebuilt, then aggressively
+// drop every event that has already reached a terminal state — CONFIRMED,
+// SUPERSEDED and ABANDONED (the last is already dead-lettered server-side).
+// Events still trying to sync (QUEUED/BLOCKED/INFLIGHT/DEGRADED) and POISONED
+// ones needing human review are NEVER dropped.
+let emergencyPruneWarnedAt = 0;
+export async function emergencyPrune(): Promise<void> {
+  try {
+    await snapshotViews();
+    const dropped = await edb.events
+      .where('syncState').anyOf(['CONFIRMED', 'SUPERSEDED', 'ABANDONED'])
+      .delete();
+    console.warn(`[emergencyPrune] storage full — dropped ${dropped} terminal event(s)`);
+    const now = Date.now();
+    if (now - emergencyPruneWarnedAt > 60 * 60 * 1000) {
+      emergencyPruneWarnedAt = now;
+      try {
+        const { toast } = await import('sonner');
+        toast.warning('This terminal is low on storage. Old synced records were cleared; unsynced work is safe.', { duration: 8000 });
+      } catch { /* toast not available */ }
+    }
+  } catch (e) {
+    console.error('[emergencyPrune] failed', e);
+  }
+}
+
 /**
  * Records the real server id once the background create-order POST lands
  * (or once a queued offline order finally syncs). `orderId` never changes
@@ -603,7 +750,10 @@ export async function seedTablesFromServer(branchId: string): Promise<void> {
       map[t.id] = {
         id: t.id,
         label: t.label,
-        status: (t.status || 'FREE').toUpperCase(),
+        status: fromDbTableStatus(t.status),
+        isActive: t.isActive ?? true,
+        statusOverride: (t.statusOverride as TableStatusOverride) ?? null,
+        lastCompletedAt: t.lastCompletedAt ?? null,
         occupiedSince: t.occupiedSince || t.since || null,
         activeOrderId: t.activeOrderId || null,
         floorNumber: t.floorNumber || t.floor || 1,
@@ -677,6 +827,7 @@ function mapServerOrderToView(o: any): OrderView {
     customerName: o.customerName ?? null,
     assignedWaiterId: o.assignedWaiterId ?? null,
     assignedWaiterName: o.assignedWaiterName ?? null,
+    billRequestedAt: o.billRequestedAt ?? null,
     notes: o.notes ?? null,
     source: o.source ?? null,
     createdAt: o.createdAt,
@@ -704,12 +855,21 @@ function mapServerOrderToView(o: any): OrderView {
  * Orders this terminal has locally but the server doesn't know about yet
  * (still PENDING/no serverId) are preserved rather than dropped by the
  * server's list.
+ *
+ * `opts.shiftId` scopes the board to one shift (spec Part 2). A cashier
+ * passes their open shift so they never see another terminal's cart or a
+ * previous shift; the server also enforces this by role.
  */
-export async function refreshOrders(branchId: string): Promise<void> {
+export async function refreshOrders(
+  branchId: string,
+  opts?: { shiftId?: string | null },
+): Promise<void> {
   try {
     const { getToken } = await import('@/lib/pos-session');
     const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-    const res = await fetch(`${API_URL}/api/orders/live?branchId=${branchId}`, {
+    const qs = new URLSearchParams({ branchId });
+    if (opts?.shiftId) qs.set('shiftId', opts.shiftId);
+    const res = await fetch(`${API_URL}/api/orders/live?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     if (!res.ok) return;

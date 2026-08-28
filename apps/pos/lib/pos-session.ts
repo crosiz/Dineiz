@@ -37,6 +37,8 @@ export const getPosShift = (): PosShift | null => {
 export const setPosShift = (data: PosShift): void => {
   if (typeof window === 'undefined') return;
   localStorage.setItem('pos_shift', JSON.stringify(data));
+  // Opening (or resuming) a shift leaves View Mode (spec Part 11).
+  localStorage.removeItem('pos_view_mode');
 };
 
 /**
@@ -98,6 +100,8 @@ export const clearPosSession = () => {
   localStorage.removeItem('pos_token');
   localStorage.removeItem('pos_branding');
   localStorage.removeItem('pos_assigned_tables');
+  localStorage.removeItem('pos_view_mode');
+  localStorage.removeItem('pos_manager_overlay');
 };
 
 export const getToken = (): string | null => {

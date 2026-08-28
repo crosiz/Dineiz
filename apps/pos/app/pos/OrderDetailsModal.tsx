@@ -13,6 +13,7 @@ import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
 import { useViews } from '@/lib/core/views';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
+import { isViewMode } from '@/lib/view-mode';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -62,6 +63,7 @@ function shellFromSummary(summary: any) {
 
 export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChanged, initialOrder }: OrderDetailsModalProps) {
   const router = useRouter();
+  const viewMode = isViewMode(); // spec Part 11 — no payments without a shift
   const session = useCartStore(s => s.session);
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -300,7 +302,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-bold text-[#0F172A] text-[14px]">{formatPKR(item.subtotal)}</span>
-                    {canAct && (
+                    {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
@@ -323,10 +325,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             {/* Actions */}
             <div className="p-4 border-t border-[#E2E8F0] shrink-0 space-y-2">
               {canAct && (
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
-                  </button>
+                // Spec Part 11 — View Mode keeps the non-financial actions
+                // (assign waiter, reprint KOT) but drops "Add Item".
+                <div className={`grid ${viewMode ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+                  {!viewMode && (
+                    <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
+                    </button>
+                  )}
                   <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
                     <span className="material-symbols-outlined text-[18px]">person_add</span> Waiter
                   </button>
@@ -338,15 +344,26 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
               {canAct && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={requestCancel}
-                    disabled={busy}
-                    className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
-                  >
-                    Cancel Order
-                  </button>
+                  {/* Spec Part 11 — voiding an order is blocked in View Mode. */}
+                  {!viewMode && (
+                    <button
+                      onClick={requestCancel}
+                      disabled={busy}
+                      className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
 
-                  {isReady ? (
+                  {isReady && viewMode ? (
+                    <button
+                      onClick={() => { router.push('/pos/shift/open'); }}
+                      className="flex-1 h-12 rounded-xl font-bold text-[13px] border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors flex flex-col items-center justify-center leading-tight"
+                    >
+                      Open a shift to take payment
+                      <span className="text-[10px] font-medium text-sky-500">You’re in view-only mode</span>
+                    </button>
+                  ) : isReady ? (
                     <button
                       onClick={() => setIsPaymentOpen(true)}
                       disabled={busy}

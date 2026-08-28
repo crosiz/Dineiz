@@ -7,16 +7,32 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getDB } from '@/lib/db';
 import { startOutbox } from '@/lib/core/outbox';
 import { startBackgroundSync } from '@/lib/sync';
-import { useViews, rebuildViews, seedTablesFromServer, refreshOrders } from '@/lib/core/views';
+import { useViews, rebuildViews, seedTablesFromServer, refreshOrders, startTableReconcile } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { NavigationProgress } from '@/components/NavigationProgress';
 import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
 import { SocketProvider, useSocket } from '@/contexts/SocketContext';
 import { POSTopBar } from '@/components/POSTopBar';
-import { getPosSession, getPosShift } from '@/lib/pos-session';
+import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
 import { QuickStockAlertModal, StockAlertPayload } from '@/components/QuickStockAlertModal';
+import { OrphanResolutionModal, OrphanOrder } from '@/components/shift/OrphanResolutionModal';
+import { ManagerOverlayBar } from '@/components/ManagerOverlayBar';
+import { useManagerOverlay } from '@/lib/manager-overlay';
+import { ViewModeBanner } from '@/components/ViewModeBanner';
+import { allowsViewMode } from '@/lib/view-mode';
+
+// Spec Part 2 — a cashier's / waiter's live board is scoped to their own
+// open shift; a branch manager / admin sees the whole branch. The server
+// also enforces the cashier scope by role, so this is mostly an
+// optimisation plus the "signed in with no shift" case.
+function liveOrdersScope(): { shiftId?: string | null } {
+  const sess = getPosSession();
+  const isManager = sess?.role === 'BRANCH_MANAGER' || sess?.role === 'TENANT_ADMIN';
+  if (isManager) return {};
+  return { shiftId: getPosShift()?.shiftId ?? null };
+}
 
 function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -29,6 +45,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
   const { setBranding } = useBrandingStore();
   const [stockAlert, setStockAlert] = useState<StockAlertPayload | null>(null);
+  const [orphans, setOrphans] = useState<OrphanOrder[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -39,7 +56,11 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const sessionObj = getPosSession();
     const shiftObj = getPosShift();
-    const skip = ['/login', '/pos/shift/open'];
+    // `/pos/shift` covers open, close and the post-close background-sync
+    // screen (spec Part 6) — the last two run with `pos_shift` already
+    // cleared and must not bounce to shift-open. `/pos/settings` is reachable
+    // with or without a shift (spec Part 9).
+    const skip = ['/login', '/pos/shift', '/pos/settings'];
 
     if (!sessionObj && !skip.some(p => pathname.startsWith(p))) {
       router.replace('/login');
@@ -83,8 +104,20 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     } catch {}
 
     if (!shiftObj && requireShiftOpening && !skip.some(p => pathname.startsWith(p))) {
-      router.replace('/pos/shift/open');
-      return;
+      // Spec Part 11 — VIEW MODE. If the tenant allows login without a shift
+      // and the cashier chose "Continue Without Shift", let them in read-only
+      // instead of forcing shift-open. Order-building / checkout screens stay
+      // off-limits until a shift is open.
+      const viewMode = allowsViewMode() && localStorage.getItem('pos_view_mode') === '1';
+      if (!viewMode) {
+        router.replace('/pos/shift/open');
+        return;
+      }
+      if (pathname.startsWith('/pos/order')) {
+        router.replace('/pos/home');
+        toast.message('Open a shift to take orders');
+        return;
+      }
     }
 
     if (sessionObj?.role === 'CASHIER' && pathname.startsWith('/pos/admin')) {
@@ -100,7 +133,16 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     if (settingsStr) {
       try {
         const settings = JSON.parse(settingsStr);
+        // `pos` must be a DEEP merge: `pos_branding.pos` carries the Part 13
+        // config the pin-login response wrote (order-number format, sync
+        // tunables, allowLoginWithoutShift, manager-overlay config …), while
+        // `pos_tenant_settings.pos` carries the separate Tenant.settings blob
+        // (requireShiftOpening, kitchen.useKDS …). A plain Object.assign here
+        // replaces the whole sub-object and silently drops whichever side's
+        // keys the other doesn't also have.
+        const mergedPos = { ...(stored.pos ?? {}), ...(settings.pos ?? {}) };
         Object.assign(stored, settings);
+        if (Object.keys(mergedPos).length) stored.pos = mergedPos;
       } catch (e) {}
     }
     setBranding(stored);
@@ -153,6 +195,10 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // finds nothing queued yet on a cold start.
     const cleanupOutbox = startOutbox();
 
+    // Spec Part 10 — restore an in-flight manager overlay across a reload
+    // (auto-exits itself if it went stale while the tab was closed).
+    useManagerOverlay.getState().hydrate();
+
     // lib/sync.ts's older queue still runs alongside it: the "add items to
     // an order already sent to the kitchen" flow (order/page.tsx's
     // isAppending branch) was deliberately NOT moved onto the outbox — it
@@ -162,6 +208,11 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // the store yet. Its offline queue (pendingItemAdds) still needs this
     // loop to drain it.
     const cleanupSync = startBackgroundSync();
+
+    // Spec Part 3 — re-derive every table every 60s so a table whose cleaning
+    // window has elapsed drops DIRTY→FREE (no event fires for a time-based
+    // transition), and any drift is corrected.
+    const cleanupTableReconcile = startTableReconcile();
 
     // Event-sourced view store (lib/core/views.ts) — replay the local event
     // log into memory once on mount (fast: IndexedDB read + pure reducer,
@@ -175,7 +226,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       // — refreshOrders needs to see any locally-pending orders already in
       // the store so it doesn't drop them while merging the server's list.
       seedTablesFromServer(s.branchId).catch(console.error);
-      refreshOrders(s.branchId).catch(console.error);
+      refreshOrders(s.branchId, liveOrdersScope()).catch(console.error);
     }).catch(console.error);
 
     // Prefetch every POS route bundle right after login so tab switching
@@ -188,8 +239,84 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     return () => {
       cleanupOutbox();
       cleanupSync && cleanupSync();
+      cleanupTableReconcile();
     };
   }, []);
+
+  // Spec Part 2 — orphan check. When a shift is open and the cashier lands on
+  // a working screen, ask the server whether any still-active orders were
+  // left under a now-closed shift at this branch. If so, block with the
+  // resolution modal until every one is adopted or cancelled. Re-runs on
+  // navigation so it also catches the first hop out of the shift-open flow.
+  useEffect(() => {
+    const shift = getPosShift();
+    const s = getPosSession();
+    const onWorkingScreen =
+      pathname.startsWith('/pos') &&
+      !pathname.startsWith('/pos/shift') &&
+      !pathname.startsWith('/pos/kds') &&
+      !pathname.startsWith('/pos/login');
+    if (!shift?.shiftId || !s?.branchId || !onWorkingScreen) {
+      setOrphans([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/orphans?branchId=${s.branchId}`,
+          { headers: { Authorization: `Bearer ${getToken()}` } },
+        );
+        if (!res.ok || cancelled) return;
+        const list = (await res.json()) as OrphanOrder[];
+        if (!cancelled) setOrphans(Array.isArray(list) ? list : []);
+      } catch {
+        /* offline / transient — the modal simply doesn't appear this pass */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [pathname]);
+
+  // Spec Part 10 — a manager overlay cannot take a payment or build an order.
+  // Walking onto the order/checkout or receipt screen ends it, and the
+  // cashier's session simply resumes.
+  useEffect(() => {
+    const o = useManagerOverlay.getState();
+    if (!o.overlay) return;
+    if (pathname.startsWith('/pos/order') || pathname.startsWith('/pos/receipt')) {
+      o.exit('NAV_PAYMENT');
+      toast.message('Manager mode ended — payments and new orders are the cashier’s job.');
+    }
+  }, [pathname]);
+
+  // Keep the idle countdown honest while the manager is actually doing things.
+  useEffect(() => {
+    let last = 0;
+    const onActivity = () => {
+      const now = Date.now();
+      if (now - last < 5000) return;
+      last = now;
+      if (useManagerOverlay.getState().overlay) useManagerOverlay.getState().bump();
+    };
+    window.addEventListener('pointerdown', onActivity, { passive: true });
+    window.addEventListener('keydown', onActivity);
+    return () => {
+      window.removeEventListener('pointerdown', onActivity);
+      window.removeEventListener('keydown', onActivity);
+    };
+  }, []);
+
+  const recheckOrphans = () => {
+    const s = getPosSession();
+    if (!s?.branchId) return;
+    fetch(
+      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/orphans?branchId=${s.branchId}`,
+      { headers: { Authorization: `Bearer ${getToken()}` } },
+    )
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list) => setOrphans(Array.isArray(list) ? list : []))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!socket) return;
@@ -257,7 +384,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // trigger a full refetch-and-merge rather than try to hand-apply a
     // partial remote event to local view state.
     const branchId = s?.branchId;
-    const onOrderChanged = () => { if (branchId) refreshOrders(branchId).catch(console.error); };
+    const onOrderChanged = () => { if (branchId) refreshOrders(branchId, liveOrdersScope()).catch(console.error); };
     const onTableChanged = () => { if (branchId) seedTablesFromServer(branchId).catch(console.error); };
 
     // Waiter assignment (from AssignWaiterSheet, possibly on another
@@ -362,6 +489,8 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-screen select-none bg-[var(--pos-bg-base)] text-[#0F172A] overflow-hidden font-body-md">
       <NavigationProgress />
       {!hideTopBar && <POSTopBar />}
+      <ManagerOverlayBar />
+      {!hideTopBar && <ViewModeBanner />}
       {/* Dynamic Content Area */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
         {children}
@@ -371,6 +500,16 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       {!hideBottomNav && <BottomNav />}
 
       <QuickStockAlertModal alert={stockAlert} onDismiss={() => setStockAlert(null)} />
+
+      {orphans.length > 0 && (
+        <OrphanResolutionModal
+          orphans={orphans}
+          branchId={getPosSession()?.branchId ?? ''}
+          intoShiftId={getPosShift()?.shiftId ?? ''}
+          token={getToken()}
+          onResolved={recheckOrphans}
+        />
+      )}
     </div>
   );
 }

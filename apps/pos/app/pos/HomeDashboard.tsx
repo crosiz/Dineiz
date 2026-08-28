@@ -15,6 +15,7 @@ import { getDB } from '@/lib/db';
 import { syncOfflineOrders, syncOfflinePayments, syncPendingItemAdds } from '@/lib/sync';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { isViewMode } from '@/lib/view-mode';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
@@ -81,6 +82,19 @@ export default function HomeDashboard() {
     session?.branchId ?? null,
     activeShift?.shiftId || activeShift?.id || null
   );
+
+  // Spec Part 11 — in View Mode (signed in, no shift) order-entry CTAs stop
+  // navigating and explain themselves with an inline "Open a shift" prompt.
+  const viewMode = isMounted && isViewMode();
+  const guardOrderEntry = (go: () => void) => {
+    if (viewMode) {
+      toast.message('Open a shift to take orders', {
+        action: { label: 'Open Shift', onClick: () => router.push('/pos/shift/open') },
+      });
+      return;
+    }
+    go();
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -238,14 +252,14 @@ export default function HomeDashboard() {
                   sublabel: 'Table service & floor plan',
                   icon: 'restaurant',
                   usePrimary: true,
-                  onClick: () => router.push('/pos/tables'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/tables')),
                 },
                 {
                   label: 'Takeaway Order',
                   sublabel: 'Quick pick-up & counter order',
                   icon: 'shopping_bag',
                   usePrimary: false,
-                  onClick: () => router.push('/pos/order?type=takeaway'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/order?type=takeaway')),
                 },
                 {
                   label: 'Active Orders',
@@ -553,7 +567,9 @@ export default function HomeDashboard() {
                               <div
                                 key={t.id}
                                 onClick={() =>
-                                  router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  guardOrderEntry(() =>
+                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  )
                                 }
                                 className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110"
                               >
