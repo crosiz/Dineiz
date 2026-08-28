@@ -442,6 +442,25 @@ export default function SettingsPage() {
     requireShiftOpening: true, blockOutOfStock: true, offlineMode: true,
   });
 
+  // Part 13 — operational settings stored on TenantBranding, pushed to every
+  // terminal. Saved through /api/settings/branding.
+  const [posOps, setPosOps] = useState<Record<string, any>>({
+    orderNumberFormat: "STANDARD", tableCleaningMinutes: 5,
+    allowLoginWithoutShift: false, allowOrderReopen: false, orderReopenWindowMinutes: 30,
+    cashCountRequired: true, varianceAlertThreshold: 500,
+    staleShiftWarnHours: 16, autoCloseAbandonedHours: 24,
+    managerOverlayEnabled: true, managerOverlayIdleMinutes: 5, managerOverlayRequireReason: true,
+    syncBatchSize: 50, syncRequestTimeoutMs: 8000, syncMaxEventLifetimeHours: 24,
+    shiftCloseSyncTimeoutSec: 45, allowCloseWithUnsynced: true, closeWithUnsyncedRequiresPin: true,
+  });
+  const saveOps = async (patch: Record<string, any>) => {
+    const prev = posOps;
+    const next = { ...posOps, ...patch };
+    setPosOps(next);
+    try { await apiFetch("/api/settings/branding", { method: "PUT", body: JSON.stringify(patch) }); toast.success("Saved"); }
+    catch { setPosOps(prev); toast.error("Failed to save"); }
+  };
+
   const [kitchen, setKitchen] = useState<KitchenSettings>({ useKDS: false, autoPrintKOT: true });
 
   const [receipt, setReceipt] = useState<ReceiptSettings>({
@@ -524,6 +543,13 @@ export default function SettingsPage() {
           if (b) {
             const restName = (b.restaurantName || "").trim() ? b.restaurantName : (s?.name || "");
             setBranding(p => ({ ...p, restaurantName: restName, primaryColor: b.primaryColor || p.primaryColor, secondaryColor: b.secondaryColor || p.secondaryColor, logoUrl: b.logoUrl || "" }));
+            // Part 13 operational settings (flat or under `pos`)
+            const ops = { ...(b.pos ?? {}), ...b };
+            setPosOps(p => {
+              const next: Record<string, any> = { ...p };
+              for (const k of Object.keys(p)) if (ops[k] !== undefined && ops[k] !== null) next[k] = ops[k];
+              return next;
+            });
             // Hydrate dual-tax into receipt settings from branding
             if (b.cashTaxRate !== undefined || b.cardTaxRate !== undefined) {
               setReceipt(p => ({
@@ -799,6 +825,75 @@ export default function SettingsPage() {
                 <SettingRow label="Require shift opening" hint="Cashiers must open a shift with an opening float before taking orders." checked={posConfig.requireShiftOpening} onChange={v => handlePOS("requireShiftOpening", v)} />
                 <SettingRow label="Block out-of-stock items" hint="Prevent adding items with zero inventory to an order." checked={posConfig.blockOutOfStock} onChange={v => handlePOS("blockOutOfStock", v)} />
                 <SettingRow label="Offline mode" hint="Continue taking orders when the internet connection is unavailable." checked={posConfig.offlineMode} onChange={v => handlePOS("offlineMode", v)} />
+              </div>
+
+              {/* ── Orders (Part 13) ── */}
+              <div className="px-6 pt-5 pb-1"><p className="text-[10.5px] font-bold text-[#94A3B8] uppercase tracking-widest">Orders</p></div>
+              <div className="divide-y divide-[#F1F5F9]">
+                <SettingRow label="Order number format" hint="Short A-047 · Standard A-0912-047 · Detailed KBJ-A-250912-047">
+                  <select value={posOps.orderNumberFormat} onChange={e => saveOps({ orderNumberFormat: e.target.value })}
+                    className="h-8 px-3 bg-white border border-[#E2E8F0] rounded-lg text-[12px] font-medium text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#FF5722]/15">
+                    <option value="SHORT">Short</option>
+                    <option value="STANDARD">Standard</option>
+                    <option value="DETAILED">Detailed</option>
+                  </select>
+                </SettingRow>
+                <SettingRow label="Allow login without shift" hint="Cashiers can sign in to view orders and print without opening a shift." checked={posOps.allowLoginWithoutShift} onChange={v => saveOps({ allowLoginWithoutShift: v })} />
+                <SettingRow label="Allow order reopen" hint="A completed order can be reopened to add items, within the window below." checked={posOps.allowOrderReopen} onChange={v => saveOps({ allowOrderReopen: v })} />
+                {posOps.allowOrderReopen && (
+                  <SettingRow label="Reopen window" hint="Minutes after completion an order can still be reopened.">
+                    <NumberInput value={posOps.orderReopenWindowMinutes} onChange={v => saveOps({ orderReopenWindowMinutes: v })} min={1} max={240} suffix="min" />
+                  </SettingRow>
+                )}
+                <SettingRow label="Table cleaning time" hint="Minutes a table stays 'dirty' after the last order before it goes free.">
+                  <NumberInput value={posOps.tableCleaningMinutes} onChange={v => saveOps({ tableCleaningMinutes: v })} min={0} max={120} suffix="min" />
+                </SettingRow>
+              </div>
+
+              {/* ── Shift (Part 13) ── */}
+              <div className="px-6 pt-5 pb-1"><p className="text-[10.5px] font-bold text-[#94A3B8] uppercase tracking-widest">Shift</p></div>
+              <div className="divide-y divide-[#F1F5F9]">
+                <SettingRow label="Cash count required on close" hint="Cashier must count the drawer to close a shift." checked={posOps.cashCountRequired} onChange={v => saveOps({ cashCountRequired: v })} />
+                <SettingRow label="Variance alert threshold" hint="Flag a shift when the drawer is off by more than this.">
+                  <NumberInput value={posOps.varianceAlertThreshold} onChange={v => saveOps({ varianceAlertThreshold: v })} min={0} max={100000} step={50} suffix="PKR" />
+                </SettingRow>
+                <SettingRow label="Warn on stale shift after" hint="Show a warning when a shift has been open this long.">
+                  <NumberInput value={posOps.staleShiftWarnHours} onChange={v => saveOps({ staleShiftWarnHours: v })} min={1} max={72} suffix="h" />
+                </SettingRow>
+                <SettingRow label="Auto-close abandoned after" hint="A forgotten open shift is marked ABANDONED after this.">
+                  <NumberInput value={posOps.autoCloseAbandonedHours} onChange={v => saveOps({ autoCloseAbandonedHours: v })} min={2} max={168} suffix="h" />
+                </SettingRow>
+              </div>
+
+              {/* ── Manager overlay (Part 13) ── */}
+              <div className="px-6 pt-5 pb-1"><p className="text-[10.5px] font-bold text-[#94A3B8] uppercase tracking-widest">Manager Override</p></div>
+              <div className="divide-y divide-[#F1F5F9]">
+                <SettingRow label="Enable manager override" hint="A manager can act on a cashier's terminal without closing their session." checked={posOps.managerOverlayEnabled} onChange={v => saveOps({ managerOverlayEnabled: v })} />
+                <SettingRow label="Override idle timeout" hint="Auto-exit the override after this much inactivity.">
+                  <NumberInput value={posOps.managerOverlayIdleMinutes} onChange={v => saveOps({ managerOverlayIdleMinutes: v })} min={1} max={30} suffix="min" />
+                </SettingRow>
+                <SettingRow label="Require a reason" hint="Every override action must record why." checked={posOps.managerOverlayRequireReason} onChange={v => saveOps({ managerOverlayRequireReason: v })} />
+              </div>
+
+              {/* ── Sync (Part 13) ── */}
+              <div className="px-6 pt-5 pb-1"><p className="text-[10.5px] font-bold text-[#94A3B8] uppercase tracking-widest">Sync Engine</p></div>
+              <div className="divide-y divide-[#F1F5F9]">
+                <SettingRow label="Batch size" hint="Max events shipped in one request.">
+                  <NumberInput value={posOps.syncBatchSize} onChange={v => saveOps({ syncBatchSize: v })} min={1} max={200} suffix="" />
+                </SettingRow>
+                <SettingRow label="Request timeout" hint="Hard timeout per sync request.">
+                  <NumberInput value={posOps.syncRequestTimeoutMs} onChange={v => saveOps({ syncRequestTimeoutMs: v })} min={2000} max={30000} step={500} suffix="ms" />
+                </SettingRow>
+                <SettingRow label="Max event lifetime" hint="An event still unsynced after this is abandoned to the dead-letter queue.">
+                  <NumberInput value={posOps.syncMaxEventLifetimeHours} onChange={v => saveOps({ syncMaxEventLifetimeHours: v })} min={1} max={168} suffix="h" />
+                </SettingRow>
+                <SettingRow label="Shift-close sync timeout" hint="How long the close screen waits for the queue before offering 'Close Anyway'.">
+                  <NumberInput value={posOps.shiftCloseSyncTimeoutSec} onChange={v => saveOps({ shiftCloseSyncTimeoutSec: v })} min={10} max={180} suffix="s" />
+                </SettingRow>
+                <SettingRow label="Allow closing with unsynced events" hint="Off = the queue must clear before a shift can close." checked={posOps.allowCloseWithUnsynced} onChange={v => saveOps({ allowCloseWithUnsynced: v })} />
+                {posOps.allowCloseWithUnsynced && (
+                  <SettingRow label="…requires a manager PIN" checked={posOps.closeWithUnsyncedRequiresPin} onChange={v => saveOps({ closeWithUnsyncedRequiresPin: v })} />
+                )}
               </div>
             </Section>
           )}
