@@ -29,9 +29,8 @@ export function generateSEOMetadata({
 }: SEOProps): Metadata {
   const fullTitle = `${title} | Dineiz`
   const finalUrl = canonical ?? (path ? `${BASE_URL}${path}` : BASE_URL)
-  // Falls back to a per-page dynamic OG image (title baked in) rather than
-  // one generic image shared across every page/post on social shares.
-  const finalOgImage = ogImage ?? `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`
+  // High-reliability static OG image for WhatsApp/Instagram or dynamic route image for subpages
+  const finalOgImage = ogImage ?? (path === '/' || !path ? `${BASE_URL}/og-image.png` : `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`)
 
   return {
     title: fullTitle,
@@ -48,6 +47,16 @@ export function generateSEOMetadata({
     alternates: {
       canonical: finalUrl,
     },
+    icons: {
+      icon: [
+        { url: '/favicon.svg', type: 'image/svg+xml' },
+        { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+        { url: '/dineiz-app-icon.png', sizes: '192x192', type: 'image/png' },
+      ],
+      apple: [
+        { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      ],
+    },
     robots: noIndex
       ? { index: false, follow: false }
       : { index: true, follow: true, googleBot: { index: true, follow: true } },
@@ -56,7 +65,7 @@ export function generateSEOMetadata({
       description,
       url: finalUrl,
       siteName: 'Dineiz',
-      images: [{ url: finalOgImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: finalOgImage, width: 1200, height: 630, alt: title, type: 'image/png' }],
       locale: 'en_PK',
       type: type,
       ...(type === 'article' && publishedTime ? { publishedTime } : {}),
