@@ -1,12 +1,12 @@
 import POSLayout from './POSLayout';
 
-// No `force-dynamic`: this layout renders only the client shell (POSLayout) and
-// has no server-side data. Forcing dynamic made the App Router refetch every
-// `/pos/*` segment's RSC payload on every tab switch, which — with `loading.tsx`
-// present — flashed the skeleton on every navigation even though the screens
-// hydrate instantly from `useViews`. Letting the router cache these trivial
-// segments makes tab switches instant; `loading.tsx` now only shows on a
-// genuine cold segment load.
+// Keep `force-dynamic`. The POS screens are client-only and localStorage /
+// IndexedDB-driven — without this Next tries to statically prerender them, and
+// the static HTML (no shift, no store, loading gates true) doesn't match what
+// the client renders, so every page throws a hydration error and regenerates.
+// (The tab-switch skeleton is a separate, smaller thing — handled per-screen,
+// not by dropping this.)
+export const dynamic = 'force-dynamic';
 export default function Layout({ children }: { children: React.ReactNode }) {
   return <POSLayout>{children}</POSLayout>;
 }
