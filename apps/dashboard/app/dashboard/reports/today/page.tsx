@@ -5,7 +5,7 @@ import { useUser } from '@/contexts/user-context';
 import { apiGet } from '@/lib/api-client';
 import { formatPKR } from '@/lib/formatters';
 import { Receipt } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/Spinner';
+import { SkeletonStatCards, SkeletonList } from '@/components/ui/skeleton';
 
 function todayISO() {
   const d = new Date();
@@ -42,7 +42,11 @@ export default function TodaysReportPage() {
       </div>
 
       {isLoading ? (
-        <InlineLoader />
+        <div className="space-y-6" role="status" aria-busy="true">
+          <span className="sr-only">Loading today&apos;s report</span>
+          <SkeletonStatCards count={3} />
+          <SkeletonList rows={5} />
+        </div>
       ) : isError ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-red-500">Couldn't load today's report.</p>

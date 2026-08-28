@@ -313,7 +313,7 @@ export function MenuSidebar({
         {isLoading ? (
           <div className="mt-2 px-3 flex flex-col gap-2">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-8 bg-slate-100 animate-pulse rounded-lg" />
+              <div key={i} className="h-8 skeleton-shimmer rounded-lg" />
             ))}
           </div>
         ) : (

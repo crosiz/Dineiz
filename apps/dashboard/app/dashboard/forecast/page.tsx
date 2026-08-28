@@ -9,7 +9,7 @@ import { InventoryForecastTable } from './_components/InventoryForecastTable';
 import { MenuItemForecastList } from './_components/MenuItemForecastList';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { AllBranchesBanner } from '@/components/AllBranchesBanner';
-import { PageLoader } from '@/components/ui/Spinner';
+import { PageSkeleton } from '@/components/ui/skeleton';
 
 export default function ForecastPage() {
   const queryClient = useQueryClient();
@@ -52,7 +52,7 @@ export default function ForecastPage() {
   const generatedAt = revenueData?.generatedAt || new Date().toISOString();
 
   if (loading && !revenueData) {
-    return <PageLoader label="Loading forecast models..." />;
+    return <PageSkeleton variant="analytics" label="Loading forecast models" />;
   }
 
   return (

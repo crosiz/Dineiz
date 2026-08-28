@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Star, Pencil, Trash2, RotateCcw, Truck, Phone } from 'lucide-react';
 import { useSuppliers, Supplier } from '../hooks/useSuppliers';
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 import { SupplierFormModal } from './SupplierFormModal';
 
 function RatingStars({ rating }: { rating?: number | null }) {
@@ -89,14 +89,10 @@ export function SuppliersTab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10">
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                      <Spinner size={16} />
-                      Loading...
-                    </div>
-                  </td>
-                </tr>
+                <SkeletonTableRows
+                  rows={6}
+                  columns={[{ w: 150, avatar: true }, 120, 90, 70, { w: 64, pill: true }, { w: 56, align: 'right' }]}
+                />
               ) : visibleSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-14">

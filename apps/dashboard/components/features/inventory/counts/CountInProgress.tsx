@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useCountDetail, useCounts } from '../hooks/useCounts';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonStatCards, SkeletonTable } from '@/components/ui/skeleton';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { formatVariance } from '@/lib/formatters';
 import { CountLineRow } from './CountLineRow';
@@ -32,8 +32,15 @@ export function CountInProgress({ sessionId, onBack }: CountInProgressProps) {
 
   if (isLoading && !session) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner size={24} />
+      <div className="space-y-5" role="status" aria-busy="true">
+        <span className="sr-only">Loading count session</span>
+        <div className="space-y-3">
+          <Skeleton className="h-3.5 w-32" />
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-3.5 w-80 max-w-[70vw]" />
+        </div>
+        <SkeletonStatCards count={4} />
+        <SkeletonTable rows={8} columns={[{ w: 160, avatar: true }, 90, 90, 90, { w: 90, align: 'right' }]} />
       </div>
     );
   }

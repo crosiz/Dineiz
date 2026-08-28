@@ -21,7 +21,7 @@ import type { WastageAnalytics as WastageAnalyticsData } from '../hooks/useWasta
 import { CHART_COLORS, REASON_COLORS, humanizeReason } from './wastageConstants';
 
 function ChartSkeleton() {
-  return <div className="h-[240px] w-full rounded-lg bg-slate-100 animate-pulse" />;
+  return <div className="h-[240px] w-full rounded-lg skeleton-shimmer" />;
 }
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {

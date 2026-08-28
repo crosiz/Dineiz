@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonStatCards, SkeletonList } from '@/components/ui/skeleton';
 
 const STAGE_LABELS: Record<string, string> = {
   GREETING: 'Just started',
@@ -48,7 +48,13 @@ export function OverviewTab() {
   }, []);
 
   if (loading) {
-    return <PageLoader label="Loading conversations..." className="min-h-[160px]" />;
+    return (
+      <div className="space-y-8" role="status" aria-busy="true">
+        <span className="sr-only">Loading conversations</span>
+        <SkeletonStatCards count={2} />
+        <SkeletonList rows={4} />
+      </div>
+    );
   }
 
   return (

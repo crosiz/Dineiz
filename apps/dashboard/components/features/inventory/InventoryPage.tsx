@@ -14,88 +14,30 @@ import { SuppliersTab } from './suppliers/SuppliersTab';
 import { AddIngredientPanel } from './panels/AddIngredientPanel';
 import { Package, Plus } from 'lucide-react';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { SkeletonStatCards, SkeletonTable } from '@/components/ui/skeleton';
 
 // ─── Stat card skeleton ───────────────────────────────────────────────────────
 function StatsSkeleton() {
-  return (
-    <div className="grid grid-cols-4 gap-6 mb-6">
-      {[0, 1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm flex flex-col justify-center gap-2"
-        >
-          <div className="h-2.5 w-24 bg-slate-200 rounded animate-pulse" />
-          <div className="h-8 w-12 bg-slate-200 rounded animate-pulse" />
-          <div className="h-2.5 w-32 bg-slate-100 rounded animate-pulse" />
-        </div>
-      ))}
-    </div>
-  );
+  return <SkeletonStatCards count={4} className="mb-6" />;
 }
 
-// ─── Table skeleton matching real columns exactly ─────────────────────────────
+// ─── Table skeleton matching the real InventoryTable columns ──────────────────
 function InventoryTableSkeleton() {
   return (
-    <div className="bg-white rounded-lg border border-slate-100 overflow-hidden mb-6">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
-            <tr>
-              <th className="w-[280px] px-6 py-4">Ingredient</th>
-              <th className="w-32 px-6 py-4">Unit</th>
-              <th className="w-32 px-6 py-4">In Stock</th>
-              <th className="w-40 px-6 py-4">Min Threshold</th>
-              <th className="w-32 px-6 py-4">Status</th>
-              <th className="w-32 px-6 py-4">Value</th>
-              <th className="w-40 px-6 py-4">Branches</th>
-              <th className="w-20 px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {[0, 60, 120, 180, 240].map((delay) => (
-              <tr key={delay} className="border-b border-slate-100">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-lg bg-slate-200 animate-pulse shrink-0"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                    <div className="space-y-1.5">
-                      <div className="h-3.5 w-28 bg-slate-200 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                      <div className="h-2.5 w-16 bg-slate-100 rounded animate-pulse" style={{ animationDelay: `${delay + 30}ms` }} />
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-3.5 w-10 bg-slate-200 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-3.5 w-16 bg-slate-200 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-3.5 w-16 bg-slate-100 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-6 w-20 bg-slate-200 rounded-full animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-3.5 w-16 bg-slate-100 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="h-3.5 w-20 bg-slate-200 rounded animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse" style={{ animationDelay: `${delay}ms` }} />
-                    <div className="w-8 h-8 bg-slate-200 rounded-lg animate-pulse" style={{ animationDelay: `${delay + 30}ms` }} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SkeletonTable
+      className="!border-slate-100 rounded-lg mb-6"
+      rows={6}
+      columns={[
+        { w: 160, avatar: true },
+        48,
+        70,
+        70,
+        { w: 72, pill: true },
+        70,
+        90,
+        { w: 56, align: 'right' },
+      ]}
+    />
   );
 }
 

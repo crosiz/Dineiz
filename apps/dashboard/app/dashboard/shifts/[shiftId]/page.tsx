@@ -156,7 +156,7 @@ export default function ShiftDetailPage() {
     return (
       <div className="min-h-screen bg-white p-8">
         <div className="max-w-[1200px] mx-auto space-y-4">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-slate-50 rounded-xl animate-pulse" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-32 skeleton-shimmer rounded-xl" />)}
         </div>
       </div>
     );
@@ -421,7 +421,7 @@ export default function ShiftDetailPage() {
 
             <Section title="Payment mix">
               <div className="border border-slate-200 rounded-xl p-5">
-                {isOrdersLoading ? <div className="h-10 bg-slate-50 animate-pulse rounded" /> : <PaymentBreakdown orders={orders} />}
+                {isOrdersLoading ? <div className="h-10 skeleton-shimmer rounded" /> : <PaymentBreakdown orders={orders} />}
               </div>
             </Section>
 
@@ -495,7 +495,7 @@ export default function ShiftDetailPage() {
                       Array.from({ length: 5 }).map((_, i) => (
                         <tr key={i}>
                           {Array.from({ length: 8 }).map((_, j) => (
-                            <td key={j} className="px-4 py-2.5"><div className="h-3 bg-slate-100 rounded animate-pulse w-12" /></td>
+                            <td key={j} className="px-4 py-2.5"><div className="h-3 skeleton-shimmer rounded w-12" /></td>
                           ))}
                         </tr>
                       ))
@@ -541,7 +541,7 @@ export default function ShiftDetailPage() {
               <div className="border border-slate-200 rounded-xl bg-white p-5">
                 {isActivityLoading ? (
                   <div className="space-y-4">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="h-10 bg-slate-50 rounded-md animate-pulse" />)}
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-10 skeleton-shimmer rounded-md" />)}
                   </div>
                 ) : activities.length === 0 ? (
                   <p className="text-sm text-slate-400 text-center py-4">No activity recorded.</p>

@@ -10,7 +10,7 @@ import { CustomerDetailSlideOver } from './_components/CustomerDetailSlideOver';
 import { CreateCustomerSlideOver } from './_components/CreateCustomerSlideOver';
 import { Pagination } from '@/components/ui/Pagination';
 import { Upload, Download, UserPlus, Search, Users } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 
 export default function CRMCustomersPage() {
   const searchParams = useSearchParams();
@@ -211,11 +211,10 @@ export default function CRMCustomersPage() {
                     </td>
                   </tr>
                 ) : loading ? (
-                  <tr>
-                    <td colSpan={4}>
-                      <PageLoader label="Loading customers..." className="min-h-0 py-16" />
-                    </td>
-                  </tr>
+                  <SkeletonTableRows
+                    rows={10}
+                    columns={[{ w: 150, avatar: true }, 120, 150, { w: 80, align: 'right' }]}
+                  />
                 ) : customers.length === 0 ? (
                   <tr>
                     <td colSpan={4}>

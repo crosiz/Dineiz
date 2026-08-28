@@ -491,7 +491,7 @@ export default function ShiftManagementPage() {
 
             {isLiveLoading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-50 rounded-lg animate-pulse" />)}
+                {[1, 2, 3].map(i => <div key={i} className="h-12 skeleton-shimmer rounded-lg" />)}
               </div>
             ) : liveShifts.length === 0 ? (
               <div className="py-20 text-center">
@@ -649,7 +649,7 @@ export default function ShiftManagementPage() {
                         Array.from({ length: 8 }).map((_, i) => (
                           <tr key={i}>
                             {Array.from({ length: showBranchColumn ? 14 : 13 }).map((_, j) => (
-                              <td key={j} className="px-4 py-3"><div className="h-3 bg-slate-100 rounded animate-pulse w-14" /></td>
+                              <td key={j} className="px-4 py-3"><div className="h-3 skeleton-shimmer rounded w-14" /></td>
                             ))}
                           </tr>
                         ))

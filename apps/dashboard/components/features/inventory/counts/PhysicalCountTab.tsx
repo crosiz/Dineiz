@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, ClipboardList } from 'lucide-react';
 import { useCounts, CountSession } from '../hooks/useCounts';
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 import { formatVariance } from '@/lib/formatters';
 import { StartCountModal } from './StartCountModal';
 import { CountInProgress } from './CountInProgress';
@@ -55,14 +55,10 @@ export function PhysicalCountTab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10">
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                      <Spinner size={16} />
-                      Loading...
-                    </div>
-                  </td>
-                </tr>
+                <SkeletonTableRows
+                  rows={5}
+                  columns={[120, { w: 72, pill: true }, { w: 120, avatar: true }, 100, 90]}
+                />
               ) : sessions.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-14">

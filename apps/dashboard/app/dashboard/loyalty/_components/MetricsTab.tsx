@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonStatCards, SkeletonChartCard } from '@/components/ui/skeleton';
 import { PieChart, Users, Sparkles, TrendingUp } from 'lucide-react';
 
 export function MetricsTab() {
@@ -23,7 +23,13 @@ export function MetricsTab() {
     fetchMetrics();
   }, []);
 
-  if (loading) return <PageLoader label="Loading metrics..." />;
+  if (loading) return (
+    <div className="space-y-6" role="status" aria-busy="true">
+      <span className="sr-only">Loading metrics</span>
+      <SkeletonStatCards count={3} />
+      <SkeletonChartCard height={260} />
+    </div>
+  );
   if (!metrics) return null;
 
   return (
