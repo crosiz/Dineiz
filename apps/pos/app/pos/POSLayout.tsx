@@ -10,6 +10,7 @@ import { startBackgroundSync } from '@/lib/sync';
 import { useViews, rebuildViews, seedTablesFromServer, refreshOrders, startTableReconcile } from '@/lib/core/views';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { NavigationProgress } from '@/components/NavigationProgress';
+import { ScreenLoader } from '@/components/ui/ScreenLoader';
 import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
 import { SocketProvider, useSocket } from '@/contexts/SocketContext';
@@ -521,9 +522,15 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       {!hideTopBar && <POSTopBar />}
       <ManagerOverlayBar />
       {!hideTopBar && <ViewModeBanner />}
-      {/* Dynamic Content Area */}
+      {/* Dynamic Content Area. Held behind `isMounted` for the first paint:
+          every POS screen decides what to render from localStorage / IndexedDB
+          (branch, shift, the view store), none of which exist on the server —
+          rendering children during SSR guarantees a hydration mismatch on
+          whichever screen was hard-loaded. One shared ScreenLoader here covers
+          that window; client-side tab switches are already mounted, so they
+          paint the next screen instantly with no loader. */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
-        {children}
+        {isMounted ? children : <ScreenLoader />}
       </div>
 
       {/* Canonical Bottom Navigation */}
