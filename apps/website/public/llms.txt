@@ -1,0 +1,30 @@
+# Dineiz
+
+> Dineiz is an offline-first restaurant management platform providing point-of-sale (POS), digital QR menus, kitchen display systems (KDS), inventory control, and real-time cloud analytics for restaurants, cafes, food carts, and multi-branch food businesses.
+
+## Products & Modules
+
+- [Dineiz POS](https://dineiz.com/product/pos): Offline-first point-of-sale terminal with table layouts, split billing, thermal/Bluetooth receipt printing, and local outbox sync.
+- [Dineiz Console](https://dineiz.com/product/console): Web-based management dashboard for menu engineering, staff roles, real-time sales reporting, and multi-branch management.
+- [Dineiz Go](https://dineiz.com/product/go): Android mobile billing app designed for quick-service counters, street food vendors, and dhabas.
+- [WhatsApp Ordering](https://dineiz.com/product/whatsapp): Automated WhatsApp conversational ordering and status notifications for customer pickup and delivery.
+- [Features Overview](https://dineiz.com/features): Comprehensive feature breakdown across POS, KDS, inventory, reporting, and staff tracking.
+
+## Industry Solutions
+
+- [Restaurants](https://dineiz.com/industries/restaurant): Full dine-in workflows, floor plans, kitchen display sync, and table turn optimization.
+- [Cafes & Bakeries](https://dineiz.com/industries/cafe): Fast counter checkout, modifier customization, barista stations, and customer loyalty.
+- [Dhabas & Quick Service](https://dineiz.com/industries/dhaba): Fast cash billing, mobile receipt printing, and offline operation during network or power cuts.
+- [Food Carts & Kiosks](https://dineiz.com/industries/food-cart): Single-device Android mobile POS with low-latency billing and Bluetooth printer support.
+
+## Pricing & Deployment
+
+- [Pricing Plans](https://dineiz.com/pricing): Tiered plans starting with Go Free (0 PKR/mo), Go Pro (999 PKR/mo), Starter (2,999 PKR/mo), Pro (5,999 PKR/mo), and Custom Enterprise. Includes 14-day free trial on paid tiers.
+
+## Company & Resources
+
+- [About Dineiz](https://dineiz.com/about): Mission, technical design principles, and local-first architecture overview.
+- [Case Studies](https://dineiz.com/case-studies): Customer stories and operational efficiency benchmarks.
+- [Blog & Guides](https://dineiz.com/blog): In-depth articles on restaurant inventory, billing software, staff management, and food business operations.
+- [Changelog](https://dineiz.com/changelog): Product updates, releases, and feature logs.
+- [Contact & Support](https://dineiz.com/contact): Sales inquiries, partner onboarding, and direct WhatsApp / email support channels.
