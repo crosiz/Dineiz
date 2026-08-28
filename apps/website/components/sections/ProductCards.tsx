@@ -36,7 +36,7 @@ export function ProductCards() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
-          <p className="text-sm font-semibold text-[#FF6B35] tracking-wide mb-4">Products</p>
+          <p className="text-sm font-semibold text-brand-700 tracking-wide mb-4">Products</p>
           <h2
             className="font-bold text-[#1d1d1f] mb-4"
             style={{ fontSize: "clamp(2rem, 4vw, 3rem)", letterSpacing: "-0.03em", lineHeight: 1.1 }}
@@ -59,7 +59,7 @@ export function ProductCards() {
               transition={{ duration: 0.4, delay: i * 0.08 }}
               className="py-10 md:py-0 first:pt-0 md:px-10 first:md:pl-0 last:md:pr-0"
             >
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#FF6B35] mb-4">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-brand-700 mb-4">
                 {p.tagline}
               </p>
               <h3 className="text-[26px] font-bold text-[#1d1d1f] mb-4 tracking-tight">
@@ -80,9 +80,10 @@ export function ProductCards() {
 
               <Link
                 href={p.href}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1d1d1f] border-b border-[#1d1d1f] pb-0.5 hover:text-[#FF6B35] hover:border-[#FF6B35] transition-colors"
+                aria-label={`Learn more about ${p.name}`}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1d1d1f] border-b border-[#1d1d1f] pb-0.5 hover:text-brand-700 hover:border-brand-700 transition-colors"
               >
-                Learn more
+                Learn more about {p.name}
                 <ArrowRight size={14} />
               </Link>
             </motion.div>

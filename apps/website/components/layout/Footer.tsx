@@ -99,7 +99,7 @@ export function Footer() {
           <div className="text-[13px] text-gray-500 font-medium">
             &copy; {new Date().getFullYear()} Dineiz by Crosiz Technologies
           </div>
-          <div className="text-[13px] text-gray-400">
+          <div className="text-[13px] text-gray-500">
             Made with <span className="text-red-500">❤</span> in Pakistan
           </div>
         </div>

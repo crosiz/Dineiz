@@ -73,7 +73,7 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <p className="text-sm font-semibold text-brand-500 tracking-wide mb-5">
+            <p className="text-sm font-semibold text-brand-700 tracking-wide mb-5">
               Restaurant POS, built in Pakistan
             </p>
 
@@ -129,7 +129,7 @@ export function HeroSection() {
             >
               <div className="flex items-center justify-between mb-3 pb-3 border-b border-dashed border-[#d9d4c3]">
                 <span className="text-[11px] font-bold tracking-widest text-[#1d1d1f]">TABLE 7 · KOT</span>
-                <span className="text-[10px] text-[#8a8467]">08:41 PM</span>
+                <span className="text-[10px] text-[#595540]">08:41 PM</span>
               </div>
               <ul className="space-y-2 text-[13px] text-[#3a3624]">
                 <li className="flex gap-2"><span className="font-bold">2×</span> Chicken Biryani</li>
@@ -146,7 +146,7 @@ export function HeroSection() {
             >
               <div className="text-center mb-4">
                 <div className="text-[13px] font-bold text-[#1d1d1f]">Order Total</div>
-                <div className="text-[10px] text-[#9a9a9f] mt-0.5">Auto-generated receipt</div>
+                <div className="text-[10px] text-[#5a5a60] mt-0.5">Auto-generated receipt</div>
               </div>
               <div className="space-y-2 text-[13px] mb-4">
                 <div className="flex justify-between text-[#6e6e73]">
