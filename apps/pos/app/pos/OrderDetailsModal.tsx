@@ -36,6 +36,50 @@ interface OrderDetailsModalProps {
   initialOrder?: any;
 }
 
+// Spec Part 8 — the modal renders entirely from local state for any order the
+// terminal knows about. `useViews` (lib/core/views.ts) already holds every
+// current-shift order with full per-item detail, because this terminal created
+// it or the socket-fed refreshOrders merged it. Map that OrderView into the
+// same shape `/api/orders/:id` returns so the render path is unchanged — but
+// with zero network and no spinner. Only a historical order outside this shift
+// still needs the fetch.
+function detailFromView(v: any) {
+  const liveItems = Array.isArray(v.items) ? v.items.filter((it: any) => !it.voided) : [];
+  return {
+    id: v.id,
+    serverId: v.serverId ?? null,
+    orderNumber: v.orderNumber,
+    tokenNumber: v.tokenNumber ?? null,
+    status: v.status,
+    type: v.type,
+    createdAt: v.createdAt,
+    table: v.tableLabel ? { label: v.tableLabel } : null,
+    tableId: v.tableId ?? null,
+    assignedWaiter: v.assignedWaiterName ? { name: v.assignedWaiterName } : null,
+    assignedWaiterId: v.assignedWaiterId ?? null,
+    customerId: v.customerId ?? null,
+    netAmount: v.netAmount ?? v.subtotal ?? 0,
+    totalAmount: v.netAmount ?? v.subtotal ?? 0,
+    taxAmount: v.taxAmount ?? 0,
+    discountAmount: v.discountAmount ?? 0,
+    billRequestedAt: v.billRequestedAt ?? null,
+    items: liveItems.map((it: any) => ({
+      id: it.lineId,
+      itemId: it.itemId,
+      quantity: it.qty,
+      unitPrice: it.unitPrice,
+      subtotal: (it.unitPrice ?? 0) * (it.qty ?? 1),
+      notes: it.note ?? null,
+      item: { name: it.itemName },
+      options: {
+        variation: it.variationName ? { id: it.variationId ?? null, name: it.variationName } : null,
+        addOns: it.addOns ?? [],
+      },
+    })),
+    __fromView: true,
+  };
+}
+
 // Adapts the lightweight /api/orders/live shape into a stand-in for the full
 // /api/orders/:id detail shape, so the header/status/total can render before
 // the detailed fetch returns. Item rows are marked __partial and rendered as
@@ -65,7 +109,18 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const router = useRouter();
   const viewMode = isViewMode(); // spec Part 11 — no payments without a shift
   const session = useCartStore(s => s.session);
-  const [order, setOrder] = useState<any>(null);
+  // Live subscription to the event-derived store. When the order lives here
+  // (any current-shift order), this is the whole data source — it re-renders
+  // the modal the instant a command lands, with no fetch.
+  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  const inStore = !!viewOrder;
+  // Lazy-init from the store so an in-store order paints on the very first
+  // render — no spinner frame, no effect round-trip.
+  const [order, setOrder] = useState<any>(() => {
+    if (!orderId) return null;
+    const v = useViews.getState().orders[orderId];
+    return v ? detailFromView(v) : (initialOrder ? shellFromSummary(initialOrder) : null);
+  });
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -102,9 +157,15 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       setOrder(null);
       return;
     }
+    if (viewOrder) {
+      // Fully local — paint from the store and keep painting as it changes.
+      // No network call at all (spec Part 8).
+      setOrder(detailFromView(viewOrder));
+      return;
+    }
     if (initialOrder) {
-      // Instant paint from data the list screen already had — no spinner —
-      // then quietly upgrade to the full-detail response in the background.
+      // Known to a list screen but not the store (a historical order) — paint
+      // the summary shell instantly, fill in detail from the one fetch.
       setOrder(shellFromSummary(initialOrder));
       fetchOrder(true);
     } else {
@@ -112,7 +173,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       fetchOrder();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, viewOrder]);
 
   useEffect(() => {
     if (!assignOpen || !session?.branchId || waiters.length > 0) return;
@@ -128,7 +189,9 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   if (!orderId) return null;
 
   const refreshAfterChange = () => {
-    fetchOrder(true);
+    // In-store orders re-render from the `viewOrder` subscription already;
+    // only a fetched (historical) order needs a re-pull.
+    if (!inStore) fetchOrder(true);
     onChanged?.();
   };
 
@@ -162,6 +225,8 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       if (!res.ok) throw new Error();
       toast.success(waiter ? `Assigned to ${waiter.name}` : 'Waiter unassigned');
       setAssignOpen(false);
+      // Reflect it locally too so an in-store order updates without a re-pull.
+      setOrder((prev: any) => (prev ? { ...prev, assignedWaiter: waiter ? { name: waiter.name } : null, assignedWaiterId: waiter?.id ?? null } : prev));
       refreshAfterChange();
     } catch {
       toast.error('Failed to assign waiter');

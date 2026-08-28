@@ -3,6 +3,7 @@ import { prisma } from '@dineiz/db';
 import { FloorPlanUpdateSchema, TableCreateSchema, TableUpdateSchema, parseTableOverride, deriveTableStatus, toDbTableStatus } from '@dineiz/schemas';
 import { requireRole, requireTenant } from '../../middleware/auth';
 import { setTableOverride, recomputeTableStatus } from '../../lib/tableStatus';
+import { getTodayOrdersWhere } from '../../lib/date-utils';
 import { z } from 'zod';
 
 export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -14,6 +15,18 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
   }, async (request, reply) => {
     const { branchId } = (request.params as any);
     const tenantId = request.user!.tenantId!;
+    const role = (request.user as any)?.role as string | undefined;
+
+    // Spec Part 2/3 — a table is OCCUPIED only if there's an order the viewer
+    // can actually act on. For a CASHIER / WAITER that means the same scope as
+    // their live board (getTodayOrdersWhere branch view: orders under a
+    // currently-open shift + shiftless-today), so a genuinely-orphaned order
+    // under a long-closed shift doesn't keep a table permanently red while its
+    // ticket is invisible. Managers / admins keep the whole-branch view.
+    const scopeToShift = role === 'CASHIER' || role === 'WAITER';
+    const orderScopeWhere = scopeToShift
+      ? await getTodayOrdersWhere(tenantId, branchId)
+      : {};
 
     // These three lookups are independent of each other — run them concurrently
     // instead of as a sequential waterfall.
@@ -26,7 +39,8 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
           tenantId,
           status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
           type: 'DINE_IN',
-          tableId: { not: null }
+          tableId: { not: null },
+          ...orderScopeWhere,
         },
         select: {
           id: true,

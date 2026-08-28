@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
+import { useViews } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
@@ -50,7 +51,30 @@ export default function PaymentModal({
   const cart = useCartStore((s) => s.cart);
   const session = useCartStore((s) => s.session);
 
-  const displayItems = items && items.length > 0 ? items : cart;
+  // An existing order (has an id) is NEVER charged from the live cart — that's
+  // empty/stale after send-to-kitchen and is exactly how "Collect Payment"
+  // ended up showing PKR 0. Prefer the `items` the caller passed; if it forgot
+  // them, pull the real lines straight from the event store; only a brand-new
+  // in-cart order (no id yet) falls back to `cart`.
+  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  const displayItems = useMemo(() => {
+    if (items && items.length > 0) return items;
+    if (viewOrder?.items?.length) {
+      return viewOrder.items
+        .filter((i: any) => !i.voided)
+        .map((i: any) => ({
+          quantity: i.qty,
+          unitPrice: i.unitPrice,
+          subtotal: (i.unitPrice ?? 0) * (i.qty ?? 1),
+          name: i.itemName,
+        }));
+    }
+    return orderId ? [] : cart;
+  }, [items, viewOrder, cart, orderId]);
+
+  // Existing order, but we still couldn't resolve its lines (not in the store,
+  // caller passed nothing) — block the charge instead of billing PKR 0.
+  const itemsUnavailable = !!orderId && displayItems.length === 0;
 
   // ── Dual Tax Reactive Logic ──
   const branding = useBrandingStore(s => s.branding);
@@ -117,8 +141,8 @@ export default function PaymentModal({
   // Recalculate everything reactively
   const subtotal = displayItems.reduce((acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity)), 0);
   const discount = useCartStore((s) => s.discount);
-  const discountAmount = discount 
-    ? (discount.type === 'percent' ? subtotal * (discount.value / 100) : discount.value) 
+  const discountAmount = discount
+    ? (discount.type === 'percent' ? subtotal * (discount.value / 100) : discount.value)
     : 0;
 
   const isCash = activeMethod === 'CASH';
@@ -714,10 +738,15 @@ export default function PaymentModal({
 
         {/* Sticky Bottom Bar */}
         <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          {itemsUnavailable && (
+            <p className="text-rose-600 text-sm font-bold text-center">
+              Couldn’t load this order’s items — reopen it from Tickets to collect payment.
+            </p>
+          )}
           <div className="flex gap-4">
             <button
               onClick={handleConfirm}
-              disabled={isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
+              disabled={itemsUnavailable || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
               className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
