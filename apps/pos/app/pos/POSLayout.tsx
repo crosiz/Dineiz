@@ -219,15 +219,18 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // no network) so orders created earlier this session are already there
     // before any screen reads from it, then seed table reference data from
     // the server the same way ClientTableMap/useSWRTables already do.
-    rebuildViews().then(() => {
+    //
+    // The server pull runs whether or not the replay resolves: replaying a
+    // local log is a best-effort optimisation, but a rejection there (a
+    // corrupt IndexedDB row, a quota error mid-read) must NOT be what leaves
+    // the terminal with no orders and no floor plan. `finally`, not `then`.
+    const pullServerState = () => {
       const s = getPosSession();
       if (!s?.branchId) return;
-      // Views must be replayed first (above) before merging server data in
-      // — refreshOrders needs to see any locally-pending orders already in
-      // the store so it doesn't drop them while merging the server's list.
       seedTablesFromServer(s.branchId).catch(console.error);
       refreshOrders(s.branchId, liveOrdersScope()).catch(console.error);
-    }).catch(console.error);
+    };
+    rebuildViews().catch(console.error).finally(pullServerState);
 
     // Prefetch every POS route bundle right after login so tab switching
     // doesn't pay Next.js's lazy-chunk-load cost the first time each tab is

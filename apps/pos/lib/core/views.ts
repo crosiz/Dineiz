@@ -158,7 +158,16 @@ export const useViews = create<ViewStore>((set) => ({
   shift: EMPTY_SHIFT,
   isReady: false,
 
-  _applyEvent: (e) => set((state) => reduce(state, e)),
+  _applyEvent: (e) => {
+    // A single malformed / unexpected event must never abort a replay — that
+    // would leave `rebuildViews()` rejected and, downstream, the whole screen
+    // without orders or a floor plan. Isolate each event.
+    try {
+      set((state) => reduce(state, e));
+    } catch (err) {
+      console.error('[views] skipped a bad event during replay', e?.type, e?.seq, err);
+    }
+  },
   _setSnapshot: (partial) => set(partial),
   _markReady: () => set({ isReady: true }),
 }));
