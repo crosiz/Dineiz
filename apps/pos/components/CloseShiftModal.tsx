@@ -43,6 +43,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [summary, setSummary] = useState<any>(null);
+  // The shift this terminal thinks is open was already closed server-side
+  // (the inactivity sweeper auto-closes a long-idle shift). Not an error to
+  // retry — there is simply nothing to close. Show a way forward instead of
+  // a dead "couldn't load" state.
+  const [noOpenShift, setNoOpenShift] = useState(false);
 
   const [closingCash, setClosingCash] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
@@ -86,10 +91,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
 
     const fetchSummary = async () => {
       setIsLoading(true);
+      setNoOpenShift(false);
       try {
         const resolvedId = await resolveActiveShiftId(API_URL);
         setShiftId(resolvedId);
-        if (!resolvedId) throw new Error('No open shift found — it may have been closed automatically.');
+        // resolveActiveShiftId already cleared the stale `pos_shift` from
+        // localStorage — surface it plainly and route the cashier onward
+        // rather than toasting an error into a blank modal.
+        if (!resolvedId) {
+          setNoOpenShift(true);
+          setIsLoading(false);
+          return;
+        }
 
         const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -451,12 +464,38 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                   <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#FF5722] animate-spin" />
                   <span className="text-xs font-medium">Calculating totals…</span>
                 </div>
+              ) : noOpenShift ? (
+                <div className="text-center py-10 px-4">
+                  <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3">
+                    <Clock size={20} />
+                  </div>
+                  <p className="text-slate-900 font-bold text-sm mb-1">This shift is already closed</p>
+                  <p className="text-slate-500 text-xs leading-relaxed max-w-[300px] mx-auto mb-5">
+                    It was closed automatically after being left open too long. Everything it recorded is
+                    saved. Open a fresh shift to keep serving.
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={onClose}
+                      className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => { onClose(); router.push('/pos/shift/open'); }}
+                      className="h-10 px-4 rounded-xl bg-[#FF5722] hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+                    >
+                      Open a New Shift
+                    </button>
+                  </div>
+                </div>
               ) : !summary ? (
                 <div className="text-center py-12">
                   <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-3">
                     <AlertCircle size={20} />
                   </div>
                   <p className="text-rose-600 font-bold text-xs">Couldn&apos;t load the shift summary.</p>
+                  <p className="text-slate-400 text-[11px] mt-1">Check your connection and try reopening this dialog.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
@@ -600,17 +639,19 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading || isSubmitting || (cashCountRequired && closingCash === '')}
-                className="w-full h-11 rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-              >
-                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={15} />}
-                Close Shift &amp; Save Report
-              </button>
-            </div>
+            {/* Footer — nothing to submit when there's no open shift to close */}
+            {!noOpenShift && (
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading || isSubmitting || !summary || (cashCountRequired && closingCash === '')}
+                  className="w-full h-11 rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                >
+                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={15} />}
+                  Close Shift &amp; Save Report
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
