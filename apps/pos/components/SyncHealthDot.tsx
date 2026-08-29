@@ -25,12 +25,6 @@ function classify(s: UnsyncedSummary | null): { health: Health; label: string; d
   return { health: 'ok', label: 'Synced', detail: `All ${s.confirmedToday} change${s.confirmedToday === 1 ? '' : 's'} today are saved` };
 }
 
-const DOT = {
-  ok: 'bg-emerald-500',
-  syncing: 'bg-amber-500 pulse-amber',
-  stuck: 'bg-rose-500 pulse-red',
-} as const;
-
 export function SyncHealthDot() {
   const router = useRouter();
   const [summary, setSummary] = useState<UnsyncedSummary | null>(null);
@@ -44,28 +38,28 @@ export function SyncHealthDot() {
   }, []);
 
   const { health, label, detail } = classify(summary);
-  // Nothing queued and nothing wrong — stay quiet, just the dot.
-  const showLabel = health !== 'ok';
+
+  // Everything synced is the normal state, and the top bar's rule is to show
+  // the exception only — the same reason the Online case has never had an
+  // indicator. A permanent green dot is decoration that trains people to
+  // ignore the spot where a real problem would appear.
+  if (health === 'ok') return null;
+
+  const tone = health === 'stuck'
+    ? { pill: 'bg-rose-50 border-rose-200', dot: 'bg-rose-500 pulse-red', text: 'text-rose-700' }
+    : { pill: 'bg-amber-50 border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700' };
 
   return (
     <button
-      onClick={() => router.push('/pos/settings?section=syncStatus')}
+      onClick={() => router.push('/pos/settings?section=sync')}
       title={detail}
-      className={`flex items-center gap-1.5 h-7 px-2 rounded-full border transition-colors ${
-        health === 'stuck'
-          ? 'border-rose-200 bg-rose-50 hover:bg-rose-100'
-          : health === 'syncing'
-            ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
-            : 'border-transparent hover:bg-[#F1F5F9]'
-      }`}
       aria-label={`Sync status: ${detail}`}
+      // Deliberately the same shape as the Offline pill two elements over —
+      // both mean "something about this terminal's connection needs you".
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors ${tone.pill}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${DOT[health]}`} />
-      {showLabel && (
-        <span className={`text-[10px] font-bold uppercase tracking-wider ${health === 'stuck' ? 'text-rose-700' : 'text-amber-700'}`}>
-          {label}
-        </span>
-      )}
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tone.dot}`} />
+      <span className={`text-[10px] font-bold uppercase tracking-wider ${tone.text}`}>{label}</span>
     </button>
   );
 }

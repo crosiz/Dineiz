@@ -426,42 +426,23 @@ export function POSTopBar() {
                     </div>
                   </div>
 
-                  {/* Menu Actions */}
+                  {/* Menu actions, ordered by what they DO and how often —
+                      shift actions (the ones taken during service) first, then
+                      the money drawer, then elevated access, then app/device
+                      settings, then leaving. The previous order interleaved all
+                      four kinds (fullscreen, drawer, settings, override, close,
+                      break) so nothing predicted where anything was. */}
                   <div className="p-1.5 flex flex-col gap-0.5">
+                    {/* — Your shift — */}
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
-                    >
-                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
-                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
-                    </button>
-
-                    <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
-                    >
-                      <Wallet size={15} className="text-slate-500" />
-                      <span>Cash Drawer</span>
-                    </button>
-
-                    <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); router.push('/pos/settings'); }}
-                    >
-                      <Settings size={15} className="text-slate-500" />
-                      <span>Settings</span>
-                    </button>
-
-                    <button
-                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-amber-700 hover:bg-amber-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70'}`}
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        if (overlayActive) exitOverlay('MANUAL');
-                        else setShowManagerOverride(true);
+                        setShowTakeBreakConfirm(true);
                       }}
                     >
-                      <Unlock size={15} className={overlayActive ? 'text-amber-600' : 'text-slate-500'} />
-                      <span>{overlayActive ? 'Exit Manager Mode' : 'Manager Override'}</span>
+                      <Coffee size={15} className="text-slate-500" />
+                      <span>Take a Break</span>
                     </button>
 
                     <button
@@ -474,13 +455,42 @@ export function POSTopBar() {
 
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
+                    >
+                      <Wallet size={15} className="text-slate-500" />
+                      <span>Cash Drawer</span>
+                    </button>
+
+                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+
+                    {/* — Elevated access — */}
+                    <button
+                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-amber-700 hover:bg-amber-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70'}`}
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        setShowTakeBreakConfirm(true);
+                        if (overlayActive) exitOverlay('MANUAL');
+                        else setShowManagerOverride(true);
                       }}
                     >
-                      <Coffee size={15} className="text-slate-500" />
-                      <span>Take a Break</span>
+                      <Unlock size={15} className={overlayActive ? 'text-amber-600' : 'text-slate-500'} />
+                      <span>{overlayActive ? 'Exit Manager Mode' : 'Manager Override'}</span>
+                    </button>
+
+                    {/* — This terminal — */}
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); router.push('/pos/settings'); }}
+                    >
+                      <Settings size={15} className="text-slate-500" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                    >
+                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
+                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
                     </button>
 
                     <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
