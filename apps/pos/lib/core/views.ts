@@ -767,37 +767,60 @@ export async function seedTablesFromServer(branchId: string): Promise<void> {
     if (!res.ok) return;
     const plan = await res.json();
     const raw = Array.isArray(plan) ? plan : plan.tables || [];
+    if (!Array.isArray(raw) || raw.length === 0) return; // empty/garbage response — keep what we have
+
     const cur = useViews.getState().tables;
-    const map: Record<string, TableView> = {};
+    const map: Record<string, TableView> = { ...cur }; // never drop a table we already know
+
     for (const t of raw) {
-      // Don't clobber a table that has a locally-pending order attached —
-      // the server snapshot may not know about it yet.
-      if (cur[t.id]?.activeOrderId) {
-        map[t.id] = cur[t.id];
-        continue;
-      }
-      map[t.id] = {
-        id: t.id,
-        label: t.label,
-        status: fromDbTableStatus(t.status),
-        isActive: t.isActive ?? true,
-        statusOverride: (t.statusOverride as TableStatusOverride) ?? null,
-        lastCompletedAt: t.lastCompletedAt ?? null,
-        occupiedSince: t.occupiedSince || t.since || null,
-        activeOrderId: t.activeOrderId || null,
-        floorNumber: t.floorNumber || t.floor || 1,
-        capacity: t.capacity || 4,
-        shape: t.shape || 'square',
-        x: t.positionX ?? t.x ?? 100,
-        y: t.positionY ?? t.y ?? 100,
-        width: t.width || 88,
-        height: t.height || 88,
-        assignedWaiterId: t.assignedWaiterId ?? null,
-        assignedWaiterName: t.assignedWaiterName ?? null,
-        assignedWaiterColor: t.assignedWaiterColor ?? null,
-      };
+      const local = cur[t.id];
+      // Geometry / label / waiter are reference data — always take the server's.
+      // status / activeOrderId / occupiedSince / lastCompletedAt are DERIVED
+      // from orders and are the reducer's to own (spec Part 3). Only trust the
+      // server's for a table this terminal has never seen — otherwise a table
+      // held OCCUPIED by a locally-punched order that hasn't synced yet would
+      // get wiped to FREE the next time the floor plan is fetched.
+      map[t.id] = local
+        ? {
+            ...local,
+            label: t.label ?? local.label,
+            isActive: t.isActive ?? local.isActive,
+            floorNumber: t.floorNumber || t.floor || local.floorNumber,
+            capacity: t.capacity || local.capacity,
+            shape: t.shape || local.shape,
+            x: t.positionX ?? t.x ?? local.x,
+            y: t.positionY ?? t.y ?? local.y,
+            width: t.width || local.width,
+            height: t.height || local.height,
+            assignedWaiterId: t.assignedWaiterId ?? local.assignedWaiterId ?? null,
+            assignedWaiterName: t.assignedWaiterName ?? local.assignedWaiterName ?? null,
+            assignedWaiterColor: t.assignedWaiterColor ?? local.assignedWaiterColor ?? null,
+          }
+        : {
+            id: t.id,
+            label: t.label,
+            status: fromDbTableStatus(t.status),
+            isActive: t.isActive ?? true,
+            statusOverride: (t.statusOverride as TableStatusOverride) ?? null,
+            lastCompletedAt: t.lastCompletedAt ?? null,
+            occupiedSince: t.occupiedSince || t.since || null,
+            activeOrderId: t.activeOrderId || null,
+            floorNumber: t.floorNumber || t.floor || 1,
+            capacity: t.capacity || 4,
+            shape: t.shape || 'square',
+            x: t.positionX ?? t.x ?? 100,
+            y: t.positionY ?? t.y ?? 100,
+            width: t.width || 88,
+            height: t.height || 88,
+            assignedWaiterId: t.assignedWaiterId ?? null,
+            assignedWaiterName: t.assignedWaiterName ?? null,
+            assignedWaiterColor: t.assignedWaiterColor ?? null,
+          };
     }
     useViews.getState()._setSnapshot({ tables: map });
+    // Re-derive every table from the orders currently in the store so status
+    // reflects local reality straight away.
+    reconcileTables();
   } catch {
     // Best-effort — table view just stays whatever it already was
   }
