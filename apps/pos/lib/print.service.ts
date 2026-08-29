@@ -22,6 +22,12 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
   // terminal set to PRINTER would silently produce a PDF instead.
   const terminal = await ensureTerminalSettings();
 
+  // Stamp the terminal's own name so the KOT header can show which till fired
+  // the ticket (multi-POS branches). Terminal-local, never from the server.
+  if (terminal.terminalName && !data.terminalName) {
+    (data as any).terminalName = terminal.terminalName;
+  }
+
   if (terminal.printMode === 'PRINTER') {
     printMode = 'PRINTER';
   } else if (terminal.printMode === 'PDF') {
@@ -271,6 +277,10 @@ async function generateKOT(data: any) {
   y += 4.5;
   if (data.cashierName) {
     printRow(doc, 'Waiter', data.cashierName, y);
+    y += 4.5;
+  }
+  if (data.terminalName) {
+    printRow(doc, 'Terminal', data.terminalName, y);
     y += 4.5;
   }
   doc.text(DASHES, PAPER_WIDTH / 2, y, { align: 'center' });

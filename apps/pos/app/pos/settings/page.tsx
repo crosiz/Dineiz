@@ -139,19 +139,8 @@ export default function POSSettingsPage() {
               {session?.expiresAt ? new Date(session.expiresAt).toLocaleString() : '—'}
             </span>
           </Row>
-          <Row label="Language" hint="Applies to this device only.">
-            <select className={selectCls} value={settings.language} onChange={(e) => set('language', e.target.value)}>
-              <option value="en">English</option>
-              <option value="ur">اردو (Urdu)</option>
-            </select>
-          </Row>
-          <Row label="PIN" hint="Your PIN unlocks this terminal. A branch manager resets it from the console.">
-            <button
-              onClick={() => toast.message('Ask your branch manager to reset your PIN in the console.')}
-              className="text-[13px] font-semibold text-[#FF5722] inline-flex items-center gap-1"
-            >
-              Request a reset <ChevronRight size={13} />
-            </button>
+          <Row label="PIN" hint="Your PIN unlocks this terminal. Only a branch manager can reset it, from the console.">
+            <span className="text-[13px] text-slate-400">Set by your manager</span>
           </Row>
         </>
       )}
@@ -177,15 +166,9 @@ export default function POSSettingsPage() {
               <option value="80mm">80 mm</option>
             </select>
           </Row>
-          <Row label="Printer name" hint="Optional label for the connected printer.">
-            <input className={inputCls} value={settings.printerName} onChange={(e) => set('printerName', e.target.value)} placeholder="e.g. Front counter" />
-          </Row>
-          <Row label="Cash drawer port" hint="Serial/USB port the kick pulse is sent to.">
-            <input className={inputCls} value={settings.cashDrawerPort} onChange={(e) => set('cashDrawerPort', e.target.value)} placeholder="e.g. COM3" />
-          </Row>
 
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-1">Device</p>
-          <Row label="Terminal name" hint="Shown on tickets and the KOT header.">
+          <Row label="Terminal name" hint="Printed on the KOT header so the kitchen knows which till fired the ticket.">
             <input className={inputCls} value={settings.terminalName} onChange={(e) => set('terminalName', e.target.value)} placeholder="e.g. Terminal A" />
           </Row>
           <Row label="Sounds" hint="The kitchen-ready chime and other alert cues.">
