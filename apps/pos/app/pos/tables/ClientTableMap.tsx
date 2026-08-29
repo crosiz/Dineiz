@@ -13,7 +13,7 @@ import { getDB } from '@/lib/db';
 import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
 import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views';
-import { setTableStatus } from '@/lib/core/commands';
+import { setTableStatus, markTableCleaned } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
 import {
   ZoomIn,
@@ -242,14 +242,16 @@ export default function ClientTableMap() {
     }
   };
 
-  // Local-first: flips the table green in the shared view store immediately
-  // and queues a TABLE_STATUS_CHANGED event; the outbox
-  // (lib/core/outbox.ts's UPDATE_TABLE_STATUS task) ships the PUT with its
-  // own retry/backoff, replacing the old blocking fetch-then-command call
-  // (which used to silently skip the local update too whenever the PUT
-  // failed, leaving the table stuck showing the wrong color).
+  // "Mark as Free" on a table the cashier has just cleared means CLEANED, and
+  // that's a different event from a manager override. TABLE_STATUS_CHANGED
+  // only clears `statusOverride`; the DIRTY the table is actually showing
+  // comes from `lastCompletedAt` (stamped by the payment), which only
+  // TABLE_CLEANED resets. Emitting the override event here re-derived the
+  // table straight back to DIRTY — the table could never be freed by hand.
+  // markTableCleaned clears the anchor, re-derives to FREE, and the outbox
+  // ships POST /api/tables/:id/clean with its own retry.
   const handleMarkAsFree = async (tableId: string) => {
-    await setTableStatus(tableId, 'FREE');
+    await markTableCleaned(tableId);
     toast.success('Table marked as Free');
     setSelectedTable(null);
   };

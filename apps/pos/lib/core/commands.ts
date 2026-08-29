@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
-import { useViews } from './views';
+import { useViews, resolveLocalOrderId } from './views';
 import { kickOutbox } from './outbox';
 import { useManagerOverlay, type OverlayAction } from '@/lib/manager-overlay';
 
@@ -15,6 +15,17 @@ function recordOverride(action: OverlayAction, targetId?: string, meta?: unknown
   if (o.overlay) o.recordAction(action, targetId, meta).catch(() => {});
 }
 
+// An ORDER command may be handed the server's id instead of this terminal's
+// (anything that loaded the order over HTTP rather than out of the view
+// store — the table map's active-order fetch, a `?orderId=` deep link, order
+// history). The reducer looks orders up by the store's key, so an unresolved
+// server id made the event a silent no-op: payment "succeeded" and nothing
+// changed. Resolve at the one choke point every command goes through, plus
+// the two dependency-chain helpers, so no call site can get this wrong.
+function aggKey(aggType: 'ORDER' | 'TABLE' | 'SHIFT', aggId: string): string {
+  return aggType === 'ORDER' ? resolveLocalOrderId(aggId) : aggId;
+}
+
 async function emit(
   type: EventType,
   aggType: 'ORDER' | 'TABLE' | 'SHIFT',
@@ -22,7 +33,7 @@ async function emit(
   payload: any,
   dependsOn: string[] = []
 ) {
-  const e = await append(type, aggType, aggId, payload, dependsOn);
+  const e = await append(type, aggType, aggKey(aggType, aggId), payload, dependsOn);
   useViews.getState()._applyEvent(e); // views update NOW
   // A CRITICAL (payment/void) or HIGH (create/send-to-kitchen) event ships
   // right away; everything else coalesces over ~200ms (spec Part 5).
@@ -38,11 +49,11 @@ async function emit(
 // deltas, until Phase 4 adds a real event-ingestion endpoint.
 const lastEventByAggregate = new Map<string, string>();
 function chain(aggId: string): string[] {
-  const prev = lastEventByAggregate.get(aggId);
+  const prev = lastEventByAggregate.get(resolveLocalOrderId(aggId));
   return prev ? [prev] : [];
 }
 function remember(aggId: string, eventId: string) {
-  lastEventByAggregate.set(aggId, eventId);
+  lastEventByAggregate.set(resolveLocalOrderId(aggId), eventId);
 }
 
 export async function createOrder(input: {

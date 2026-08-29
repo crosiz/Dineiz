@@ -457,7 +457,16 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
       const raw = String(e.payload.status ?? '').toUpperCase();
       const override: TableStatusOverride =
         raw === 'RESERVED' || raw === 'INACTIVE' || raw === 'MERGED' ? (raw as TableStatusOverride) : null;
-      tables[e.aggregateId] = { ...t, statusOverride: override };
+      // Clearing the override to "free" also means the table is clean: drop
+      // the cleaning-timer anchor so the derivation can actually reach FREE.
+      // Without this, clearing an override on a recently-paid table re-derived
+      // straight back to DIRTY and looked like nothing happened.
+      const clearingToFree = override === null && (raw === 'FREE' || raw === 'AVAILABLE' || raw === 'CLEAN' || raw === '');
+      tables[e.aggregateId] = {
+        ...t,
+        statusOverride: override,
+        ...(clearingToFree ? { lastCompletedAt: null } : {}),
+      };
       touch(e.aggregateId);
       break;
     }
@@ -714,6 +723,32 @@ export async function emergencyPrune(): Promise<void> {
  * operations (payment, append-items) on this order knows what id to PUT
  * against, since the server doesn't accept client-supplied ids yet.
  */
+/**
+ * Map an order id that may be EITHER this terminal's client id or the
+ * server's id onto the view store's key.
+ *
+ * Every command in commands.ts addresses an order by the store's key, because
+ * that's what the reducer looks up (`orders[e.aggregateId]`). But plenty of
+ * call sites only have the server's id — anything that loaded the order over
+ * HTTP rather than out of the store (ClientTableMap's `fetchActiveOrder`, a
+ * deep link with `?orderId=`, the order-history list). Passing one of those
+ * straight to a command made the reducer's lookup miss and the event a silent
+ * no-op: payment collected, nothing happened — the order stayed on the board
+ * and the table never updated.
+ *
+ * Returns the input unchanged when nothing matches, so a brand-new order id
+ * (or an order this terminal genuinely doesn't know) behaves as before.
+ */
+export function resolveLocalOrderId(id: string): string {
+  if (!id) return id;
+  const orders = useViews.getState().orders;
+  if (orders[id]) return id;
+  for (const [localId, o] of Object.entries(orders)) {
+    if (o.serverId === id) return localId;
+  }
+  return id;
+}
+
 export function reconcileServerId(orderId: string, serverId: string) {
   const o = useViews.getState().orders[orderId];
   if (!o) return;
