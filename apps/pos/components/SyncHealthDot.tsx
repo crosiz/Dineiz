@@ -45,21 +45,23 @@ export function SyncHealthDot() {
   // ignore the spot where a real problem would appear.
   if (health === 'ok') return null;
 
+  // No pill, no border, no uppercase — the bar's permanent-info zone is plain
+  // text (the clock is plain text). Just a coloured dot and a count that sits
+  // quietly next to the clock; it only ever appears when there's something to
+  // act on, and tapping it opens the Sync & Data page.
   const tone = health === 'stuck'
-    ? { pill: 'bg-rose-50 border-rose-200', dot: 'bg-rose-500 pulse-red', text: 'text-rose-700' }
-    : { pill: 'bg-amber-50 border-amber-200', dot: 'bg-amber-500', text: 'text-amber-700' };
+    ? { dot: 'bg-rose-500 pulse-red', text: 'text-rose-600' }
+    : { dot: 'bg-amber-500', text: 'text-amber-600' };
 
   return (
     <button
       onClick={() => router.push('/pos/settings?section=sync')}
       title={detail}
       aria-label={`Sync status: ${detail}`}
-      // Deliberately the same shape as the Offline pill two elements over —
-      // both mean "something about this terminal's connection needs you".
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors ${tone.pill}`}
+      className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
     >
       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${tone.dot}`} />
-      <span className={`text-[10px] font-bold uppercase tracking-wider ${tone.text}`}>{label}</span>
+      <span className={`text-[12px] font-semibold tabular-nums ${tone.text}`}>{label}</span>
     </button>
   );
 }

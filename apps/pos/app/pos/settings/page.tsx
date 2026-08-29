@@ -89,7 +89,25 @@ export default function POSSettingsPage() {
   const searchParams = useSearchParams();
   const initialSection: SectionId = SECTION_ALIASES[searchParams.get('section') ?? ''] ?? 'account';
   const [section, setSection] = useState<SectionId>(initialSection);
-  const [mobileOpen, setMobileOpen] = useState(!!searchParams.get('section')); // mobile: is a detail open
+
+  // The list and the detail pane are separate, swappable views ONLY on a
+  // narrow screen. On desktop both are on screen at once, so `mobileOpen` must
+  // never gate anything there — that was the "press Back twice" bug: arriving
+  // via ?section= set mobileOpen=true, and on desktop the first Back press only
+  // cleared that (no visible change) instead of leaving the page.
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const sync = () => setIsNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  useEffect(() => {
+    if (isNarrow && searchParams.get('section')) setMobileOpen(true);
+  }, [isNarrow, searchParams]);
+  const detailOpen = isNarrow && mobileOpen;
 
   // ── Live sync data ─────────────────────────────────────────────────────
   const [summary, setSummary] = useState<UnsyncedSummary | null>(null);
@@ -196,14 +214,14 @@ export default function POSSettingsPage() {
   return (
     <div className="fixed inset-0 z-[90] bg-[var(--pos-bg-base,#F6F7F9)] flex flex-col">
       {/* Header */}
-      <div className="h-14 shrink-0 bg-white border-b border-slate-200 flex items-center justify-between px-4">
+      <div className="h-14 shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-4">
         <button
-          onClick={() => (mobileOpen ? setMobileOpen(false) : router.back())}
+          onClick={() => (detailOpen ? setMobileOpen(false) : router.back())}
           className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 hover:text-slate-900"
         >
-          <ArrowLeft size={16} /> {mobileOpen ? 'Settings' : 'Back'}
+          <ArrowLeft size={16} /> {detailOpen ? 'Settings' : 'Back'}
         </button>
-        <span className="text-[13px] font-semibold text-slate-500">{session?.name ?? ''}</span>
+        {!detailOpen && <span className="text-[13px] font-semibold text-slate-900">Settings</span>}
       </div>
 
       <div className="flex-1 min-h-0 flex">
@@ -263,6 +281,36 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
 
   const mb = (n?: number) => (n == null ? '—' : `${(n / 1_048_576).toFixed(1)} MB`);
 
+  // A 1s ticker so the "updated Ns ago" clock actually moves — that, plus the
+  // status dot changing colour on its own, is what makes this read as a live
+  // readout instead of a settings form that happens to show numbers.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const h = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(h);
+  }, []);
+  const lastAtMs = diag?.lastProgressAt ? new Date(diag.lastProgressAt).getTime() : null;
+  const agoSec = lastAtMs == null ? null : Math.max(0, Math.round((now - lastAtMs) / 1000));
+  const agoStr =
+    agoSec == null ? 'no activity yet'
+      : agoSec < 5 ? 'just now'
+        : agoSec < 60 ? `${agoSec}s ago`
+          : agoSec < 3600 ? `${Math.round(agoSec / 60)}m ago`
+            : `${Math.round(agoSec / 3600)}h ago`;
+
+  const needsManager = (s?.poisoned ?? 0) + (s?.abandoned ?? 0);
+  const interrupted = !!(s?.stalled || s?.circuitOpen);
+  const inFlight = s?.count ?? 0;
+  const headline =
+    needsManager > 0
+      ? { t: `${needsManager} change${needsManager === 1 ? '' : 's'} need a manager`, c: 'text-rose-700', d: 'bg-rose-500' }
+      : interrupted
+        ? { t: 'Sync interrupted — retrying', c: 'text-rose-700', d: 'bg-rose-500 pulse-red' }
+        : inFlight > 0
+          ? { t: `Syncing ${inFlight} change${inFlight === 1 ? '' : 's'}…`, c: 'text-amber-700', d: 'bg-amber-500' }
+          : { t: 'All changes saved', c: 'text-emerald-700', d: 'bg-emerald-500' };
+  const nothingToDo = inFlight === 0 && needsManager === 0 && !interrupted;
+
   const exportDiag = async () => {
     setBusy(true);
     try {
@@ -289,10 +337,18 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       <h2 className="text-[15px] font-bold text-slate-900 mb-1">Sync &amp; Data</h2>
       <p className="text-[12px] text-slate-500 leading-relaxed mb-4">
         Everything you do is saved on this device first, then sent to the server.
-        Nothing here is guesswork — every figure is read from the local event log.
+        Every figure below is read live from this terminal&apos;s event log.
       </p>
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-4 mb-1">Connection</p>
+      {/* Live status — the dot colour and the "updated" clock both move on
+          their own, so this reads as a running readout, not a static form. */}
+      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 mb-5">
+        <span className={`w-2 h-2 rounded-full shrink-0 ${headline.d}`} />
+        <span className={`text-[14px] font-bold ${headline.c}`}>{headline.t}</span>
+        <span className="ml-auto text-[11px] text-slate-400 tabular-nums shrink-0">updated {agoStr}</span>
+      </div>
+
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Connection</p>
       <Row label="Server">
         <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${online ? 'text-emerald-600' : 'text-rose-600'}`}>
           {online ? <Wifi size={14} /> : <WifiOff size={14} />}
@@ -326,9 +382,10 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
 
       <button
         onClick={() => { forceSyncNow(); toast.message('Sync kicked'); }}
-        className="mt-4 h-10 px-4 rounded-xl bg-[#FF5722] text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors"
+        disabled={nothingToDo}
+        className="mt-4 h-10 px-4 rounded-xl bg-[#FF5722] text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-slate-100 disabled:text-slate-400"
       >
-        Sync Now
+        {nothingToDo ? 'Nothing waiting to sync' : 'Sync Now'}
       </button>
 
       {attention.length > 0 && (
@@ -433,39 +490,6 @@ function ManagedPanel({ managed, isManager }: { managed: any; isManager: boolean
           </div>
         ))}
       </div>
-    </>
-  );
-}
-
-function DiagnosticsPanel() {
-  const [busy, setBusy] = useState(false);
-  const linkRef = useRef<HTMLAnchorElement>(null);
-  const exportDiag = async () => {
-    setBusy(true);
-    try {
-      const diag = await getSyncDiagnostics();
-      const summary = await getUnsyncedSummary();
-      const session = getPosSession();
-      const blob = new Blob([JSON.stringify({ at: new Date().toISOString(), session: { role: session?.role, branchId: session?.branchId }, summary, diag }, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = linkRef.current!;
-      a.href = url;
-      a.download = `pos-diagnostics-${Date.now()}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <>
-      <h2 className="text-[15px] font-bold text-slate-900 mb-1">Diagnostics</h2>
-      <p className="text-[12px] text-slate-500 mb-4">A JSON snapshot of this terminal's sync state — hand it to support if something's stuck.</p>
-      <button onClick={exportDiag} disabled={busy}
-        className="h-10 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-[13px] hover:bg-slate-50 disabled:opacity-50 transition-colors inline-flex items-center gap-2">
-        <Download size={14} /> {busy ? 'Preparing…' : 'Export Diagnostics'}
-      </button>
-      <a ref={linkRef} className="hidden" />
     </>
   );
 }
