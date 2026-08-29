@@ -232,18 +232,31 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
       const leftoverTable = events.filter((e) => !handledTable.has(e.id));
       if (leftoverTable.length) markConfirmed(leftoverTable.map((e) => e.id));
     } else if (aggType === 'SHIFT') {
-      // Shift-lifecycle events ship synchronously from their own call sites;
-      // recorded here only for the local audit trail.
-      for (const e of events) markConfirmed(e.id);
+      // Shift-lifecycle events ship synchronously from their own call sites
+      // (POST /api/shifts/:id/open|close, and the pending-sync finalisation in
+      // markShiftPendingSync/finalisePendingSyncShiftIfDrained). Recorded here
+      // only for the local audit trail — nothing to queue.
+      markConfirmed(events.map((e) => e.id));
+      continue;
     } else {
       // ORDER
       const order = orders[aggregateId];
       const hasServerId = !!order?.serverId;
-      const sentEvent = events.find((e) => e.type === 'ORDER_SENT_TO_KITCHEN');
 
-      if (sentEvent && !hasServerId) {
-        chain.push({ kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id), lane: laneOf(events) });
-      } else if (hasServerId) {
+      if (!hasServerId) {
+        // The server has never seen this order — create it, carrying every
+        // pending event for it. Previously this also required a pending
+        // ORDER_SENT_TO_KITCHEN event, so an order whose create/send had
+        // already been confirmed in an earlier session (or whose create had
+        // failed) matched NEITHER branch: no task was built and the events
+        // were never confirmed either. They sat QUEUED forever — the queue
+        // count never moved, Force Sync appeared to do nothing, and the
+        // stall detector restarted the engine on a loop. An order we can't
+        // create yet (nothing in the store) is handled by the guard below.
+        if (order) {
+          chain.push({ kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id), lane: laneOf(events) });
+        }
+      } else {
         const itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');
         const statusEvents = events.filter((e) =>
           ['ORDER_MARKED_READY', 'ORDER_SERVED', 'ORDER_CANCELLED', 'ORDER_VOIDED', 'ORDER_WALKED_OUT'].includes(e.type),
@@ -278,7 +291,23 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
       }
     }
 
-    if (chain.length) chains.set(aggregateId, chain);
+    if (chain.length) {
+      chains.set(aggregateId, chain);
+    } else {
+      // INVARIANT: pending events must always produce either a task or a
+      // terminal state. Anything reaching here is unshippable by construction
+      // (no view-store entry to build a body from — e.g. the order was pruned,
+      // or these are local-only event types for an aggregate we no longer
+      // hold). Confirm them as local-only rather than leaving them QUEUED:
+      // a silently-stuck queue is the failure mode this whole engine exists to
+      // prevent, and it makes the pending count untrustworthy everywhere it's
+      // shown (the top-bar dot, the Sync panel, shift close).
+      console.warn(
+        `[outbox] ${events.length} pending event(s) for ${aggType} ${aggregateId} produced no task — confirming as local-only`,
+        events.map((e) => e.type),
+      );
+      markConfirmed(events.map((e) => e.id));
+    }
   }
 
   return chains;
@@ -1038,9 +1067,40 @@ export async function getSyncCategoryProgress(): Promise<SyncCategoryProgress> {
 // outbox next drains to zero — this session or a later one — it POSTs
 // sync-complete so the server flips the shift PENDING_SYNC → CLOSED.
 const PENDING_SYNC_SHIFT_KEY = 'pos_pending_sync_shift';
+// Set only when the close POST itself never reached the server (offline / 5xx).
+// The shift is closed on the terminal but still OPEN server-side, so the close
+// has to be replayed before sync-complete can mean anything.
+const PENDING_SHIFT_CLOSE_KEY = 'pos_pending_shift_close';
 
-export function markShiftPendingSync(shiftId: string): void {
-  try { localStorage.setItem(PENDING_SYNC_SHIFT_KEY, shiftId); } catch { /* ignore */ }
+export function markShiftPendingSync(shiftId: string, unsentClosePayload?: unknown): void {
+  try {
+    localStorage.setItem(PENDING_SYNC_SHIFT_KEY, shiftId);
+    if (unsentClosePayload !== undefined) {
+      localStorage.setItem(PENDING_SHIFT_CLOSE_KEY, JSON.stringify(unsentClosePayload));
+    }
+  } catch { /* ignore */ }
+}
+
+/** Replay a close POST that never landed. Returns false if it still hasn't. */
+async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
+  let raw: string | null = null;
+  try { raw = localStorage.getItem(PENDING_SHIFT_CLOSE_KEY); } catch { /* ignore */ }
+  if (!raw) return true; // nothing outstanding — the close already landed
+
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/shifts/${shiftId}/close`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: raw,
+    });
+    // 4xx here means the server already has it closed, or is refusing for a
+    // reason replaying won't fix — either way stop retrying forever.
+    if (res.ok || (res.status >= 400 && res.status < 500)) {
+      try { localStorage.removeItem(PENDING_SHIFT_CLOSE_KEY); } catch { /* ignore */ }
+      return true;
+    }
+  } catch { /* still offline */ }
+  return false;
 }
 
 async function finalisePendingSyncShiftIfDrained(): Promise<void> {
@@ -1050,6 +1110,11 @@ async function finalisePendingSyncShiftIfDrained(): Promise<void> {
 
   const remaining = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).count();
   if (remaining > 0) return;
+
+  // The close itself may never have reached the server (closed offline).
+  // Replay it first — sync-complete is meaningless on a shift the server
+  // still thinks is OPEN.
+  if (!(await replayPendingShiftClose(shiftId))) return;
 
   const poisonedOrAbandoned = await edb.events.where('syncState').anyOf(['POISONED', 'ABANDONED']).count();
   try {
