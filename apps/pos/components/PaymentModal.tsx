@@ -72,11 +72,21 @@ export default function PaymentModal({
     return orderId ? [] : cart;
   }, [items, viewOrder, cart, orderId]);
 
-  // Existing order whose lines we couldn't resolve (not in the store, caller
-  // passed nothing — e.g. the API is unreachable). We still know its total
-  // from `orderTotal`, so bill that rather than showing PKR 0; the server
-  // re-derives the real figure on payment anyway.
-  const itemsUnavailable = !!orderId && displayItems.length === 0;
+  const subtotalFromItems = displayItems.reduce(
+    (acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity) || 0),
+    0,
+  );
+
+  // Existing order we can't bill from its own lines — either they never
+  // loaded (API unreachable) OR they loaded without prices (a server-seeded
+  // orphan order: `viewOrder.items` present but every `unitPrice` undefined,
+  // so they sum to 0). Both cases fall back to the known `orderTotal`; the
+  // server re-derives the real figure on payment anyway. Checking the SUM,
+  // not `.length`, is the fix for "collect payment on an old order and it
+  // comes back" — priced-at-zero lines slipped past a `.length === 0` guard
+  // and a PKR 0 payment was queued, which the server rejects (422) so the
+  // order never actually gets paid.
+  const itemsUnavailable = !!orderId && subtotalFromItems <= 0;
 
   // ── Dual Tax Reactive Logic ──
   const branding = useBrandingStore(s => s.branding);
@@ -145,9 +155,8 @@ export default function PaymentModal({
   const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
   const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
 
-  const subtotalFromItems = displayItems.reduce((acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity) || 0), 0);
-  // No line items but a known order total → treat that total as gross and
-  // back out this method's tax so the recompute lands back on it, not PKR 0.
+  // No usable line prices but a known order total → treat that total as gross
+  // and back out this method's tax so the recompute lands back on it, not PKR 0.
   const subtotal = subtotalFromItems > 0
     ? subtotalFromItems
     : (itemsUnavailable && orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
@@ -339,6 +348,13 @@ export default function PaymentModal({
   // PAYMENT_COLLECTED event below) — it has its own retry/backoff and
   // survives this modal closing, unlike the old inline fetch-then-queue.
   const submitPayment = async (payload: any) => {
+    // Never queue a PKR 0 payment — the server rejects it (422) and the order
+    // silently bounces back onto the board. If we got here with no total,
+    // the order's lines didn't resolve; tell the cashier to reopen it.
+    if (!(totalWithTip > 0)) {
+      toast.error("Nothing to charge — this order's total came through as zero. Reopen it from Tickets.");
+      return;
+    }
     setIsProcessing(true);
     try {
       const isCash = payload.method === 'CASH';
@@ -746,20 +762,20 @@ export default function PaymentModal({
 
         {/* Sticky Bottom Bar */}
         <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-          {itemsUnavailable && orderTotal > 0 && (
+          {itemsUnavailable && orderTotal > 0 && totalWithTip > 0 && (
             <p className="text-amber-600 text-[12px] font-semibold text-center">
               Line items couldn’t load — billing the order total. The server confirms the final amount.
             </p>
           )}
-          {itemsUnavailable && orderTotal <= 0 && (
+          {totalWithTip <= 0 && (
             <p className="text-rose-600 text-sm font-bold text-center">
-              Couldn’t load this order — reopen it from Tickets to collect payment.
+              This order’s total couldn’t be read. Reopen it from Tickets, or cancel it — payment can’t be collected for PKR 0.
             </p>
           )}
           <div className="flex gap-4">
             <button
               onClick={handleConfirm}
-              disabled={(itemsUnavailable && orderTotal <= 0) || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
+              disabled={totalWithTip <= 0 || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
               className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >

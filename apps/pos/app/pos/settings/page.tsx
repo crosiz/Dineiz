@@ -11,7 +11,7 @@ import { getPosSession } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
 import { useTerminalSettings } from '@/lib/terminal-settings';
 import {
-  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, kickOutbox,
+  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, kickOutbox, discardStuckEvent,
   type UnsyncedSummary,
 } from '@/lib/core/outbox';
 
@@ -385,12 +385,20 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
                   {a.aggregateId} · {a.attempts} attempts{a.at ? ` · ${new Date(a.at).toLocaleString()}` : ''}
                 </p>
                 {a.lastError && <p className="text-[11px] text-rose-700 mt-0.5">{a.lastError}</p>}
-                <button
-                  onClick={() => { kickOutbox('immediate'); toast.message('Retrying…'); }}
-                  className="mt-2 text-[11px] font-semibold text-[#FF5722] flex items-center gap-1"
-                >
-                  <RefreshCw size={11} /> Retry
-                </button>
+                <div className="mt-2 flex items-center gap-4">
+                  <button
+                    onClick={() => { kickOutbox('immediate'); toast.message('Retrying…'); }}
+                    className="text-[11px] font-semibold text-[#FF5722] flex items-center gap-1"
+                  >
+                    <RefreshCw size={11} /> Retry
+                  </button>
+                  <button
+                    onClick={async () => { await discardStuckEvent(a.id); toast.success('Dismissed — re-collect the payment to settle the order'); }}
+                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+                  >
+                    Dismiss
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -159,6 +159,14 @@ export async function collectPayment(orderId: string, p: {
   payments?: Array<{ method: string; amount: number; status?: string; transactionId?: string | null }>;
   redeemedPointsAmount?: number;
 }) {
+  // Last line of defence against the "paid order comes back" bug: the server
+  // rejects any payment whose total is below the order total, so a PKR 0
+  // payment poisons its event and the order never actually settles. Refuse
+  // to even record one — the caller (PaymentModal) already blocks this, this
+  // just guarantees no other path can queue it.
+  if (!(typeof p.total === 'number' && p.total > 0)) {
+    throw new Error(`collectPayment: refusing a non-positive total (${p.total}) for ${orderId}`);
+  }
   const e = await emit('PAYMENT_COLLECTED', 'ORDER', orderId, p, chain(orderId));
   remember(orderId, e.id);
 }

@@ -1035,6 +1035,25 @@ export function forceSyncNow(): void {
   kickOutbox('immediate');
 }
 
+/**
+ * Operator-initiated discard of a POISONED / ABANDONED event that can never
+ * succeed on retry (a stale PKR 0 payment the server keeps rejecting, an
+ * event whose order was cancelled server-side, …). Marks it SUPERSEDED —
+ * terminal, and out of the "needs a manager" count — without shipping
+ * anything, and clears the sync flag on its order so the board stops showing
+ * it as stuck. Retrying such an event just re-poisons it; this is the way out.
+ */
+export async function discardStuckEvent(eventId: string): Promise<void> {
+  const e = await edb.events.get(eventId);
+  if (!e || (e.syncState !== 'POISONED' && e.syncState !== 'ABANDONED')) return;
+  await edb.events.update(eventId, {
+    syncState: 'SUPERSEDED',
+    confirmedAt: new Date().toISOString(),
+    lastError: `Discarded by operator${e.lastError ? ` — was: ${e.lastError}` : ''}`,
+  });
+  reflectOrderSyncState([eventId], 'SYNCED');
+}
+
 // ─── Shift close (spec Part 6) ───────────────────────────────────────────
 
 const PAYMENT_TYPES = new Set(['PAYMENT_COLLECTED']);
