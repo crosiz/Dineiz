@@ -72,8 +72,10 @@ export default function PaymentModal({
     return orderId ? [] : cart;
   }, [items, viewOrder, cart, orderId]);
 
-  // Existing order, but we still couldn't resolve its lines (not in the store,
-  // caller passed nothing) — block the charge instead of billing PKR 0.
+  // Existing order whose lines we couldn't resolve (not in the store, caller
+  // passed nothing — e.g. the API is unreachable). We still know its total
+  // from `orderTotal`, so bill that rather than showing PKR 0; the server
+  // re-derives the real figure on payment anyway.
   const itemsUnavailable = !!orderId && displayItems.length === 0;
 
   // ── Dual Tax Reactive Logic ──
@@ -139,16 +141,22 @@ export default function PaymentModal({
   }, [customerId]);
 
   // Recalculate everything reactively
-  const subtotal = displayItems.reduce((acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity)), 0);
+  const isCash = activeMethod === 'CASH';
+  const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
+  const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
+
+  const subtotalFromItems = displayItems.reduce((acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity) || 0), 0);
+  // No line items but a known order total → treat that total as gross and
+  // back out this method's tax so the recompute lands back on it, not PKR 0.
+  const subtotal = subtotalFromItems > 0
+    ? subtotalFromItems
+    : (itemsUnavailable && orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
+
   const discount = useCartStore((s) => s.discount);
   const discountAmount = discount
     ? (discount.type === 'percent' ? subtotal * (discount.value / 100) : discount.value)
     : 0;
 
-  const isCash = activeMethod === 'CASH';
-  const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
-  const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
-  
   // Calculate Loyalty Discount if toggled
   let loyaltyDiscount = 0;
   let redeemedPoints = 0;
@@ -738,15 +746,20 @@ export default function PaymentModal({
 
         {/* Sticky Bottom Bar */}
         <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-          {itemsUnavailable && (
+          {itemsUnavailable && orderTotal > 0 && (
+            <p className="text-amber-600 text-[12px] font-semibold text-center">
+              Line items couldn’t load — billing the order total. The server confirms the final amount.
+            </p>
+          )}
+          {itemsUnavailable && orderTotal <= 0 && (
             <p className="text-rose-600 text-sm font-bold text-center">
-              Couldn’t load this order’s items — reopen it from Tickets to collect payment.
+              Couldn’t load this order — reopen it from Tickets to collect payment.
             </p>
           )}
           <div className="flex gap-4">
             <button
               onClick={handleConfirm}
-              disabled={itemsUnavailable || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
+              disabled={(itemsUnavailable && orderTotal <= 0) || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
               className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
