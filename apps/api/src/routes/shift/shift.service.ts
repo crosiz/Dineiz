@@ -2,6 +2,7 @@ import { prisma } from '@dineiz/db';
 import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
 import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
+import { getBusinessDayRange } from '../../lib/date-utils';
 import { applyOrderStatusSideEffects } from '../order/order.service';
 import {
   OpenShiftSchema, CloseShiftSchema, CashEntrySchema,
@@ -466,15 +467,29 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
   });
 
   if (activeShifts.length === 1 && activeShifts[0].id === shiftId) {
-    const branchPending = await prisma.order.findMany({
-      where: { branchId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } }
+    // Scoped to TODAY's business day. This query had no date or shift bound at
+    // all — its own message says "orders from today" but it counted every
+    // unsettled order the branch had ever accumulated, so any historical
+    // orphan blocked every close forever, with no way to clear it from here.
+    // Genuinely-old unresolved orders are the orphan flow's job
+    // (GET /api/pos/orphans + the shift-open resolution modal), not a reason
+    // to trap the cashier who's trying to go home.
+    const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { timezone: true } });
+    const { from, to } = getBusinessDayRange(branch?.timezone || 'Asia/Karachi');
+
+    const branchPending = await prisma.order.count({
+      where: {
+        branchId, tenantId,
+        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+        createdAt: { gte: from, lte: to },
+      },
     });
-    
-    if (branchPending.length > 0) {
+
+    if (branchPending > 0) {
       blockers.push({
         type: 'SOLE_CASHIER_ACTIVE',
-        message: `You are the only cashier on shift at this branch. There are ${branchPending.length} orders from today that have not been settled. Closing your shift would leave these orders unresolved.`,
-        count: branchPending.length,
+        message: `You are the only cashier on shift at this branch. There are ${branchPending} orders from today that have not been settled. Closing your shift would leave these orders unresolved.`,
+        count: branchPending,
       });
     }
   } else if (activeShifts.length > 1) {
@@ -522,12 +537,23 @@ export async function getShiftSummary(tenantId: string, id: string) {
   const shift = await prisma.shift.findFirst({ where: { id, tenantId }, select: { id: true, status: true, openingFloat: true, openedAt: true } });
   if (!shift) return null;
 
-  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, cashEntryAgg, breaks] = await Promise.all([
-    prisma.order.aggregate({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
+  // Sales figures count COMPLETED orders ONLY — money actually taken. They
+  // used to include every non-CANCELLED order, so orders still PENDING /
+  // IN_KITCHEN / READY inflated "net sales" against a drawer that only ever
+  // holds real payments: the close screen showed e.g. 5,700 in sales with far
+  // less expected in the drawer and looked broken. This also makes the figure
+  // agree with ShiftAggregate (lib/shiftAggregate.ts), which has always
+  // counted COMPLETED only. Unpaid work is reported separately below.
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidAgg, cashEntryAgg, breaks] = await Promise.all([
+    prisma.order.aggregate({ where: { shiftId: id, status: 'COMPLETED' }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true } }),
-    prisma.order.count({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } } }),
+    prisma.order.count({ where: { shiftId: id, status: 'COMPLETED' } }),
+    prisma.order.aggregate({
+      where: { shiftId: id, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
+      _sum: { netAmount: true }, _count: { _all: true },
+    }),
     prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
     prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
   ]);
@@ -548,6 +574,10 @@ export async function getShiftSummary(tenantId: string, id: string) {
     totalDiscount: orderAgg._sum.discountAmount ?? 0,
     totalTax: orderAgg._sum.taxAmount ?? 0,
     totalOrders,
+    // Still-open orders on this shift — shown as their own line on the close
+    // screen so the gap between sales and the drawer is explicit, not implied.
+    unpaidOrders: unpaidAgg._count._all ?? 0,
+    unpaidValue: unpaidAgg._sum.netAmount ?? 0,
     cashIn,
     cashOut,
     // The close-shift screen must show the SAME expected figure the server

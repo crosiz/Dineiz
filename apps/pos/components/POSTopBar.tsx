@@ -73,6 +73,29 @@ export function POSTopBar() {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
+  // Re-run the can-close check after the cashier settles/cancels a blocking
+  // order from inside the blocker list. Clears the blocker modal and drops
+  // them into the close flow the moment nothing is blocking any more, so they
+  // never have to re-open the menu and start over.
+  const recheckCanClose = async () => {
+    if (!session.branchId || !session.shiftId) return;
+    try {
+      const token = localStorage.getItem('pos_token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.canClose) {
+        setIsBlockerOpen(false);
+        setBlockers([]);
+        setIsCloseShiftOpen(true);
+      } else {
+        setBlockers(data.blockers || []);
+      }
+    } catch { /* offline — the list stays as-is, override is still available */ }
+  };
+
   const handleCloseShiftClick = async () => {
     setIsDropdownOpen(false);
 
@@ -776,6 +799,7 @@ export function POSTopBar() {
         isOpen={isBlockerOpen}
         onClose={() => setIsBlockerOpen(false)}
         blockers={blockers}
+        onResolved={recheckCanClose}
         onForceClose={async (pin, reason) => {
           setIsBlockerOpen(false);
           localStorage.setItem('shift_override_pin', pin);

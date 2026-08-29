@@ -184,14 +184,34 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         payload.overrideReason = overrideReason;
       }
 
-      const res = await fetch(`${API_URL}/api/shifts/${shiftId}/close`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to close shift');
+      // Spec Part 6: "A shift can always be closed. The cashier goes home. The
+      // restaurant closes. The software must never prevent this." A failed or
+      // unreachable POST therefore must NOT throw — it downgrades to the same
+      // pending-sync path an explicit background close takes. Previously any
+      // network blip left the cashier stuck in this modal with no way out.
+      let closedOnServer = false;
+      let serverError: string | null = null;
+      try {
+        const res = await fetch(`${API_URL}/api/shifts/${shiftId}/close`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          closedOnServer = true;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          serverError = errData.error || `Server refused the close (${res.status})`;
+        }
+      } catch {
+        serverError = 'offline';
+      }
+
+      // A 4xx is the server saying "no" for a real reason (blockers, wrong
+      // state) — surface it and let the cashier act. Only a transport failure
+      // or a 5xx falls through to closing locally.
+      if (!closedOnServer && serverError && serverError !== 'offline' && !/50\d/.test(serverError)) {
+        throw new Error(serverError);
       }
 
       // Local audit: the shift is closed on this terminal now, whatever the
@@ -202,13 +222,20 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       localStorage.removeItem('shift_override_reason');
       stopSyncTimers();
 
-      if (pendingSync) {
+      if (pendingSync || !closedOnServer) {
         // Keep the token/session so the background outbox can finish
-        // shipping; hand off to the dedicated screen.
-        markShiftPendingSync(shiftId);
+        // shipping; hand off to the dedicated screen. When the close POST
+        // itself never landed, hand the payload over too so the outbox can
+        // replay it — otherwise the server never learns the shift closed and
+        // sync-complete has nothing to finalise.
+        markShiftPendingSync(shiftId, closedOnServer ? undefined : payload);
         localStorage.removeItem('pos_shift');
         kickOutbox('immediate');
-        toast.success('Shift closed — finishing sync in the background');
+        toast.success(
+          closedOnServer
+            ? 'Shift closed — finishing sync in the background'
+            : 'Shift closed on this terminal — it will reach the server when you’re back online',
+        );
         router.replace(`/pos/shift/synced?shiftId=${shiftId}`);
         return;
       }
@@ -500,11 +527,13 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               ) : (
                 <div className="flex flex-col gap-5">
 
-                  {/* Shift at a glance */}
+                  {/* Shift at a glance. Net Sales is paid orders only — the
+                      same basis as the drawer — so the two can't look like
+                      they disagree. Anything still open is its own line below. */}
                   <div className="grid grid-cols-2 gap-2.5">
                     {[
                       { Icon: Timer, label: 'Duration', value: formatDuration(summary.openedAt) },
-                      { Icon: Receipt, label: 'Orders', value: String(summary.totalOrders) },
+                      { Icon: Receipt, label: 'Orders Paid', value: String(summary.totalOrders) },
                       { Icon: Banknote, label: 'Net Sales', value: pkr(summary.totalSales) },
                       { Icon: Coffee, label: 'Breaks', value: `${summary.breakCount ?? 0} · ${summary.totalBreakMinutes ?? 0}m` },
                     ].map(({ Icon, label, value }) => (
@@ -517,6 +546,20 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       </div>
                     ))}
                   </div>
+
+                  {/* Still-open orders on this shift. Their value is deliberately
+                      NOT in Net Sales — nobody has paid for them — so saying so
+                      here is what stops the two numbers looking contradictory. */}
+                  {(summary.unpaidOrders ?? 0) > 0 && (
+                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                      <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                      <p className="text-[12px] text-amber-900 leading-relaxed">
+                        <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
+                        {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
+                        settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} before closing.
+                      </p>
+                    </div>
+                  )}
 
                   {/* What the drawer should hold */}
                   <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
