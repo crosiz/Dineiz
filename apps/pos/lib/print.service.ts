@@ -3,7 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { getPersistedPrinter, sendToPrinter } from './printer/webusb';
 import { buildReceipt, buildKOT, buildCancellationKOT, type PrintOrder } from './printer/templates';
 import { useBrandingStore } from './branding-store';
-import { useTerminalSettings } from './terminal-settings';
+import { useTerminalSettings, ensureTerminalSettings } from './terminal-settings';
 
 export type PrintDocumentType = 'KOT' | 'CUSTOMER_BILL' | 'PAID_RECEIPT' | 'CANCELLATION_KOT' | 'SHIFT_REPORT' | 'TEST_PRINT';
 
@@ -17,7 +17,10 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
   // which stays PDF unless the console explicitly turned it off.
   let printMode = 'PRINTER';
   const branding = useBrandingStore.getState().branding;
-  const terminal = useTerminalSettings.getState().settings;
+  // Awaited, not read synchronously: the store starts on DEFAULT_TERMINAL_SETTINGS
+  // (printMode PDF) until the IndexedDB read lands, so an early print on a
+  // terminal set to PRINTER would silently produce a PDF instead.
+  const terminal = await ensureTerminalSettings();
 
   if (terminal.printMode === 'PRINTER') {
     printMode = 'PRINTER';
