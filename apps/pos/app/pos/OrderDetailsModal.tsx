@@ -58,8 +58,11 @@ function detailFromView(v: any) {
     assignedWaiter: v.assignedWaiterName ? { name: v.assignedWaiterName } : null,
     assignedWaiterId: v.assignedWaiterId ?? null,
     customerId: v.customerId ?? null,
-    netAmount: v.netAmount ?? v.subtotal ?? 0,
-    totalAmount: v.netAmount ?? v.subtotal ?? 0,
+    // Match the fields (and order) the Active Orders card falls back through —
+    // otherwise the card shows PKR 893 while this modal hands PaymentModal
+    // orderTotal 0, and payment for an unpriced-lines order gets blocked.
+    netAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    totalAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
     taxAmount: v.taxAmount ?? 0,
     discountAmount: v.discountAmount ?? 0,
     billRequestedAt: v.billRequestedAt ?? null,
@@ -98,8 +101,8 @@ function shellFromSummary(summary: any) {
     table: summary.tableLabel ? { label: summary.tableLabel } : null,
     tableId: summary.tableId ?? null,
     assignedWaiter: summary.assignedWaiterName ? { name: summary.assignedWaiterName } : null,
-    netAmount: summary.netAmount ?? summary.total ?? 0,
-    totalAmount: summary.netAmount ?? summary.total ?? 0,
+    netAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
+    totalAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
     items: [],
     __partial: true,
   };
