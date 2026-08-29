@@ -965,19 +965,43 @@ export async function refreshOrders(
 
     const cur = useViews.getState().orders;
     const bySeverId = new Map<string, string>(); // serverId -> local orderId, for locally-created orders already reconciled
+    // Order numbers are client-owned and unique per tenant (@@unique on
+    // [tenantId, orderNumber]; the server inserts ours verbatim), so they are
+    // the ONE identifier both sides always agree on. Matching on serverId
+    // alone left a race: if a socket-driven refresh ran between the create
+    // POST landing and reconcileServerId applying, the local row still had
+    // serverId=null, so the same order was ALSO inserted under the server's
+    // id — one punch, two tickets, and the duplicate stuck permanently
+    // because from then on it matched itself. Matching on the number closes
+    // the window regardless of reconcile timing.
+    const byNumber = new Map<string, string>();
     for (const [localId, o] of Object.entries(cur)) {
       if (o.serverId) bySeverId.set(o.serverId, localId);
+      // Prefer the client-created row (it owns the permanent id/number) if a
+      // duplicate from the old behaviour is still sitting in the store.
+      if (o.orderNumber && (!byNumber.has(o.orderNumber) || localId !== o.serverId)) {
+        byNumber.set(o.orderNumber, localId);
+      }
     }
 
     const merged: Record<string, OrderView> = {};
     // Keep every locally-known order not yet confirmed by the server list
-    // (brand new, still in flight) exactly as-is.
+    // (brand new, still in flight) exactly as-is — unless it's a stale
+    // server-keyed duplicate of a client-created row we're about to re-add.
     for (const [localId, o] of Object.entries(cur)) {
-      if (!o.serverId) merged[localId] = o;
+      if (o.serverId) continue;
+      if (o.orderNumber && byNumber.get(o.orderNumber) !== localId) continue;
+      merged[localId] = o;
     }
     for (const raw of list) {
-      const localId = bySeverId.get(raw.id);
+      const localId = bySeverId.get(raw.id) ?? (raw.orderNumber ? byNumber.get(raw.orderNumber) : undefined);
       const existing = localId ? cur[localId] : undefined;
+      // Matched by number but the local row never got its serverId (the race
+      // above) — heal it now so every later lookup, and the outbox, resolve
+      // against the real id instead of trying to create the order again.
+      if (existing && !existing.serverId && localId && localId !== raw.id) {
+        reconcileServerId(localId, raw.id);
+      }
       // GET /api/orders/live only ever returns PENDING/IN_KITCHEN/READY
       // orders. If this terminal already marked the same order COMPLETED
       // (or CANCELLED/VOIDED/WALKED_OUT) locally — e.g. it just collected
@@ -999,9 +1023,25 @@ export async function refreshOrders(
       // permanent number for the server's, which is the exact bug this
       // whole event-sourced order-number design exists to prevent.
       merged[localId ?? raw.id] = existing
-        ? { ...mapped, id: existing.id, orderNumber: existing.orderNumber, tokenNumber: existing.tokenNumber }
+        ? { ...mapped, id: existing.id, serverId: raw.id, orderNumber: existing.orderNumber, tokenNumber: existing.tokenNumber }
         : mapped;
     }
+
+    // Belt and braces: never hand the UI two rows with the same order number.
+    // Any that slipped in before this fix (they persist in the store across a
+    // whole session) are collapsed onto the client-created row, which owns the
+    // permanent id and number.
+    const seen = new Map<string, string>();
+    for (const [id, o] of Object.entries(merged)) {
+      if (!o.orderNumber) continue;
+      const kept = seen.get(o.orderNumber);
+      if (kept === undefined) { seen.set(o.orderNumber, id); continue; }
+      // Prefer the row whose key is NOT the server id — that's the local one.
+      const dropId = o.serverId === id ? id : kept;
+      if (dropId !== id) seen.set(o.orderNumber, id);
+      delete merged[dropId];
+    }
+
     useViews.getState()._setSnapshot({ orders: merged });
   } catch {
     // Best-effort — orders view just stays whatever it already was
