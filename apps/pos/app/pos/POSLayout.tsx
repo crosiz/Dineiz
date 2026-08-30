@@ -55,6 +55,15 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Never fire router.replace() during the hydration render. Reaching a
+    // route via a client-side transition and then redirecting again inside
+    // that same commit desyncs Next's <Router> under Turbopack + React 19
+    // ("Rendered more hooks than during the previous render", blank screen —
+    // seen right after a successful PIN). One frame's delay (isMounted flips
+    // in the mount effect) puts the redirect safely after hydration, and the
+    // content slot already renders nothing until then anyway.
+    if (!isMounted) return;
+
     const sessionObj = getPosSession();
     const shiftObj = getPosShift();
     // `/pos/shift` covers open, close and the post-close background-sync
@@ -125,7 +134,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       router.replace('/pos/home');
       return;
     }
-  }, [pathname, searchParams, router]);
+  }, [pathname, searchParams, router, isMounted]);
 
   useEffect(() => {
     // Load once from localStorage on mount (in case zustand initial state missed it on server)
