@@ -641,15 +641,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     </div>
 
                     {countMode === 'total' ? (
-                      <div className="h-14 border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center px-4 transition-colors">
-                        <span className="text-xs font-bold text-[#FF5722] mr-3">PKR</span>
-                        <div className="w-px h-5 bg-slate-200" />
+                      <div className="h-14 border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+                        <span className="text-xs font-bold text-[#FF5722]">PKR</span>
                         <input
-                          type="number"
+                          type="text"
                           inputMode="numeric"
-                          value={closingCash}
-                          onChange={(e) => setClosingCash(e.target.value === '' ? '' : Number(e.target.value))}
-                          className="w-full bg-transparent border-none text-right text-xl font-bold text-slate-900 focus:ring-0 placeholder:text-slate-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          autoComplete="off"
+                          value={closingCash === '' ? '' : Number(closingCash).toLocaleString('en-US')}
+                          onChange={(e) => {
+                            const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                            setClosingCash(d === '' ? '' : Number(d));
+                          }}
+                          className="w-full bg-transparent border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 text-right text-xl font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none"
                           placeholder="0"
                           autoFocus
                         />
