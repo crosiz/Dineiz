@@ -60,7 +60,7 @@ export function Navbar() {
             href="/"
             className="flex items-center"
           >
-            <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-7 w-auto object-contain" priority />
+            <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-[23px] md:h-7 w-auto object-contain" priority />
           </Link>
 
           {/* Desktop Navigation */}
@@ -153,7 +153,7 @@ export function Navbar() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden text-[#1A1A1A] p-2 -mr-2"
+            className="md:hidden text-[#1A1A1A] p-1.5 focus:outline-none"
             aria-label="Open menu"
           >
             <Menu size={24} strokeWidth={2} />
@@ -177,11 +177,11 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center"
               >
-                <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-7 w-auto object-contain" priority />
+                <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-[23px] md:h-7 w-auto object-contain" priority />
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-[#1A1A1A] p-2 -mr-2"
+                className="text-[#1A1A1A] p-1.5 focus:outline-none"
                 aria-label="Close menu"
               >
                 <X size={24} strokeWidth={2} />
