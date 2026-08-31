@@ -34,8 +34,8 @@ const APP_VERSION = '0.1.0';
 type SectionId = 'account' | 'terminal' | 'sync' | 'managed';
 
 const NAV: Array<{ id: SectionId; label: string; hint: string; Icon: any }> = [
-  { id: 'account', label: 'Account', hint: 'You, your PIN, language', Icon: User },
-  { id: 'terminal', label: 'This Terminal', hint: 'Printer, sound, display, drawer', Icon: MonitorSmartphone },
+  { id: 'account', label: 'Account', hint: 'You, your PIN, your session', Icon: User },
+  { id: 'terminal', label: 'This Terminal', hint: 'Printer, paper, sound, screen', Icon: MonitorSmartphone },
   { id: 'sync', label: 'Sync & Data', hint: 'Queue, storage, diagnostics', Icon: RefreshCw },
   { id: 'managed', label: 'Managed by Console', hint: 'Tax, payments, limits', Icon: Lock },
 ];
@@ -373,7 +373,23 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
 
       {attention.length > 0 && (
         <>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-2">Rejected</p>
+          <div className="flex items-center justify-between mt-5 mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected</p>
+            <button
+              onClick={async () => {
+                for (const a of attention) await discardStuckEvent(a.id);
+                toast.success(`Dismissed ${attention.length}`);
+              }}
+              className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+            >
+              Dismiss all {attention.length}
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
+            The server refused these. Retrying only helps if the cause is fixed
+            (e.g. a re-opened order); otherwise dismiss them and re-collect the
+            payment.
+          </p>
           <div className="space-y-2">
             {attention.map((a) => (
               <div key={a.id} className="bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2.5">
