@@ -173,17 +173,22 @@
   /* Touch feedback */
   button:active { opacity: 0.85; }
 
-  /* Input base style */
+  /* Input base style — a sensible default for a bare <input>, NOT a lock.
+     These were `!important`, which meant no component could style its own
+     inputs with Tailwind (every field rendered as a slate-100 filled box with
+     a forced border, whatever the component asked for — the "why does this
+     input have an outline" complaint). Tailwind utilities live in a later
+     @layer, so plain declarations here still apply to unstyled inputs but
+     yield the moment a component sets `bg-*` / `border-*` / `rounded-*`. */
   input, textarea, select {
-    background-color: var(--pos-bg-elevated) !important;
-    color: var(--pos-text-primary) !important;
-    border: 1px solid var(--pos-border-strong) !important;
-    border-radius: 10px !important;
+    background-color: var(--pos-bg-elevated);
+    color: var(--pos-text-primary);
+    border: 1px solid var(--pos-border-strong);
+    border-radius: 10px;
   }
   input:focus, textarea:focus, select:focus {
-    outline: none !important;
-    border-color: var(--pos-primary) !important;
-    box-shadow: var(--pos-primary-glow) !important;
+    outline: none;
+    border-color: var(--pos-primary);
   }
 
   /* Placeholder */
