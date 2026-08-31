@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Lock, User, MonitorSmartphone,
-  RefreshCw, ExternalLink, Download, Wifi, WifiOff,
+  RefreshCw, ExternalLink, Download,
 } from 'lucide-react';
 import { getPosSession } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
 import { useTerminalSettings } from '@/lib/terminal-settings';
+import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import {
-  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, kickOutbox, discardStuckEvent,
+  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, discardStuckEvent,
   type UnsyncedSummary,
 } from '@/lib/core/outbox';
 
@@ -331,91 +332,55 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
         <span className="ml-auto text-[11px] text-slate-400 tabular-nums shrink-0">updated {agoStr}</span>
       </div>
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Connection</p>
-      <Row label="Server">
-        <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${online ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {online ? <Wifi size={14} /> : <WifiOff size={14} />}
-          {online ? 'Online' : 'Offline'}{s?.avgRttMs != null ? ` · ${s.avgRttMs} ms` : ''}
-        </span>
-      </Row>
-      <Row label="Engine" hint={s?.circuitOpen ? 'Backing off after repeated failures — probing every 15s.' : undefined}>
-        <span className="text-[13px] text-slate-600">
-          {s?.circuitOpen ? 'Probing' : diag?.batchEndpointAvailable ? 'Batch' : 'REST fallback'}
-          {s?.stalled ? ' · stalled' : ''}
-        </span>
-      </Row>
-      <Row label="Last sync">
-        <span className="text-[13px] text-slate-600 tabular-nums">
-          {diag?.lastProgressAt ? new Date(diag.lastProgressAt).toLocaleTimeString() : '—'}
-        </span>
-      </Row>
+      {s?.circuitOpen && (
+        <p className="text-[12px] text-rose-600 font-medium bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 mb-4 leading-relaxed">
+          Can&apos;t reach the server right now. Nothing is lost — changes are held
+          here and send on their own once it&apos;s back.
+        </p>
+      )}
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-1">Queue</p>
       <Row label="Waiting to send">
         <span className={`text-[13px] font-semibold tabular-nums ${(s?.count ?? 0) > 0 ? 'text-amber-600' : 'text-slate-600'}`}>{s?.count ?? '…'}</span>
       </Row>
-      <Row label="Sent in the last 24h">
+      <Row label="Sent today">
         <span className="text-[13px] text-slate-600 tabular-nums">{s?.confirmedToday ?? '…'}</span>
       </Row>
-      <Row label="Needs a manager" hint={attention.length > 0 ? 'The server rejected these — they are listed below.' : undefined}>
-        <span className={`text-[13px] font-semibold tabular-nums ${attention.length > 0 ? 'text-rose-600' : 'text-slate-600'}`}>
-          {(s?.poisoned ?? 0) + (s?.abandoned ?? 0)}
+      <Row label="Last synced">
+        <span className="text-[13px] text-slate-600 tabular-nums">
+          {diag?.lastProgressAt ? new Date(diag.lastProgressAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'}
         </span>
       </Row>
 
       <button
-        onClick={() => { forceSyncNow(); toast.message('Sync kicked'); }}
+        onClick={() => { forceSyncNow(); toast.message('Trying now…'); }}
         disabled={nothingToDo}
         className="mt-4 h-10 px-4 rounded-xl bg-[#FF5722] text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-slate-100 disabled:text-slate-400"
       >
-        {nothingToDo ? 'Nothing waiting to sync' : 'Sync Now'}
+        {nothingToDo ? 'Nothing waiting' : 'Sync now'}
       </button>
 
       {attention.length > 0 && (
         <>
-          <div className="flex items-center justify-between mt-5 mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected</p>
+          <div className="flex items-center justify-between mt-5 mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected payments</p>
             <button
               onClick={async () => {
                 for (const a of attention) await discardStuckEvent(a.id);
-                toast.success(`Dismissed ${attention.length}`);
+                toast.success(`Dismissed ${attention.length} — the orders are back on the board`);
               }}
               className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
             >
               Dismiss all {attention.length}
             </button>
           </div>
-          <p className="text-[11px] text-slate-400 mb-2 leading-relaxed">
-            The server refused these. Retrying only helps if the cause is fixed
-            (e.g. a re-opened order); otherwise dismiss them and re-collect the
-            payment.
+          <p className="text-[11px] text-slate-400 mb-2.5 leading-relaxed">
+            The server turned these down — the amount charged didn&apos;t match
+            the order. They won&apos;t go through by retrying. Dismiss to put the
+            order back on the board, then collect payment again.
           </p>
           <div className="space-y-2">
             {attention.map((a) => (
-              <div key={a.id} className="bg-rose-50 border border-rose-200 rounded-xl px-3.5 py-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-semibold text-slate-900">{a.type}</span>
-                  <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-white text-rose-600">{a.state}</span>
-                </div>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  {a.aggregateId} · {a.attempts} attempts{a.at ? ` · ${new Date(a.at).toLocaleString()}` : ''}
-                </p>
-                {a.lastError && <p className="text-[11px] text-rose-700 mt-0.5">{a.lastError}</p>}
-                <div className="mt-2 flex items-center gap-4">
-                  <button
-                    onClick={() => { kickOutbox('immediate'); toast.message('Retrying…'); }}
-                    className="text-[11px] font-semibold text-[#FF5722] flex items-center gap-1"
-                  >
-                    <RefreshCw size={11} /> Retry
-                  </button>
-                  <button
-                    onClick={async () => { await discardStuckEvent(a.id); toast.success('Dismissed — re-collect the payment to settle the order'); }}
-                    className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
+              <RejectedRow key={a.id} a={a} onDone={() => toast.success('Dismissed — the order is back on the board')} />
             ))}
           </div>
         </>
@@ -453,6 +418,71 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       </div>
       <a ref={linkRef} className="hidden" />
     </>
+  );
+}
+
+// One rejected payment, in plain language — not `PAYMENT_COLLECTED · <cuid> ·
+// 1 attempts`. Resolves the aggregate id to a real order number/total from the
+// view store and turns the server's error string into a sentence a manager can
+// act on.
+function RejectedRow({ a, onDone }: { a: any; onDone: () => void }) {
+  const router = useRouter();
+  const localId = resolveLocalOrderId(a.aggregateId);
+  const order = useViews((s) => s.orders[localId]);
+  const orderLabel = order?.orderNumber || order?.tokenNumber || null;
+
+  const m = /less than the order total PKR\s*([\d,]+)/i.exec(a.lastError || '');
+  const billed = /total PKR\s*([\d,]+)\s+is less/i.exec(a.lastError || '');
+  let reason: string;
+  if (billed && m) {
+    const paid = Number(billed[1].replace(/,/g, ''));
+    const owed = Number(m[1].replace(/,/g, ''));
+    reason = paid === 0
+      ? `The payment went through as PKR 0 — the order is PKR ${owed.toLocaleString()}.`
+      : `Charged PKR ${paid.toLocaleString()}, but the order is PKR ${owed.toLocaleString()}.`;
+  } else if (/dependency .* is (poisoned|abandoned)/i.test(a.lastError || '')) {
+    reason = 'An earlier change on this order also failed to sync.';
+  } else {
+    reason = a.lastError || 'The server rejected this payment.';
+  }
+
+  const when = a.at ? new Date(a.at) : null;
+  const canSettle = !!order && (order.status === 'PENDING' || order.status === 'IN_KITCHEN' || order.status === 'READY' || order.status === 'COMPLETED');
+
+  return (
+    <div className="bg-rose-50/70 border border-rose-200 rounded-xl px-3.5 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[13px] font-bold text-slate-900">
+          {orderLabel ? `Order ${orderLabel}` : 'A payment'}
+        </span>
+        <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white text-rose-600 shrink-0">Rejected</span>
+      </div>
+      <p className="text-[12px] text-slate-600 mt-1 leading-relaxed">{reason}</p>
+      {when && (
+        <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
+          {when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, {when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        </p>
+      )}
+      <div className="mt-2.5 flex items-center gap-4">
+        {canSettle && (
+          <button
+            onClick={async () => {
+              await discardStuckEvent(a.id);
+              router.push(`/pos/order?orderId=${order!.serverId || order!.id}&checkout=true`);
+            }}
+            className="text-[11px] font-bold text-[#FF5722] hover:underline"
+          >
+            Settle this order
+          </button>
+        )}
+        <button
+          onClick={async () => { await discardStuckEvent(a.id); onDone(); }}
+          className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
   );
 }
 
