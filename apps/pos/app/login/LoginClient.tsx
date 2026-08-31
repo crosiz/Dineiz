@@ -440,7 +440,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         }
         router.push('/pos/tables');
       } else {
-        router.push('/pos');
+        // Straight to /pos/home — not /pos. `/pos` is a render-time
+        // redirect(), and reaching it through this client-side push desyncs
+        // hydration under Turbopack + React 19 ("Rendered more hooks" in
+        // Next's Router, blank screen right after a successful PIN).
+        router.push('/pos/home');
       }
 
     } catch (error: any) {

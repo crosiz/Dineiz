@@ -1,6 +1,7 @@
 import { prisma } from '@dineiz/db';
 import { emitOrderUpdated } from '../../lib/socket';
 import { applyOrderStatusSideEffects } from '../order/order.service';
+import { getTodayOrdersWhere } from '../../lib/date-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,9 @@ function mapOrder(o: any, now: number): KdsOrder {
   const minutes = Math.floor(secondsElapsed / 60);
   return {
     id: o.id,
-    orderNumber: String(o.orderNumber ?? o.id.slice(-3)).replace(/\D/g, '').padStart(3, '0'),
+    // Show the real, terminal-owned order number as-is (Part 4). Stripping
+    // non-digits here turned "A-0827-001" into "0827001" on the KDS.
+    orderNumber: o.orderNumber ? String(o.orderNumber) : `#${o.id.slice(-4)}`,
     status: o.status,
     type: o.type,
     tableLabel: o.table?.label ?? null,
@@ -119,19 +122,27 @@ export async function getKdsDashboard(
     ? { some: { kdsStationId: stationId } }
     : undefined;
 
+  // Spec Part 2 — the kitchen serves the whole branch, but only for shifts
+  // that are open right now (plus shiftless QR/WhatsApp/aggregator orders
+  // from today). Without this, a stale order under a long-closed shift — or
+  // seeded historical data — sat on the KDS forever showing a "166 min"
+  // timer.
+  const shiftScope = await getTodayOrdersWhere(tenantId, branchId);
+
   const [rawOrders, inQueue, inProgress, completedToday, deliveredOrders, stations] = await Promise.all([
     prisma.order.findMany({
       where: {
         tenantId,
         branchId,
         status: { in: [...activeStatuses] },
+        ...shiftScope,
         ...(stationId ? { items: itemWhere } : {}),
       },
       orderBy: { createdAt: 'asc' },
       include: ORDER_INCLUDE,
     }),
-    prisma.order.count({ where: { tenantId, branchId, status: 'PENDING' } }),
-    prisma.order.count({ where: { tenantId, branchId, status: { in: ['PENDING', 'IN_KITCHEN'] } } }),
+    prisma.order.count({ where: { tenantId, branchId, status: 'PENDING', ...shiftScope } }),
+    prisma.order.count({ where: { tenantId, branchId, status: { in: ['PENDING', 'IN_KITCHEN'] }, ...shiftScope } }),
     prisma.order.count({
       where: { tenantId, branchId, status: 'COMPLETED', createdAt: { gte: todayStart } },
     }),

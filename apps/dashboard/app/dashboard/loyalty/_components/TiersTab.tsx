@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { Trash2, Award, Plus } from 'lucide-react';
 
 export function TiersTab() {
@@ -58,7 +58,7 @@ export function TiersTab() {
     }
   };
 
-  if (loading) return <PageLoader label="Loading tiers..." />;
+  if (loading) return <SkeletonList rows={4} />;
 
   return (
     <div className="space-y-4">

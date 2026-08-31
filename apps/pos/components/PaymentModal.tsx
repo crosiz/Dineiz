@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
+import { useViews } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
@@ -50,7 +51,42 @@ export default function PaymentModal({
   const cart = useCartStore((s) => s.cart);
   const session = useCartStore((s) => s.session);
 
-  const displayItems = items && items.length > 0 ? items : cart;
+  // An existing order (has an id) is NEVER charged from the live cart — that's
+  // empty/stale after send-to-kitchen and is exactly how "Collect Payment"
+  // ended up showing PKR 0. Prefer the `items` the caller passed; if it forgot
+  // them, pull the real lines straight from the event store; only a brand-new
+  // in-cart order (no id yet) falls back to `cart`.
+  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  const displayItems = useMemo(() => {
+    if (items && items.length > 0) return items;
+    if (viewOrder?.items?.length) {
+      return viewOrder.items
+        .filter((i: any) => !i.voided)
+        .map((i: any) => ({
+          quantity: i.qty,
+          unitPrice: i.unitPrice,
+          subtotal: (i.unitPrice ?? 0) * (i.qty ?? 1),
+          name: i.itemName,
+        }));
+    }
+    return orderId ? [] : cart;
+  }, [items, viewOrder, cart, orderId]);
+
+  const subtotalFromItems = displayItems.reduce(
+    (acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity) || 0),
+    0,
+  );
+
+  // Existing order we can't bill from its own lines — either they never
+  // loaded (API unreachable) OR they loaded without prices (a server-seeded
+  // orphan order: `viewOrder.items` present but every `unitPrice` undefined,
+  // so they sum to 0). Both cases fall back to the known `orderTotal`; the
+  // server re-derives the real figure on payment anyway. Checking the SUM,
+  // not `.length`, is the fix for "collect payment on an old order and it
+  // comes back" — priced-at-zero lines slipped past a `.length === 0` guard
+  // and a PKR 0 payment was queued, which the server rejects (422) so the
+  // order never actually gets paid. (Superseded by `itemsTrustworthy` below,
+  // which also catches a partially-loaded line list, not just an empty one.)
 
   // ── Dual Tax Reactive Logic ──
   const branding = useBrandingStore(s => s.branding);
@@ -115,16 +151,30 @@ export default function PaymentModal({
   }, [customerId]);
 
   // Recalculate everything reactively
-  const subtotal = displayItems.reduce((acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity)), 0);
-  const discount = useCartStore((s) => s.discount);
-  const discountAmount = discount 
-    ? (discount.type === 'percent' ? subtotal * (discount.value / 100) : discount.value) 
-    : 0;
-
   const isCash = activeMethod === 'CASH';
   const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
   const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
-  
+
+  // For an EXISTING order the authoritative amount is `orderTotal` (server /
+  // view store), NOT what the visible line items add up to: `/api/orders/live`
+  // returns items with no `unitPrice`, and a partially-loaded list undercounts.
+  // Trust the line sum only when it's within ~2% of the known total — or when
+  // there is no known total (a brand-new in-cart order). This is what stopped a
+  // 9-item PKR 6,300 order being charged PKR 735 (one line's worth), rejected
+  // 422, and left "paid" locally while the server kept it IN_KITCHEN.
+  const itemsTrustworthy =
+    subtotalFromItems > 0 &&
+    (!orderId || orderTotal <= 0 || subtotalFromItems >= orderTotal * 0.98);
+
+  const subtotal = itemsTrustworthy
+    ? subtotalFromItems
+    : (orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
+
+  const discount = useCartStore((s) => s.discount);
+  const discountAmount = discount
+    ? (discount.type === 'percent' ? subtotal * (discount.value / 100) : discount.value)
+    : 0;
+
   // Calculate Loyalty Discount if toggled
   let loyaltyDiscount = 0;
   let redeemedPoints = 0;
@@ -307,6 +357,13 @@ export default function PaymentModal({
   // PAYMENT_COLLECTED event below) — it has its own retry/backoff and
   // survives this modal closing, unlike the old inline fetch-then-queue.
   const submitPayment = async (payload: any) => {
+    // Never queue a PKR 0 payment — the server rejects it (422) and the order
+    // silently bounces back onto the board. If we got here with no total,
+    // the order's lines didn't resolve; tell the cashier to reopen it.
+    if (!(totalWithTip > 0)) {
+      toast.error("Nothing to charge — this order's total came through as zero. Reopen it from Tickets.");
+      return;
+    }
     setIsProcessing(true);
     try {
       const isCash = payload.method === 'CASH';
@@ -714,10 +771,20 @@ export default function PaymentModal({
 
         {/* Sticky Bottom Bar */}
         <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
+            <p className="text-amber-600 text-[12px] font-semibold text-center">
+              Billing this order&apos;s full total (PKR {Math.round(orderTotal).toLocaleString()}). The server confirms the final amount.
+            </p>
+          )}
+          {totalWithTip <= 0 && (
+            <p className="text-rose-600 text-sm font-bold text-center">
+              This order’s total couldn’t be read. Reopen it from Tickets, or cancel it — payment can’t be collected for PKR 0.
+            </p>
+          )}
           <div className="flex gap-4">
             <button
               onClick={handleConfirm}
-              disabled={isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
+              disabled={totalWithTip <= 0 || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
               className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >

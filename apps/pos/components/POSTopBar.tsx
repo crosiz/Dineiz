@@ -4,7 +4,9 @@ import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopBarStateContext } from '../contexts/TopBarContext';
 import { useCartStore } from '@/lib/store';
-import { getPosSession, getPosShift, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
+import { getPosSession, getPosShift, getToken, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
+import { getDB } from '@/lib/db';
+import { v4 as uuid } from 'uuid';
 import { toast } from 'sonner';
 import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { CashDrawerModal } from '@/components/CashDrawerModal';
@@ -12,7 +14,10 @@ import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { DineizLogo } from './ui/DineizLogo';
-import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag } from 'lucide-react';
+import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
+import { SyncHealthDot } from '@/components/SyncHealthDot';
+import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startBreak } from '@/lib/core/commands';
 import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
@@ -36,9 +41,18 @@ export function POSTopBar() {
   const [showTakeBreakConfirm, setShowTakeBreakConfirm] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
   const [isCashDrawerOpen, setIsCashDrawerOpen] = useState(false);
+  const [showManagerOverride, setShowManagerOverride] = useState(false);
+  const overlayActive = useManagerOverlay((s) => !!s.overlay);
+  const exitOverlay = useManagerOverlay((s) => s.exit);
   const [pendingBackConfirm, setPendingBackConfirm] = useState(false);
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
+
+  // Spec Part 11 — signing out with items still in the cart builder (never
+  // sent to the kitchen, so nothing durable exists for them) prompts
+  // Hold It / Discard / Cancel before the session actually ends.
+  const [showCartWarning, setShowCartWarning] = useState(false);
+  const [holdBusy, setHoldBusy] = useState(false);
 
   // Sign-out sync guard — blocks signing out while this terminal still has
   // events queued for the server, instead of silently abandoning them.
@@ -58,6 +72,29 @@ export function POSTopBar() {
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Re-run the can-close check after the cashier settles/cancels a blocking
+  // order from inside the blocker list. Clears the blocker modal and drops
+  // them into the close flow the moment nothing is blocking any more, so they
+  // never have to re-open the menu and start over.
+  const recheckCanClose = async () => {
+    if (!session.branchId || !session.shiftId) return;
+    try {
+      const token = localStorage.getItem('pos_token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.canClose) {
+        setIsBlockerOpen(false);
+        setBlockers([]);
+        setIsCloseShiftOpen(true);
+      } else {
+        setBlockers(data.blockers || []);
+      }
+    } catch { /* offline — the list stays as-is, override is still available */ }
+  };
 
   const handleCloseShiftClick = async () => {
     setIsDropdownOpen(false);
@@ -175,6 +212,64 @@ export function POSTopBar() {
   // would sit idle until someone logs back in here. Rather than silently
   // abandon it, block the sign-out and show what's still in flight.
   const handleSignOut = async () => {
+    // Spec Part 11 — an unfinished cart isn't durable anywhere (it only
+    // becomes an event once sent to the kitchen). Never let it vanish on
+    // sign-out: offer Hold It / Discard / Cancel first.
+    if (useCartStore.getState().cart.length > 0) {
+      setShowSignOutConfirm(false);
+      setShowCartWarning(true);
+      return;
+    }
+    await continueSignOut();
+  };
+
+  // Persists the in-builder cart to the same `heldOrders` store the order
+  // screen's "Hold" button writes to, so it reappears under Tickets → On Hold.
+  const holdCurrentCart = async () => {
+    const c = useCartStore.getState();
+    if (c.cart.length === 0) return;
+    const heldOrder = {
+      id: uuid(),
+      tableId: c.selectedTableId,
+      tableLabel: c.selectedTableLabel,
+      orderType: c.orderType || 'DINE_IN',
+      guests: '1',
+      cashierId: c.session?.cashierId ?? getPosSession()?.userId ?? null,
+      cart: c.cart,
+      heldAt: new Date().toISOString(),
+    };
+    try {
+      const db = getDB();
+      if (db.heldOrders) await db.heldOrders.put(heldOrder);
+      if (navigator.onLine && getToken()) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/held`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify(heldOrder),
+        }).catch(() => { /* saved locally is enough */ });
+      }
+    } catch {
+      /* local storage unavailable — fall through, the cart is still cleared */
+    }
+  };
+
+  const holdCartThenSignOut = async () => {
+    setHoldBusy(true);
+    await holdCurrentCart();
+    useCartStore.getState().clearCart();
+    setHoldBusy(false);
+    setShowCartWarning(false);
+    toast.success('Order held. Find it in Tickets → On Hold');
+    await continueSignOut();
+  };
+
+  const discardCartThenSignOut = async () => {
+    useCartStore.getState().clearCart();
+    setShowCartWarning(false);
+    await continueSignOut();
+  };
+
+  const continueSignOut = async () => {
     const pending = await hasUnsyncedEvents();
     if (!pending) {
       finishSignOut();
@@ -294,6 +389,8 @@ export function POSTopBar() {
               </div>
             )}
 
+            {isMounted && <SyncHealthDot />}
+
             <span className="hidden md:inline font-mono text-[13px] font-semibold text-[#64748B] tabular-nums">{clockStr}</span>
 
             <div className="relative" ref={dropdownRef}>
@@ -329,22 +426,23 @@ export function POSTopBar() {
                     </div>
                   </div>
 
-                  {/* Menu Actions */}
+                  {/* Menu actions, ordered by what they DO and how often —
+                      shift actions (the ones taken during service) first, then
+                      the money drawer, then elevated access, then app/device
+                      settings, then leaving. The previous order interleaved all
+                      four kinds (fullscreen, drawer, settings, override, close,
+                      break) so nothing predicted where anything was. */}
                   <div className="p-1.5 flex flex-col gap-0.5">
+                    {/* — Your shift — */}
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setShowTakeBreakConfirm(true);
+                      }}
                     >
-                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
-                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
-                    </button>
-
-                    <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
-                    >
-                      <Wallet size={15} className="text-slate-500" />
-                      <span>Cash Drawer</span>
+                      <Coffee size={15} className="text-slate-500" />
+                      <span>Take a Break</span>
                     </button>
 
                     <button
@@ -357,13 +455,42 @@ export function POSTopBar() {
 
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
+                    >
+                      <Wallet size={15} className="text-slate-500" />
+                      <span>Cash Drawer</span>
+                    </button>
+
+                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+
+                    {/* — Elevated access — */}
+                    <button
+                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-amber-700 hover:bg-amber-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70'}`}
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        setShowTakeBreakConfirm(true);
+                        if (overlayActive) exitOverlay('MANUAL');
+                        else setShowManagerOverride(true);
                       }}
                     >
-                      <Coffee size={15} className="text-slate-500" />
-                      <span>Take a Break</span>
+                      <Unlock size={15} className={overlayActive ? 'text-amber-600' : 'text-slate-500'} />
+                      <span>{overlayActive ? 'Exit Manager Mode' : 'Manager Override'}</span>
+                    </button>
+
+                    {/* — This terminal — */}
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); router.push('/pos/settings'); }}
+                    >
+                      <Settings size={15} className="text-slate-500" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                    >
+                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
+                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
                     </button>
 
                     <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
@@ -412,6 +539,52 @@ export function POSTopBar() {
               >
                 Sign Out
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spec Part 11 — unfinished cart on sign-out. Hold It / Discard / Cancel. */}
+      {showCartWarning && (
+        <div className="fixed inset-0 z-[205] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <ShoppingBag size={20} />
+            </div>
+
+            <h3 className="font-bold text-slate-900 text-base mb-1">You have an unfinished order</h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              There {useCartStore.getState().cart.length === 1 ? 'is' : 'are'}{' '}
+              <strong className="text-slate-700">
+                {useCartStore.getState().cart.length} item{useCartStore.getState().cart.length === 1 ? '' : 's'}
+              </strong>{' '}
+              in the cart that {useCartStore.getState().cart.length === 1 ? 'hasn’t' : 'haven’t'} been sent to the
+              kitchen. Signing out now will lose {useCartStore.getState().cart.length === 1 ? 'it' : 'them'} unless you hold the order.
+            </p>
+
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={holdCartThenSignOut}
+                disabled={holdBusy}
+                className="w-full h-10 rounded-xl bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {holdBusy ? <RefreshCw size={13} className="animate-spin" /> : <ShoppingBag size={13} />}
+                Hold It &amp; Sign Out
+              </button>
+              <div className="flex gap-2.5 w-full">
+                <button
+                  onClick={() => setShowCartWarning(false)}
+                  className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={discardCartThenSignOut}
+                  className="flex-1 h-10 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
+                >
+                  Discard &amp; Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -516,6 +689,10 @@ export function POSTopBar() {
             finishSignOut();
           }}
         />
+      )}
+
+      {showManagerOverride && (
+        <StartManagerOverrideModal onClose={() => setShowManagerOverride(false)} />
       )}
 
       {/* Take Break confirm modal */}
@@ -632,6 +809,7 @@ export function POSTopBar() {
         isOpen={isBlockerOpen}
         onClose={() => setIsBlockerOpen(false)}
         blockers={blockers}
+        onResolved={recheckCanClose}
         onForceClose={async (pin, reason) => {
           setIsBlockerOpen(false);
           localStorage.setItem('shift_override_pin', pin);

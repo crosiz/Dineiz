@@ -17,9 +17,7 @@ interface BranchSelectProps {
 }
 
 function SelectSkeleton() {
-  return (
-    <div className="w-full h-10 rounded-lg border border-slate-200 bg-slate-100 animate-pulse" />
-  );
+  return <div className="w-full h-10 rounded-lg border border-slate-200 skeleton-shimmer" />;
 }
 
 export function BranchSelect({

@@ -27,7 +27,7 @@ export function generateSEOMetadata({
   publishedTime,
   authors,
 }: SEOProps): Metadata {
-  const fullTitle = `${title} | Dineiz`
+  const fullTitle = title.toLowerCase().includes('dineiz') ? title : `${title} | Dineiz`
   const finalUrl = canonical ?? (path ? `${BASE_URL}${path}` : BASE_URL)
   const finalOgImage = ogImage ?? `${BASE_URL}/api/og?title=${encodeURIComponent(title)}`
 

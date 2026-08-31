@@ -10,7 +10,7 @@ export const metadata = generateSEOMetadata({
   canonical: 'https://dineiz.com/pricing',
 });
 
-// JSON-LD for pricing page
+// JSON-LD for pricing page (SaaS SoftwareApplication schema)
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
@@ -18,14 +18,21 @@ const jsonLd = {
     '@type': 'ListItem',
     position: i + 1,
     item: {
-      '@type': 'Product',
-      name: plan.name,
+      '@type': 'SoftwareApplication',
+      name: `Dineiz ${plan.name}`,
       description: plan.tagline,
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Android, iOS, Web, Windows',
+      brand: {
+        '@type': 'Brand',
+        name: 'Dineiz'
+      },
       offers: {
         '@type': 'Offer',
-        price: plan.monthlyPrice || 0,
+        price: plan.monthlyPrice !== null ? plan.monthlyPrice : '0',
         priceCurrency: 'PKR',
         availability: 'https://schema.org/InStock',
+        url: 'https://dineiz.com/pricing'
       }
     }
   }))

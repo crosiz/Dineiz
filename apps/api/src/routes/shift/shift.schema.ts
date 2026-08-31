@@ -17,11 +17,16 @@ export const DenominationSchema = z.object({
 });
 
 export const CloseShiftSchema = z.object({
-  closingCash: z.number().min(0),
+  // null = drawer not counted (allowed when cashCountRequired is off, or on a
+  // force close). closeShift() already treats null as "no variance".
+  closingCash: z.number().min(0).nullable(),
   notes: z.string().optional(),
   denominations: z.array(DenominationSchema).optional(),
   overridePin: z.string().optional(),
   overrideReason: z.string().optional(),
+  // Spec Part 6 — the terminal still has queued events; close to PENDING_SYNC.
+  pendingSync: z.boolean().optional(),
+  pendingSyncCount: z.number().int().nonnegative().optional(),
 });
 
 /**
@@ -55,7 +60,7 @@ export const ShiftListQuerySchema = z.object({
   branchId: z.string().optional(),
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  status: z.enum(['OPEN', 'CLOSED', 'ABANDONED']).optional(),
+  status: z.enum(['OPEN', 'CLOSED', 'ABANDONED', 'PENDING_SYNC']).optional(),
   search: z.string().optional(),
   cashierId: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),

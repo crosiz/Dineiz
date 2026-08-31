@@ -2,7 +2,7 @@ import { FastifyPluginAsync } from 'fastify';
 import { requireAuth, requireRole } from '../../middleware/auth';
 import {
   handleGetCurrentShift, handleListShifts, handleGetShift,
-  handleOpenShift, handleCloseShift, handleAddCashEntry, handleGetShiftSummary,
+  handleOpenShift, handleCloseShift, handleCompleteShiftSync, handleAddCashEntry, handleGetShiftSummary,
   handleGetActiveShifts, handleForceCloseShift,
   handleGetShiftOrders, handleGetShiftActivity, handleGetActiveShiftStats,
   handleStartBreak, handleEndBreak, handleCanCloseShift,
@@ -16,6 +16,10 @@ export const shiftRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/shifts/:id', { preHandler: requireAuth }, handleGetShift);
   fastify.post('/api/shifts/open', { preHandler: requireAuth }, handleOpenShift);
   fastify.post('/api/shifts/:id/close', { preHandler: requireRole(['CASHIER', 'BRANCH_MANAGER', 'TENANT_ADMIN']) }, handleCloseShift);
+  // Spec Part 6 — the terminal finished shipping a PENDING_SYNC shift's
+  // queued events; recompute + flip to CLOSED. Also the dashboard's manual
+  // "Finalize" for a terminal that never came back online.
+  fastify.post('/api/shifts/:id/sync-complete', { preHandler: requireRole(['CASHIER', 'BRANCH_MANAGER', 'TENANT_ADMIN']) }, handleCompleteShiftSync);
   fastify.post('/api/shifts/:id/cash-entries', { preHandler: requireAuth }, handleAddCashEntry);
   fastify.get('/api/shifts/:id/summary', { preHandler: requireAuth }, handleGetShiftSummary);
   fastify.get('/api/shifts/:id/report', { preHandler: requireAuth }, handleGetShiftReport);

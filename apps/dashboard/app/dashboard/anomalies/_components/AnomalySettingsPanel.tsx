@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Bell, AlertTriangle } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
 
 export function AnomalySettingsPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
@@ -72,8 +72,22 @@ export function AnomalySettingsPanel({ onClose }: { onClose: () => void }) {
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
-        <div className="w-[500px] bg-white h-full shadow-2xl flex items-center justify-center">
-          <PageLoader label="Loading settings..." />
+        <div
+          className="w-[500px] bg-white h-full shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right"
+          role="status"
+          aria-busy="true"
+        >
+          <span className="sr-only">Loading settings</span>
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-56" />
+              <Skeleton className="h-3.5 w-40" />
+            </div>
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+          <div className="flex-1 p-6">
+            <SkeletonForm rows={6} />
+          </div>
         </div>
       </div>
     );

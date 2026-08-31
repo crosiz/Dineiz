@@ -7,7 +7,7 @@ import { POStatusBadge, PO_STATUS_FILTERS } from './StatusBadge';
 import { CreatePOModal } from './CreatePOModal';
 import { ReceiveGoodsModal } from './ReceiveGoodsModal';
 import { PODetailModal } from './PODetailModal';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTable } from '@/components/ui/skeleton';
 
 // ─── Small action pill for row-level actions ───────────────────────────────────
 function ActionPill({
@@ -147,9 +147,11 @@ export function PurchaseOrdersTab() {
 
       {/* ── List ───────────────────────────────────────────────────────────── */}
       {isLoading ? (
-        <div className="bg-white rounded-lg border border-slate-100 overflow-hidden">
-          <PageLoader label="Loading purchase orders..." />
-        </div>
+        <SkeletonTable
+          className="!border-slate-100 rounded-lg"
+          rows={6}
+          columns={[110, { w: 130, avatar: true }, 90, 60, 90, { w: 72, pill: true }, { w: 56, align: 'right' }]}
+        />
       ) : orders.length === 0 ? (
         <EmptyPOState onCreate={() => setCreateOpen(true)} />
       ) : (

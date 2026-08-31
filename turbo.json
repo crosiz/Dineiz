@@ -4,6 +4,7 @@
     "dev": {
       "cache": false,
       "persistent": true,
+      "dependsOn": ["^build"],
       "env": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "BETTER_AUTH_SECRET", "NEXT_PUBLIC_API_URL"]
     },
     "build": {

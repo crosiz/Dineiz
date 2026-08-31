@@ -1,7 +1,30 @@
 import { nanoid } from 'nanoid';
-import { append, nextOrderNumber, type EventType } from './event-log';
-import { useViews } from './views';
+import { append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
+import { useViews, resolveLocalOrderId } from './views';
 import { kickOutbox } from './outbox';
+import { useManagerOverlay, type OverlayAction } from '@/lib/manager-overlay';
+
+// Spec Part 10 — if a manager overlay is active, use the manager as the
+// approver automatically (no per-action PIN) and log the action against the
+// overlay session. append() already stamps overrideBy* on the event itself.
+function overlayApprover(passed?: string): string | undefined {
+  return useManagerOverlay.getState().overlay?.managerId ?? passed;
+}
+function recordOverride(action: OverlayAction, targetId?: string, meta?: unknown) {
+  const o = useManagerOverlay.getState();
+  if (o.overlay) o.recordAction(action, targetId, meta).catch(() => {});
+}
+
+// An ORDER command may be handed the server's id instead of this terminal's
+// (anything that loaded the order over HTTP rather than out of the view
+// store — the table map's active-order fetch, a `?orderId=` deep link, order
+// history). The reducer looks orders up by the store's key, so an unresolved
+// server id made the event a silent no-op: payment "succeeded" and nothing
+// changed. Resolve at the one choke point every command goes through, plus
+// the two dependency-chain helpers, so no call site can get this wrong.
+function aggKey(aggType: 'ORDER' | 'TABLE' | 'SHIFT', aggId: string): string {
+  return aggType === 'ORDER' ? resolveLocalOrderId(aggId) : aggId;
+}
 
 async function emit(
   type: EventType,
@@ -10,9 +33,12 @@ async function emit(
   payload: any,
   dependsOn: string[] = []
 ) {
-  const e = await append(type, aggType, aggId, payload, dependsOn);
+  const e = await append(type, aggType, aggKey(aggType, aggId), payload, dependsOn);
   useViews.getState()._applyEvent(e); // views update NOW
-  kickOutbox(); // ship it — debounced, so a burst of emits in one caller only drains once
+  // A CRITICAL (payment/void) or HIGH (create/send-to-kitchen) event ships
+  // right away; everything else coalesces over ~200ms (spec Part 5).
+  const lane = laneForEvent(type);
+  kickOutbox(lane === 'CRITICAL' || lane === 'HIGH' ? 'immediate' : undefined);
   return e;
 }
 
@@ -23,11 +49,11 @@ async function emit(
 // deltas, until Phase 4 adds a real event-ingestion endpoint.
 const lastEventByAggregate = new Map<string, string>();
 function chain(aggId: string): string[] {
-  const prev = lastEventByAggregate.get(aggId);
+  const prev = lastEventByAggregate.get(resolveLocalOrderId(aggId));
   return prev ? [prev] : [];
 }
 function remember(aggId: string, eventId: string) {
-  lastEventByAggregate.set(aggId, eventId);
+  lastEventByAggregate.set(resolveLocalOrderId(aggId), eventId);
 }
 
 export async function createOrder(input: {
@@ -57,6 +83,31 @@ export async function addItem(orderId: string, item: {
   remember(orderId, e.id);
 }
 
+/**
+ * Add items to an order that's already been sent to the kitchen (spec Part 8 /
+ * offline-first). Same event as a first-time add — `ITEM_ADDED` — so it flows
+ * through the outbox's `ADD_ITEMS` op (POST /api/orders/:serverId/items), which
+ * waits for the order's server id if it isn't reconciled yet and retries a
+ * transient failure. Replaces the order screen's direct `fetch(.../items)`,
+ * which 404'd whenever the order was still keyed by its local client id.
+ * The caller prints the KOT immediately and navigates away optimistically.
+ */
+export async function appendItems(
+  orderId: string,
+  items: Array<{
+    itemId: string; itemName: string;
+    variationId?: string | null; variationName?: string | null;
+    qty: number; unitPrice: number; note?: string | null;
+    addOns?: Array<{ id: string; name: string; price: number }> | null;
+  }>,
+) {
+  for (const item of items) {
+    const e = await emit('ITEM_ADDED', 'ORDER', orderId,
+      { lineId: `ln_${nanoid(10)}`, appended: true, ...item }, chain(orderId));
+    remember(orderId, e.id);
+  }
+}
+
 export async function changeQty(orderId: string, lineId: string, qty: number) {
   const e = await emit('ITEM_QTY_CHANGED', 'ORDER', orderId, { lineId, qty }, chain(orderId));
   remember(orderId, e.id);
@@ -69,16 +120,18 @@ export async function removeItem(orderId: string, lineId: string) {
 
 export async function voidItem(orderId: string, lineId: string, reason: string, approverId?: string) {
   const e = await emit('ITEM_VOIDED', 'ORDER', orderId,
-    { lineId, reason, approverId: approverId ?? null }, chain(orderId));
+    { lineId, reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('VOID_ITEM', orderId, { lineId, reason });
 }
 
 export async function applyDiscount(
   orderId: string, amount: number, percent: number, reason: string, approverId?: string
 ) {
   const e = await emit('DISCOUNT_APPLIED', 'ORDER', orderId,
-    { amount, percent, reason, approverId: approverId ?? null }, chain(orderId));
+    { amount, percent, reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('DISCOUNT_OVERRIDE', orderId, { amount, percent, reason });
 }
 
 export async function sendToKitchen(orderId: string) {
@@ -106,13 +159,22 @@ export async function collectPayment(orderId: string, p: {
   payments?: Array<{ method: string; amount: number; status?: string; transactionId?: string | null }>;
   redeemedPointsAmount?: number;
 }) {
+  // Last line of defence against the "paid order comes back" bug: the server
+  // rejects any payment whose total is below the order total, so a PKR 0
+  // payment poisons its event and the order never actually settles. Refuse
+  // to even record one — the caller (PaymentModal) already blocks this, this
+  // just guarantees no other path can queue it.
+  if (!(typeof p.total === 'number' && p.total > 0)) {
+    throw new Error(`collectPayment: refusing a non-positive total (${p.total}) for ${orderId}`);
+  }
   const e = await emit('PAYMENT_COLLECTED', 'ORDER', orderId, p, chain(orderId));
   remember(orderId, e.id);
 }
 
 export async function voidOrder(orderId: string, reason: string, approverId: string) {
-  const e = await emit('ORDER_VOIDED', 'ORDER', orderId, { reason, approverId }, chain(orderId));
+  const e = await emit('ORDER_VOIDED', 'ORDER', orderId, { reason, approverId: overlayApprover(approverId) }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('VOID_ORDER', orderId, { reason });
 }
 
 export async function cancelOrder(orderId: string) {
@@ -120,8 +182,34 @@ export async function cancelOrder(orderId: string) {
   remember(orderId, e.id);
 }
 
+// Manager override ONLY — pass 'RESERVED' / 'INACTIVE' / 'MERGED', or a
+// falsy/"free" value to clear the override and let the derivation take over
+// (spec Part 3). occupied/dirty/bill_requested are derived, not settable.
 export async function setTableStatus(tableId: string, status: string) {
   await emit('TABLE_STATUS_CHANGED', 'TABLE', tableId, { status });
+  recordOverride('TABLE_OVERRIDE', tableId, { status });
+}
+
+// Guest asked for the bill — the table shows BILL_REQUESTED until payment.
+// Pass cancel:true to undo.
+export async function requestBill(orderId: string, cancel = false) {
+  const e = await emit('BILL_REQUESTED', 'ORDER', orderId, { cancel }, chain(orderId));
+  remember(orderId, e.id);
+}
+
+// Manager marked a DIRTY table clean before the cleaning timer elapsed.
+export async function markTableCleaned(tableId: string) {
+  await emit('TABLE_CLEANED', 'TABLE', tableId, {});
+  recordOverride('TABLE_OVERRIDE', tableId, { cleaned: true });
+}
+
+// Orphan resolution (spec Part 2) — a manager pulled an order from a
+// now-closed shift into this one. Recorded locally for the audit trail; the
+// authoritative move is the POST /api/pos/orphans/:id/resolve call.
+export async function adoptOrder(orderId: string, fromShiftId: string, intoShiftId: string, approverId: string) {
+  const e = await emit('ORDER_ADOPTED', 'ORDER', orderId, { fromShiftId, intoShiftId, approverId: overlayApprover(approverId) }, chain(orderId));
+  remember(orderId, e.id);
+  recordOverride('ADOPT_ORPHAN', orderId, { fromShiftId, intoShiftId });
 }
 
 export async function changeItemNote(orderId: string, lineId: string, note: string) {
@@ -136,8 +224,9 @@ export async function changeOrderNote(orderId: string, note: string) {
 
 export async function removeDiscount(orderId: string, reason: string, approverId?: string) {
   const e = await emit('DISCOUNT_REMOVED', 'ORDER', orderId,
-    { reason, approverId: approverId ?? null }, chain(orderId));
+    { reason, approverId: overlayApprover(approverId) ?? null }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('REMOVE_DISCOUNT', orderId, { reason });
 }
 
 export async function markServed(orderId: string) {
@@ -146,8 +235,9 @@ export async function markServed(orderId: string) {
 }
 
 export async function walkOutOrder(orderId: string, reason: string, approverId: string) {
-  const e = await emit('ORDER_WALKED_OUT', 'ORDER', orderId, { reason, approverId }, chain(orderId));
+  const e = await emit('ORDER_WALKED_OUT', 'ORDER', orderId, { reason, approverId: overlayApprover(approverId) }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('WALK_OUT', orderId, { reason });
 }
 
 export async function attachCustomer(
@@ -162,6 +252,7 @@ export async function assignWaiter(
 ) {
   const e = await emit('WAITER_ASSIGNED', 'ORDER', orderId, { waiterId, waiterName, waiterColor }, chain(orderId));
   remember(orderId, e.id);
+  recordOverride('REASSIGN_WAITER', orderId, { waiterId, waiterName });
 }
 
 export async function moveOrderToTable(
@@ -209,6 +300,13 @@ export async function openShift(shiftId: string, openingFloat: number, denominat
 
 export async function closeShift(shiftId: string, closingCash: number, variance: number, notes?: string) {
   await emit('SHIFT_CLOSED', 'SHIFT', shiftId, { closingCash, variance, notes });
+}
+
+// Spec Part 6 — the terminal finished shipping a shift that was closed with a
+// queue still pending. Local audit marker; the server flip (POST
+// /api/shifts/:id/sync-complete) is the authoritative signal.
+export async function shiftSyncCompleted(shiftId: string) {
+  await emit('SHIFT_SYNC_COMPLETED', 'SHIFT', shiftId, {});
 }
 
 export async function startBreak(shiftId: string, breakType?: string) {

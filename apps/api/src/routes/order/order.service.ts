@@ -1,7 +1,10 @@
 import { prisma } from '@dineiz/db';
 import { upstash } from '../../lib/redis';
 import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerator';
-import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled, emitTableStatusChanged } from '../../lib/socket';
+import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled } from '../../lib/socket';
+import { recomputeTableStatus, markTableOrderCompleted } from '../../lib/tableStatus';
+import { incrementShiftAggregate, decrementShiftAggregate, getBranchTodayAggregate } from '../../lib/shiftAggregate';
+import { invalidatePattern } from '../../lib/cache';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
 import { enqueueZapierEvent } from '../../lib/webhooks';
 import { erpSyncQueue, analyticsQueue } from '../../lib/queue';
@@ -166,10 +169,17 @@ export async function createOrder(
   userId: string,
   body: any,
 ) {
-  const { items, payments, orderDeals, branchId, cashierId, customerPhone, customerName, ...orderData } = body;
+  const {
+    items, payments, orderDeals, branchId, cashierId, customerPhone, customerName,
+    // Part 4 — the terminal owns the order number. Pulled out of `orderData`
+    // both so it doesn't get double-applied and so `clientId` (not a column)
+    // never reaches prisma.order.create.
+    orderNumber: clientOrderNumber, clientId: _clientId,
+    ...orderData
+  } = body;
 
   // ── Independent lookups run concurrently instead of as a sequential waterfall ──
-  const [, tenantBranding, orderNumber, tokenNumber, routedItems] = await Promise.all([
+  const [, tenantBranding, resolvedOrderNumber, tokenNumber, routedItems] = await Promise.all([
     checkPlanLimits(tenantId),
     prisma.tenantBranding.findUnique({
       where: { tenantId },
@@ -179,10 +189,15 @@ export async function createOrder(
         taxRoundingMethod: true,
       },
     }),
-    generateOrderNumber(tenantId),
+    // Only needed when the caller didn't bring its own number (non-POS
+    // sources, or a POS build from before Part 4).
+    typeof clientOrderNumber === 'string' && clientOrderNumber.trim()
+      ? Promise.resolve(clientOrderNumber.trim())
+      : generateOrderNumber(tenantId),
     generateTokenNumber(branchId, userId),
     routeItemsToKdsStations(tenantId, branchId, items),
   ]);
+  const trustClientNumber = typeof clientOrderNumber === 'string' && !!clientOrderNumber.trim();
 
   const cashTaxEnabled = tenantBranding?.cashTaxEnabled ?? true;
   const cashTaxRate = tenantBranding?.cashTaxRate ?? 5;
@@ -242,13 +257,16 @@ export async function createOrder(
   // and abort the whole order with a P2028 error. Calling create() directly
   // keeps the same atomicity guarantee without either problem.
   //
-  // orderNumber now has a @@unique([tenantId, orderNumber]) constraint —
-  // generateOrderNumber()'s Redis INCR is collision-free on its own, but its
-  // fallback (used when Redis is unreachable) truncates Date.now() to a few
-  // digits and can collide under concurrent orders. Retry with a freshly
-  // generated number on that specific violation rather than surface a raw
-  // 500 to the cashier for what's really just a naming collision.
-  let currentOrderNumber = orderNumber;
+  // orderNumber has a @@unique([tenantId, orderNumber]) constraint.
+  //   • Server-generated number (non-POS / fallback): generateOrderNumber()'s
+  //     Redis INCR is collision-free, but its Redis-down fallback truncates
+  //     Date.now() and can collide — regenerate and retry.
+  //   • Client-supplied number (Part 4, POS): the terminal owns it and it's
+  //     unique by construction (terminal prefix + date + per-terminal seq).
+  //     A collision here almost always means an idempotent replay whose
+  //     X-Idempotency-Key didn't reach withIdempotency — return the order
+  //     that's already there rather than mint a different number for it.
+  let currentOrderNumber = resolvedOrderNumber;
   let order;
   for (let attempt = 0; ; attempt++) {
     try {
@@ -269,7 +287,23 @@ export async function createOrder(
       break;
     } catch (e: any) {
       const isOrderNumberCollision = e?.code === 'P2002' && e?.meta?.target?.includes?.('orderNumber');
-      if (!isOrderNumberCollision || attempt >= 2) throw e;
+      if (!isOrderNumberCollision) throw e;
+
+      if (trustClientNumber) {
+        const existing = await prisma.order.findUnique({
+          where: { tenantId_orderNumber: { tenantId, orderNumber: currentOrderNumber } },
+          include: { items: true, payments: true, orderDeals: true },
+        });
+        if (existing && existing.branchId === branchId) {
+          console.warn(`[createOrder] client orderNumber "${currentOrderNumber}" already exists — returning it (idempotent replay)`);
+          return existing;
+        }
+        const err: any = new Error(`Order number "${currentOrderNumber}" is already in use`);
+        err.statusCode = 409;
+        throw err;
+      }
+
+      if (attempt >= 2) throw e;
       console.warn(`[createOrder] orderNumber collision on "${currentOrderNumber}", regenerating (attempt ${attempt + 1})`);
       currentOrderNumber = await generateOrderNumber(tenantId);
     }
@@ -518,7 +552,7 @@ export async function listOrderHistory(
 
   const mapOrder = (o: any) => ({
     id: o.id,
-    orderNumber: String(o.orderNumber || o.id.slice(-4)).padStart(4, '0'),
+    orderNumber: o.orderNumber ? String(o.orderNumber) : `#${o.id.slice(-4)}`,
     dateTime: o.createdAt.toISOString(),
     branchName: o.branch?.name ?? '',
     type: o.type, source: o.source, customerName: null as string | null,
@@ -555,20 +589,32 @@ function invalidateLiveOrdersCache(tenantId: string, branchId?: string | null) {
   );
 }
 
-export async function listLiveOrders(tenantId: string, branchId: string | undefined) {
+export async function listLiveOrders(
+  tenantId: string,
+  branchId: string | undefined,
+  opts?: { shiftId?: string | null },
+) {
+  // The shared cache only covers the branch-wide board (the expensive
+  // open-shift lookup). A cashier's shift-scoped board is a cheap indexed
+  // `where: { shiftId }` and per-cashier, so it skips the cache entirely —
+  // that also sidesteps having to thread shiftId through the 9
+  // invalidateLiveOrdersCache call sites.
+  const useCache = !opts?.shiftId;
   const cacheKey = `live-orders:${tenantId}:${branchId ?? 'all'}`;
-  const cached = await upstash.get(cacheKey).catch(() => null);
-  if (cached) return cached;
+  if (useCache) {
+    const cached = await upstash.get(cacheKey).catch(() => null);
+    if (cached) return cached;
+  }
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const now = Date.now();
 
-  // Business-day scoping (shift-open date, not order-created date) — without
-  // this, an order left PENDING/IN_KITCHEN/READY under a shift that was
-  // never closed keeps showing up on the live board indefinitely, days
-  // later, mixed in with today's real orders.
-  const todayOrdersWhere = await getTodayOrdersWhere(tenantId, branchId);
+  // Spec Part 2 — Shift Ownership. With opts.shiftId this is exactly that
+  // cashier's shift; without it, orders under any currently-OPEN shift at the
+  // branch plus shiftless orders from today. Orphans (still-active orders
+  // under a closed shift) are excluded — they go through the orphan flow.
+  const todayOrdersWhere = await getTodayOrdersWhere(tenantId, branchId, opts);
 
   // Active orders and today's summary source data are independent — fetch
   // concurrently. (Previously this also re-fetched the last 20 completed
@@ -607,7 +653,7 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
   // Map to the enriched shape
   const mapOrder = (o: any) => ({
     id: o.id,
-    orderNumber: String(o.orderNumber || o.id.slice(-4)).padStart(3, '0'),
+    orderNumber: o.orderNumber ? String(o.orderNumber) : `#${o.id.slice(-4)}`,
     status: o.status,
     type: o.type,
     source: o.source,
@@ -651,9 +697,11 @@ export async function listLiveOrders(tenantId: string, branchId: string | undefi
     summary: { todayOrderCount, todayRevenue, avgPrepTime, inProgressCount },
   };
 
-  upstash.set(cacheKey, result, { ex: LIVE_ORDERS_CACHE_TTL_SECONDS }).catch((e) =>
-    console.error('Failed to cache live orders:', e)
-  );
+  if (useCache) {
+    upstash.set(cacheKey, result, { ex: LIVE_ORDERS_CACHE_TTL_SECONDS }).catch((e) =>
+      console.error('Failed to cache live orders:', e)
+    );
+  }
 
   return result;
 }
@@ -690,7 +738,9 @@ export async function getOrder(tenantId: string, id: string) {
 }
 
 export async function updateOrder(tenantId: string, id: string, data: any) {
-  const { items, payments, orderDeals, ...orderData } = data;
+  // clientId / orderNumber ride along on the create schema (Part 4) but a PUT
+  // must never rewrite an order's identity — drop them here.
+  const { items, payments, orderDeals, clientId: _clientId, orderNumber: _orderNumber, ...orderData } = data;
 
   const existingOrder = await prisma.order.findUnique({ where: { id, tenantId } });
   if (!existingOrder) throw new Error('Order not found');
@@ -727,15 +777,43 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
       roundingMethod,
     );
 
+    const serverNet = taxableSubtotal + taxAmount;
     Object.assign(orderData, {
       taxAmount,
-      netAmount: taxableSubtotal + taxAmount,
+      netAmount: serverNet,
       cashTaxRate: cashTaxRate / 100,
       cardTaxRate: cardTaxRate / 100,
       appliedTaxRate,
       appliedTaxLabel,
     });
+
+    // ── Financial integrity guards (spec Part 12) ──────────────────────────
+    const completing = orderData.status === 'COMPLETED' || existingOrder.status !== 'COMPLETED';
+    if (completing) {
+      const paid = payments.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
+      // The money tendered must cover the (server-recomputed) total. A small
+      // rounding tolerance; anything more is rejected, never silently accepted.
+      if (paid + 1 < serverNet) {
+        const err: any = new Error(`Payment total PKR ${paid.toFixed(0)} is less than the order total PKR ${serverNet.toFixed(0)}`);
+        err.statusCode = 422;
+        throw err;
+      }
+      // A zero/negative-total completion is only legitimate with an explicit
+      // manager approval, and it's always worth flagging.
+      if (serverNet <= 0 && !orderData.managerApprovalId && !(orderData as any).approvedByManagerId) {
+        const err: any = new Error('A zero-total order can only be completed with manager approval');
+        err.statusCode = 422;
+        throw err;
+      }
+      if (serverNet <= 0) {
+        console.error(`[order] CRITICAL zero-total completion: order ${id} tenant ${tenantId} approvedBy ${orderData.managerApprovalId ?? (orderData as any).approvedByManagerId}`);
+      }
+    }
   }
+  // `managerApprovalId` / `approvedByManagerId` are audit inputs, not Order
+  // columns — strip so `...orderData` can't reach prisma.order.update.
+  delete (orderData as any).managerApprovalId;
+  delete (orderData as any).approvedByManagerId;
 
   if (items && Array.isArray(items)) {
     const routedItems = await routeItemsToKdsStations(tenantId, existingOrder.branchId, items);
@@ -838,6 +916,12 @@ export async function enqueueOrderEvents(
   if (order.status === 'CANCELLED') {
     recordOrderVoided(order, { amount: Number(order.netAmount ?? 0), wholeOrder: true });
     await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
+    // If this order had already completed (a rare reopen-then-void), back it
+    // out of the shift's running totals (spec Part 7 / Part 12).
+    if (order.sideEffectsAppliedAt) {
+      await decrementShiftAggregate(order, order.payments);
+      await broadcastShiftTotals(tenantId, order.branchId);
+    }
   }
   if (order.status === 'COMPLETED') {
     // Atomic claim: this bundle (inventory deduction, loyalty earn, deal
@@ -855,6 +939,13 @@ export async function enqueueOrderEvents(
     });
 
     if (claim.count === 1) {
+      // Spec Part 7 — fold this order into the shift's running money totals.
+      // This runs exactly once per order (the claim above is the latch), so
+      // it is the atomic "record the payment" point the dashboard reads back
+      // as a single row. Awaited (not fire-and-forget) so the broadcast
+      // below carries the fresh number.
+      await incrementShiftAggregate({ ...order, payments: payments ?? order.payments }, payments ?? order.payments);
+
       // Writes the ORDER_COMPLETED (and DISCOUNT_APPLIED) lines the Shift
       // Management timeline and the shift PDF are built from. Fire-and-forget
       // by design — see shift-activity.ts.
@@ -875,7 +966,9 @@ export async function enqueueOrderEvents(
         removeOnComplete: true,
         removeOnFail: true,
       }).catch(() => {});
-      emitDashboardStatsUpdated(tenantId, order.branchId);
+      // Spec Part 7 — bust the dashboard cache and push the fresh totals so
+      // the number moves within a second, no polling.
+      await broadcastShiftTotals(tenantId, order.branchId);
 
       // Update Deal usage counters — one round trip per deal line
       // sequentially used to serialize N DB calls that don't depend on each
@@ -900,7 +993,24 @@ export async function enqueueOrderEvents(
       }
     }
   } else if (payments && payments.length > 0) {
-    emitDashboardStatsUpdated(tenantId, order.branchId);
+    await broadcastShiftTotals(tenantId, order.branchId);
+  }
+}
+
+// Bust the dashboard-summary cache for this tenant/branch and broadcast the
+// freshly-summed shift totals (spec Part 7). Best-effort — the number is
+// still correct on the next read even if Redis/socket is down.
+async function broadcastShiftTotals(tenantId: string, branchId: string): Promise<void> {
+  try {
+    await invalidatePattern(`dash:summary:${tenantId}:*`);
+    await invalidatePattern(`dash:summary:${tenantId}:all:*`);
+  } catch { /* ignore */ }
+  try {
+    const totals = await getBranchTodayAggregate(tenantId, branchId);
+    emitDashboardStatsUpdated(tenantId, branchId, totals);
+  } catch (e: any) {
+    console.warn('[broadcastShiftTotals] failed:', e?.message);
+    emitDashboardStatsUpdated(tenantId, branchId);
   }
 }
 
@@ -933,22 +1043,14 @@ export async function applyOrderStatusSideEffects(
   }
 
   if (order.tableId) {
-    // Fire-and-forget: don't make the caller wait on this write before it
-    // sees the order update confirmed.
-    let newTableStatus: 'occupied' | 'free' | null = null;
-    if (order.status === 'READY') newTableStatus = 'occupied';
-    else if (order.status === 'COMPLETED' || order.status === 'CANCELLED') newTableStatus = 'free';
-
-    if (newTableStatus) {
-      prisma.table.update({ where: { id: order.tableId, tenantId }, data: { status: newTableStatus } })
-        .then(() => {
-          emitTableStatusChanged(order.branchId, {
-            tableId: order.tableId,
-            status: newTableStatus,
-            ...(newTableStatus === 'occupied' ? { orderId: order.id, since: order.createdAt.toISOString() } : {}),
-          }, tenantId);
-        })
-        .catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
+    // Part 3 — the table's status is derived, never set to a literal here.
+    // A completed order stamps lastCompletedAt (so the table goes DIRTY and
+    // clears to FREE after the cleaning window); a cancel/void just frees it
+    // (nobody ate). Fire-and-forget: the order update is already confirmed.
+    if (order.status === 'COMPLETED') {
+      markTableOrderCompleted(tenantId, order.tableId).catch(() => {});
+    } else {
+      recomputeTableStatus(tenantId, order.tableId).catch(() => {});
     }
   }
 

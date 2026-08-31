@@ -13,6 +13,7 @@ import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
 import { useViews } from '@/lib/core/views';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
+import { isViewMode } from '@/lib/view-mode';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -35,6 +36,53 @@ interface OrderDetailsModalProps {
   initialOrder?: any;
 }
 
+// Spec Part 8 — the modal renders entirely from local state for any order the
+// terminal knows about. `useViews` (lib/core/views.ts) already holds every
+// current-shift order with full per-item detail, because this terminal created
+// it or the socket-fed refreshOrders merged it. Map that OrderView into the
+// same shape `/api/orders/:id` returns so the render path is unchanged — but
+// with zero network and no spinner. Only a historical order outside this shift
+// still needs the fetch.
+function detailFromView(v: any) {
+  const liveItems = Array.isArray(v.items) ? v.items.filter((it: any) => !it.voided) : [];
+  return {
+    id: v.id,
+    serverId: v.serverId ?? null,
+    orderNumber: v.orderNumber,
+    tokenNumber: v.tokenNumber ?? null,
+    status: v.status,
+    type: v.type,
+    createdAt: v.createdAt,
+    table: v.tableLabel ? { label: v.tableLabel } : null,
+    tableId: v.tableId ?? null,
+    assignedWaiter: v.assignedWaiterName ? { name: v.assignedWaiterName } : null,
+    assignedWaiterId: v.assignedWaiterId ?? null,
+    customerId: v.customerId ?? null,
+    // Match the fields (and order) the Active Orders card falls back through —
+    // otherwise the card shows PKR 893 while this modal hands PaymentModal
+    // orderTotal 0, and payment for an unpriced-lines order gets blocked.
+    netAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    totalAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    taxAmount: v.taxAmount ?? 0,
+    discountAmount: v.discountAmount ?? 0,
+    billRequestedAt: v.billRequestedAt ?? null,
+    items: liveItems.map((it: any) => ({
+      id: it.lineId,
+      itemId: it.itemId,
+      quantity: it.qty,
+      unitPrice: it.unitPrice,
+      subtotal: (it.unitPrice ?? 0) * (it.qty ?? 1),
+      notes: it.note ?? null,
+      item: { name: it.itemName },
+      options: {
+        variation: it.variationName ? { id: it.variationId ?? null, name: it.variationName } : null,
+        addOns: it.addOns ?? [],
+      },
+    })),
+    __fromView: true,
+  };
+}
+
 // Adapts the lightweight /api/orders/live shape into a stand-in for the full
 // /api/orders/:id detail shape, so the header/status/total can render before
 // the detailed fetch returns. Item rows are marked __partial and rendered as
@@ -53,8 +101,8 @@ function shellFromSummary(summary: any) {
     table: summary.tableLabel ? { label: summary.tableLabel } : null,
     tableId: summary.tableId ?? null,
     assignedWaiter: summary.assignedWaiterName ? { name: summary.assignedWaiterName } : null,
-    netAmount: summary.netAmount ?? summary.total ?? 0,
-    totalAmount: summary.netAmount ?? summary.total ?? 0,
+    netAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
+    totalAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
     items: [],
     __partial: true,
   };
@@ -62,8 +110,20 @@ function shellFromSummary(summary: any) {
 
 export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChanged, initialOrder }: OrderDetailsModalProps) {
   const router = useRouter();
+  const viewMode = isViewMode(); // spec Part 11 — no payments without a shift
   const session = useCartStore(s => s.session);
-  const [order, setOrder] = useState<any>(null);
+  // Live subscription to the event-derived store. When the order lives here
+  // (any current-shift order), this is the whole data source — it re-renders
+  // the modal the instant a command lands, with no fetch.
+  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  const inStore = !!viewOrder;
+  // Lazy-init from the store so an in-store order paints on the very first
+  // render — no spinner frame, no effect round-trip.
+  const [order, setOrder] = useState<any>(() => {
+    if (!orderId) return null;
+    const v = useViews.getState().orders[orderId];
+    return v ? detailFromView(v) : (initialOrder ? shellFromSummary(initialOrder) : null);
+  });
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -100,9 +160,15 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       setOrder(null);
       return;
     }
+    if (viewOrder) {
+      // Fully local — paint from the store and keep painting as it changes.
+      // No network call at all (spec Part 8).
+      setOrder(detailFromView(viewOrder));
+      return;
+    }
     if (initialOrder) {
-      // Instant paint from data the list screen already had — no spinner —
-      // then quietly upgrade to the full-detail response in the background.
+      // Known to a list screen but not the store (a historical order) — paint
+      // the summary shell instantly, fill in detail from the one fetch.
       setOrder(shellFromSummary(initialOrder));
       fetchOrder(true);
     } else {
@@ -110,7 +176,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       fetchOrder();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, viewOrder]);
 
   useEffect(() => {
     if (!assignOpen || !session?.branchId || waiters.length > 0) return;
@@ -126,7 +192,9 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   if (!orderId) return null;
 
   const refreshAfterChange = () => {
-    fetchOrder(true);
+    // In-store orders re-render from the `viewOrder` subscription already;
+    // only a fetched (historical) order needs a re-pull.
+    if (!inStore) fetchOrder(true);
     onChanged?.();
   };
 
@@ -160,6 +228,8 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       if (!res.ok) throw new Error();
       toast.success(waiter ? `Assigned to ${waiter.name}` : 'Waiter unassigned');
       setAssignOpen(false);
+      // Reflect it locally too so an in-store order updates without a re-pull.
+      setOrder((prev: any) => (prev ? { ...prev, assignedWaiter: waiter ? { name: waiter.name } : null, assignedWaiterId: waiter?.id ?? null } : prev));
       refreshAfterChange();
     } catch {
       toast.error('Failed to assign waiter');
@@ -300,7 +370,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-bold text-[#0F172A] text-[14px]">{formatPKR(item.subtotal)}</span>
-                    {canAct && (
+                    {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
@@ -323,10 +393,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             {/* Actions */}
             <div className="p-4 border-t border-[#E2E8F0] shrink-0 space-y-2">
               {canAct && (
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
-                  </button>
+                // Spec Part 11 — View Mode keeps the non-financial actions
+                // (assign waiter, reprint KOT) but drops "Add Item".
+                <div className={`grid ${viewMode ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+                  {!viewMode && (
+                    <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
+                    </button>
+                  )}
                   <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
                     <span className="material-symbols-outlined text-[18px]">person_add</span> Waiter
                   </button>
@@ -338,15 +412,26 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
               {canAct && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={requestCancel}
-                    disabled={busy}
-                    className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
-                  >
-                    Cancel Order
-                  </button>
+                  {/* Spec Part 11 — voiding an order is blocked in View Mode. */}
+                  {!viewMode && (
+                    <button
+                      onClick={requestCancel}
+                      disabled={busy}
+                      className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
 
-                  {isReady ? (
+                  {isReady && viewMode ? (
+                    <button
+                      onClick={() => { router.push('/pos/shift/open'); }}
+                      className="flex-1 h-12 rounded-xl font-bold text-[13px] border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors flex flex-col items-center justify-center leading-tight"
+                    >
+                      Open a shift to take payment
+                      <span className="text-[10px] font-medium text-sky-500">You’re in view-only mode</span>
+                    </button>
+                  ) : isReady ? (
                     <button
                       onClick={() => setIsPaymentOpen(true)}
                       disabled={busy}

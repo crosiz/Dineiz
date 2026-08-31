@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonList } from '@/components/ui/skeleton';
 import { Trash2, Megaphone, Plus } from 'lucide-react';
 
 export function CampaignsTab() {
@@ -55,7 +55,7 @@ export function CampaignsTab() {
     }
   };
 
-  if (loading) return <PageLoader label="Loading campaigns..." />;
+  if (loading) return <SkeletonList rows={3} />;
 
   return (
     <div className="space-y-4">

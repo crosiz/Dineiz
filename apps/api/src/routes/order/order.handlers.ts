@@ -2,11 +2,11 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import {
   createOrder, listOrders, listOrderHistory, listLiveOrders, getOrder, updateOrder, enqueueOrderEvents, applyOrderStatusSideEffects, getActiveCount, assignOrder, appendOrderItems, deleteOrderItem, listActiveOrders
 } from './order.service';
-import {
-  emitNewOrder, emitOrderUpdated, emitTableStatusChanged,
-} from '../../lib/socket';
+import { emitNewOrder, emitOrderUpdated } from '../../lib/socket';
 import { prisma } from '@dineiz/db';
 import { withIdempotency } from '../../lib/idempotency';
+import { getCurrentShift } from '../shift/shift.service';
+import { recomputeTableStatus } from '../../lib/tableStatus';
 
 
 export async function handleCreateOrder(request: FastifyRequest, reply: FastifyReply) {
@@ -31,20 +31,12 @@ export async function handleCreateOrder(request: FastifyRequest, reply: FastifyR
         emitNewOrder(tenantId, body.branchId, order);
 
         if (body.tableId) {
-          // Fire-and-forget: the client already has its order confirmation, and the
-          // table shouldn't need to wait on this write to turn occupied on-screen —
-          // emit as soon as the (usually near-instant) DB write resolves in the background.
-          prisma.table.update({
-            where: { id: body.tableId, tenantId },
-            data: { status: 'occupied' },
-          }).then(() => {
-            emitTableStatusChanged(body.branchId, {
-              tableId: body.tableId,
-              status: 'occupied',
-              orderId: order.id,
-              since: order.createdAt.toISOString(),
-            }, tenantId);
-          }).catch((e: any) => console.warn('[Order] Table status update failed:', e.message));
+          // Part 3 — don't write a literal "occupied" here. Derive the
+          // table's status from the orders actually on it (this new one
+          // included) via the single server writer. Fire-and-forget: the
+          // client already has its confirmation and shows the table busy
+          // from its own reducer.
+          recomputeTableStatus(tenantId, body.tableId).catch(() => {});
         }
 
         return { statusCode: 201, body: order };
@@ -56,6 +48,11 @@ export async function handleCreateOrder(request: FastifyRequest, reply: FastifyR
     console.error('CREATE ORDER ERROR:', e);
     if (e.message === 'PLAN_LIMIT_EXCEEDED') {
       return reply.status(402).send({ error: 'PLAN_LIMIT_EXCEEDED', message: 'Daily order limit reached for your plan.' });
+    }
+    // resolveAppliedTax throws 422 on a tax mismatch; createOrder throws 409
+    // on a genuine cross-terminal order-number collision (Part 4).
+    if (typeof e.statusCode === 'number') {
+      return reply.status(e.statusCode).send({ error: e.message });
     }
     return reply.status(500).send({ error: e.message });
   }
@@ -101,7 +98,20 @@ export async function handleListLiveOrders(request: FastifyRequest, reply: Fasti
   const tenantId = request.user!.tenantId!;
   const q = request.query as any;
   const branchId = (request.scopedBranchId ?? undefined) || q.branchId;
-  return listLiveOrders(tenantId, branchId);
+  const role = request.user!.role as string | undefined;
+
+  // Spec Part 2 — a CASHIER only ever sees their own shift's orders, never
+  // another terminal's cart or a previous shift. Trust an explicit shiftId
+  // from the POS; if it's missing, resolve the cashier's current open shift
+  // so the scoping can't be bypassed by just omitting the param. Managers /
+  // admins get the branch-wide board unless they ask for a specific shift.
+  let shiftId: string | null | undefined = q.shiftId;
+  if (role === 'CASHIER' && !shiftId && branchId) {
+    const current = await getCurrentShift(branchId, tenantId, request.user!.id!);
+    shiftId = current?.id ?? '__none__'; // no open shift → deliberately match nothing
+  }
+
+  return listLiveOrders(tenantId, branchId, { shiftId });
 }
 
 export async function handleGetActiveCount(request: FastifyRequest, reply: FastifyReply) {

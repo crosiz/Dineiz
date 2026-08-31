@@ -497,6 +497,18 @@ model Order {
   orderNumber String // e.g., ORD-1001
   tokenNumber String? // e.g., A-12
   shiftId     String? // The shift this order was placed during
+
+  // Orphan adoption (Part 2 — Shift Ownership). An order created under a shift
+  // that has since closed, but still PENDING/IN_KITCHEN/READY, is an orphan.
+  // A manager can pull it into a live shift; revenue attribution stays with
+  // the ORIGINAL shift in reports, and these fields record the adoption.
+  adoptedFromShiftId String?
+  adoptedByUserId    String?
+
+  // Set when the guest asks for the bill (Part 3). Drives the table's
+  // BILL_REQUESTED derived status; cleared implicitly once the order completes.
+  billRequestedAt DateTime?
+
   status      OrderStatus @default(PENDING)
   type        OrderType   @default(DINE_IN)
   source      OrderSource @default(POS)
@@ -771,6 +783,10 @@ enum ShiftStatus {
   OPEN // Shift is active â€” terminal can process orders
   CLOSED // Shift has been closed and reconciled
   ABANDONED // Shift was left open with no activity for a long time
+  PENDING_SYNC // Closed on the terminal, but some events hadn't reached the
+  // server yet (offline / weak network). The terminal keeps shipping them in
+  // the background; the dashboard shows this state until the last one
+  // confirms (POST /api/shifts/:id/sync-complete) and it flips to CLOSED.
 }
 
 // A Shift represents one cashier's working session at a POS terminal.
@@ -801,6 +817,11 @@ model Shift {
   closedReason String? // Reason provided if FORCE_CLOSED_BY_MANAGER
   totalRefunds Float?  @default(0)
 
+  // Set when the shift was closed with events still unsynced (spec Part 6).
+  // Cleared when sync-complete flips the status to CLOSED.
+  pendingSyncAt    DateTime?
+  pendingSyncCount Int?
+
   // Variance = closingCash - (openingFloat + totalCash)
   // Positive = overage, Negative = shortage
   cashVariance Float?
@@ -822,6 +843,7 @@ model Shift {
   orders        Order[]
   breaks        ShiftBreak[]
   activities    ShiftActivity[]
+  aggregate     ShiftAggregate?
 
   @@index([tenantId])
   @@index([branchId])
@@ -832,6 +854,42 @@ model Shift {
   // "is there already a shift?" conflict check) — that lookup was falling
   // back to the plain single-column indexes above.
   @@index([tenantId, branchId, userId, status])
+}
+
+// Running per-shift money totals (spec Part 7 — Financial Accuracy).
+//
+// Incremented atomically the first time each order in the shift reaches
+// COMPLETED (guarded by Order.sideEffectsAppliedAt, so a retried payment
+// never double-counts). The admin dashboard and the live shift board read
+// this as a single-row lookup instead of re-aggregating thousands of orders
+// on every request, and it is broadcast over Socket.IO on every payment so
+// the number moves within a second. A 15-minute job recomputes it from
+// source orders and corrects any drift (drift ⇒ something bypassed the
+// increment ⇒ logged).
+model ShiftAggregate {
+  id       String @id @default(cuid())
+  shiftId  String @unique
+  tenantId String
+  branchId String
+
+  orderCount    Int   @default(0)
+  grossRevenue  Float @default(0) // Σ order.totalAmount (pre-tax, pre-discount)
+  discountTotal Float @default(0) // Σ order.discountAmount
+  taxCollected  Float @default(0) // Σ order.taxAmount
+  netRevenue    Float @default(0) // Σ order.netAmount
+  cashRevenue   Float @default(0) // Σ payments where method = CASH
+  cardRevenue   Float @default(0) // Σ payments where method = CARD
+  otherRevenue  Float @default(0) // Σ payments for every other method
+  refundTotal   Float @default(0)
+  voidCount     Int   @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, branchId])
+  @@index([tenantId, updatedAt])
 }
 
 // Tracks mid-shift cash-in / cash-out entries (e.g., safe drops, paid-outs)
@@ -1879,9 +1937,20 @@ model Table {
   height      Float
   rotation    Float    @default(0)
   isActive    Boolean  @default(true)
-  status      String   @default("free") // "free", "occupied", "dirty", "ready", "reserved"
-  orders      Order[] // active orders on this table
-  createdAt   DateTime @default(now())
+
+  // Table status is DERIVED from the orders on the table (Part 3 — Single
+  // Ownership): free / occupied / bill_requested / dirty. It is never written
+  // directly except via `statusOverride`, which is the one thing that beats
+  // the derivation and is set + cleared explicitly by a manager.
+  status         String    @default("free")
+  statusOverride String? // "RESERVED" | "INACTIVE" | "MERGED" | null
+  overrideAt     DateTime?
+  // Set on PAYMENT_COLLECTED. Powers the dirty→free transition after
+  // TenantBranding.tableCleaningMinutes without a background writer.
+  lastCompletedAt DateTime?
+
+  orders    Order[] // active orders on this table
+  createdAt DateTime @default(now())
 
   @@index([branchId])
   @@index([tenantId])
@@ -1953,6 +2022,40 @@ model TenantBranding {
   currency                    String  @default("PKR")
   posLanguage                 String  @default("en")
   requireShiftOpen            Boolean @default(true)
+
+  // Order-number format (Part 4). One generator, configurable shape:
+  //   SHORT     A-047            terminal prefix + per-shift sequence
+  //   STANDARD  A-0912-047       terminal + DDMM + per-day sequence  (default)
+  //   DETAILED  KBJ-A-250912-047 tenant code + terminal + YYMMDD + sequence
+  orderNumberFormat String  @default("STANDARD")
+  tenantShortCode   String? // used by DETAILED, clamped to 3 chars, e.g. "KBJ"
+  // Minutes a table stays DIRTY after the last order completes before the
+  // derivation lets it fall back to FREE (Part 3 / Part 13).
+  tableCleaningMinutes Int @default(5)
+
+  // ── Part 13: operational settings, edited in the console, pushed to every
+  // terminal over Socket.IO. The POS Settings screen shows them read-only. ──
+  // Orders
+  allowLoginWithoutShift      Boolean @default(false) // Part 11 wires "view mode"
+  allowOrderReopen            Boolean @default(false)
+  orderReopenWindowMinutes    Int     @default(30)
+  // Shift
+  staleShiftWarnHours         Int     @default(16)
+  autoCloseAbandonedHours     Int     @default(24)
+  cashCountRequired           Boolean @default(true)
+  varianceAlertThreshold      Float   @default(500)
+  // Manager overlay (Part 6 wires the behaviour; the config lands here)
+  managerOverlayEnabled       Boolean @default(true)
+  managerOverlayIdleMinutes   Int     @default(5)
+  managerOverlayRequireReason Boolean @default(true)
+  // Sync engine (Part 5) — the outbox reads these instead of hard-coded consts
+  syncBatchSize               Int     @default(50)
+  syncRequestTimeoutMs        Int     @default(8000)
+  syncMaxEventLifetimeHours   Int     @default(24)
+  shiftCloseSyncTimeoutSec    Int     @default(45)
+  allowCloseWithUnsynced      Boolean @default(true)
+  closeWithUnsyncedRequiresPin Boolean @default(true)
+
   autoKotPrint                Boolean @default(true)
   autoReceiptPrint            Boolean @default(true)
   blockOutOfStock             Boolean @default(true)
@@ -2557,5 +2660,38 @@ model PosDeadLetter {
 
   @@unique([tenantId, eventId])
   @@index([tenantId, branchId, resolvedAt])
+}
+
+// Manager overlay (spec Part 10). A temporary elevated session a manager runs
+// ON a cashier's terminal without closing the cashier's session. One row per
+// overlay session; `actions` accumulates every override performed during it.
+// Revenue/shift stay attributed to the cashier — this is the authorisation
+// record, and what the shift report reads to show "voided, authorised by …".
+model ManagerOverride {
+  id          String  @id @default(cuid())
+  tenantId    String
+  branchId    String
+  terminalId  String?
+  shiftId     String? // the CASHIER's shift the overlay ran on
+  cashierId   String?
+  cashierName String?
+  managerId   String
+  managerName String
+  reason      String?
+  oneShot     Boolean @default(false)
+
+  actions Json @default("[]") // [{ at, action, targetId, meta }]
+
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  durationSec Int?
+  // MANUAL | IDLE | ONE_SHOT | BACKGROUNDED | NAV_PAYMENT | SHIFT_CLOSED
+  exitReason  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, branchId])
+  @@index([shiftId])
+  @@index([managerId])
 }
 

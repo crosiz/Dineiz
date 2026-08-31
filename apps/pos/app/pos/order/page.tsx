@@ -16,9 +16,8 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
-import { queueItemAdd } from '@/lib/offlineHelpers';
 import * as commands from '@/lib/core/commands';
-import { useViews } from '@/lib/core/views';
+import { useViews, seedServerOrder } from '@/lib/core/views';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -650,50 +649,50 @@ function OrderEntryPageContent() {
     const notes = orderNote;
 
     // ── Adding items to an order already sent to the kitchen ──────────────
-    // Kept synchronous (not optimistic) — the kitchen may already be
-    // cooking this order, so we don't assume the append succeeded until
-    // the server confirms it. What changes here vs. before: a failure
-    // while offline is now queued for retry instead of just failing.
+    // Event-sourced now: each extra item is an ITEM_ADDED event on the
+    // existing order, shipped by the outbox's ADD_ITEMS op
+    // (POST /api/orders/:serverId/items) with its own retry/dependency
+    // handling. This replaces a direct fetch against `paymentOrderId`, which
+    // 404'd whenever that id was still the order's local client id (the
+    // common case — Tickets/Tables link to the local view-store order).
+    // Works online, offline, and while the parent order is still syncing.
     if (isAppending) {
       setKitchenLoading(true);
-      const body = JSON.stringify({
-        items: cartItems.map(item => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotal: item.unitPrice * item.quantity,
-          options: buildItemOptions(item),
-          notes: item.notes ?? undefined,
-        }))
-      });
 
-      // Same reasoning as the new-order path: the kitchen needs the extra
-      // items the instant this is tapped, not after a round trip. Everything
-      // this KOT needs (the added items, which table/order it's for) is
-      // already known — print now instead of waiting on the POST.
+      // The order must be in the view store for the reducer + outbox to act
+      // on it. Every order Tickets/Tables can link to already is; only a
+      // pre-view-store historical order (loaded via the network fallback)
+      // needs seeding first.
+      let targetId = paymentOrderId!;
+      if (!useViews.getState().orders[targetId] && existingOrderData) {
+        targetId = seedServerOrder(existingOrderData) || targetId;
+      }
+
+      // The kitchen needs the extra items the instant this is tapped — print
+      // now, don't wait on the queue.
       printKOT(
         {
           orderNumber: existingOrderData?.orderNumber || paymentOrderNumber || `#${paymentOrderId?.slice(-6)}`,
           tokenNumber: existingOrderData?.tokenNumber,
           createdAt: new Date().toISOString(),
         },
-        orderTypeStr, sessionObj, cartItems, notes
+        orderTypeStr, sessionObj, cartItems, notes,
       );
 
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${paymentOrderId}/items`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body,
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await commands.appendItems(targetId, cartItems.map(item => ({
+          itemId: item.itemId,
+          itemName: item.name,
+          variationId: item.selectedVariation?.id ?? null,
+          variationName: item.selectedVariation?.name ?? null,
+          qty: item.quantity,
+          unitPrice: item.unitPrice,
+          note: item.notes ?? null,
+          addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+        })));
 
-        const order = await res.json();
         setOrderNote('');
-        toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} updated!`);
+        toast.success('Items added — sending to kitchen');
 
         if (isHeld && rawOrderId) {
           try {
@@ -706,21 +705,8 @@ function OrderEntryPageContent() {
         setDiscount(null);
         router.push('/pos/home');
       } catch (err) {
-        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-        if (isOffline) {
-          try {
-            await queueItemAdd({ orderId: paymentOrderId!, body });
-            toast.success('No connection — items saved locally and will sync automatically.');
-            clearCart();
-            setDiscount(null);
-            router.push('/pos/home');
-          } catch (queueErr) {
-            console.error('Failed to queue item add', queueErr);
-            toast.error('Failed to save items offline. Please retry.');
-          }
-        } else {
-          toast.error('Failed to send order. Check connection.');
-        }
+        console.error('Failed to append items', err);
+        toast.error('Could not add the items — please retry.');
       } finally {
         setKitchenLoading(false);
       }
@@ -925,47 +911,35 @@ function OrderEntryPageContent() {
         setChargeLoading(false);
       }
     } else if (cart.length > 0) {
-      // We have an existing order but there are un-sent items in the cart
+      // Existing order with un-sent items in the cart — fold them in as
+      // ITEM_ADDED events (same event-sourced path as sendToKitchen's append),
+      // then open payment. Local-first: the events write instantly and the
+      // outbox ships the ADD_ITEMS op; PaymentModal reads the merged line list
+      // from the view store.
       setChargeLoading(true);
       const isHeld = searchParams.get('isHeld') === 'true';
       const isActuallyEdit = !!paymentOrderId && !isHeld;
-      const isAppending = isActuallyEdit && existingOrderData;
-      const body = JSON.stringify({
-        items: cart.map(item => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotal: item.unitPrice * item.quantity,
-          options: buildItemOptions(item),
-          notes: item.notes ?? undefined,
-        })),
-      });
-
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders${isAppending ? `/${paymentOrderId}/items` : ''}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body,
-        });
-
-        if (!res.ok) throw new Error('Could not append items');
+        if (isActuallyEdit && existingOrderData) {
+          let targetId = paymentOrderId!;
+          if (!useViews.getState().orders[targetId]) {
+            targetId = seedServerOrder(existingOrderData) || targetId;
+          }
+          await commands.appendItems(targetId, cart.map(item => ({
+            itemId: item.itemId,
+            itemName: item.name,
+            variationId: item.selectedVariation?.id ?? null,
+            variationName: item.selectedVariation?.name ?? null,
+            qty: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.notes ?? null,
+            addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+          })));
+        }
         setIsPaymentOpen(true);
       } catch (err) {
-        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-        if (isOffline && isAppending) {
-          try {
-            await queueItemAdd({ orderId: paymentOrderId!, body });
-            toast.success('No connection — items saved locally and will sync automatically. Charge again once synced.');
-          } catch (queueErr) {
-            console.error('Failed to queue item add', queueErr);
-            toast.error('Failed to save items offline. Please retry.');
-          }
-        } else {
-          toast.error('Could not update order. Check connection.');
-        }
+        console.error('Failed to append items before charge', err);
+        toast.error('Could not add the items — please retry.');
       } finally {
         setChargeLoading(false);
       }

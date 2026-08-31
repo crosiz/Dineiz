@@ -25,6 +25,7 @@ export interface PrintOrder {
   tokenNumber: string;
   type: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   cashierName?: string;
+  terminalName?: string; // terminal-local (Settings → This Terminal); KOT header only
   tenantName: string;
   branchName: string;
   branchAddress?: string;
@@ -306,6 +307,7 @@ export function buildKOT(order: PrintOrder): Uint8Array {
 
   p.twoCol(order.orderNumber, formatDate(order.createdAt));
   if (order.cashierName) p.println(`Cashier: ${order.cashierName}`);
+  if (order.terminalName) p.println(`Terminal: ${order.terminalName}`);
   p.doubleSeparator();
 
   // ── Items (large text) ──────────────────────────────────────────────────

@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, TrendingDown, Trash2 } from 'lucide-react';
 import { useWastage } from '../hooks/useWastage';
 import { formatPKR } from '@/lib/formatters';
-import { Spinner } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 import { AddWastageModal } from './AddWastageModal';
 import { WastageAnalytics } from './WastageAnalytics';
 import { humanizeReason, REASON_COLORS } from './wastageConstants';
@@ -30,7 +30,7 @@ export function WastageTab() {
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">This Month&apos;s Wastage</p>
             <p className="text-xl font-bold text-slate-900 mt-0.5">
-              {isAnalyticsLoading ? <span className="inline-block h-6 w-24 bg-slate-100 rounded animate-pulse" /> : formatPKR(analytics?.totalCost ?? 0)}
+              {isAnalyticsLoading ? <span className="inline-block h-6 w-24 skeleton-shimmer rounded align-middle" /> : formatPKR(analytics?.totalCost ?? 0)}
             </p>
           </div>
         </div>
@@ -43,7 +43,7 @@ export function WastageTab() {
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Top Wasted Ingredient</p>
             <p className="text-xl font-bold text-slate-900 mt-0.5">
               {isAnalyticsLoading ? (
-                <span className="inline-block h-6 w-24 bg-slate-100 rounded animate-pulse" />
+                <span className="inline-block h-6 w-24 skeleton-shimmer rounded align-middle" />
               ) : topIngredient ? (
                 <>
                   {topIngredient.name} <span className="text-sm font-medium text-slate-400">({formatPKR(topIngredient.cost)})</span>
@@ -89,14 +89,10 @@ export function WastageTab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-10">
-                    <div className="flex items-center justify-center gap-2 text-slate-400">
-                      <Spinner size={16} />
-                      Loading...
-                    </div>
-                  </td>
-                </tr>
+                <SkeletonTableRows
+                  rows={6}
+                  columns={[{ w: 140, avatar: true }, 80, 70, 90, 110, 90]}
+                />
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-14 text-slate-500 text-sm">No wastage logged yet.</td>

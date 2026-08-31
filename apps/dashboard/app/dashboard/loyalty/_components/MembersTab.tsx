@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Pagination } from '@/components/ui/Pagination';
 import { Sparkles } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 
 export function MembersTab() {
   const [loading, setLoading] = useState(true);
@@ -65,11 +65,10 @@ export function MembersTab() {
                   </td>
                 </tr>
               ) : loading ? (
-                <tr>
-                  <td colSpan={4}>
-                    <PageLoader label="Loading members..." className="min-h-0 py-16" />
-                  </td>
-                </tr>
+                <SkeletonTableRows
+                  rows={8}
+                  columns={[{ w: 150, avatar: true }, { w: 72, pill: true }, 90, { w: 90, align: 'right' }]}
+                />
               ) : customers.length === 0 ? (
                 <tr>
                   <td colSpan={4}>

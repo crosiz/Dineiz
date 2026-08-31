@@ -11,7 +11,41 @@ import { authClient } from '../../../lib/auth-client';
 import { useFloorPlanSocket } from './hooks/useFloorPlanSocket';
 import { useDashboardContext } from '@/contexts/dashboard-context';
 import { Store } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Mirrors the editor chrome — top bar, tool rail, canvas — so the real editor
+// drops straight in without the frame jumping.
+function EditorSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      className="h-[calc(100vh-4rem)] w-full flex flex-col bg-white overflow-hidden"
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">{label}</span>
+      <div className="h-14 border-b border-slate-200 flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      </div>
+      <div className="flex-1 flex min-h-0">
+        <div className="w-14 border-r border-slate-200 flex flex-col items-center gap-3 py-4 shrink-0">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-9 rounded-lg" />
+          ))}
+        </div>
+        <div className="flex-1 p-8 bg-slate-50">
+          <Skeleton className="h-full w-full rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function FloorPlanEditor() {
   const {
@@ -98,19 +132,11 @@ export function FloorPlanEditor() {
   useFloorPlanSocket(selectedBranchId, showTableStatus);
 
   if (!selectedBranchId && !user) {
-    return (
-      <div className="h-[calc(100vh-4rem)] w-full bg-slate-50">
-        <PageLoader label="Authenticating..." />
-      </div>
-    );
+    return <EditorSkeleton label="Authenticating" />;
   }
 
   if (isLoading && !!selectedBranchId) {
-    return (
-      <div className="h-[calc(100vh-4rem)] w-full bg-slate-50">
-        <PageLoader label="Loading floor plan editor..." />
-      </div>
-    );
+    return <EditorSkeleton label="Loading floor plan editor" />;
   }
 
   const hasBranch = !!selectedBranchId;

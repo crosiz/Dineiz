@@ -8,7 +8,7 @@ import {
   AlertTriangle, Info, HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonForm } from '@/components/ui/skeleton';
 import { CopyRecipeModal } from './modals/CopyRecipeModal';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -352,7 +352,23 @@ export function RecipesTab() {
     : '';
 
   if (isLoading) {
-    return <PageLoader label="Loading recipes..." className="min-h-[240px]" />;
+    return (
+      <div className="flex gap-6 h-[720px]" role="status" aria-busy="true">
+        <span className="sr-only">Loading recipes</span>
+        <div className="w-1/3 bg-white border border-slate-200 rounded-lg p-4 space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-40" />
+          <div className="pt-2 space-y-1.5">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 bg-white border border-slate-200 rounded-lg p-6">
+          <SkeletonForm rows={6} />
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -439,7 +455,7 @@ export function RecipesTab() {
             </div>
 
             {isVariationLoading ? (
-              <PageLoader label="Loading variation recipe..." className="min-h-[200px]" />
+              <div className="flex-1 p-6"><SkeletonForm rows={5} /></div>
             ) : (
               <div className="flex-1 flex overflow-hidden">
                 {/* Form area */}

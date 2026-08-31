@@ -249,20 +249,20 @@ export function MenuItemGrid({
           <div className={`p-5 grid gap-3 ${viewMode === 'grid' ? cols : 'grid-cols-1'}`}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               viewMode === 'grid' ? (
-                <div key={i} className="bg-white rounded-xl border border-slate-100 overflow-hidden animate-pulse">
-                  <div className="h-32 bg-slate-100" />
+                <div key={i} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="h-32 skeleton-shimmer" />
                   <div className="p-3 space-y-2">
-                    <div className="h-3 bg-slate-100 rounded w-3/4" />
-                    <div className="h-2.5 bg-slate-100 rounded w-1/2" />
-                    <div className="h-2 bg-slate-100 rounded w-full mt-1" />
+                    <div className="h-3 skeleton-shimmer rounded w-3/4" />
+                    <div className="h-2.5 skeleton-shimmer rounded w-1/2" />
+                    <div className="h-2 skeleton-shimmer rounded w-full mt-1" />
                   </div>
                 </div>
               ) : (
-                <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 animate-pulse">
-                  <div className="w-9 h-9 bg-slate-100 rounded-lg" />
+                <div key={i} className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100">
+                  <div className="w-9 h-9 skeleton-shimmer rounded-lg" />
                   <div className="flex-1 space-y-1.5">
-                    <div className="h-2.5 bg-slate-100 rounded w-2/3" />
-                    <div className="h-2 bg-slate-100 rounded w-1/3" />
+                    <div className="h-2.5 skeleton-shimmer rounded w-2/3" />
+                    <div className="h-2 skeleton-shimmer rounded w-1/3" />
                   </div>
                 </div>
               )

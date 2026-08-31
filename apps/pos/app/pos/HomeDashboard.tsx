@@ -15,6 +15,7 @@ import { getDB } from '@/lib/db';
 import { syncOfflineOrders, syncOfflinePayments, syncPendingItemAdds } from '@/lib/sync';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { isViewMode } from '@/lib/view-mode';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
@@ -75,12 +76,50 @@ export default function HomeDashboard() {
   const [shiftStatus, setShiftStatus] = useState<string>('LOCAL');
   const [shiftElapsed, setShiftElapsed] = useState<string>('0h 0m');
 
-  // Instant paint from cache, refreshed in the background — replaces the
-  // old fetchStats()/useState pair that showed zeros on every mount.
+  // Server-side shift totals — instant paint from cache, refreshed in the
+  // background + on payment:confirmed. The authoritative number once sync
+  // catches up (it also folds in refunds / other terminals).
   const { stats, invalidate: invalidateStats } = useShiftStats(
     session?.branchId ?? null,
     activeShift?.shiftId || activeShift?.id || null
   );
+
+  // Local-first "Today's Performance": derived straight from the event store
+  // for this shift's completed orders. Ticks up the instant a payment is
+  // collected on this terminal — before the outbox has shipped it — which is
+  // what "the numbers aren't updating" was really about. The server figure
+  // above is used as a ceiling so another terminal's activity still shows.
+  const activeShiftId = activeShift?.shiftId || activeShift?.id || null;
+  const localPerf = useViews((s) => {
+    if (!activeShiftId) return { count: 0, value: 0 };
+    const done = Object.values(s.orders).filter(
+      (o) => o.status === 'COMPLETED' && o.shiftId === activeShiftId,
+    );
+    const value = done.reduce((sum, o) => sum + Number(o.netAmount ?? o.subtotal ?? 0), 0);
+    return { count: done.length, value };
+  });
+  const perf = (() => {
+    const ordersServed = Math.max(localPerf.count, Math.round(stats.ordersServed || 0));
+    const totalValue = Math.max(localPerf.value, Number(stats.totalValue || 0));
+    return {
+      ordersServed,
+      totalValue,
+      averagePerOrder: ordersServed ? totalValue / ordersServed : 0,
+    };
+  })();
+
+  // Spec Part 11 — in View Mode (signed in, no shift) order-entry CTAs stop
+  // navigating and explain themselves with an inline "Open a shift" prompt.
+  const viewMode = isMounted && isViewMode();
+  const guardOrderEntry = (go: () => void) => {
+    if (viewMode) {
+      toast.message('Open a shift to take orders', {
+        action: { label: 'Open Shift', onClick: () => router.push('/pos/shift/open') },
+      });
+      return;
+    }
+    go();
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -238,14 +277,14 @@ export default function HomeDashboard() {
                   sublabel: 'Table service & floor plan',
                   icon: 'restaurant',
                   usePrimary: true,
-                  onClick: () => router.push('/pos/tables'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/tables')),
                 },
                 {
                   label: 'Takeaway Order',
                   sublabel: 'Quick pick-up & counter order',
                   icon: 'shopping_bag',
                   usePrimary: false,
-                  onClick: () => router.push('/pos/order?type=takeaway'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/order?type=takeaway')),
                 },
                 {
                   label: 'Active Orders',
@@ -487,21 +526,21 @@ export default function HomeDashboard() {
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Orders served</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-[36px] font-bold text-[#0F172A] leading-none">{Math.round(stats.ordersServed)}</span>
+                  <span className="clash-display text-[36px] font-bold text-[#0F172A] leading-none">{perf.ordersServed}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Total value</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(stats.totalValue))}</span>
+                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.totalValue))}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Average per order</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(stats.averagePerOrder))}</span>
+                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.averagePerOrder))}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'Per order this shift' : 'No shift open'}</span>
                 </div>
               </div>
@@ -553,7 +592,9 @@ export default function HomeDashboard() {
                               <div
                                 key={t.id}
                                 onClick={() =>
-                                  router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  guardOrderEntry(() =>
+                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  )
                                 }
                                 className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110"
                               >

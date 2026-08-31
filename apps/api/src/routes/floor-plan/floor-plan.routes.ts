@@ -1,7 +1,9 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { prisma } from '@dineiz/db';
-import { FloorPlanUpdateSchema, TableCreateSchema, TableUpdateSchema } from '@dineiz/schemas';
+import { FloorPlanUpdateSchema, TableCreateSchema, TableUpdateSchema, parseTableOverride, deriveTableStatus, toDbTableStatus } from '@dineiz/schemas';
 import { requireRole, requireTenant } from '../../middleware/auth';
+import { setTableOverride, recomputeTableStatus } from '../../lib/tableStatus';
+import { getTodayOrdersWhere } from '../../lib/date-utils';
 import { z } from 'zod';
 
 export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
@@ -13,10 +15,22 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
   }, async (request, reply) => {
     const { branchId } = (request.params as any);
     const tenantId = request.user!.tenantId!;
+    const role = (request.user as any)?.role as string | undefined;
+
+    // Spec Part 2/3 — a table is OCCUPIED only if there's an order the viewer
+    // can actually act on. For a CASHIER / WAITER that means the same scope as
+    // their live board (getTodayOrdersWhere branch view: orders under a
+    // currently-open shift + shiftless-today), so a genuinely-orphaned order
+    // under a long-closed shift doesn't keep a table permanently red while its
+    // ticket is invisible. Managers / admins keep the whole-branch view.
+    const scopeToShift = role === 'CASHIER' || role === 'WAITER';
+    const orderScopeWhere = scopeToShift
+      ? await getTodayOrdersWhere(tenantId, branchId)
+      : {};
 
     // These three lookups are independent of each other — run them concurrently
     // instead of as a sequential waterfall.
-    const [existingFloorPlan, tables, activeOrders] = await Promise.all([
+    const [existingFloorPlan, tables, activeOrders, branding] = await Promise.all([
       prisma.floorPlan.findUnique({ where: { branchId } }),
       prisma.table.findMany({ where: { branchId, tenantId, isActive: true } }),
       prisma.order.findMany({
@@ -25,18 +39,21 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
           tenantId,
           status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
           type: 'DINE_IN',
-          tableId: { not: null }
+          tableId: { not: null },
+          ...orderScopeWhere,
         },
         select: {
           id: true,
           status: true,
           tableId: true,
           createdAt: true,
+          billRequestedAt: true,
           assignedWaiterId: true,
           assignedWaiterName: true,
           assignedWaiter: { select: { avatarColor: true } }
         }
       }),
+      prisma.tenantBranding.findUnique({ where: { tenantId }, select: { tableCleaningMinutes: true } }),
     ]);
 
     let floorPlan = existingFloorPlan;
@@ -49,22 +66,26 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
       });
     }
 
+    // Part 3 — one derivation, the shared @dineiz/schemas one. Table.status
+    // is kept current in the DB by recomputeTableStatus on every order event,
+    // so this mostly just reflects that back; deriving again here is cheap
+    // insurance against drift and keeps this endpoint honest.
+    const cleaningMinutes = branding?.tableCleaningMinutes ?? 5;
     const tablesWithStatus = tables.map(t => {
-      const order = activeOrders.find(o => o.tableId === t.id);
-      
-      let derivedStatus = 'FREE';
-      if (order) {
-        if (t.status === 'BILL_REQUESTED') derivedStatus = 'BILL_REQUESTED';
-        else derivedStatus = 'OCCUPIED';
-      } else {
-        if (t.status === 'DIRTY') derivedStatus = 'DIRTY';
-        else if (t.status === 'RESERVED') derivedStatus = 'RESERVED';
-        else derivedStatus = 'FREE';
-      }
+      const ordersOnTable = activeOrders.filter(o => o.tableId === t.id);
+      const order = ordersOnTable[0];
+
+      const derivedStatus = deriveTableStatus({
+        isActive: t.isActive,
+        statusOverride: (t.statusOverride as any) ?? null,
+        activeOrders: ordersOnTable.map(o => ({ status: o.status, billRequestedAt: o.billRequestedAt })),
+        lastCompletedAt: t.lastCompletedAt,
+        cleaningMinutes,
+      });
 
       return {
         ...t,
-        status: derivedStatus,
+        status: toDbTableStatus(derivedStatus),
         occupiedSince: order ? order.createdAt : null,
         activeOrderId: order?.id || null,
         assignedWaiterId: order?.assignedWaiterId || null,
@@ -393,6 +414,14 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   // PUT /api/tables/:tableId/status
+  //
+  // Part 3 — table status is DERIVED from orders, so this endpoint only
+  // accepts the three things a manager sets explicitly: RESERVED, INACTIVE,
+  // or clearing an override ("free" / "available" / "clean"). Everything
+  // else (occupied, dirty, bill_requested) comes out of the derivation and
+  // can't be set by hand. setTableOverride() records the override then
+  // recomputes so the visible status is right immediately, and emits the
+  // socket event itself.
   fastify.put('/api/tables/:tableId/status', {
     schema: {
       params: z.object({ tableId: z.string() }),
@@ -404,22 +433,30 @@ export const floorPlanRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const { status } = (request.body as any);
     const tenantId = request.user!.tenantId!;
 
-    const table = await prisma.table.update({
-      where: { id: tableId, tenantId },
-      data: { status }
-    });
+    const table = await prisma.table.findFirst({ where: { id: tableId, tenantId }, select: { id: true } });
+    if (!table) return reply.status(404).send({ error: 'Table not found' });
 
-    const { getIO } = await import('../../lib/socket.js');
-    const io = getIO();
-    if (io) {
-      // Must target the /pos namespace specifically — both the admin Floor
-      // Plan editor and the POS Tables screen connect to /pos, not the
-      // default namespace. Emitting on the raw `io` here silently dropped
-      // this event for both listeners.
-      io.of('/pos').to(`branch:${table.branchId}`).emit('table:status_changed', { tableId, status });
-    }
+    const parsed = parseTableOverride(status);
+    const resolved = await setTableOverride(tenantId, tableId, parsed === 'CLEAR' ? null : parsed);
 
-    return table;
+    return reply.send({ id: tableId, status: resolved });
+  });
+
+  // POST /api/tables/:tableId/clean — a manager marked a DIRTY table clean
+  // before the cleaning timer elapsed. Clears the timer anchor and re-derives
+  // (→ FREE, assuming no active order).
+  fastify.post('/api/tables/:tableId/clean', {
+    schema: { params: z.object({ tableId: z.string() }) },
+    preHandler: requireRole(['SUPER_ADMIN', 'TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER'])
+  }, async (request, reply) => {
+    const { tableId } = (request.params as any);
+    const tenantId = request.user!.tenantId!;
+    const table = await prisma.table.findFirst({ where: { id: tableId, tenantId }, select: { id: true } });
+    if (!table) return reply.status(404).send({ error: 'Table not found' });
+
+    await prisma.table.update({ where: { id: tableId }, data: { lastCompletedAt: null } });
+    const resolved = await recomputeTableStatus(tenantId, tableId);
+    return reply.send({ id: tableId, status: resolved });
   });
 
 };

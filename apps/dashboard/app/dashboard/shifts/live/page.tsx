@@ -72,7 +72,7 @@ export default function LiveShiftsPage() {
 
         {/* Shifts table */}
         {isLoading ? (
-          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 bg-white border border-slate-100 rounded-2xl animate-pulse" />)}</div>
+          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-20 skeleton-shimmer border border-slate-100 rounded-2xl" />)}</div>
         ) : shifts.length === 0 ? (
           <div className="bg-white border border-slate-100 rounded-2xl p-16 text-center">
             <Clock className="w-12 h-12 text-slate-200 mx-auto mb-4" />

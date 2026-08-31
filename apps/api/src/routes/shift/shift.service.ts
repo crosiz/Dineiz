@@ -1,6 +1,9 @@
 import { prisma } from '@dineiz/db';
 import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
+import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
+import { getBusinessDayRange } from '../../lib/date-utils';
+import { applyOrderStatusSideEffects } from '../order/order.service';
 import {
   OpenShiftSchema, CloseShiftSchema, CashEntrySchema,
 } from './shift.schema';
@@ -44,7 +47,7 @@ export interface ShiftListQuery {
   branchId?: string;
   from?: string;
   to?: string;
-  status?: 'OPEN' | 'CLOSED' | 'ABANDONED';
+  status?: 'OPEN' | 'CLOSED' | 'ABANDONED' | 'PENDING_SYNC';
   search?: string;
   cashierId?: string;
   page: number;
@@ -173,14 +176,18 @@ export async function getShift(tenantId: string, id: string) {
 
   if (!shift) return null;
 
-  const waiterStats = await prisma.order.groupBy({
-    by: ['assignedWaiterId', 'assignedWaiterName'],
-    where: { shiftId: id, status: { notIn: ['CANCELLED'] }, assignedWaiterId: { not: null } },
-    _count: { id: true },
-    _sum: { netAmount: true },
-  });
+  const [waiterStats, managerOverrides] = await Promise.all([
+    prisma.order.groupBy({
+      by: ['assignedWaiterId', 'assignedWaiterName'],
+      where: { shiftId: id, status: { notIn: ['CANCELLED'] }, assignedWaiterId: { not: null } },
+      _count: { id: true },
+      _sum: { netAmount: true },
+    }),
+    // Spec Part 10 — every manager overlay that ran on this shift + what it did.
+    prisma.managerOverride.findMany({ where: { shiftId: id }, orderBy: { startedAt: 'asc' } }),
+  ]);
 
-  return { ...shift, waiterStats };
+  return { ...shift, waiterStats, managerOverrides };
 }
 
 export async function openShift(tenantId: string, userId: string, data: { branchId: string; openingFloat: number }) {
@@ -240,6 +247,13 @@ export interface CloseShiftInput {
    */
   force?: boolean;
   forcedById?: string;
+  /**
+   * Spec Part 6 — the terminal is closing with events still unsynced. The
+   * shift goes to PENDING_SYNC instead of CLOSED; the terminal keeps shipping
+   * in the background and calls sync-complete when the queue drains.
+   */
+  pendingSync?: boolean;
+  pendingSyncCount?: number;
 }
 
 export async function closeShift(tenantId: string, id: string, data: CloseShiftInput) {
@@ -268,6 +282,26 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
   } else {
     const canClose = await canCloseShift(tenantId, shift.branchId, id, shift.userId);
     if (!canClose.canClose) return { error: 'Shift cannot be closed due to pending orders', blockers: canClose.blockers };
+  }
+
+  // Spec Part 12 — a force close cancels the shift's still-open orders rather
+  // than orphaning them, each with a reason that names the manager. Done
+  // before computeShiftTotals so the frozen totals reflect the cancellations.
+  if (isForceClosed) {
+    const stillOpen = await prisma.order.findMany({
+      where: { shiftId: id, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
+      select: { id: true, status: true, branchId: true },
+    });
+    if (stillOpen.length > 0) {
+      const reason = `Shift force closed${data.overrideReason ? ` — ${data.overrideReason}` : ''}`;
+      for (const o of stillOpen) {
+        const cancelled = await prisma.order.update({
+          where: { id: o.id },
+          data: { status: 'CANCELLED', notes: reason },
+        }).catch(() => null);
+        if (cancelled) await applyOrderStatusSideEffects(tenantId, cancelled, o.status, {}).catch(() => {});
+      }
+    }
   }
 
   const { totalSales, totalDiscount, totalTax, totalOrders, totalCash, totalCard } = await computeShiftTotals(id);
@@ -331,12 +365,16 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
       prisma.shift.update({
         where: { id },
         data: {
-          status: 'CLOSED',
+          // Spec Part 6 — PENDING_SYNC if the terminal still has events to
+          // ship. sync-complete (or the auto-finaliser) flips it to CLOSED.
+          status: data.pendingSync ? 'PENDING_SYNC' : 'CLOSED',
           closedAt,
           closingCash: counted,
           totalSales, totalCash, totalCard, totalDiscount, totalTax, totalOrders, cashVariance,
           notes: data.notes,
           closedReason: isForceClosed ? data.overrideReason : null,
+          pendingSyncAt: data.pendingSync ? closedAt : null,
+          pendingSyncCount: data.pendingSync ? (data.pendingSyncCount ?? null) : null,
         },
       }),
       prisma.shiftActivity.createMany({
@@ -355,6 +393,12 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
     // close is a single network hop rather than one per write.
   );
 
+  // Spec Part 7 — make the running aggregate exactly match source at close,
+  // so the shift's final number and every dashboard read of it agree. (For a
+  // PENDING_SYNC close this is a best-effort snapshot; sync-complete redoes it
+  // once the queued orders/payments actually land.)
+  await recomputeShiftAggregate(id).catch((e) => console.warn('[closeShift] aggregate recompute failed', e));
+
   // Re-read with the relations the callers expect. Outside the transaction so
   // the include's extra queries can't count against its budget.
   const closed = await prisma.shift.findUnique({
@@ -362,9 +406,42 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
     include: { user: { select: { id: true, name: true } }, denominations: { orderBy: { denomination: 'desc' } }, cashEntries: true },
   });
 
-  emitShiftEvent(shift.branchId, 'closed', id);
+  emitShiftEvent(shift.branchId, data.pendingSync ? 'pending_sync' : 'closed', id);
   emitDashboardStatsUpdated(tenantId, shift.branchId);
   return closed;
+}
+
+/**
+ * Spec Part 6 — the terminal has finished shipping a PENDING_SYNC shift's
+ * queued events. Recompute the totals from what's now in the database, flip
+ * the status to CLOSED, and tell the dashboard. Idempotent: a shift that is
+ * already CLOSED (auto-finalised, or a duplicate call) just returns ok.
+ */
+export async function completeShiftSync(tenantId: string, id: string) {
+  const shift = await prisma.shift.findFirst({ where: { id, tenantId } });
+  if (!shift) return { error: 'Shift not found' };
+  if (shift.status === 'CLOSED') return { ok: true, alreadyClosed: true };
+  if (shift.status !== 'PENDING_SYNC') return { error: `Shift is ${shift.status}, not PENDING_SYNC` };
+
+  const { totalSales, totalDiscount, totalTax, totalOrders, totalCash, totalCard } = await computeShiftTotals(id);
+  await recomputeShiftAggregate(id).catch(() => {});
+
+  await prisma.shift.update({
+    where: { id },
+    data: {
+      status: 'CLOSED',
+      pendingSyncAt: null,
+      pendingSyncCount: null,
+      totalSales, totalCash, totalCard, totalDiscount, totalTax, totalOrders,
+    },
+  });
+  await prisma.shiftActivity.create({
+    data: { shiftId: id, activityType: 'CLOSED', notes: 'Background sync completed — shift finalised' },
+  }).catch(() => {});
+
+  emitShiftEvent(shift.branchId, 'closed', id);
+  emitDashboardStatsUpdated(tenantId, shift.branchId);
+  return { ok: true };
 }
 
 export async function canCloseShift(tenantId: string, branchId: string, shiftId: string, userId: string) {
@@ -390,15 +467,29 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
   });
 
   if (activeShifts.length === 1 && activeShifts[0].id === shiftId) {
-    const branchPending = await prisma.order.findMany({
-      where: { branchId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } }
+    // Scoped to TODAY's business day. This query had no date or shift bound at
+    // all — its own message says "orders from today" but it counted every
+    // unsettled order the branch had ever accumulated, so any historical
+    // orphan blocked every close forever, with no way to clear it from here.
+    // Genuinely-old unresolved orders are the orphan flow's job
+    // (GET /api/pos/orphans + the shift-open resolution modal), not a reason
+    // to trap the cashier who's trying to go home.
+    const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { timezone: true } });
+    const { from, to } = getBusinessDayRange(branch?.timezone || 'Asia/Karachi');
+
+    const branchPending = await prisma.order.count({
+      where: {
+        branchId, tenantId,
+        status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+        createdAt: { gte: from, lte: to },
+      },
     });
-    
-    if (branchPending.length > 0) {
+
+    if (branchPending > 0) {
       blockers.push({
         type: 'SOLE_CASHIER_ACTIVE',
-        message: `You are the only cashier on shift at this branch. There are ${branchPending.length} orders from today that have not been settled. Closing your shift would leave these orders unresolved.`,
-        count: branchPending.length,
+        message: `You are the only cashier on shift at this branch. There are ${branchPending} orders from today that have not been settled. Closing your shift would leave these orders unresolved.`,
+        count: branchPending,
       });
     }
   } else if (activeShifts.length > 1) {
@@ -446,12 +537,23 @@ export async function getShiftSummary(tenantId: string, id: string) {
   const shift = await prisma.shift.findFirst({ where: { id, tenantId }, select: { id: true, status: true, openingFloat: true, openedAt: true } });
   if (!shift) return null;
 
-  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, cashEntryAgg, breaks] = await Promise.all([
-    prisma.order.aggregate({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
+  // Sales figures count COMPLETED orders ONLY — money actually taken. They
+  // used to include every non-CANCELLED order, so orders still PENDING /
+  // IN_KITCHEN / READY inflated "net sales" against a drawer that only ever
+  // holds real payments: the close screen showed e.g. 5,700 in sales with far
+  // less expected in the drawer and looked broken. This also makes the figure
+  // agree with ShiftAggregate (lib/shiftAggregate.ts), which has always
+  // counted COMPLETED only. Unpaid work is reported separately below.
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidAgg, cashEntryAgg, breaks] = await Promise.all([
+    prisma.order.aggregate({ where: { shiftId: id, status: 'COMPLETED' }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true } }),
-    prisma.order.count({ where: { shiftId: id, status: { notIn: ['CANCELLED'] } } }),
+    prisma.order.count({ where: { shiftId: id, status: 'COMPLETED' } }),
+    prisma.order.aggregate({
+      where: { shiftId: id, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
+      _sum: { netAmount: true }, _count: { _all: true },
+    }),
     prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
     prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
   ]);
@@ -472,6 +574,10 @@ export async function getShiftSummary(tenantId: string, id: string) {
     totalDiscount: orderAgg._sum.discountAmount ?? 0,
     totalTax: orderAgg._sum.taxAmount ?? 0,
     totalOrders,
+    // Still-open orders on this shift — shown as their own line on the close
+    // screen so the gap between sales and the drawer is explicit, not implied.
+    unpaidOrders: unpaidAgg._count._all ?? 0,
+    unpaidValue: unpaidAgg._sum.netAmount ?? 0,
     cashIn,
     cashOut,
     // The close-shift screen must show the SAME expected figure the server
@@ -558,13 +664,42 @@ export async function getActiveShiftStats(tenantId: string, branchId?: string | 
     orderBy: { openedAt: 'desc' },
   });
 
+  // Spec Part 7 — read the running per-shift totals as one indexed query
+  // instead of 3 aggregate fan-outs per shift. A shift with no ShiftAggregate
+  // row yet (brand new, or pre-migration) falls back to computing on the fly.
+  const aggRows = await prisma.shiftAggregate.findMany({
+    where: { shiftId: { in: activeShifts.map((s) => s.id) } },
+  });
+  const aggByShift = new Map(aggRows.map((a) => [a.shiftId, a]));
+
   // Enrich each shift with live payment aggregates + break stats
   const enriched = await Promise.all(activeShifts.map(async (shift) => {
-    const [cashAgg, cardAgg, orderAgg] = await Promise.all([
-      prisma.payment.aggregate({ where: { order: { shiftId: shift.id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true }, _count: { id: true } }),
-      prisma.payment.aggregate({ where: { order: { shiftId: shift.id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true }, _count: { id: true } }),
-      prisma.order.aggregate({ where: { shiftId: shift.id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true }, _count: { id: true } }),
-    ]);
+    const agg = aggByShift.get(shift.id);
+    let liveStats;
+    if (agg) {
+      liveStats = {
+        cashOrders: 0, // per-method order counts aren't tracked on the aggregate
+        cashTotal: Number(agg.cashRevenue),
+        digitalOrders: 0,
+        digitalTotal: Number(agg.cardRevenue) + Number(agg.otherRevenue),
+        totalOrders: agg.orderCount,
+        totalSales: Number(agg.netRevenue),
+      };
+    } else {
+      const [cashAgg, cardAgg, orderAgg] = await Promise.all([
+        prisma.payment.aggregate({ where: { order: { shiftId: shift.id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true }, _count: { id: true } }),
+        prisma.payment.aggregate({ where: { order: { shiftId: shift.id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true }, _count: { id: true } }),
+        prisma.order.aggregate({ where: { shiftId: shift.id, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true }, _count: { id: true } }),
+      ]);
+      liveStats = {
+        cashOrders: cashAgg._count.id,
+        cashTotal: Number(cashAgg._sum.amount ?? 0),
+        digitalOrders: cardAgg._count.id,
+        digitalTotal: Number(cardAgg._sum.amount ?? 0),
+        totalOrders: orderAgg._count.id,
+        totalSales: Number(orderAgg._sum.netAmount ?? 0),
+      };
+    }
 
     const completedBreaks = shift.breaks.filter((b) => b.endedAt !== null);
     const activeBreak = shift.breaks.find((b) => b.endedAt === null) ?? null;
@@ -572,14 +707,7 @@ export async function getActiveShiftStats(tenantId: string, branchId?: string | 
 
     return {
       ...shift,
-      liveStats: {
-        cashOrders: cashAgg._count.id,
-        cashTotal: Number(cashAgg._sum.amount ?? 0),
-        digitalOrders: cardAgg._count.id,
-        digitalTotal: Number(cardAgg._sum.amount ?? 0),
-        totalOrders: orderAgg._count.id,
-        totalSales: Number(orderAgg._sum.netAmount ?? 0),
-      },
+      liveStats,
       breakStats: {
         breakCount: completedBreaks.length,
         totalBreakMinutes,

@@ -167,8 +167,22 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
         receiptLayout: true,
         downloadPdfReceipt: true,
         showPoweredBy: true,
+        // Part 13 operational settings — the POS Settings screen shows these
+        // read-only; the sync engine, close flow and jobs read them live.
+        orderNumberFormat: true, tenantShortCode: true, tableCleaningMinutes: true,
+        requireShiftOpen: true, allowLoginWithoutShift: true,
+        allowOrderReopen: true, orderReopenWindowMinutes: true,
+        maxDiscountPercent: true, allowCashierDiscounts: true,
+        voidRequiresManagerApproval: true, autoKotPrint: true, autoReceiptPrint: true,
+        blockOutOfStock: true, kotEnabled: true, posMarkReadyEnabled: true,
+        staleShiftWarnHours: true, autoCloseAbandonedHours: true,
+        cashCountRequired: true, varianceAlertThreshold: true,
+        managerOverlayEnabled: true, managerOverlayIdleMinutes: true, managerOverlayRequireReason: true,
+        syncBatchSize: true, syncRequestTimeoutMs: true, syncMaxEventLifetimeHours: true,
+        shiftCloseSyncTimeoutSec: true, allowCloseWithUnsynced: true, closeWithUnsyncedRequiresPin: true,
       }
     });
+    const tb = tenantBranding as any;
 
     const branding = {
       restaurantName: tenantBranding?.restaurantName || tenant?.name || 'Dineiz Go',
@@ -215,8 +229,46 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
       closingTime: branch?.closingTime ?? null,
       // Tenant-wide POS/Kitchen settings blob (Settings → Point of Sale /
       // Kitchen tabs) — same gap: configurable in the admin UI, never read
-      // by the terminal.
-      pos: (tenant?.settings as any)?.pos ?? {},
+      // by the terminal. The structured Part 13 TenantBranding columns are
+      // layered on top so the POS Settings screen and the sync engine see
+      // the authoritative values.
+      pos: {
+        ...((tenant?.settings as any)?.pos ?? {}),
+        orderNumberFormat: tb?.orderNumberFormat ?? 'STANDARD',
+        tenantShortCode: tb?.tenantShortCode ?? null,
+        tableCleaningMinutes: tb?.tableCleaningMinutes ?? 5,
+        requireShiftOpen: tb?.requireShiftOpen ?? true,
+        requireShiftOpening: tb?.requireShiftOpen ?? true, // POSLayout reads this alias
+        allowLoginWithoutShift: tb?.allowLoginWithoutShift ?? false,
+        allowOrderReopen: tb?.allowOrderReopen ?? false,
+        orderReopenWindowMinutes: tb?.orderReopenWindowMinutes ?? 30,
+        maxDiscountPercent: tb?.maxDiscountPercent ?? 0,
+        allowCashierDiscounts: tb?.allowCashierDiscounts ?? false,
+        voidRequiresManagerApproval: tb?.voidRequiresManagerApproval ?? true,
+        autoKotPrint: tb?.autoKotPrint ?? true,
+        autoReceiptPrint: tb?.autoReceiptPrint ?? true,
+        blockOutOfStock: tb?.blockOutOfStock ?? true,
+        kotEnabled: tb?.kotEnabled ?? true,
+        posMarkReadyEnabled: tb?.posMarkReadyEnabled ?? true,
+        staleShiftWarnHours: tb?.staleShiftWarnHours ?? 16,
+        autoCloseAbandonedHours: tb?.autoCloseAbandonedHours ?? 24,
+        cashCountRequired: tb?.cashCountRequired ?? true,
+        varianceAlertThreshold: tb?.varianceAlertThreshold ?? 500,
+        managerOverlayEnabled: tb?.managerOverlayEnabled ?? true,
+        managerOverlayIdleMinutes: tb?.managerOverlayIdleMinutes ?? 5,
+        managerOverlayRequireReason: tb?.managerOverlayRequireReason ?? true,
+        syncBatchSize: tb?.syncBatchSize ?? 50,
+        syncRequestTimeoutMs: tb?.syncRequestTimeoutMs ?? 8000,
+        syncMaxEventLifetimeHours: tb?.syncMaxEventLifetimeHours ?? 24,
+        shiftCloseSyncTimeoutSec: tb?.shiftCloseSyncTimeoutSec ?? 45,
+        allowCloseWithUnsynced: tb?.allowCloseWithUnsynced ?? true,
+        closeWithUnsyncedRequiresPin: tb?.closeWithUnsyncedRequiresPin ?? true,
+      },
+      // Also flat, so print.service / branding-store consumers that read
+      // b.orderNumberFormat directly keep working.
+      orderNumberFormat: tb?.orderNumberFormat ?? 'STANDARD',
+      tenantShortCode: tb?.tenantShortCode ?? null,
+      tableCleaningMinutes: tb?.tableCleaningMinutes ?? 5,
       kitchen: (tenant?.settings as any)?.kitchen ?? {},
     };
 
