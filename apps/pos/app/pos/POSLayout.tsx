@@ -35,6 +35,53 @@ function liveOrdersScope(): { shiftId?: string | null } {
   return { shiftId: getPosShift()?.shiftId ?? null };
 }
 
+const ROUTE_SKIP = ['/login', '/pos/shift', '/pos/settings'];
+
+/**
+ * Where this route SHOULD be, given the local session/shift state — or `null`
+ * if it's fine to stay. Pure (reads localStorage only), no navigation. Called
+ * both during render (to hold back `children` so the target screen never
+ * flashes its stale contents for a frame before the redirect) and in the
+ * mount effect (which actually calls router.replace).
+ */
+function resolveRouteGate(pathname: string, searchParams: URLSearchParams): { to: string; toast?: string } | null {
+  const sessionObj = getPosSession();
+  const onSkip = ROUTE_SKIP.some((p) => pathname.startsWith(p));
+
+  if (!sessionObj) return onSkip ? null : { to: '/login' };
+
+  const role = sessionObj.role?.toUpperCase() || '';
+
+  if (role === 'KITCHEN_STAFF') {
+    return pathname.startsWith('/pos/kds') ? null : { to: '/pos/kds' };
+  }
+
+  if (role === 'WAITER') {
+    const allowed = ['/pos/tables', '/pos/tickets', '/pos/order', '/pos/stock'];
+    if (!allowed.some((p) => pathname.startsWith(p))) return { to: '/pos/tables' };
+    if (pathname === '/pos/order' && !searchParams.get('tableId') && !searchParams.get('orderId')) {
+      return { to: '/pos/tables' };
+    }
+    return null;
+  }
+
+  let requireShiftOpening = true;
+  try {
+    const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+    if (settings?.pos?.requireShiftOpening === false) requireShiftOpening = false;
+  } catch {}
+
+  if (!getPosShift() && requireShiftOpening && !onSkip) {
+    const viewMode = allowsViewMode() && localStorage.getItem('pos_view_mode') === '1';
+    if (!viewMode) return { to: '/pos/shift/open' };
+    if (pathname.startsWith('/pos/order')) return { to: '/pos/home', toast: 'Open a shift to take orders' };
+  }
+
+  if (role === 'CASHIER' && pathname.startsWith('/pos/admin')) return { to: '/pos/home' };
+
+  return null;
+}
+
 function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,87 +101,22 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
 
   const searchParams = useSearchParams();
 
+  // The route this screen should be on (or null to stay). Computed during
+  // render so `children` can be held back below — otherwise /pos/home paints a
+  // frame of its stale useViews orders and dashboard numbers before the mount
+  // effect redirects to /pos/shift/open. `null` until mounted so SSR and the
+  // first client render agree.
+  const gate = isMounted ? resolveRouteGate(pathname, searchParams) : null;
+
   useEffect(() => {
-    // Never fire router.replace() during the hydration render. Reaching a
-    // route via a client-side transition and then redirecting again inside
-    // that same commit desyncs Next's <Router> under Turbopack + React 19
-    // ("Rendered more hooks than during the previous render", blank screen —
-    // seen right after a successful PIN). One frame's delay (isMounted flips
-    // in the mount effect) puts the redirect safely after hydration, and the
-    // content slot already renders nothing until then anyway.
-    if (!isMounted) return;
-
-    const sessionObj = getPosSession();
-    const shiftObj = getPosShift();
-    // `/pos/shift` covers open, close and the post-close background-sync
-    // screen (spec Part 6) — the last two run with `pos_shift` already
-    // cleared and must not bounce to shift-open. `/pos/settings` is reachable
-    // with or without a shift (spec Part 9).
-    const skip = ['/login', '/pos/shift', '/pos/settings'];
-
-    if (!sessionObj && !skip.some(p => pathname.startsWith(p))) {
-      router.replace('/login');
-      return;
-    }
-
-    const role = sessionObj?.role?.toUpperCase() || '';
-
-    // 1. KITCHEN_STAFF: Only allowed on KDS
-    if (role === 'KITCHEN_STAFF') {
-      if (!pathname.startsWith('/pos/kds')) {
-        router.replace('/pos/kds');
-      }
-      return;
-    }
-
-    // 2. WAITER: Only allowed on specific floor/order screens
-    if (role === 'WAITER') {
-      const allowedWaiterPaths = ['/pos/tables', '/pos/tickets', '/pos/order', '/pos/stock'];
-      if (!allowedWaiterPaths.some(p => pathname.startsWith(p))) {
-        router.replace('/pos/tables');
-        return;
-      }
-      
-      // If a waiter tries to access /pos/order directly without a tableId or orderId, redirect back
-      if (pathname === '/pos/order' && !searchParams.get('tableId') && !searchParams.get('orderId')) {
-        router.replace('/pos/tables');
-        return;
-      }
-      return; // Fully exempt from shift check below
-    }
-
-    // 3. Shift Check: All other roles MUST have a shift opened, unless the
-    // tenant has turned off Settings → Point of Sale → "Require shift
-    // opening" — previously this redirect fired unconditionally regardless
-    // of that setting, so turning it off in the admin panel had no effect.
-    let requireShiftOpening = true;
-    try {
-      const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
-      if (settings?.pos?.requireShiftOpening === false) requireShiftOpening = false;
-    } catch {}
-
-    if (!shiftObj && requireShiftOpening && !skip.some(p => pathname.startsWith(p))) {
-      // Spec Part 11 — VIEW MODE. If the tenant allows login without a shift
-      // and the cashier chose "Continue Without Shift", let them in read-only
-      // instead of forcing shift-open. Order-building / checkout screens stay
-      // off-limits until a shift is open.
-      const viewMode = allowsViewMode() && localStorage.getItem('pos_view_mode') === '1';
-      if (!viewMode) {
-        router.replace('/pos/shift/open');
-        return;
-      }
-      if (pathname.startsWith('/pos/order')) {
-        router.replace('/pos/home');
-        toast.message('Open a shift to take orders');
-        return;
-      }
-    }
-
-    if (sessionObj?.role === 'CASHIER' && pathname.startsWith('/pos/admin')) {
-      router.replace('/pos/home');
-      return;
-    }
-  }, [pathname, searchParams, router, isMounted]);
+    // Never fire router.replace() during the hydration render — reaching a
+    // route via a client transition and redirecting again inside the same
+    // commit desyncs Next's <Router> under Turbopack + React 19 ("Rendered
+    // more hooks…", blank screen). Wait one frame (isMounted).
+    if (!isMounted || !gate) return;
+    if (gate.toast) toast.message(gate.toast);
+    router.replace(gate.to);
+  }, [gate?.to, gate?.toast, isMounted, router]);
 
   useEffect(() => {
     // Load once from localStorage on mount (in case zustand initial state missed it on server)
@@ -540,9 +522,14 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
           flips in the mount effect), and a skeleton in that window is a flash of
           fake content, not information. The shell around it — top bar, bottom
           nav — is already painted, so the terminal never looks broken, and
-          NavigationProgress is the cue for anything that actually takes time. */}
+          NavigationProgress is the cue for anything that actually takes time.
+
+          Also held back while `gate` is set: this screen is about to redirect
+          (no shift → /pos/shift/open, wrong role, …). Rendering `children` here
+          would flash /pos/home's stale orders + dashboard numbers for a frame
+          before the redirect lands. */}
       <div className="flex-1 overflow-hidden flex flex-col relative">
-        {isMounted ? children : null}
+        {isMounted && !gate ? children : null}
       </div>
 
       {/* Canonical Bottom Navigation */}
