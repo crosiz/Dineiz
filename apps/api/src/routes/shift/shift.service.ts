@@ -446,18 +446,38 @@ export async function completeShiftSync(tenantId: string, id: string) {
 
 export async function canCloseShift(tenantId: string, branchId: string, shiftId: string, userId: string) {
   const blockers: any[] = [];
-  
-  const pendingOrders = await prisma.order.findMany({
+
+  const openOrders = await prisma.order.findMany({
     where: { shiftId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
-    select: { id: true, orderNumber: true, totalAmount: true, status: true, table: { select: { label: true } } }
+    select: {
+      id: true, orderNumber: true, totalAmount: true, netAmount: true, status: true,
+      table: { select: { label: true } },
+      _count: { select: { items: true, payments: true } },
+    },
   });
+
+  // Phantom orders — no items, no value, no payments — can never be "settled"
+  // (there's nothing to charge) and shouldn't trap the cashier at close. They
+  // come from a New Order that was sent with an empty cart, or an ITEM_ADDED
+  // batch that never synced. Auto-void them here instead of blocking.
+  const phantoms = openOrders.filter(
+    (o) => o._count.items === 0 && o._count.payments === 0 && (o.totalAmount ?? 0) <= 0 && (o.netAmount ?? 0) <= 0,
+  );
+  if (phantoms.length > 0) {
+    await prisma.order.updateMany({
+      where: { id: { in: phantoms.map((o) => o.id) } },
+      data: { status: 'CANCELLED', notes: 'Auto-voided at shift close: empty order (no items, no value).' },
+    });
+  }
+
+  const pendingOrders = openOrders.filter((o) => !phantoms.includes(o));
 
   if (pendingOrders.length > 0) {
     blockers.push({
       type: 'PENDING_ORDERS',
-      message: `You have ${pendingOrders.length} orders that have not been collected. Resolve these before closing your shift.`,
+      message: `You have ${pendingOrders.length} order${pendingOrders.length === 1 ? '' : 's'} that ${pendingOrders.length === 1 ? 'has' : 'have'} not been collected. Resolve ${pendingOrders.length === 1 ? 'it' : 'these'} before closing your shift.`,
       count: pendingOrders.length,
-      orders: pendingOrders,
+      orders: pendingOrders.map((o) => ({ id: o.id, orderNumber: o.orderNumber, totalAmount: o.totalAmount, status: o.status, table: o.table })),
     });
   }
 
@@ -482,6 +502,7 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
         branchId, tenantId,
         status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
         createdAt: { gte: from, lte: to },
+        items: { some: {} }, // ignore phantom empty orders (see above)
       },
     });
 

@@ -135,6 +135,16 @@ export async function applyDiscount(
 }
 
 export async function sendToKitchen(orderId: string) {
+  // Never send an order with no live items. The order screen already guards on
+  // `cart.length`, but a stray call here (or a create whose ITEM_ADDED events
+  // never landed) would otherwise put an empty PKR 0 order on the board that
+  // can't be settled and blocks shift close ("phantom order"). Refuse it.
+  const key = resolveLocalOrderId(orderId);
+  const o = useViews.getState().orders[key];
+  const liveItems = (o?.items ?? []).filter((i: any) => !i.voided);
+  if (o && liveItems.length === 0) {
+    throw new Error('Add at least one item before sending this order to the kitchen.');
+  }
   const e = await emit('ORDER_SENT_TO_KITCHEN', 'ORDER', orderId, {}, chain(orderId));
   remember(orderId, e.id);
   // Caller prints the KOT immediately — order number already exists
