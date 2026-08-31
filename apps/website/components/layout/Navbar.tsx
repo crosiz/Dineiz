@@ -60,7 +60,7 @@ export function Navbar() {
             href="/"
             className="flex items-center"
           >
-            <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain" priority />
+            <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-7 w-auto object-contain" priority />
           </Link>
 
           {/* Desktop Navigation */}
@@ -177,7 +177,7 @@ export function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center"
               >
-                <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain" priority />
+                <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-7 w-auto object-contain" priority />
               </Link>
               <button
                 onClick={() => setMobileMenuOpen(false)}

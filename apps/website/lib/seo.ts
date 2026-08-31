@@ -132,7 +132,7 @@ export function generateArticleSchema(
       name: 'Dineiz',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://dineiz.com/logo.svg'
+        url: 'https://dineiz.com/logo.png'
       }
     }
   }
@@ -145,7 +145,7 @@ export function generateOrganizationSchema() {
     name: 'Dineiz',
     legalName: 'Crosiz Technologies',
     url: BASE_URL,
-    logo: `${BASE_URL}/logo.svg`,
+    logo: `${BASE_URL}/logo.png`,
     description: 'Restaurant POS and management software built in Pakistan.',
     email: 'hello@dineiz.com',
     contactPoint: {

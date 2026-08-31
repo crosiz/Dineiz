@@ -35,7 +35,7 @@ export function Footer() {
           {/* Column 1: Brand & Socials */}
           <div className="flex flex-col gap-5">
             <Link href="/" className="inline-block mb-6">
-              <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain hover:scale-105 transition-transform duration-300" />
+              <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-7 w-auto object-contain" />
             </Link>
             <p className="text-[14px] text-gray-500 leading-snug">
               Smart billing for Pakistan&apos;s restaurants.
