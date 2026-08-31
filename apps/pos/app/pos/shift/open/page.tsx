@@ -1,293 +1,295 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
-import { getToken, getPosSession, clearPosSession } from '@/lib/pos-session';
+import { getToken, getPosSession, clearPosSession, setPosShift } from '@/lib/pos-session';
 import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
+import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const DENOMS = [5000, 1000, 500, 100, 50, 20, 10, 5];
+const QUICK = [2000, 5000, 10000];
+const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 
 export default function ShiftOpenGate() {
   const router = useRouter();
-  const session = useCartStore(s => s.session);
+  const session = useCartStore((s) => s.session);
+
   const [float, setFloat] = useState<number | ''>('');
-  const [showDenominations, setShowDenominations] = useState(false);
-  const [denominations, setDenominations] = useState<Record<number, number>>({
-    5000: 0, 1000: 0, 500: 0, 100: 0, 50: 0, 10: 0
-  });
-  
-  const [timeStr, setTimeStr] = useState('00:00 AM');
-  const [dateStr, setDateStr] = useState('Monday, January 1');
-  const [greeting, setGreeting] = useState('Good Morning');
-  // Anything derived from localStorage (`allowsViewMode()`, `getPosSession()`)
-  // can only be trusted after mount — reading it during render makes the
-  // server output ("Branch", no View Mode button) disagree with the client
-  // and React throws a hydration mismatch. Gate all of it on `mounted`.
+  const [countByNote, setCountByNote] = useState(false);
+  const [notes, setNotes] = useState<Record<number, number>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
+
+  // localStorage-derived values are only trustworthy after mount, or SSR and
+  // the client first render disagree and React throws a hydration mismatch.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
-  const cashierName = mounted ? (session?.cashierName || getPosSession()?.name || 'Operator') : 'Operator';
-  const branchName = mounted ? (session?.branchName || getPosSession()?.branchName || 'Branch') : 'Branch';
+  const cashierName = mounted ? session?.cashierName || getPosSession()?.name || 'Operator' : 'Operator';
+  const branchName = mounted ? session?.branchName || getPosSession()?.branchName || 'Branch' : 'Branch';
+  const role = mounted ? (getPosSession()?.role || 'CASHIER').replace(/_/g, ' ').toLowerCase() : 'cashier';
 
+  // Already have a shift → this screen has nothing to do. Send them on without
+  // a toast (the redirect itself is the feedback; the toast fired on every
+  // incidental mount and read as an error).
   useEffect(() => {
-    const checkExistingShift = () => {
-      const existingShift = localStorage.getItem('pos_shift');
-      if (existingShift) {
-        toast.info('Continuing existing shift');
-        router.replace('/pos/home');
-      }
-    };
-    checkExistingShift();
+    if (localStorage.getItem('pos_shift')) router.replace('/pos/home');
   }, [router]);
 
   useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeStr(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }));
-      setDateStr(now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }));
-      const h = now.getHours();
-      setGreeting(h < 12 ? 'Good Morning' : h < 17 ? 'Good Afternoon' : 'Good Evening');
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
+    const tick = () => setNow(new Date());
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
   }, []);
 
-  // Auto-sum denominations into float
-  useEffect(() => {
-    const total = Object.entries(denominations).reduce(
-      (sum, [denom, count]) => sum + Number(denom) * Number(count), 0
-    );
-    if (total > 0) setFloat(total);
-  }, [denominations]);
+  const noteTotal = useMemo(
+    () => DENOMS.reduce((sum, d) => sum + d * (notes[d] || 0), 0),
+    [notes],
+  );
+  // When the breakdown is open it is the source of truth for the amount.
+  const amount = countByNote ? noteTotal : float === '' ? 0 : float;
 
   const handleStartShift = async () => {
-    const floatAmount = float === '' ? 0 : float;
-    if (floatAmount < 0) {
-      toast.error('Please enter a valid float amount');
+    if (submitting) return;
+    if (amount < 0) {
+      toast.error('Enter a valid float amount');
       return;
     }
-    
+    setSubmitting(true);
     try {
-      const payload = {
-        branchId: session?.branchId,
-        openingFloat: floatAmount
-      };
-      
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/open`, {
+      const res = await fetch(`${API_URL}/api/shifts/open`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`,
-        },
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ branchId: session?.branchId, openingFloat: amount }),
       });
-      
+
+      // A shift is already open for this branch/cashier — adopt it rather than
+      // erroring. Pull its real openedAt / float from the server so the home
+      // screen's elapsed timer and drawer expectation are correct (this used
+      // to stamp `new Date()` and a guessed float).
       if (res.status === 409) {
-        const errorData = await res.json().catch(() => ({}));
-        const existingShiftId = errorData.shiftId;
-        if (existingShiftId) {
-          toast.success('Resumed existing open shift');
-          useCartStore.setState({ session: { ...session, shiftId: existingShiftId } });
-          localStorage.setItem('pos_shift', JSON.stringify({
-            shiftId: existingShiftId,
-            openedAt: new Date().toISOString(), // Or fetch actual openedAt if needed
-            openingFloat: floatAmount, // We might not know original float, but this works to unblock
-          }));
-          localStorage.removeItem('pos_view_mode'); // leaving View Mode (Part 11)
-          router.push('/pos/home');
-          return;
-        }
+        const body = await res.json().catch(() => ({}));
+        const shiftId: string | undefined = body.shiftId;
+        if (!shiftId) throw new Error(body.error || 'A shift is already open');
+
+        let openedAt = new Date().toISOString();
+        let openingFloat = amount;
+        try {
+          const s = await fetch(`${API_URL}/api/shifts/${shiftId}`, {
+            headers: { Authorization: `Bearer ${getToken()}` },
+          });
+          if (s.ok) {
+            const sd = await s.json();
+            openedAt = sd.openedAt ?? openedAt;
+            openingFloat = sd.openingFloat ?? openingFloat;
+          }
+        } catch { /* keep the fallbacks */ }
+
+        useCartStore.setState({ session: { ...session, shiftId } });
+        setPosShift({ shiftId, openedAt, openingFloat });
+        localStorage.removeItem('pos_view_mode');
+        toast.success('Resumed your open shift');
+        router.replace('/pos/home');
+        return;
       }
 
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Server error: ${res.status}`);
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Couldn't open the shift (${res.status})`);
       }
-      
+
       const data = await res.json();
-      const shiftId = data.id;
-      
-      if (!shiftId) {
-        throw new Error('Server returned OK but no shift ID was provided.');
-      }
-      
-      useCartStore.setState({ session: { ...session, shiftId } });
-      localStorage.setItem('pos_shift', JSON.stringify({
-        shiftId,
-        openedAt: new Date().toISOString(),
-        openingFloat: floatAmount,
-      }));
-      localStorage.removeItem('pos_view_mode'); // leaving View Mode (Part 11)
-      toast.success('Shift opened successfully');
-      router.push('/pos/home');
+      if (!data?.id) throw new Error('The server opened the shift but returned no ID');
+
+      useCartStore.setState({ session: { ...session, shiftId: data.id } });
+      setPosShift({
+        shiftId: data.id,
+        openedAt: data.openedAt ?? new Date().toISOString(),
+        openingFloat: amount,
+      });
+      localStorage.removeItem('pos_view_mode');
+      toast.success('Shift started');
+      router.replace('/pos/home');
     } catch (err: any) {
       console.error('Failed to open shift:', err);
-      toast.error(err.message || 'Error opening shift');
+      toast.error(err?.message || 'Error opening shift');
+      setSubmitting(false);
     }
+    // On success we navigate away — leave `submitting` true so the button
+    // stays disabled through the route transition.
   };
 
-  const greetingEmoji = greeting === 'Good Morning' ? '☀️' : greeting === 'Good Afternoon' ? '🌤️' : '🌙';
+  const dateLine = now
+    ? now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    : '';
+  const timeLine = now
+    ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : '';
 
   return (
-    <div className="bg-[#F8FAFC] min-h-screen flex items-center justify-center font-body-md overflow-hidden antialiased p-4 text-[#0F172A]">
-      {/* Subtle dot grid background */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{ backgroundImage: 'radial-gradient(circle, rgba(245,158,11,0.06) 1px, transparent 1px)', backgroundSize: '24px 24px' }}
-      />
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-body-md text-slate-900">
+      <main className="w-full max-w-[420px]">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.12)] overflow-hidden">
 
-      <main className="relative z-10 w-full max-w-[480px]">
-        <div className="bg-white rounded-[20px] shadow-[0_10px_40px_rgba(0,0,0,0.08)] overflow-hidden border border-[#E2E8F0]">
-          
-          {/* CARD TOP: amber gradient header */}
-          <header className="bg-gradient-to-br from-[#F59E0B] to-[#D97706] p-[28px] text-white flex flex-col items-center">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[20px]">{greetingEmoji}</span>
-              <h1 className="text-[20px] font-bold clash-display">{greeting}!</h1>
-            </div>
-            <p className="text-[14px] text-white/90 mb-4 font-medium">{branchName}</p>
-            <div className="text-[40px] font-bold tracking-tight mb-1 font-mono">
-              {timeStr}
-            </div>
-            <p className="text-[14px] text-white/80">{dateStr}</p>
-          </header>
-
-          {/* CARD BODY — Light themed */}
-          <div className="bg-white p-[28px]">
-
-            {/* STAFF IDENTITY ROW */}
-            <div className="flex items-center gap-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 mb-6">
-              <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-[#D97706] font-bold text-[15px]">
-                {cashierName.substring(0, 2).toUpperCase()}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[15px] font-bold text-[#0F172A]">{cashierName}</span>
-                <span className="text-[12px] text-[#64748B] font-medium">Cashier • {branchName}</span>
-              </div>
-              <div className="ml-auto">
-                <span className="material-symbols-outlined text-[#D97706]">verified_user</span>
-              </div>
+          {/* Identity + context */}
+          <div className="p-6 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Open shift</span>
+              <span className="text-[12px] text-slate-400 tabular-nums" suppressHydrationWarning>
+                {dateLine}{timeLine && ` · ${timeLine}`}
+              </span>
             </div>
 
-            {/* OPENING FLOAT SECTION */}
-            <section>
-              <div className="flex flex-col mb-4">
-                <label className="text-[13px] font-bold uppercase text-[#0F172A] tracking-[0.05em]">Opening Cash Float</label>
-                <p className="text-[12px] text-[#64748B] mt-1 font-medium">Count the cash in your drawer and enter the total</p>
+            <div className="flex items-center gap-3 mt-4">
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-[15px] shrink-0"
+                style={{ backgroundColor: getPosSession()?.avatarColor || 'var(--pos-primary,#FF5722)' }}
+                suppressHydrationWarning
+              >
+                {cashierName.slice(0, 2).toUpperCase()}
               </div>
-
-              {/* LARGE INPUT */}
-              <div className="relative group mb-4">
-                <div className="h-[68px] border-2 border-[#CBD5E1] group-focus-within:border-[var(--pos-primary,#F59E0B)] rounded-xl bg-[#F8FAFC] flex items-center px-4 transition-all duration-200">
-                  <div className="flex items-center">
-                    <span className="text-[16px] font-bold text-[#475569] mr-3">PKR</span>
-                    <div className="w-[2px] h-6 bg-[#CBD5E1]"></div>
-                  </div>
-                  <input 
-                    className="w-full bg-transparent border-none text-right text-[24px] font-bold text-[#0F172A] focus:ring-0 placeholder:text-[#94A3B8] outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" 
-                    id="floatInput" 
-                    placeholder="0" 
-                    type="number"
-                    min="0"
-                    value={float}
-                    onChange={(e) => setFloat(e.target.value === '' ? '' : Number(e.target.value))}
-                  />
-                </div>
+              <div className="min-w-0">
+                <div className="text-[15px] font-bold text-slate-900 truncate" suppressHydrationWarning>{cashierName}</div>
+                <div className="text-[12px] text-slate-500 capitalize truncate" suppressHydrationWarning>{role} · {branchName}</div>
               </div>
+              <ShieldCheck size={18} className="ml-auto text-emerald-500 shrink-0" />
+            </div>
+          </div>
 
-              {/* QUICK FLOAT PILLS */}
-              <div className="flex gap-2 mb-6">
-                {[2000, 5000, 10000].map(amount => (
-                  <button 
-                    key={amount}
-                    className={`flex-1 border transition-all rounded-full py-2 px-3 text-[13px] font-bold active:scale-95 duration-150 ${
-                      float === amount 
-                        ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]'
-                        : 'border-[#CBD5E1] text-[#475569] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-amber-50'
+          {/* Float */}
+          <div className="p-6">
+            <label htmlFor="floatInput" className="block text-[13px] font-bold text-slate-900">
+              Opening cash float
+            </label>
+            <p className="text-[12px] text-slate-500 mt-0.5">
+              Count what&apos;s physically in the drawer right now.
+            </p>
+
+            <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-[var(--pos-primary,#FF5722)]">
+              <span className="text-[15px] font-semibold text-slate-400 shrink-0">PKR</span>
+              {/* type="text" + inputMode: a number input renders its own inset
+                  field chrome (the faint box the amount sat in) even with
+                  appearance:none — this is a plain field we style fully. */}
+              <input
+                id="floatInput"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="0"
+                disabled={countByNote}
+                value={countByNote ? (noteTotal ? noteTotal.toLocaleString('en-US') : '') : (float === '' ? '' : float.toLocaleString('en-US'))}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                  setFloat(digits === '' ? '' : Number(digits));
+                }}
+                className="flex-1 min-w-0 bg-transparent text-right text-[26px] font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none border-none focus:ring-0 disabled:text-slate-500"
+              />
+            </div>
+
+            {!countByNote && (
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {QUICK.map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setFloat(v)}
+                    className={`h-9 rounded-lg text-[13px] font-bold border transition-colors ${
+                      float === v
+                        ? 'border-[var(--pos-primary,#FF5722)] bg-[var(--pos-primary,#FF5722)]/10 text-[var(--pos-primary,#FF5722)]'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                     }`}
-                    onClick={() => setFloat(amount)}
                   >
-                    PKR {amount.toLocaleString()}
+                    {v.toLocaleString()}
                   </button>
                 ))}
               </div>
+            )}
 
-              {/* DENOMINATION TOGGLE */}
-              <div className="mb-8">
-                <button 
-                  className="text-[#D97706] text-[12px] font-bold flex items-center gap-1 hover:text-[#B45309] transition-colors"
-                  onClick={() => setShowDenominations(!showDenominations)}
-                >
-                  Count by denomination 
-                  <span className="material-symbols-outlined text-[16px]">{showDenominations ? 'expand_less' : 'expand_more'}</span>
-                </button>
+            <button
+              type="button"
+              onClick={() => setCountByNote((v) => !v)}
+              className="mt-4 flex items-center gap-1 text-[12px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              <ChevronDown size={14} className={`transition-transform ${countByNote ? 'rotate-180' : ''}`} />
+              Count note by note
+            </button>
 
-                {showDenominations && (
-                  <div className="mt-4 grid grid-cols-2 gap-3 max-h-[220px] overflow-y-auto pr-2 no-scrollbar">
-                    {[5000, 1000, 500, 100, 50, 10].map(denom => (
-                      <div key={denom} className="flex items-center justify-between bg-[#F8FAFC] p-3 rounded-lg border border-[#E2E8F0]">
-                        <span className="text-[13px] font-bold text-[#0F172A]">
-                          PKR {denom.toLocaleString()}
-                        </span>
-                        <input 
-                          type="number"
-                          placeholder="0"
-                          min="0"
-                          value={denominations[denom] || ''}
-                          onChange={(e) => setDenominations(prev => ({
-                            ...prev, [denom]: Number(e.target.value) || 0
-                          }))}
-                          className="w-16 h-8 text-center bg-white border border-[#CBD5E1] rounded-lg outline-none text-[13px] text-[#0F172A] font-bold focus:ring-1 focus:ring-[var(--pos-primary,#F59E0B)] focus:border-[var(--pos-primary,#F59E0B)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shadow-sm"
-                        /></div>
-                    ))}
-                  </div>
-                )}
+            {countByNote && (
+              <div className="mt-3 rounded-xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+                {DENOMS.map((d) => {
+                  const c = notes[d] || 0;
+                  return (
+                    <div key={d} className="flex items-center gap-3 px-3 py-2">
+                      <span className="text-[13px] font-semibold text-slate-700 w-[4.5rem] tabular-nums">PKR {d.toLocaleString()}</span>
+                      <span className="text-slate-300 text-[13px]">×</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        placeholder="0"
+                        value={notes[d] || ''}
+                        onChange={(e) => {
+                          const n = Number(e.target.value.replace(/[^\d]/g, '').slice(0, 4));
+                          setNotes((p) => ({ ...p, [d]: n || 0 }));
+                        }}
+                        className="w-14 h-8 text-center rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-900 outline-none focus:border-[var(--pos-primary,#FF5722)]"
+                      />
+                      <span className="ml-auto text-[13px] font-semibold text-slate-500 tabular-nums">{pkr(d * c)}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between px-3 py-2.5 bg-slate-50">
+                  <span className="text-[12px] font-bold uppercase tracking-wide text-slate-400">Total</span>
+                  <span className="text-[15px] font-bold text-slate-900 tabular-nums">{pkr(noteTotal)}</span>
+                </div>
               </div>
-            </section>
+            )}
+          </div>
 
-            {/* FOOTER */}
-            <footer className="flex flex-col items-center">
-              <button 
-                onClick={handleStartShift}
-                className="w-full h-[54px] bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 active:scale-[0.98] text-white font-bold text-[16px] rounded-xl flex items-center justify-center gap-2 transition-all duration-150 mb-3 shadow-md"
-              >
-                Start Shift
-                <span className="material-symbols-outlined">arrow_forward</span>
-              </button>
-              <p className="text-[11px] text-[#64748B] text-center px-4 font-medium">
-                Your shift record and all orders will be tracked from now
-              </p>
-
-              {/* Spec Part 11 — VIEW MODE. Only when the console allows login
-                  without a shift. Read-only: view orders, reprint, tables,
-                  stock, reports. No new orders, no payments. */}
-              {mounted && allowsViewMode() && (
-                <button
-                  onClick={() => { enterViewMode(); router.replace('/pos/home'); }}
-                  className="w-full h-[46px] mt-2 border border-[#E2E8F0] bg-white text-[#475569] font-semibold text-[14px] rounded-xl hover:bg-[#F8FAFC] active:scale-[0.98] transition-all"
-                >
-                  Continue Without Shift
-                  <span className="block text-[11px] font-medium text-[#94A3B8] mt-0.5">
-                    View orders, print receipts, manage tables — no new orders
-                  </span>
-                </button>
+          {/* Actions */}
+          <div className="px-6 pb-6">
+            <button
+              type="button"
+              onClick={handleStartShift}
+              disabled={submitting}
+              className="w-full h-[52px] rounded-xl bg-[var(--pos-primary,#FF5722)] text-white font-bold text-[15px] flex items-center justify-center gap-2 transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
+            >
+              {submitting ? (
+                <><Loader2 size={18} className="animate-spin" /> Starting…</>
+              ) : (
+                <>Start shift <ArrowRight size={18} /></>
               )}
+            </button>
+            <p className="text-[11px] text-slate-400 text-center mt-2">
+              Every order from now is tracked against this shift.
+            </p>
 
+            {mounted && allowsViewMode() && (
               <button
-                onClick={() => {
-                  // Ends the session without clearing pos_branch_id, so the
-                  // terminal stays linked to its branch for the next login
-                  // (previously this only removed pos_session, leaving a
-                  // stale pos_token behind).
-                  clearPosSession();
-                  router.push('/login');
-                }}
-                className="mt-4 text-[#ef4444] text-[13px] font-bold hover:underline"
+                type="button"
+                disabled={submitting}
+                onClick={() => { enterViewMode(); router.replace('/pos/home'); }}
+                className="w-full mt-3 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-[13px] font-semibold hover:bg-slate-50 active:scale-[0.99] transition-all disabled:opacity-50"
               >
-                Logout / Switch User
+                Continue without a shift
+                <span className="block text-[11px] font-medium text-slate-400 mt-0.5">
+                  View orders, reprint, manage tables — no new orders
+                </span>
               </button>
-            </footer>
+            )}
+
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => { clearPosSession(); router.push('/login'); }}
+              className="w-full mt-3 text-[12px] font-semibold text-slate-400 hover:text-rose-600 transition-colors disabled:opacity-50"
+            >
+              Switch user
+            </button>
           </div>
         </div>
       </main>
