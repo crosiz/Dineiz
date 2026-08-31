@@ -1052,6 +1052,24 @@ export async function discardStuckEvent(eventId: string): Promise<void> {
     lastError: `Discarded by operator${e.lastError ? ` — was: ${e.lastError}` : ''}`,
   });
   reflectOrderSyncState([eventId], 'SYNCED');
+
+  // Undo the discarded event's effect on the board. A rejected PAYMENT_COLLECTED
+  // still marked its order COMPLETED locally (the reducer applies it optimistically),
+  // so the order vanished from Tickets while the server kept it unpaid — and every
+  // close-shift attempt then blocked on an order the cashier couldn't see. Replay
+  // without the now-SUPERSEDED event, then re-pull the live list so the order
+  // reappears at its real server status.
+  try {
+    const { rebuildViews, refreshOrders } = await import('./views');
+    await rebuildViews();
+    const { getPosSession, getPosShift } = await import('@/lib/pos-session');
+    const branchId = getPosSession()?.branchId;
+    if (branchId) {
+      const role = getPosSession()?.role;
+      const isManager = role === 'BRANCH_MANAGER' || role === 'TENANT_ADMIN';
+      await refreshOrders(branchId, isManager ? {} : { shiftId: getPosShift()?.shiftId ?? null });
+    }
+  } catch { /* the SUPERSEDED mark is what matters; the board refreshes on its own cadence too */ }
 }
 
 // ─── Shift close (spec Part 6) ───────────────────────────────────────────

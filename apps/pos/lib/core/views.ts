@@ -650,7 +650,12 @@ export async function rebuildViews(): Promise<void> {
   const lastSeq = snapshot?.version ?? 0;
   const events = await edb.events.where('seq').above(lastSeq).sortBy('seq');
   const apply = useViews.getState()._applyEvent;
-  for (const e of events) apply(e);
+  // SUPERSEDED = "this event is void, act as if it never happened" — both for a
+  // stale duplicate the outbox collapsed AND for a poisoned event an operator
+  // dismissed (outbox.discardStuckEvent). Skipping it here is what makes
+  // dismissing a rejected PKR-0 / half-total payment actually put the order
+  // back on the board instead of leaving it "paid" locally forever.
+  for (const e of events) if (e.syncState !== 'SUPERSEDED') apply(e);
 
   // Re-apply any serverId reconciliations persisted by reconcileServerId —
   // these aren't events (they're a shipping-layer detail, not a fact about

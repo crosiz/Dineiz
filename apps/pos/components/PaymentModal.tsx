@@ -85,8 +85,8 @@ export default function PaymentModal({
   // not `.length`, is the fix for "collect payment on an old order and it
   // comes back" — priced-at-zero lines slipped past a `.length === 0` guard
   // and a PKR 0 payment was queued, which the server rejects (422) so the
-  // order never actually gets paid.
-  const itemsUnavailable = !!orderId && subtotalFromItems <= 0;
+  // order never actually gets paid. (Superseded by `itemsTrustworthy` below,
+  // which also catches a partially-loaded line list, not just an empty one.)
 
   // ── Dual Tax Reactive Logic ──
   const branding = useBrandingStore(s => s.branding);
@@ -155,11 +155,20 @@ export default function PaymentModal({
   const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
   const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
 
-  // No usable line prices but a known order total → treat that total as gross
-  // and back out this method's tax so the recompute lands back on it, not PKR 0.
-  const subtotal = subtotalFromItems > 0
+  // For an EXISTING order the authoritative amount is `orderTotal` (server /
+  // view store), NOT what the visible line items add up to: `/api/orders/live`
+  // returns items with no `unitPrice`, and a partially-loaded list undercounts.
+  // Trust the line sum only when it's within ~2% of the known total — or when
+  // there is no known total (a brand-new in-cart order). This is what stopped a
+  // 9-item PKR 6,300 order being charged PKR 735 (one line's worth), rejected
+  // 422, and left "paid" locally while the server kept it IN_KITCHEN.
+  const itemsTrustworthy =
+    subtotalFromItems > 0 &&
+    (!orderId || orderTotal <= 0 || subtotalFromItems >= orderTotal * 0.98);
+
+  const subtotal = itemsTrustworthy
     ? subtotalFromItems
-    : (itemsUnavailable && orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
+    : (orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
 
   const discount = useCartStore((s) => s.discount);
   const discountAmount = discount
@@ -762,9 +771,9 @@ export default function PaymentModal({
 
         {/* Sticky Bottom Bar */}
         <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
-          {itemsUnavailable && orderTotal > 0 && totalWithTip > 0 && (
+          {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
             <p className="text-amber-600 text-[12px] font-semibold text-center">
-              Line items couldn’t load — billing the order total. The server confirms the final amount.
+              Billing this order&apos;s full total (PKR {Math.round(orderTotal).toLocaleString()}). The server confirms the final amount.
             </p>
           )}
           {totalWithTip <= 0 && (
