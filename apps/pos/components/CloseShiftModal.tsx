@@ -61,6 +61,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const [syncPhase, setSyncPhase] = useState<'none' | 'syncing' | 'incomplete'>('none');
   const [syncNow, setSyncNow] = useState<SyncCategoryProgress>({ payments: 0, orders: 0, other: 0, total: 0 });
   const [syncElapsed, setSyncElapsed] = useState(0);
+  // The remaining events aren't broken — the server is unreachable (Redis down /
+  // offline). Changes the "Sync incomplete" copy from "N items could not sync"
+  // (reads as data loss) to "can't reach the server, will finish on its own",
+  // and skips the 45s countdown that's pointless against a dead server.
+  const [serverUnreachable, setServerUnreachable] = useState(false);
   const [showCloseAnywayPin, setShowCloseAnywayPin] = useState(false);
   const syncBaseRef = useRef<SyncCategoryProgress>({ payments: 0, orders: 0, other: 0, total: 0 });
   const syncPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -254,6 +259,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   };
 
   const beginSyncWait = () => {
+    setServerUnreachable(false);
     getSyncCategoryProgress().then((c) => {
       syncBaseRef.current = c;
       setSyncNow(c);
@@ -264,13 +270,23 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     kickOutbox('immediate');
 
     syncPollRef.current = setInterval(async () => {
-      setSyncElapsed(Math.round((Date.now() - syncStartRef.current) / 1000));
+      const elapsed = Math.round((Date.now() - syncStartRef.current) / 1000);
+      setSyncElapsed(elapsed);
       const summary = await getUnsyncedSummary();
       const c = await getSyncCategoryProgress();
       setSyncNow(c);
       if (summary.count === 0) {
         stopSyncTimers();
         void doClose(false);
+        return;
+      }
+      // Server is unreachable (circuit breaker open) and no progress has been
+      // made — don't make the cashier watch a 45s bar tick against a dead
+      // connection. Bail to the "incomplete" step early with the right copy.
+      if ((summary.circuitOpen || summary.stalled) && elapsed >= 6) {
+        setServerUnreachable(true);
+        stopSyncTimers();
+        setSyncPhase('incomplete');
       }
     }, 1000);
 
@@ -288,6 +304,14 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     const summary = await getUnsyncedSummary();
     if (summary.count === 0) {
       void doClose(false);
+    } else if (summary.circuitOpen || summary.stalled) {
+      // Server already known-unreachable — go straight to the close-anyway
+      // step, no countdown.
+      setServerUnreachable(true);
+      const c = await getSyncCategoryProgress();
+      syncBaseRef.current = c;
+      setSyncNow(c);
+      setSyncPhase('incomplete');
     } else {
       beginSyncWait();
     }
@@ -354,36 +378,54 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
                         <CloudOff size={17} />
                       </div>
-                      <h2 className="text-base font-bold text-slate-900">Sync incomplete</h2>
+                      <h2 className="text-base font-bold text-slate-900">
+                        {serverUnreachable ? "Can't reach the server" : 'Sync incomplete'}
+                      </h2>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed mb-1">
-                      <strong className="text-slate-900 tabular-nums">{syncNow.total} item{syncNow.total === 1 ? '' : 's'}</strong> could not sync.
-                    </p>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                      Financial data is safe on this device and will sync automatically.
-                    </p>
-                    <div className="flex gap-2.5">
+                    {serverUnreachable ? (
+                      <p className="text-xs text-slate-600 leading-relaxed mb-5">
+                        <strong className="text-slate-900 tabular-nums">{syncNow.total} change{syncNow.total === 1 ? '' : 's'}</strong> haven&apos;t
+                        reached the server yet. They&apos;re saved on this device and sync
+                        automatically once the connection is back — no need to wait here.
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-xs text-slate-600 leading-relaxed mb-1">
+                          <strong className="text-slate-900 tabular-nums">{syncNow.total} item{syncNow.total === 1 ? '' : 's'}</strong> could not sync.
+                        </p>
+                        <p className="text-xs text-slate-500 leading-relaxed mb-5">
+                          Financial data is safe on this device and will sync automatically.
+                        </p>
+                      </>
+                    )}
+                    <div className={`flex gap-2.5 ${serverUnreachable ? 'flex-col-reverse' : ''}`}>
                       <button
                         onClick={beginSyncWait}
                         disabled={isSubmitting}
-                        className={`h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 ${allowCloseWithUnsynced ? 'flex-1' : 'w-full'}`}
+                        className={`h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 ${allowCloseWithUnsynced && !serverUnreachable ? 'flex-1' : 'w-full'}`}
                       >
-                        <RefreshCw size={13} /> Keep Trying
+                        <RefreshCw size={13} /> {serverUnreachable ? 'Try the connection again' : 'Keep Trying'}
                       </button>
                       {allowCloseWithUnsynced && (
                         <button
                           onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
                           disabled={isSubmitting}
-                          className="flex-1 h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                          className={`h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 disabled:opacity-50 transition-colors ${serverUnreachable ? 'w-full' : 'flex-1'}`}
                         >
-                          Close Anyway
+                          {serverUnreachable ? 'Close shift · finish sync later' : 'Close Anyway'}
                         </button>
                       )}
                     </div>
                     <p className="text-[10px] text-slate-400 text-center mt-3">
-                      {allowCloseWithUnsynced
-                        ? (closeWithUnsyncedRequiresPin ? 'Close Anyway needs a manager PIN and flags this shift for review.' : 'Closing now flags this shift for review; it keeps syncing in the background.')
-                        : 'Your administrator requires the queue to clear before this shift can close.'}
+                      {!allowCloseWithUnsynced
+                        ? 'Your administrator requires the queue to clear before this shift can close.'
+                        : serverUnreachable
+                          ? (closeWithUnsyncedRequiresPin
+                              ? 'Needs a manager PIN. The shift closes now and finishes syncing on its own.'
+                              : 'The shift closes now and finishes syncing on its own.')
+                          : (closeWithUnsyncedRequiresPin
+                              ? 'Close Anyway needs a manager PIN and flags this shift for review.'
+                              : 'Closing now flags this shift for review; it keeps syncing in the background.')}
                     </p>
                   </>
                 )}
