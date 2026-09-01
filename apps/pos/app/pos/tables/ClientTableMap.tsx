@@ -59,14 +59,23 @@ function popupFromView(o: any) {
   const items = (o.items || [])
     .filter((i: any) => !i.voided)
     .map((i: any) => ({
-      quantity: i.qty,
-      name: i.itemName,
-      unitPrice: i.unitPrice,
-      subtotal: (i.unitPrice ?? 0) * (i.qty ?? 1),
+      quantity: i.qty ?? i.quantity ?? 1,
+      name: i.itemName ?? i.name,
+      unitPrice: i.unitPrice ?? 0,
+      subtotal: i.subtotal ?? (i.unitPrice ?? 0) * (i.qty ?? i.quantity ?? 1),
       notes: i.note ?? null,
     }));
-  const subtotal = items.reduce((s: number, i: any) => s + i.subtotal, 0);
-  const total = o.netAmount ?? subtotal + (o.taxAmount ?? 0) - (o.discountAmount ?? 0);
+  const subtotal = items.reduce((s: number, i: any) => s + (i.subtotal || 0), 0);
+  // `??` binds looser than `+`/`-`, and only falls through on null/undefined —
+  // a stored `netAmount` of 0 (a local order whose recalc hasn't run, or a row
+  // hydrated before the API sent line prices) would win and show "Rs. 0".
+  // Take the first POSITIVE of netAmount / total / items-derived.
+  const derived = subtotal > 0 ? subtotal + (o.taxAmount ?? 0) - (o.discountAmount ?? 0) : 0;
+  const total =
+    Number(o.netAmount) > 0 ? Number(o.netAmount)
+    : Number(o.total) > 0 ? Number(o.total)
+    : Number(o.totalAmount) > 0 ? Number(o.totalAmount)
+    : derived;
   return {
     id: o.serverId || o.id,
     orderNumber: o.orderNumber,
@@ -207,11 +216,15 @@ export default function ClientTableMap() {
     const vo = Object.values(useViews.getState().orders).find(
       (o) => o.tableId === tableId && ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status),
     );
+    const voPopup = vo ? popupFromView(vo) : null;
     const cacheKey = `table-order-${tableId}`;
     const cached = await getDB().ordersCache.get(cacheKey).catch(() => null);
 
-    if (vo) {
-      setPopupOrder(popupFromView(vo));
+    // Only trust the local row if it actually has a value — a zero-total view
+    // row (stale hydration, missed recalc) should fall through to cache/fetch
+    // rather than show "Rs. 0" against a real order.
+    if (voPopup && voPopup.total > 0) {
+      setPopupOrder(voPopup);
       setPopupLoading(false);
     } else if (cached?.data?.[0]) {
       setPopupOrder(cached.data[0]);

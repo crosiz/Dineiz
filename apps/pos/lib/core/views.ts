@@ -1057,12 +1057,29 @@ export async function refreshOrders(
     const seen = new Map<string, string>();
     for (const [id, o] of Object.entries(merged)) {
       if (!o.orderNumber) continue;
-      const kept = seen.get(o.orderNumber);
-      if (kept === undefined) { seen.set(o.orderNumber, id); continue; }
-      // Prefer the row whose key is NOT the server id — that's the local one.
-      const dropId = o.serverId === id ? id : kept;
-      if (dropId !== id) seen.set(o.orderNumber, id);
+      const keptId = seen.get(o.orderNumber);
+      if (keptId === undefined) { seen.set(o.orderNumber, id); continue; }
+      // Two rows, same client-owned order number. Keep the one whose key is NOT
+      // its own server id (the client-created row — it owns the id + number).
+      const keepId = o.serverId === id ? keptId : id;
+      const dropId = keepId === id ? keptId : id;
+      const keep = merged[keepId];
+      const drop = merged[dropId];
+      // ...but if the kept row is missing its money (a botched local create, or
+      // a row hydrated before the API sent line prices), adopt it from the
+      // other row so the table popup / checkout don't read "Rs. 0".
+      if (keep && drop && (keep.netAmount ?? 0) <= 0 && (drop.netAmount ?? 0) > 0) {
+        merged[keepId] = {
+          ...keep,
+          items: keep.items?.length ? keep.items : drop.items,
+          subtotal: drop.subtotal,
+          taxAmount: drop.taxAmount,
+          discountAmount: drop.discountAmount,
+          netAmount: drop.netAmount,
+        };
+      }
       delete merged[dropId];
+      seen.set(o.orderNumber, keepId);
     }
 
     useViews.getState()._setSnapshot({ orders: merged });
