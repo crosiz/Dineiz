@@ -565,15 +565,23 @@ export async function getShiftSummary(tenantId: string, id: string) {
   // less expected in the drawer and looked broken. This also makes the figure
   // agree with ShiftAggregate (lib/shiftAggregate.ts), which has always
   // counted COMPLETED only. Unpaid work is reported separately below.
-  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidAgg, cashEntryAgg, breaks] = await Promise.all([
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidOrdersList, cashEntryAgg, breaks] = await Promise.all([
     prisma.order.aggregate({ where: { shiftId: id, status: 'COMPLETED' }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.order.count({ where: { shiftId: id, status: 'COMPLETED' } }),
-    prisma.order.aggregate({
+    // Full rows, not just the aggregate — the close-shift screen renders
+    // these directly (Settle/Cancel per order) so a cashier is never stuck
+    // on a passive "N orders still open" line with no way to act on it. This
+    // used to depend entirely on a SEPARATE /api/shifts/can-close check
+    // (which also auto-voids true phantom orders) resolving in the
+    // background; if that call failed or was slow, the cashier saw this
+    // count with nothing clickable.
+    prisma.order.findMany({
       where: { shiftId: id, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
-      _sum: { netAmount: true }, _count: { _all: true },
+      select: { id: true, orderNumber: true, netAmount: true, status: true, table: { select: { label: true } } },
+      orderBy: { createdAt: 'asc' },
     }),
     prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
     prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
@@ -597,8 +605,11 @@ export async function getShiftSummary(tenantId: string, id: string) {
     totalOrders,
     // Still-open orders on this shift — shown as their own line on the close
     // screen so the gap between sales and the drawer is explicit, not implied.
-    unpaidOrders: unpaidAgg._count._all ?? 0,
-    unpaidValue: unpaidAgg._sum.netAmount ?? 0,
+    unpaidOrders: unpaidOrdersList.length,
+    unpaidValue: unpaidOrdersList.reduce((sum, o) => sum + Number(o.netAmount ?? 0), 0),
+    unpaidOrdersList: unpaidOrdersList.map((o) => ({
+      id: o.id, orderNumber: o.orderNumber, netAmount: o.netAmount, status: o.status, tableLabel: o.table?.label ?? null,
+    })),
     cashIn,
     cashOut,
     // The close-shift screen must show the SAME expected figure the server

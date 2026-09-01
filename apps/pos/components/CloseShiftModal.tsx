@@ -9,7 +9,7 @@ import {
   getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox,
   type SyncCategoryProgress,
 } from '@/lib/core/outbox';
-import { closeShift as emitShiftClosed } from '@/lib/core/commands';
+import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import {
@@ -17,6 +17,14 @@ import {
   Banknote, Coffee, TrendingUp, TrendingDown, FileEdit, CheckCheck, Loader2, Check,
   RefreshCw, CloudOff,
 } from 'lucide-react';
+
+interface UnpaidOrderRow {
+  id: string;
+  orderNumber: string;
+  netAmount: number;
+  status: string;
+  tableLabel: string | null;
+}
 
 const DEFAULT_SYNC_TIMEOUT_MS = 45_000; // spec Part 6 — overridable in console settings
 
@@ -91,38 +99,58 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   if (tokenRef.current === null) tokenRef.current = getToken();
   const token = tokenRef.current;
 
+  // Re-run after the cashier settles/cancels an order from the list below,
+  // so the warning (and the button it's blocking) clears the moment there's
+  // nothing left open — no need to close and reopen this modal.
+  const fetchSummary = async (showSpinner = true) => {
+    if (showSpinner) setIsLoading(true);
+    setNoOpenShift(false);
+    try {
+      const resolvedId = await resolveActiveShiftId(API_URL);
+      setShiftId(resolvedId);
+      // resolveActiveShiftId already cleared the stale `pos_shift` from
+      // localStorage — surface it plainly and route the cashier onward
+      // rather than toasting an error into a blank modal.
+      if (!resolvedId) {
+        setNoOpenShift(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch shift summary');
+      setSummary(await res.json());
+    } catch (err: any) {
+      toast.error(err.message || 'Error fetching shift summary');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const fetchSummary = async () => {
-      setIsLoading(true);
-      setNoOpenShift(false);
-      try {
-        const resolvedId = await resolveActiveShiftId(API_URL);
-        setShiftId(resolvedId);
-        // resolveActiveShiftId already cleared the stale `pos_shift` from
-        // localStorage — surface it plainly and route the cashier onward
-        // rather than toasting an error into a blank modal.
-        if (!resolvedId) {
-          setNoOpenShift(true);
-          setIsLoading(false);
-          return;
-        }
-
-        const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to fetch shift summary');
-        setSummary(await res.json());
-      } catch (err: any) {
-        toast.error(err.message || 'Error fetching shift summary');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, token]);
+
+  // Cancelling here goes through the same local-first command Tickets uses
+  // — applies instantly, the outbox ships it — so the cashier never has to
+  // leave this screen, walk to Tickets, and start the close flow over.
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const cancelUnpaidOrder = async (orderId: string) => {
+    setBusyOrderId(orderId);
+    try {
+      await cancelOrder(orderId);
+      toast.success('Order cancelled');
+      await fetchSummary(false);
+    } catch {
+      toast.error('Could not cancel that order — open it from Tickets.');
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
 
   // Denomination counting drives the total, so the two can never disagree.
   const denominationTotal = useMemo(
@@ -593,13 +621,45 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       NOT in Net Sales — nobody has paid for them — so saying so
                       here is what stops the two numbers looking contradictory. */}
                   {(summary.unpaidOrders ?? 0) > 0 && (
-                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                      <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-amber-900 leading-relaxed">
-                        <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
-                        {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
-                        settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} before closing.
-                      </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-[12px] text-amber-900 leading-relaxed">
+                          <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
+                          {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
+                          settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} below before closing.
+                        </p>
+                      </div>
+                      {Array.isArray(summary.unpaidOrdersList) && summary.unpaidOrdersList.length > 0 && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {(summary.unpaidOrdersList as UnpaidOrderRow[]).map((o) => (
+                            <div key={o.id} className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-amber-200/70 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-bold text-slate-900 font-mono">#{o.orderNumber}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase shrink-0">
+                                  {o.tableLabel || 'Takeaway'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2.5 shrink-0">
+                                <span className="font-bold text-slate-900 font-mono">{pkr(o.netAmount)}</span>
+                                <button
+                                  onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
+                                  className="text-[11px] font-semibold text-[#FF5722] hover:underline"
+                                >
+                                  Settle
+                                </button>
+                                <button
+                                  onClick={() => cancelUnpaidOrder(o.id)}
+                                  disabled={busyOrderId === o.id}
+                                  className="text-[11px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
+                                >
+                                  {busyOrderId === o.id ? '…' : 'Cancel'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
