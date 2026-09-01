@@ -451,10 +451,12 @@ export async function listActiveOrders(tenantId: string, branchId: string) {
         id: i.id,
         name: i.item?.name || 'Unknown Item',
         quantity: i.quantity,
+        unitPrice: i.unitPrice ?? 0,
         subtotal: i.subtotal,
         options: i.options,
         notes: i.notes
       })),
+      tableId: o.tableId ?? null,
       tableLabel: o.table?.label ?? o.tableLabel ?? null,
       customerName: o.customer?.name ?? o.customerName ?? null,
       customerPhone: o.customer?.phone ?? o.customerPhone ?? null,
@@ -657,14 +659,23 @@ export async function listLiveOrders(
     status: o.status,
     type: o.type,
     source: o.source,
+    // `tableId` so a terminal that didn't open the order can still show its
+    // table occupied; `tableLabel` alone forced a label→id lookup that the
+    // client's table-status derivation doesn't do.
+    tableId: o.tableId ?? null,
     tableLabel: o.table?.label ?? null,
     token: o.tokenNumber ?? null,
     customerName: o.customer?.name ?? null,
     customerPhone: o.customer?.phone ?? null,
     payments: (o.payments || []).map((p: any) => ({ method: p.method, status: p.status })),
+    // `unitPrice` / `subtotal` per line — without them the client billed
+    // priced-at-0 lines (PKR 0 payments, the "735 vs 6300" undercharge, the
+    // checkout total flipping when this list overwrote local prices).
     items: (o.items || []).map((it: any) => ({
       name: it.item?.name ?? 'Item',
       qty: it.quantity,
+      unitPrice: it.unitPrice ?? 0,
+      subtotal: it.subtotal ?? (it.unitPrice ?? 0) * (it.quantity ?? 1),
       variation: null,
     })),
     total: o.netAmount ?? 0,

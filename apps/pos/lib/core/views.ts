@@ -1027,8 +1027,26 @@ export async function refreshOrders(
       // next background refresh after creating an order silently swaps its
       // permanent number for the server's, which is the exact bug this
       // whole event-sourced order-number design exists to prevent.
+      //
+      // `tableId` / `tableLabel` are ALSO preserved from the local row:
+      // GET /api/orders/live's summary shape carries `tableLabel` but no
+      // `tableId`, so `mapped.tableId` is null — letting it through wiped the
+      // table link the ORDER_CREATED event set, and the table's derived status
+      // dropped back to FREE a second after the order was punched (table not
+      // turning red / freeing wrongly). The server list never knows a table
+      // better than the terminal that opened the order.
+      const preservedTableId = existing?.tableId ?? mapped.tableId;
+      const preservedTableLabel = existing?.tableLabel ?? mapped.tableLabel;
       merged[localId ?? raw.id] = existing
-        ? { ...mapped, id: existing.id, serverId: raw.id, orderNumber: existing.orderNumber, tokenNumber: existing.tokenNumber }
+        ? {
+            ...mapped,
+            id: existing.id,
+            serverId: raw.id,
+            orderNumber: existing.orderNumber,
+            tokenNumber: existing.tokenNumber,
+            tableId: preservedTableId,
+            tableLabel: preservedTableLabel,
+          }
         : mapped;
     }
 
