@@ -9,7 +9,7 @@ import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const DENOMS = [5000, 1000, 500, 100, 50, 20, 10, 5];
+const DENOMS = [5000, 1000, 500, 100, 50, 20, 10];
 const QUICK = [2000, 5000, 10000];
 const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 
@@ -131,12 +131,16 @@ export default function ShiftOpenGate() {
     : '';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-body-md text-slate-900">
-      <main className="w-full max-w-[420px]">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.12)] overflow-hidden">
+    <div className="h-screen bg-slate-50 flex items-center justify-center p-4 font-body-md text-slate-900">
+      {/* Bounded flex column: identity + actions are fixed, only the middle
+          (float + note-by-note breakdown) scrolls — otherwise opening the
+          breakdown grows the card past the viewport and its top/bottom get
+          clipped ("it becomes very very big"). */}
+      <main className="w-full max-w-[420px] max-h-full flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.12)] overflow-hidden flex flex-col min-h-0">
 
           {/* Identity + context */}
-          <div className="p-6 border-b border-slate-100">
+          <div className="p-6 border-b border-slate-100 shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Open shift</span>
               <span className="text-[12px] text-slate-400 tabular-nums" suppressHydrationWarning>
@@ -160,8 +164,8 @@ export default function ShiftOpenGate() {
             </div>
           </div>
 
-          {/* Float */}
-          <div className="p-6">
+          {/* Float — the only scrolling region */}
+          <div className="p-6 overflow-y-auto flex-1 min-h-0">
             <label htmlFor="floatInput" className="block text-[13px] font-bold text-slate-900">
               Opening cash float
             </label>
@@ -223,7 +227,7 @@ export default function ShiftOpenGate() {
                 {DENOMS.map((d) => {
                   const c = notes[d] || 0;
                   return (
-                    <div key={d} className="flex items-center gap-3 px-3 py-2">
+                    <div key={d} className="flex items-center gap-3 px-3 py-1.5">
                       <span className="text-[13px] font-semibold text-slate-700 w-[4.5rem] tabular-nums">PKR {d.toLocaleString()}</span>
                       <span className="text-slate-300 text-[13px]">×</span>
                       <input
@@ -250,8 +254,8 @@ export default function ShiftOpenGate() {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="px-6 pb-6">
+          {/* Actions — fixed at the bottom */}
+          <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={handleStartShift}
