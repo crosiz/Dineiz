@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
-import { useViews } from '@/lib/core/views';
+import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
@@ -56,21 +56,39 @@ export default function PaymentModal({
   // ended up showing PKR 0. Prefer the `items` the caller passed; if it forgot
   // them, pull the real lines straight from the event store; only a brand-new
   // in-cart order (no id yet) falls back to `cart`.
-  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  // `orderId` may be a client id OR a server id (a "Settle" deep link carries
+  // the server id) — resolve to the view store's key either way.
+  const viewOrder = useViews((s) => (orderId ? s.orders[resolveLocalOrderId(orderId)] : undefined));
+
+  // For an order with an id, the EVENT STORE copy is authoritative: its lines
+  // carry `unitPrice` straight from the ITEM_ADDED events this terminal wrote.
+  // The `items` prop is the order screen's `[...existingItems, ...cart]`,
+  // stitched from async fetches whose line `subtotal` is sometimes pre-tax and
+  // sometimes post-tax depending on which endpoint won the race — that made the
+  // total read 900.14 on open and then jump to 945 a minute later. Prefer the
+  // event store; the prop and the cart are fallbacks.
+  const viewItemsPriced = useMemo(() => {
+    if (!orderId || !viewOrder?.items?.length) return null;
+    const mapped = viewOrder.items
+      .filter((i: any) => !i.voided)
+      .map((i: any) => ({
+        quantity: i.qty,
+        unitPrice: i.unitPrice,
+        subtotal: (i.unitPrice ?? 0) * (i.qty ?? 1),
+        name: i.itemName,
+      }));
+    return mapped.some((m) => m.subtotal > 0) ? mapped : null;
+  }, [orderId, viewOrder]);
+
   const displayItems = useMemo(() => {
+    if (viewItemsPriced) return viewItemsPriced;
     if (items && items.length > 0) return items;
-    if (viewOrder?.items?.length) {
-      return viewOrder.items
-        .filter((i: any) => !i.voided)
-        .map((i: any) => ({
-          quantity: i.qty,
-          unitPrice: i.unitPrice,
-          subtotal: (i.unitPrice ?? 0) * (i.qty ?? 1),
-          name: i.itemName,
-        }));
-    }
     return orderId ? [] : cart;
-  }, [items, viewOrder, cart, orderId]);
+  }, [viewItemsPriced, items, cart, orderId]);
+
+  // True when displayItems came from the event store — then the sum is the
+  // real pre-tax subtotal and needs no cross-check against `orderTotal`.
+  const itemsFromEventStore = !!viewItemsPriced;
 
   const subtotalFromItems = displayItems.reduce(
     (acc: number, c: any) => acc + (c.subtotal || (c.unitPrice * c.quantity) || 0),
@@ -155,20 +173,29 @@ export default function PaymentModal({
   const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
   const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
 
-  // For an EXISTING order the authoritative amount is `orderTotal` (server /
-  // view store), NOT what the visible line items add up to: `/api/orders/live`
-  // returns items with no `unitPrice`, and a partially-loaded list undercounts.
-  // Trust the line sum only when it's within ~2% of the known total — or when
-  // there is no known total (a brand-new in-cart order). This is what stopped a
-  // 9-item PKR 6,300 order being charged PKR 735 (one line's worth), rejected
-  // 422, and left "paid" locally while the server kept it IN_KITCHEN.
+  // What we can bill from the visible lines:
+  //  - straight from the event store → the sum IS the real pre-tax subtotal,
+  //    trust it outright (no cross-check — the `orderTotal` prop is a stale
+  //    downstream figure and was the one that flipped 900 → 945).
+  //  - from the `items` prop / cart → only trust it if the tax-inclusive total
+  //    it implies lands within 5% of the known `orderTotal`; a partially-loaded
+  //    list undercounts (was: 9-item PKR 6,300 order billed PKR 735).
+  const impliedGross = subtotalFromItems + Math.round(subtotalFromItems * (taxRate / 100));
   const itemsTrustworthy =
     subtotalFromItems > 0 &&
-    (!orderId || orderTotal <= 0 || subtotalFromItems >= orderTotal * 0.98);
+    (itemsFromEventStore ||
+      !orderId ||
+      orderTotal <= 0 ||
+      Math.abs(impliedGross - orderTotal) <= Math.max(2, orderTotal * 0.05));
 
+  // Fallback: we only know the gross `orderTotal`. Split it so subtotal + tax
+  // === orderTotal EXACTLY (no rounding drift — that drift is what showed
+  // "Total Due 900.14" for a PKR 900 order). `dynamicTotal` is pinned to
+  // `orderTotal` below in this case.
+  const fallbackTax = orderTotal > 0 ? orderTotal - Math.round(orderTotal / (1 + taxRate / 100)) : 0;
   const subtotal = itemsTrustworthy
     ? subtotalFromItems
-    : (orderTotal > 0 ? orderTotal / (1 + taxRate / 100) : subtotalFromItems);
+    : (orderTotal > 0 ? orderTotal - fallbackTax : subtotalFromItems);
 
   const discount = useCartStore((s) => s.discount);
   const discountAmount = discount
@@ -187,11 +214,17 @@ export default function PaymentModal({
   }
 
   const taxableSubtotal = Math.max(0, subtotal - discountAmount - loyaltyDiscount);
-  const taxAmount = Math.round(taxableSubtotal * (taxRate / 100));
+  const taxAmount = itemsTrustworthy
+    ? Math.round(taxableSubtotal * (taxRate / 100))
+    : Math.max(0, fallbackTax - Math.round((discountAmount + loyaltyDiscount) * (taxRate / 100)));
   const taxLabel = taxEnabled ? `${getTaxLabel(activeMethod)} (${taxRate}%)` : 'Tax Disabled';
 
-  // Override orderTotal prop with locally calculated exact total
-  const dynamicTotal = taxableSubtotal + taxAmount;
+  // When we're billing from the known gross `orderTotal` (items not trustworthy),
+  // the total to charge IS `orderTotal` minus any discount — pinned exactly, no
+  // reconstructed subtotal+tax that drifts by a rupee (the "900.14" bug).
+  const dynamicTotal = itemsTrustworthy || orderTotal <= 0
+    ? taxableSubtotal + taxAmount
+    : Math.max(0, Math.round(orderTotal) - discountAmount - loyaltyDiscount);
 
   const [tipPercent, setTipPercent] = useState<number>(0);
   const [customTip, setCustomTip] = useState<string>('');
