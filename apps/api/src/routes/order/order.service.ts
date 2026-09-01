@@ -458,6 +458,7 @@ export async function listActiveOrders(tenantId: string, branchId: string) {
       })),
       tableId: o.tableId ?? null,
       tableLabel: o.table?.label ?? o.tableLabel ?? null,
+      shiftId: o.shiftId ?? null,
       customerName: o.customer?.name ?? o.customerName ?? null,
       customerPhone: o.customer?.phone ?? o.customerPhone ?? null,
       totalItems,
@@ -661,9 +662,12 @@ export async function listLiveOrders(
     source: o.source,
     // `tableId` so a terminal that didn't open the order can still show its
     // table occupied; `tableLabel` alone forced a label→id lookup that the
-    // client's table-status derivation doesn't do.
+    // client's table-status derivation doesn't do. `shiftId` so the POS home's
+    // local "orders served / total value" (filtered by shiftId) counts a
+    // payment collected on this terminal before the outbox has shipped it.
     tableId: o.tableId ?? null,
     tableLabel: o.table?.label ?? null,
+    shiftId: o.shiftId ?? null,
     token: o.tokenNumber ?? null,
     customerName: o.customer?.name ?? null,
     customerPhone: o.customer?.phone ?? null,

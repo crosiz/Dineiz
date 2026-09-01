@@ -1037,6 +1037,10 @@ export async function refreshOrders(
       // better than the terminal that opened the order.
       const preservedTableId = existing?.tableId ?? mapped.tableId;
       const preservedTableLabel = existing?.tableLabel ?? mapped.tableLabel;
+      // `shiftId` too — the live list omitted it, so `mapped.shiftId` was ''
+      // and a locally-created order lost the shift stamp it needs to be counted
+      // in the POS home's local "orders served / total value".
+      const preservedShiftId = existing?.shiftId || mapped.shiftId || '';
       merged[localId ?? raw.id] = existing
         ? {
             ...mapped,
@@ -1046,6 +1050,7 @@ export async function refreshOrders(
             tokenNumber: existing.tokenNumber,
             tableId: preservedTableId,
             tableLabel: preservedTableLabel,
+            shiftId: preservedShiftId,
           }
         : mapped;
     }
@@ -1066,12 +1071,16 @@ export async function refreshOrders(
       const keep = merged[keepId];
       const drop = merged[dropId];
       // ...but if the kept row is missing its money (a botched local create, or
-      // a row hydrated before the API sent line prices), adopt it from the
-      // other row so the table popup / checkout don't read "Rs. 0".
-      if (keep && drop && (keep.netAmount ?? 0) <= 0 && (drop.netAmount ?? 0) > 0) {
+      // a row hydrated before the API sent line prices), adopt the other row's
+      // items + totals wholesale so the table popup / checkout don't read
+      // "Rs. 0" and a payment isn't blocked as "nothing to charge".
+      const keepMoneyless =
+        (keep?.netAmount ?? 0) <= 0 &&
+        (keep?.items ?? []).reduce((s, i) => s + (i.unitPrice ?? 0) * (i.qty ?? 0), 0) <= 0;
+      if (keep && drop && keepMoneyless && (drop.netAmount ?? 0) > 0) {
         merged[keepId] = {
           ...keep,
-          items: keep.items?.length ? keep.items : drop.items,
+          items: drop.items?.length ? drop.items : keep.items,
           subtotal: drop.subtotal,
           taxAmount: drop.taxAmount,
           discountAmount: drop.discountAmount,
