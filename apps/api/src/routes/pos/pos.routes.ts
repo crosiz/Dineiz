@@ -79,7 +79,7 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
         },
         select: {
           id: true, orderNumber: true, status: true, type: true,
-          netAmount: true, totalAmount: true, createdAt: true, shiftId: true,
+          netAmount: true, totalAmount: true, createdAt: true, shiftId: true, cashierId: true,
           table: { select: { label: true } },
           shift: { select: { id: true, status: true, closedAt: true, user: { select: { name: true } } } },
           _count: { select: { items: true } },
@@ -113,6 +113,7 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       originalShiftId: o.shiftId,
       originalShiftStatus: o.shift?.status ?? null,
       originalCashier: o.shift?.user?.name ?? null,
+      originalCashierId: o.cashierId ?? null,
     })));
   });
 
@@ -122,30 +123,61 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       body: z.object({
         action: z.enum(['ADOPT', 'CANCEL']),
         intoShiftId: z.string().optional(),
-        overridePin: z.string(),
-        overrideReason: z.string().min(1),
+        // Optional now — a cashier adopting their OWN orphaned order doesn't
+        // need a manager PIN at all (see isSelfAdopt below). Still required
+        // for every other case, checked by hand once we know which case
+        // this is.
+        overridePin: z.string().optional(),
+        overrideReason: z.string().optional(),
       }),
     },
     preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER']),
   }, async (request, reply) => {
     const tenantId = request.user!.tenantId!;
+    const userId = request.user!.id!;
     const { orderId } = request.params as { orderId: string };
     const { action, intoShiftId, overridePin, overrideReason } = request.body as {
-      action: 'ADOPT' | 'CANCEL'; intoShiftId?: string; overridePin: string; overrideReason: string;
+      action: 'ADOPT' | 'CANCEL'; intoShiftId?: string; overridePin?: string; overrideReason?: string;
     };
-
-    // Manager PIN gate — same lookup shift.service.closeShift uses.
-    const manager = await prisma.user.findFirst({
-      where: { tenantId, posPin: overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
-      select: { id: true, name: true },
-    });
-    if (!manager) return reply.status(403).send({ error: 'Invalid manager PIN or insufficient permissions' });
 
     const order = await prisma.order.findFirst({
       where: { id: orderId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
-      select: { id: true, branchId: true, shiftId: true, tableId: true, orderNumber: true },
+      select: { id: true, branchId: true, shiftId: true, tableId: true, orderNumber: true, cashierId: true },
     });
     if (!order) return reply.status(404).send({ error: 'Order not found or already resolved' });
+
+    // A cashier picking their OWN unfinished order back up into their OWN
+    // new shift is a routine continuation of service, not an override — it
+    // was requiring a manager's PIN here that turned "the previous shift
+    // left 2 orders open" into "you can't serve anyone until a manager
+    // answers their phone" for a lone cashier. Voiding an order always
+    // needs a manager regardless of whose it is — that's a real write-off
+    // of revenue, not a continuation — and adopting someone ELSE's order
+    // still needs one too.
+    const isSelfAdopt = action === 'ADOPT' && !!order.cashierId && order.cashierId === userId;
+
+    let authorizerId: string;
+    let authorizerName: string;
+    let reasonText: string;
+
+    if (isSelfAdopt) {
+      const self = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      authorizerId = userId;
+      authorizerName = self?.name ?? 'Cashier';
+      reasonText = overrideReason?.trim() || 'Continuing my own order into this shift';
+    } else {
+      if (!overridePin) return reply.status(400).send({ error: 'Manager PIN is required' });
+      if (!overrideReason?.trim()) return reply.status(400).send({ error: 'A reason is required' });
+      // Manager PIN gate — same lookup shift.service.closeShift uses.
+      const manager = await prisma.user.findFirst({
+        where: { tenantId, posPin: overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
+        select: { id: true, name: true },
+      });
+      if (!manager) return reply.status(403).send({ error: 'Invalid manager PIN or insufficient permissions' });
+      authorizerId = manager.id;
+      authorizerName = manager.name;
+      reasonText = overrideReason.trim();
+    }
 
     if (action === 'ADOPT') {
       if (!intoShiftId) return reply.status(400).send({ error: 'intoShiftId is required to adopt' });
@@ -160,7 +192,7 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
         data: {
           shiftId: intoShiftId,
           adoptedFromShiftId: order.shiftId,
-          adoptedByUserId: manager.id,
+          adoptedByUserId: authorizerId,
         },
       });
 
@@ -171,16 +203,16 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
           {
             shiftId: order.shiftId!,
             activityType: 'FORCE_CLOSED' as any, // no ADOPTED enum yet — closest existing marker
-            performedById: manager.id,
-            notes: `Order ${order.orderNumber} adopted OUT to shift ${intoShiftId} by ${manager.name} — ${overrideReason}`,
-            metadata: { orderId, adoptedIntoShiftId: intoShiftId, kind: 'ORDER_ADOPTED_OUT' },
+            performedById: authorizerId,
+            notes: `Order ${order.orderNumber} adopted OUT to shift ${intoShiftId} by ${authorizerName} — ${reasonText}`,
+            metadata: { orderId, adoptedIntoShiftId: intoShiftId, kind: 'ORDER_ADOPTED_OUT', selfAdopt: isSelfAdopt },
           },
           {
             shiftId: intoShiftId,
             activityType: 'OPENED' as any,
-            performedById: manager.id,
-            notes: `Order ${order.orderNumber} adopted IN from shift ${order.shiftId} by ${manager.name} — ${overrideReason}`,
-            metadata: { orderId, adoptedFromShiftId: order.shiftId, kind: 'ORDER_ADOPTED_IN' },
+            performedById: authorizerId,
+            notes: `Order ${order.orderNumber} adopted IN from shift ${order.shiftId} by ${authorizerName} — ${reasonText}`,
+            metadata: { orderId, adoptedFromShiftId: order.shiftId, kind: 'ORDER_ADOPTED_IN', selfAdopt: isSelfAdopt },
           },
         ],
       }).catch((e) => console.warn('[orphans] shift activity write failed', e));
@@ -190,19 +222,20 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       return reply.send({ ok: true, action, order: updated });
     }
 
-    // CANCEL
+    // CANCEL — always manager-gated above, regardless of whose order it is:
+    // this writes off real revenue, not a continuation of service.
     const priorStatus = (await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } }))?.status ?? null;
     const cancelled = await prisma.order.update({
       where: { id: orderId },
-      data: { status: 'CANCELLED', notes: `Orphan cancelled by ${manager.name} — ${overrideReason}` },
+      data: { status: 'CANCELLED', notes: `Orphan cancelled by ${authorizerName} — ${reasonText}` },
     });
     await applyOrderStatusSideEffects(tenantId, cancelled, priorStatus, {});
     await prisma.shiftActivity.create({
       data: {
         shiftId: order.shiftId!,
         activityType: 'ORDER_VOIDED' as any,
-        performedById: manager.id,
-        notes: `Orphan order ${order.orderNumber} cancelled by ${manager.name} — ${overrideReason}`,
+        performedById: authorizerId,
+        notes: `Orphan order ${order.orderNumber} cancelled by ${authorizerName} — ${reasonText}`,
         metadata: { orderId, kind: 'ORPHAN_CANCELLED' },
       },
     }).catch(() => {});

@@ -543,6 +543,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
           branchId={getPosSession()?.branchId ?? ''}
           intoShiftId={getPosShift()?.shiftId ?? ''}
           token={getToken()}
+          currentUserId={getPosSession()?.userId ?? ''}
           onResolved={recheckOrphans}
         />
       )}
