@@ -506,6 +506,8 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
     return reply.status(201).send(row);
   });
 
+  const TERMINAL_ORDER_STATUSES = ['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT'];
+
   fastify.get('/api/pos/dead-letters', {
     schema: {
       querystring: z.object({ branchId: z.string().optional(), includeResolved: z.string().optional() }),
@@ -523,6 +525,42 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       orderBy: { poisonedAt: 'desc' },
       take: 200,
     });
+
+    // A dead letter records a moment the sync FAILED — it says nothing about
+    // whether the order it's about was later resolved some other way (a
+    // manager completing it by hand, a force-closed shift cancelling it, or
+    // — for a PAYMENT_COLLECTED whose aggregateId never reconciled to a real
+    // server order at all — the order simply never having existed). Without
+    // this check, a real fix elsewhere leaves a phantom alert here forever;
+    // this is what caught 11 stale rows from Aug 28-31 during a live
+    // investigation, none pointing at an order that still needed attention.
+    const unresolved = rows.filter((r) => !r.resolvedAt && r.aggregateType === 'ORDER');
+    if (unresolved.length > 0) {
+      const orders = await prisma.order.findMany({
+        where: { id: { in: unresolved.map((r) => r.aggregateId) }, tenantId },
+        select: { id: true, status: true },
+      });
+      const statusByOrderId = new Map(orders.map((o) => [o.id, o.status]));
+      const staleIds = unresolved
+        .filter((r) => {
+          const status = statusByOrderId.get(r.aggregateId);
+          // Terminal already, OR the aggregateId is a local client id that
+          // never reconciled to a server order (nothing left to settle).
+          return (status && TERMINAL_ORDER_STATUSES.includes(status)) || !statusByOrderId.has(r.aggregateId);
+        })
+        .map((r) => r.id);
+
+      if (staleIds.length > 0) {
+        await prisma.posDeadLetter.updateMany({
+          where: { id: { in: staleIds } },
+          data: { resolvedAt: new Date(), resolvedBy: 'system:auto-resolved-stale' },
+        }).catch((e) => console.warn('[dead-letters] auto-resolve failed', e));
+        if (includeResolved !== 'true') {
+          return reply.send(rows.filter((r) => !staleIds.includes(r.id)));
+        }
+      }
+    }
+
     return reply.send(rows);
   });
 
