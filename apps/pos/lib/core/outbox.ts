@@ -82,6 +82,14 @@ interface OutboxTask {
   lane: SyncLane;
   status?: string;                 // UPDATE_STATUS / UPDATE_TABLE_STATUS
   billRequestedAt?: string | null; // REQUEST_BILL
+  // CREATE_ORDER only: the subset of eventIds actually reflected in
+  // createOrderBody (ORDER_CREATED + ITEM_ADDED). eventIds may carry other
+  // event types too — bundled in only so a create can't outrun them and to
+  // keep the "every pending event produces a task" invariant — but
+  // createOrderBody has no channel for a payment, a status change, or a
+  // bill request, so only bodyEventIds may be confirmed when this task
+  // succeeds. See deriveTaskChains and confirmShippedEvents.
+  bodyEventIds?: string[];
 }
 
 // ─── Module state ────────────────────────────────────────────────────────
@@ -253,8 +261,29 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         // count never moved, Force Sync appeared to do nothing, and the
         // stall detector restarted the engine on a loop. An order we can't
         // create yet (nothing in the store) is handled by the guard below.
+        //
+        // eventIds still carries EVERY pending event (so a payment or status
+        // change can't be missed by the invariant check below, and so the
+        // lane/opId accounting stays exactly as before) — but only
+        // ORDER_CREATED/ITEM_ADDED are ever actually reflected in
+        // createOrderBody (it reads current cart state directly for items,
+        // and has no field for a payment, a status change, or a bill
+        // request at all). bodyEventIds marks that subset so
+        // confirmShippedEvents only confirms what was genuinely sent and
+        // requeues the rest for the very next cycle, once hasServerId is
+        // true and they can ship through their own proper task kind. Without
+        // this split, a payment collected in the few seconds before a slow
+        // (Neon cold-start) create response landed was marked CONFIRMED the
+        // moment create succeeded, having never been transmitted at all —
+        // the order settled on screen, the drawer never saw the money.
         if (order) {
-          chain.push({ kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id), lane: laneOf(events) });
+          const bodyEventIds = events
+            .filter((e) => e.type === 'ORDER_CREATED' || e.type === 'ITEM_ADDED')
+            .map((e) => e.id);
+          chain.push({
+            kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id),
+            bodyEventIds, lane: laneOf(events),
+          });
         }
       } else {
         const itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');
@@ -489,6 +518,21 @@ async function markConfirmed(eventIds: string | string[]): Promise<void> {
   reflectOrderSyncState(ids, 'SYNCED');
 }
 
+// A successful task confirms only what it actually transmitted. For every
+// task kind except CREATE_ORDER that's simply task.eventIds. A CREATE_ORDER
+// task's eventIds can carry event types createOrderBody never sends (see
+// deriveTaskChains) — those were left INFLIGHT by markInflight(task.eventIds)
+// and must go back to QUEUED here, not be confirmed alongside the create,
+// so the next cycle ships them for real once hasServerId is set.
+async function confirmShippedEvents(task: OutboxTask): Promise<void> {
+  const toConfirm = task.kind === 'CREATE_ORDER' && task.bodyEventIds ? task.bodyEventIds : task.eventIds;
+  await markConfirmed(toConfirm);
+  if (toConfirm !== task.eventIds) {
+    const leftover = task.eventIds.filter((id) => !toConfirm.includes(id));
+    if (leftover.length) await edb.events.where('id').anyOf(leftover).modify({ syncState: 'QUEUED' });
+  }
+}
+
 async function markSuperseded(eventIds: string[]): Promise<void> {
   if (!eventIds.length) return;
   const now = new Date().toISOString();
@@ -637,7 +681,7 @@ async function runCriticalTask(task: OutboxTask): Promise<void> {
         await shipOps([op], [task]);
       } else {
         await runTaskViaRest(task);
-        await markConfirmed(task.eventIds);
+        await confirmShippedEvents(task);
       }
       consecutiveFailures = 0;
       return;
@@ -702,7 +746,7 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
     if (!task) continue;
     if (r.ok) {
       if (task.kind === 'CREATE_ORDER' && r.body?.id) reconcileServerId(task.aggregateId, r.body.id);
-      await markConfirmed(task.eventIds);
+      await confirmShippedEvents(task);
     } else if (r.status === 424) {
       // "skipped — earlier op failed" — put it back to QUEUED for next cycle.
       failedAggs.add(task.aggregateId);
@@ -819,7 +863,7 @@ async function shipBundleViaRest(tasks: OutboxTask[]): Promise<void> {
     await markInflight(task.eventIds);
     try {
       await runTaskViaRest(task);
-      await markConfirmed(task.eventIds);
+      await confirmShippedEvents(task);
       consecutiveFailures = 0;
     } catch (err) {
       const te = err instanceof TaskError ? err : new TaskError((err as Error)?.message ?? 'Unknown error', false);

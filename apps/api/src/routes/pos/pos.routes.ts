@@ -439,10 +439,35 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
                 return { statusCode: 201, body: order };
               },
             );
+            let responseBody: any = body;
             if (statusCode >= 200 && statusCode < 300 && body?.id) {
               createdIdByAggregate.set(op.aggregateId, body.id);
+              // A retried CREATE_ORDER (its first attempt's response was lost
+              // to a client-side timeout, not a real failure — a Neon
+              // cold-start routinely exceeds the client's 8s budget) replays
+              // that FIRST attempt's cached response verbatim, by design:
+              // withIdempotency must never create a second order for the
+              // same key. But the client rebuilds this op's body from its
+              // current cart on every attempt, so if items were added
+              // between the lost response and this retry, they're real items
+              // that never reached a code path that persists them — the
+              // cache hit returns before createOrder() runs again. Items
+              // only ever get appended, never reordered or removed before
+              // shipping (createOrderBody filters voided lines out
+              // entirely), so a plain length comparison safely finds
+              // exactly what's missing and appends it.
+              const sentItems = Array.isArray(op.body?.items) ? op.body.items : [];
+              const persistedCount = Array.isArray(body.items) ? body.items.length : 0;
+              if (sentItems.length > persistedCount) {
+                try {
+                  responseBody = await appendOrderItems(tenantId, body.id, sentItems.slice(persistedCount));
+                } catch {
+                  // Order reached a terminal state before this could apply —
+                  // the cached response is the best available answer.
+                }
+              }
             }
-            results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body });
+            results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body: responseBody });
             if (statusCode >= 300) failedAggregates.add(op.aggregateId);
             break;
           }
