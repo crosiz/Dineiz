@@ -758,7 +758,14 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
   const { items, payments, orderDeals, clientId: _clientId, orderNumber: _orderNumber, ...orderData } = data;
 
   const existingOrder = await prisma.order.findUnique({ where: { id, tenantId } });
-  if (!existingOrder) throw new Error('Order not found');
+  if (!existingOrder) {
+    // No such order for this tenant — retrying won't change that. Tagged so
+    // the events/batch handler's classify() marks it permanent instead of
+    // retrying forever (pos.routes.ts).
+    const err: any = new Error('Order not found');
+    err.statusCode = 404;
+    throw err;
+  }
 
   if (payments && payments.length > 0) {
     const tenantBranding = await prisma.tenantBranding.findUnique({
@@ -888,7 +895,15 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
     where: { id, tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } }
   });
 
-  if (!existingOrder) throw new Error('Order not found or already completed');
+  if (!existingOrder) {
+    // Order is gone, or already COMPLETED/CANCELLED — an ADD_ITEMS retry can
+    // never succeed against either state. Tagged 409 so events/batch's
+    // classify() treats it as permanent (dead-letter it) instead of retrying
+    // forever, which is what an untagged throw (plain 500 → transient) did.
+    const err: any = new Error('Order not found or already completed');
+    err.statusCode = 409;
+    throw err;
+  }
 
   // Simple recalculation as requested by the user
   const newItemsTotal = newItems.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
