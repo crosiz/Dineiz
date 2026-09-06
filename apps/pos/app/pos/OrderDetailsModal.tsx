@@ -12,6 +12,7 @@ import { AdminPinModal } from '@/components/AdminPinModal';
 import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
 import { useViews } from '@/lib/core/views';
+import { useBrandingStore } from '@/lib/branding-store';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
 
@@ -112,6 +113,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const router = useRouter();
   const viewMode = isViewMode(); // spec Part 11 — no payments without a shift
   const session = useCartStore(s => s.session);
+  const branding = useBrandingStore(s => s.branding);
   // Live subscription to the event-derived store. When the order lives here
   // (any current-shift order), this is the whole data source — it re-renders
   // the modal the instant a command lands, with no fetch.
@@ -268,7 +270,11 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
     }
   };
 
-  const voidRequiresManagerApproval = (session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true;
+  // `session` (the PIN-login identity) never carried a `tenantBranding` field —
+  // this always read undefined and silently defaulted to true. The real
+  // setting lives in the branding store, same as every other Settings →
+  // Point of Sale toggle.
+  const voidRequiresManagerApproval = branding?.pos?.voidRequiresManagerApproval ?? true;
   const isManager = session?.role === 'BRANCH_MANAGER' || session?.role === 'TENANT_ADMIN';
 
   const requestCancel = () => setCancelConfirmOpen(true);

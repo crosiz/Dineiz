@@ -169,7 +169,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // and the dashboard used to report different variances for the same shift.
   const expectedCash = Number(summary?.expectedCash ?? 0);
   const counted = closingCash === '' ? 0 : Number(closingCash);
-  const variance = closingCash === '' ? 0 : counted - expectedCash;
+  // null, not 0 — an uncounted drawer isn't "balanced", it's simply unknown.
+  // Pinning this to 0 made the summary read "Counted PKR 0 / Variance:
+  // Balanced" whenever cash counting was optional and skipped.
+  const variance = closingCash === '' ? null : counted - expectedCash;
 
   const formatDuration = (openedAtStr: string) => {
     const ms = Date.now() - new Date(openedAtStr).getTime();
@@ -480,9 +483,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               <div className="flex justify-between text-xs pt-2 mt-1 border-t border-slate-200">
                 <span className="font-bold text-slate-900">Variance</span>
                 <span className={`font-bold tabular-nums ${
-                  Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
+                  variance === null ? 'text-slate-400' : Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
                 }`}>
-                  {Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${pkr(Math.abs(variance))}`}
+                  {variance === null ? 'Not counted' : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${pkr(Math.abs(variance))}`}
                 </span>
               </div>
             </div>
@@ -749,7 +752,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
 
                     {/* Variance */}
                     <div className="mt-3 min-h-[22px]">
-                      {closingCash !== '' && (
+                      {closingCash !== '' && variance !== null && (
                         <div className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold ${
                           Math.round(variance) === 0
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'

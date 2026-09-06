@@ -18,6 +18,8 @@ import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import * as commands from '@/lib/core/commands';
 import { useViews, seedServerOrder } from '@/lib/core/views';
+import { useBrandingStore } from '@/lib/branding-store';
+import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -72,7 +74,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
               <span className="text-[13px] text-[#64748B] font-medium">{cartItem.selectedVariation.name}</span>
             )}
           </div>
-          <span className="font-mono text-[16px] font-bold text-[#0F172A]">PKR {cartItem.subtotal.toFixed(2)}</span>
+          <span className="font-mono text-[16px] font-bold text-[#0F172A]">{formatPKR(cartItem.subtotal)}</span>
         </div>
         <div className="flex justify-between items-center mt-2">
           <div className="flex flex-wrap gap-2">
@@ -126,6 +128,7 @@ function buildItemOptions(item: { selectedVariation?: { id: string; name: string
 function OrderEntryPageContent() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
+  const branding = useBrandingStore(s => s.branding);
   const cart = useCartStore(s => s.cart);
   const addItem = useCartStore(s => s.addItem);
   const incrementItem = useCartStore(s => s.incrementItem);
@@ -1206,7 +1209,7 @@ function OrderEntryPageContent() {
               </div>
               <span className="tracking-wide">View Order</span>
             </div>
-            <span className="text-lg tracking-tight">PKR {combinedTotal.toFixed(2)}</span>
+            <span className="text-lg tracking-tight">{formatPKR(combinedTotal)}</span>
           </button>
         </div>
 
@@ -1323,7 +1326,7 @@ function OrderEntryPageContent() {
                         {i.variationName && <span className="text-[12px] text-[#94A3B8]">{i.variationName}</span>}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[14px] text-[#64748B]">PKR {(i.subtotal || (i.quantity * i.unitPrice)).toFixed(2)}</span>
+                        <span className="font-mono text-[14px] text-[#64748B]">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
                         <button
                           onClick={() => setVoidSheetState({ isOpen: true, item: i })}
                           className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
@@ -1388,18 +1391,18 @@ function OrderEntryPageContent() {
             <div className="space-y-2 text-sm text-[#64748B] font-medium">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-[#0F172A] font-semibold">PKR {combinedSubtotal.toFixed(2)}</span>
+                <span className="text-[#0F172A] font-semibold">{formatPKR(combinedSubtotal)}</span>
               </div>
               {combinedTaxAmount > 0 && (
                 <div className="flex justify-between">
                   <span>{taxLabel}</span>
-                  <span className="text-[#0F172A] font-semibold">PKR {combinedTaxAmount.toFixed(2)}</span>
+                  <span className="text-[#0F172A] font-semibold">{formatPKR(combinedTaxAmount)}</span>
                 </div>
               )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-semibold">
                   <span>Discount</span>
-                  <span>- PKR {discountAmount.toFixed(2)}</span>
+                  <span>- {formatPKR(discountAmount)}</span>
                 </div>
               )}
             </div>
@@ -1407,7 +1410,7 @@ function OrderEntryPageContent() {
             <div className="flex justify-between items-end pt-2 border-t border-[#E2E8F0]">
               <span className="text-[16px] font-bold uppercase tracking-wider text-[#0F172A]">Order Total</span>
               <div className="text-right">
-                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">PKR {combinedTotal.toFixed(2)}</p>
+                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
               </div>
             </div>
 
@@ -1524,7 +1527,7 @@ function OrderEntryPageContent() {
           item={voidSheetState.item}
           onClose={() => setVoidSheetState({ isOpen: false, item: null })}
           onSuccess={handleVoidSuccess}
-          voidRequiresManagerApproval={(session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true}
+          voidRequiresManagerApproval={branding?.pos?.voidRequiresManagerApproval ?? true}
         />
       )}
 

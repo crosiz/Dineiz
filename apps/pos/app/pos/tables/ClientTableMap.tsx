@@ -827,9 +827,18 @@ export default function ClientTableMap() {
       {showOverrideModal && selectedTable && (
         <AdminPinModal
           onClose={() => setShowOverrideModal(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowOverrideModal(false);
-            handleMarkAsFree(selectedTable.id);
+            // This clears the RESERVED override, not a cleaning timer —
+            // handleMarkAsFree (markTableCleaned) only ever touches
+            // lastCompletedAt, so it left the reservation itself in place
+            // while toasting "Table marked as Free". setTableStatus with an
+            // empty status clears statusOverride AND (per its own reducer)
+            // the cleaning-timer anchor in one event, so the table actually
+            // reaches FREE instead of re-deriving back to RESERVED/DIRTY.
+            await setTableStatus(selectedTable.id, '');
+            toast.success('Reservation cleared');
+            setSelectedTable(null);
           }}
         />
       )}
