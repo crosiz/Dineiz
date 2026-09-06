@@ -138,8 +138,12 @@ export function AssignWaiterSheet({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-[9999] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 transform translate-y-0 max-h-[85vh]">
+      {/* 500/501, not 9998/9999 — matches CustomerPickerSheet's fix; see the
+          comment there. Both had independently landed on the exact same
+          "high enough" values, which also tied with ConfirmModal's real
+          z-index. */}
+      <div className="fixed inset-0 bg-black/40 z-[500]" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-[501] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] transition-transform duration-300 transform translate-y-0 max-h-[85vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h2 className="text-[18px] font-bold text-slate-800">Assign Table {tableLabel} to Waiter</h2>
           <button onClick={onClose} className="p-2 -mr-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors">

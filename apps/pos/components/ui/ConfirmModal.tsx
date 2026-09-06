@@ -40,8 +40,12 @@ export function ConfirmModal({
     return <HelpCircle size={20} />;
   };
 
+  // z-50 in the className used to sit here too — the inline style always
+  // won, so it was dead and made the actual stacking (9999, deliberately
+  // near the top: this can be invoked from inside any other modal) look
+  // wrong to anyone reading the class list.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto" style={{ zIndex: 9999 }}>
+    <div className="fixed inset-0 flex items-center justify-center pointer-events-auto" style={{ zIndex: 9999 }}>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={onCancel} />
 

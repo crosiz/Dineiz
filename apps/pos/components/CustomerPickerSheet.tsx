@@ -90,8 +90,13 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:m-auto sm:h-fit sm:max-w-[440px] bg-white rounded-t-2xl sm:rounded-2xl z-[9999] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[85vh]">
+      {/* 500/501, not 9998/9999 — that pair was picked to "look high enough"
+          and happened to land on the exact values AssignWaiterSheet also
+          picked independently, and tied with ConfirmModal's real z-index
+          (9999), which is meant to out-rank every other sheet including
+          this one. */}
+      <div className="fixed inset-0 bg-black/40 z-[500]" onClick={onClose} />
+      <div className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:m-auto sm:h-fit sm:max-w-[440px] bg-white rounded-t-2xl sm:rounded-2xl z-[501] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[85vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0] shrink-0">
           <h2 className="text-[18px] font-bold text-[#0F172A]">{showCreate ? 'New Customer' : 'Attach Customer'}</h2>
           <button onClick={onClose} className="p-2 -mr-2 text-[#94A3B8] hover:text-[#0F172A] rounded-full hover:bg-[#F1F5F9] transition-colors">
