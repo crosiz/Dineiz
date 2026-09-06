@@ -764,14 +764,19 @@ export function POSTopBar() {
                     if (res.ok) {
                       const data = await res.json();
                       setPosBreak({ breakId: data.breakId, shiftId, startedAt: data.startedAt });
+                      // Local audit-trail record — only once the server has
+                      // actually confirmed the break. This event is
+                      // auto-confirmed locally the moment it's appended
+                      // (SHIFT-lane events don't retry through the outbox),
+                      // so recording it unconditionally meant a break the
+                      // server explicitly rejected still showed up "confirmed
+                      // forever" in the local log, with nothing to ever
+                      // surface the mismatch.
+                      startBreak(shiftId).catch(console.error);
                     } else {
                       const body = await res.json().catch(() => ({}));
                       toast.error(body?.error || "Couldn't start your break — it may not be recorded.");
                     }
-                    // Local audit-trail record — the break API call above is
-                    // still what the server actually relies on; this just
-                    // keeps the local event log complete.
-                    startBreak(shiftId).catch(console.error);
                   } catch {
                     toast.error("Couldn't reach the server — your break may not be recorded.");
                   }

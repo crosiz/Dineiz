@@ -411,12 +411,18 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             const breakData = await breakRes.json();
             const mins = breakData.durationMinutes ?? 0;
             toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
+            // Local audit-trail record — only once the server has confirmed
+            // it. Recording this unconditionally (including when the server
+            // rejected the call) left a break "confirmed" in the local log
+            // forever with no way to tell it apart from a real one — SHIFT
+            // events auto-confirm on append and never retry through the
+            // outbox.
+            const { endBreak } = await import('@/lib/core/commands');
+            endBreak(posBreak.shiftId).catch(() => {});
           } else {
             const body = await breakRes.json().catch(() => ({}));
             toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
           }
-          const { endBreak } = await import('@/lib/core/commands');
-          endBreak(posBreak.shiftId).catch(() => {});
         } catch {
           toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
         } finally {

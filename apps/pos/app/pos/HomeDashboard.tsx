@@ -12,7 +12,7 @@ import { useViews } from '@/lib/core/views';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
-import { syncOfflineOrders, syncOfflinePayments, syncPendingItemAdds } from '@/lib/sync';
+import { getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { isViewMode } from '@/lib/view-mode';
@@ -209,31 +209,34 @@ export default function HomeDashboard() {
     () => tables.filter((t: any) => t.status === 'BILL_REQUESTED'),
     [tables]
   );
-  const unsyncedOrders = useLiveQuery(() => {
-    const db = getDB();
-    return db.offlineOrders ? db.offlineOrders.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedPayments = useLiveQuery(() => {
-    const db = getDB();
-    return db.offlinePayments ? db.offlinePayments.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedItemAdds = useLiveQuery(() => {
-    const db = getDB();
-    return db.pendingItemAdds ? db.pendingItemAdds.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedCount = unsyncedOrders.length + unsyncedPayments.length + unsyncedItemAdds.length;
+  // lib/sync.ts's queueOfflineOrder/queueOfflinePayment/queueItemAdd (and the
+  // offlineOrders/offlinePayments/pendingItemAdds tables they wrote to) are
+  // dead code — nothing has written to those tables since the outbox
+  // (lib/core/outbox.ts) took over. This card used to read only those tables,
+  // so it always reported 0 unsynced and "Retry Now" always "succeeded"
+  // regardless of the real backlog. Poll the actual outbox summary instead —
+  // the same source SyncHealthDot in the top bar already uses, so the two
+  // indicators can't disagree.
+  const [syncSummary, setSyncSummary] = useState<UnsyncedSummary | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = () => getUnsyncedSummary().then((s) => { if (alive) setSyncSummary(s); }).catch(() => {});
+    tick();
+    const h = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(h); };
+  }, []);
+  const unsyncedCount = syncSummary?.count ?? 0;
+  const stuckCount = (syncSummary?.poisoned ?? 0) + (syncSummary?.abandoned ?? 0);
 
   const [isRetryingSync, setIsRetryingSync] = useState(false);
   const retrySync = async () => {
     setIsRetryingSync(true);
-    try {
-      await syncOfflineOrders();
-      await syncPendingItemAdds();
-      await syncOfflinePayments();
-      toast.success('Sync attempted for pending offline data');
-    } finally {
-      setIsRetryingSync(false);
-    }
+    kickOutbox('immediate');
+    toast.success('Sync attempted for pending offline data');
+    // Give the drain a moment to actually move something before the summary
+    // re-polls on its own 4s cadence — otherwise the button's own state
+    // clears before there's anything new to see.
+    setTimeout(() => setIsRetryingSync(false), 1000);
   };
 
   const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedCount;
@@ -455,18 +458,22 @@ export default function HomeDashboard() {
                 ))}
 
                 {unsyncedCount > 0 && (
-                  <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between shadow-sm">
+                  <div className={`p-4 rounded-xl flex items-center justify-between shadow-sm border ${
+                    stuckCount > 0 ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
+                  }`}>
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-sky-600">cloud_off</span>
+                      <span className={`material-symbols-outlined ${stuckCount > 0 ? 'text-rose-600' : 'text-sky-600'}`}>
+                        {stuckCount > 0 ? 'error' : 'cloud_off'}
+                      </span>
                       <div>
                         <p className="font-bold text-[#0F172A]">
-                          {[
-                            unsyncedOrders.length > 0 ? `${unsyncedOrders.length} order${unsyncedOrders.length > 1 ? 's' : ''}` : null,
-                            unsyncedPayments.length > 0 ? `${unsyncedPayments.length} payment${unsyncedPayments.length > 1 ? 's' : ''}` : null,
-                            unsyncedItemAdds.length > 0 ? `${unsyncedItemAdds.length} item update${unsyncedItemAdds.length > 1 ? 's' : ''}` : null,
-                          ].filter(Boolean).join(', ')} saved offline, not yet synced
+                          {stuckCount > 0
+                            ? `${stuckCount} change${stuckCount > 1 ? 's' : ''} the server rejected — needs a manager`
+                            : `${unsyncedCount} change${unsyncedCount > 1 ? 's' : ''} not yet synced`}
                         </p>
-                        <p className="text-xs text-[#64748B]">Will sync automatically when back online</p>
+                        <p className="text-xs text-[#64748B]">
+                          {stuckCount > 0 ? 'Review in Settings → Sync & Data' : 'Will sync automatically in the background'}
+                        </p>
                       </div>
                     </div>
                     <button

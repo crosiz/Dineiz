@@ -136,19 +136,43 @@ export async function getTerminalPrefix(): Promise<string> {
   return id.slice(0, 1); // single char prefix: A, B, C...
 }
 
+// ─── Cross-tab mutual exclusion ─────────────────────────────────────────────
+//
+// Two tabs on the same terminal (or the same tab racing itself across a hard
+// power-cycle mid-write) can otherwise read the same counter value before
+// either writes it back, and hand out the identical seq/order-number to two
+// different events. navigator.locks is scoped per-origin, not per-tab — the
+// same name serializes across every tab/window on this terminal. Falls back
+// to running the callback unlocked on a browser without the Web Locks API
+// (older WebViews) rather than throwing.
+async function withLock<T>(name: string, fn: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && navigator.locks?.request) {
+    return navigator.locks.request(name, () => fn());
+  }
+  return fn();
+}
+
 // ─── Lamport counter: monotonic, never resets, ordering guarantee ──────────
 
-let seqCache: number | null = null;
+let seqCache: number | null = null; // same-tab hint only — never trusted alone, see below
 
 export async function nextSeq(): Promise<number> {
-  if (seqCache === null) {
+  return withLock('dineiz-pos:seq', async () => {
+    // Always re-read: a cached value that was only ever loaded once let a
+    // second tab (which persisted its own increments to the same IndexedDB
+    // row) go unnoticed — this tab would keep handing out seqs starting from
+    // its stale in-memory number, colliding with what the other tab already
+    // wrote. The lock makes this read-modify-write atomic across tabs; only
+    // reading fresh inside it makes it correct.
     const row = await edb.meta.get('seq');
-    seqCache = (row?.value as number | undefined) ?? 0;
-  }
-  const next = (seqCache ?? 0) + 1;
-  seqCache = next;
-  edb.meta.put({ key: 'seq', value: next }).catch(console.error);
-  return next;
+    const next = ((row?.value as number | undefined) ?? 0) + 1;
+    // Awaited, not fire-and-forget — the previous version could hand out
+    // `next` and return before the write landed, so a crash right after lost
+    // the increment and the next call reused the same seq.
+    await edb.meta.put({ key: 'seq', value: next });
+    seqCache = next;
+    return next;
+  });
 }
 
 // ─── Order number: CLIENT GENERATED, permanent (spec Part 4) ────────────────
@@ -195,9 +219,19 @@ export async function nextOrderNumber(shiftId: string): Promise<string> {
     format === 'SHORT'
       ? `orderSeq:${shiftId || 'noshift'}`
       : `orderSeq:${prefix}:${now.getFullYear()}${mm}${dd}`;
-  const row = await edb.meta.get(seqKey);
-  const n = (row?.value ?? 0) + 1;
-  await edb.meta.put({ key: seqKey, value: n });
+  // Same unguarded read-then-write race as nextSeq above, and a worse
+  // outcome: two orders minted with the identical number hit the server's
+  // @@unique([tenantId, orderNumber]) constraint, the outbox's one grace
+  // retry hits the same constraint, the whole order gets poisoned and
+  // cascades, and dismissing it marks it SUPERSEDED — which replay skips by
+  // design. Net effect without the lock: an order silently vanishes from the
+  // board with no error the cashier sees.
+  const n = await withLock(`dineiz-pos:${seqKey}`, async () => {
+    const row = await edb.meta.get(seqKey);
+    const next = (row?.value ?? 0) + 1;
+    await edb.meta.put({ key: seqKey, value: next });
+    return next;
+  });
   const seq = String(n).padStart(3, '0');
 
   if (format === 'SHORT') return `${prefix}-${seq}`;
