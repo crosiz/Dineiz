@@ -432,7 +432,23 @@ interface BatchOp {
   body: any;
 }
 
-async function buildOp(task: OutboxTask): Promise<BatchOp | null> {
+// TERMINAL means "this order can never take another write" — the only
+// state where a line item genuinely no longer matters to anyone.
+const ORDER_TERMINAL_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT']);
+
+// null = confirm task.eventIds as local-only, nothing to ship (safe: either
+// the aggregate is gone entirely, or the order has reached a terminal state
+// so a stale item genuinely doesn't matter any more).
+// undefined = do NOT touch task.eventIds — leave them exactly as they are so
+// the next cycle tries again. Used when addItemsBody comes back empty for a
+// still-open order: that's either a legitimate remove/void racing this
+// build, or a real bug in lineId matching — buildOp can't tell those apart
+// from here, and confirming the wrong one is silent, permanent data loss
+// (an item the cashier believes is on the order, that the kitchen and the
+// bill never see). Leaving it QUEUED costs nothing but a harmless retry in
+// the safe case, and in the unsafe case keeps the event visible in the
+// pending count (Home badge, Sync & Data) instead of vanishing.
+async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
   const orders = useViews.getState().orders;
   const order = orders[task.aggregateId];
   const opId = task.eventIds.join(',');
@@ -444,7 +460,11 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null> {
     case 'ADD_ITEMS': {
       if (!order) return null;
       const body = await addItemsBody(task, order);
-      if (!body.items.length) return null; // lines removed before shipping — nothing to add
+      if (!body.items.length) {
+        if (ORDER_TERMINAL_STATUSES.has(order.status)) return null;
+        console.warn(`[outbox] ADD_ITEMS for order ${task.aggregateId} resolved to 0 items on a non-terminal order (status=${order.status}) — leaving queued instead of confirming, to avoid silently dropping it`, task.eventIds);
+        return undefined;
+      }
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `additems:${opId}`, body };
     }
     case 'UPDATE_STATUS':
@@ -677,6 +697,7 @@ async function runCriticalTask(task: OutboxTask): Promise<void> {
     try {
       if (batchEndpointAvailable) {
         const op = await buildOp(task);
+        if (op === undefined) return; // leave queued — see buildOp's comment
         if (!op) { await markConfirmed(task.eventIds); return; }
         await shipOps([op], [task]);
       } else {
@@ -815,6 +836,7 @@ async function drain(): Promise<void> {
         const bundleTasks: OutboxTask[] = [];
         for (const task of b.tasks) {
           const op = await buildOp(task);
+          if (op === undefined) continue; // leave queued — see buildOp's comment
           if (!op) { await markConfirmed(task.eventIds); continue; }
           bundleOps.push(op);
           bundleTasks.push(task);
