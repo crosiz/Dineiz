@@ -485,42 +485,51 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
 
 // ─── REST fallback executors (used only if the batch endpoint 404s) ───────
 
-async function runTaskViaRest(task: OutboxTask): Promise<void> {
+// Returns whether the caller may confirm task.eventIds. Only ADD_ITEMS's
+// empty-match case (see buildOp's comment — same bug, same fix, this is the
+// REST-fallback twin of it) can come back false; everything else always
+// completes with either a genuine confirm or a thrown TaskError.
+async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
   const orders = useViews.getState().orders;
   const order = orders[task.aggregateId];
 
   if (task.kind === 'CREATE_ORDER') {
-    if (!order) return;
+    if (!order) return true;
     const res = await fetchWithTimeout(`${API_URL}/api/orders`, { method: 'POST', headers: authHeaders(task.aggregateId), body: JSON.stringify(createOrderBody(order)) });
     if (!res.ok) throw classifyHttpError(res.status);
     const created = await res.json();
     reconcileServerId(task.aggregateId, created.id);
-    return;
+    return true;
   }
   if (task.kind === 'UPDATE_TABLE_STATUS') {
     const res = await fetchWithTimeout(`${API_URL}/api/tables/${task.aggregateId}/status`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: task.status }) });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
   if (task.kind === 'CLEAN_TABLE') {
     const res = await fetchWithTimeout(`${API_URL}/api/tables/${task.aggregateId}/clean`, { method: 'POST', headers: authHeaders() });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
 
   if (!order?.serverId) throw new TaskError('No serverId yet', false);
   if (task.kind === 'ADD_ITEMS') {
     const body = await addItemsBody(task, order);
-    if (!body.items.length) return;
+    if (!body.items.length) {
+      if (ORDER_TERMINAL_STATUSES.has(order.status)) return true;
+      console.warn(`[outbox] ADD_ITEMS (REST fallback) for order ${task.aggregateId} resolved to 0 items on a non-terminal order (status=${order.status}) — leaving queued instead of confirming`, task.eventIds);
+      return false;
+    }
     const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}/items`, { method: 'POST', headers: authHeaders(`additems:${task.eventIds.join(',')}`), body: JSON.stringify(body) });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
   const body = task.kind === 'COLLECT_PAYMENT' ? collectPaymentBody(order)
     : task.kind === 'REQUEST_BILL' ? { billRequestedAt: task.billRequestedAt ?? null }
     : { status: task.status };
   const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) throw classifyHttpError(res.status);
+  return true;
 }
 
 // ─── Event bookkeeping ───────────────────────────────────────────────────
@@ -701,8 +710,8 @@ async function runCriticalTask(task: OutboxTask): Promise<void> {
         if (!op) { await markConfirmed(task.eventIds); return; }
         await shipOps([op], [task]);
       } else {
-        await runTaskViaRest(task);
-        await confirmShippedEvents(task);
+        const shouldConfirm = await runTaskViaRest(task);
+        if (shouldConfirm) await confirmShippedEvents(task);
       }
       consecutiveFailures = 0;
       return;
@@ -884,8 +893,8 @@ async function shipBundleViaRest(tasks: OutboxTask[]): Promise<void> {
     if (circuitOpen) return;
     await markInflight(task.eventIds);
     try {
-      await runTaskViaRest(task);
-      await confirmShippedEvents(task);
+      const shouldConfirm = await runTaskViaRest(task);
+      if (shouldConfirm) await confirmShippedEvents(task);
       consecutiveFailures = 0;
     } catch (err) {
       const te = err instanceof TaskError ? err : new TaskError((err as Error)?.message ?? 'Unknown error', false);
