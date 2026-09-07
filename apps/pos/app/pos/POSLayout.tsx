@@ -439,6 +439,26 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     socket.on('order:cancelled', onOrderChanged);
     socket.on('table:status_changed', onTableChanged);
 
+    // refreshOrders only ever ran on mount or off a socket push — nothing
+    // re-ran it on a timer. A tab backgrounded for hours (a POS tablet
+    // overnight, or just left on another screen) both throttles/suspends
+    // that mount-only state and, separately, the socket connection itself
+    // can drop and silently miss whatever fired while it was down. Either
+    // way the view store goes stale: Tickets can show fewer orders than
+    // actually exist (or none) even though the server has them, because
+    // nothing told this terminal to go and look. Re-pull both orders and
+    // tables the moment the tab is genuinely foregrounded again, the same
+    // "conditions changed, check now" pattern as the online-event handlers
+    // already scattered through this app.
+    const handleVisible = () => {
+      if (document.visibilityState === 'visible') {
+        onOrderChanged();
+        onTableChanged();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleVisible);
+
     return () => {
       socket.off('menu:published', handleMenuPublished);
       socket.off('menu:price_changed', handleMenuPriceChanged);
@@ -450,6 +470,8 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       socket.off('order:updated', onOrderChanged);
       socket.off('order:cancelled', onOrderChanged);
       socket.off('table:status_changed', onTableChanged);
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
     };
   }, [socket, queryClient]);
 

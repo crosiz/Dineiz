@@ -1031,9 +1031,29 @@ export function startOutbox(): () => void {
   const handleOnline = () => kickOutbox('immediate');
   window.addEventListener('online', handleOnline);
 
+  // A backgrounded/locked tab throttles setInterval (Chrome can drop the
+  // 5s kickOutbox loop to roughly once a minute, or suspend it entirely) —
+  // exactly the profile a POS tablet sees overnight or between rushes. Found
+  // live: PAYMENT_COLLECTED events dead-lettered with 0 attempts and
+  // "Exceeded 24h max lifetime" — never once picked up by deriveTaskChains
+  // in a full day, then killed by the watchdog purely on age. Re-kicking
+  // (and re-running the watchdog, in case it also missed cycles) the moment
+  // the tab is foregrounded again closes that window instead of waiting on
+  // a throttled timer to eventually resume.
+  const handleVisible = () => {
+    if (document.visibilityState === 'visible') {
+      kickOutbox('immediate');
+      runWatchdog().catch(console.error);
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisible);
+  window.addEventListener('focus', handleVisible);
+
   return () => {
     clearAllHandles();
     window.removeEventListener('online', handleOnline);
+    document.removeEventListener('visibilitychange', handleVisible);
+    window.removeEventListener('focus', handleVisible);
     started = false;
   };
 }
