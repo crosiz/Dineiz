@@ -754,8 +754,19 @@ export async function getOrder(tenantId: string, id: string) {
 
 export async function updateOrder(tenantId: string, id: string, data: any) {
   // clientId / orderNumber ride along on the create schema (Part 4) but a PUT
-  // must never rewrite an order's identity — drop them here.
-  const { items, payments, orderDeals, clientId: _clientId, orderNumber: _orderNumber, ...orderData } = data;
+  // must never rewrite an order's identity — drop them here. redeemedPointsAmount
+  // rides along on COLLECT_PAYMENT for applyOrderStatusSideEffects (which reads
+  // it straight off the original request body, not off this function's return
+  // value) — Order has no such column at all, so passing it through to
+  // Prisma's update() unconditionally 500'd on EVERY payment, every time,
+  // regardless of tenant, order or amount: "Unknown argument
+  // `redeemedPointsAmount`". This was the actual cause behind the repeated
+  // "collected payment, still shows unpaid at close shift" reports.
+  const {
+    items, payments, orderDeals,
+    clientId: _clientId, orderNumber: _orderNumber, redeemedPointsAmount: _redeemedPointsAmount,
+    ...orderData
+  } = data;
 
   const existingOrder = await prisma.order.findUnique({ where: { id, tenantId } });
   if (!existingOrder) {
