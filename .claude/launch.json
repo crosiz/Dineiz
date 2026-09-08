@@ -24,6 +24,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "website", "dev"],
       "port": 3006
+    },
+    {
+      "name": "standalone",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "--filter", "@dineiz/standalone", "exec", "electron-vite", "dev", "--", "--no-sandbox"],
+      "port": 5173
     }
   ]
 }

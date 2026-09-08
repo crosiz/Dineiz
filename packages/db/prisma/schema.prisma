@@ -151,9 +151,10 @@ model Tenant {
   emailLogs        EmailLog[]
 
   // Super Admin Extensions
-  featureOverrides TenantFeatureOverride[]
-  messages         SuperAdminMessage[]
-  auditLogs        AuditLog[]
+  featureOverrides   TenantFeatureOverride[]
+  messages           SuperAdminMessage[]
+  auditLogs          AuditLog[]
+  standaloneLicenses StandaloneLicense[]
 
   // Settings
   settings        Json?
@@ -2232,6 +2233,36 @@ model TenantFeatureOverride {
 
   @@unique([tenantId, featureKey])
   @@index([tenantId])
+}
+
+// Tracks licenses issued for Dineiz Standalone (the offline, one-time-purchase
+// Electron POS — see dineiz/decisions/0003-standalone-architecture in the repo
+// vault). The standalone app itself verifies license files entirely offline
+// (RSA signature check against a compiled-in public key — it makes zero
+// network calls), so this table is a record of what's been issued, NOT a live
+// enforcement mechanism: setting status to REVOKED here does not and cannot
+// invalidate a license file already sitting on a customer's machine, since
+// that machine never phones home to check. It exists for bookkeeping,
+// support conversations, and reissuing a license if a customer's fingerprint
+// changes (e.g. they migrate to new hardware).
+model StandaloneLicense {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  licenseId          String    @unique // matches the signed payload's own licenseId (a UUID)
+  restaurantName     String
+  machineFingerprint String
+  issuedAt           DateTime
+  expiresAt          DateTime? // null = perpetual
+  signedLicenseJson  String // the full { payload, signature } JSON, so it can be re-downloaded later
+  status             String    @default("ACTIVE") // ACTIVE, REVOKED (bookkeeping only — see model doc comment)
+  revokedAt          DateTime?
+  revokedReason      String?
+  issuedBy           String? // super admin id
+  createdAt          DateTime  @default(now())
+
+  @@index([tenantId])
+  @@index([machineFingerprint])
 }
 
 model PlanDefinition {
