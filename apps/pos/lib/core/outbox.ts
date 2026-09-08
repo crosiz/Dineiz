@@ -595,11 +595,31 @@ async function reportDeadLetter(e: PosEvent, attempts: number): Promise<void> {
 }
 
 let authExpiredToastShownAt = 0;
+// Event ids already warned about by runWatchdog's stuck-payment check —
+// per-event, not time-windowed, since the same event stays non-terminal
+// across many 60s watchdog ticks and should only ever surface once.
+const stalePaymentWarned = new Set<string>();
 function notifyAuthExpiredOnce() {
   const now = Date.now();
   if (now - authExpiredToastShownAt < 10 * 60 * 1000) return;
   authExpiredToastShownAt = now;
   toast.warning('Your session has expired — sign out and back in to sync pending changes.', { duration: 8000 });
+}
+
+// A poisoned event only ever showed up as a quiet dot in the top bar
+// (SyncHealthDot) or a row in Settings -> Sync & Data — easy to miss on a
+// busy floor, and for a payment specifically the cost of missing it is
+// real money: the cashier sees "paid" on screen (views update the instant
+// the event is appended, before any server round trip) and moves on, then
+// finds out only at close-shift, hours later, that the server never
+// actually recorded it. Surface it the moment it's known, by name, instead.
+function notifyPaymentPoisoned(e: PosEvent, message: string) {
+  const order = useViews.getState().orders[e.aggregateId];
+  const label = order ? `${order.orderNumber}${order.tableLabel ? ` (Table ${order.tableLabel})` : ''}` : 'an order';
+  toast.error(`Payment for ${label} did not reach the server: ${message}`, {
+    duration: 15000,
+    description: 'The order still shows as paid here, but the drawer total will not include it until this is resolved in Settings → Sync & Data.',
+  });
 }
 
 async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> {
@@ -615,7 +635,10 @@ async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> 
       syncState: poisoned ? 'POISONED' : 'DEGRADED',
       attempts, lastAttemptAt: now, lastError: err.message,
     });
-    if (poisoned) reportDeadLetter({ ...e, lastError: err.message }, attempts).catch(() => {});
+    if (poisoned) {
+      reportDeadLetter({ ...e, lastError: err.message }, attempts).catch(() => {});
+      if (e.type === 'PAYMENT_COLLECTED') notifyPaymentPoisoned(e, err.message);
+    }
   }
   reflectOrderSyncState(eventIds, anyPoisoned ? 'POISONED' : 'DEGRADED');
   return anyPoisoned;
@@ -931,6 +954,27 @@ async function runWatchdog(): Promise<void> {
     console.warn(`[outbox] watchdog: requeueing ${stuckInflight.length} stuck INFLIGHT event(s)`);
     await edb.events.where('id').anyOf(stuckInflight.map((e) => e.id)).modify({ syncState: 'DEGRADED' });
     kickOutbox('immediate');
+  }
+
+  // A payment that's still non-terminal 90s after being collected is worth
+  // flagging even before it's formally POISONED — markFailed's toast only
+  // fires on a hard, permanent rejection, but a payment can just as easily
+  // sit DEGRADED indefinitely (a transient error keeps re-queueing it with
+  // no error ever bad enough to poison outright), and the "PKR 0 at close
+  // shift, hours later" report traces back to exactly this: the cashier's
+  // screen said paid, nothing ever told them the server disagreed.
+  const stuckPayments = nonTerminal.filter(
+    (e) => e.type === 'PAYMENT_COLLECTED' && !stalePaymentWarned.has(e.id)
+      && now - new Date(e.clientTime).getTime() > 90_000,
+  );
+  for (const e of stuckPayments) {
+    stalePaymentWarned.add(e.id);
+    const order = useViews.getState().orders[e.aggregateId];
+    const label = order ? `${order.orderNumber}${order.tableLabel ? ` (Table ${order.tableLabel})` : ''}` : 'an order';
+    toast.warning(`Payment for ${label} is still trying to sync — the server hasn't confirmed it yet.`, {
+      duration: 12000,
+      description: 'It will keep retrying automatically. Check Settings → Sync & Data if this order is still open at close-shift.',
+    });
   }
 }
 
