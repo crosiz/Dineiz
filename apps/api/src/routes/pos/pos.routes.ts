@@ -169,8 +169,13 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       if (!overridePin) return reply.status(400).send({ error: 'Manager PIN is required' });
       if (!overrideReason?.trim()) return reply.status(400).send({ error: 'A reason is required' });
       // Manager PIN gate — same lookup shift.service.closeShift uses.
+      // posPin is stored SHA-256 hashed (staff.handlers.ts, user.routes.ts);
+      // this compared the raw PIN against it, so no PIN — right or wrong —
+      // could ever pass here. Every orphan-adopt/void needing a real manager
+      // PIN has always failed with "Invalid manager PIN".
+      const hashedOverridePin = crypto.createHash('sha256').update(overridePin).digest('hex');
       const manager = await prisma.user.findFirst({
-        where: { tenantId, posPin: overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
+        where: { tenantId, posPin: hashedOverridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
         select: { id: true, name: true },
       });
       if (!manager) return reply.status(403).send({ error: 'Invalid manager PIN or insufficient permissions' });

@@ -1,4 +1,5 @@
 import { prisma } from '@dineiz/db';
+import crypto from 'crypto';
 import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
 import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
@@ -264,8 +265,14 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
   let managerId: string | null = null;
 
   if (data.overridePin) {
+    // posPin is stored SHA-256 hashed (staff.handlers.ts, user.routes.ts) —
+    // comparing the raw PIN against it can never match a real one. This
+    // compared plaintext to begin with, so a manager-PIN force-close has
+    // never actually worked; every attempt failed with "Invalid manager
+    // PIN" regardless of the PIN entered.
+    const hashedOverridePin = crypto.createHash('sha256').update(data.overridePin).digest('hex');
     const manager = await prisma.user.findFirst({
-      where: { tenantId, posPin: data.overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } }
+      where: { tenantId, posPin: hashedOverridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } }
     });
     if (!manager) return { error: 'Invalid manager PIN or insufficient permissions' };
     if (!data.overrideReason?.trim()) return { error: 'Override reason is required' };
