@@ -277,13 +277,29 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         // moment create succeeded, having never been transmitted at all —
         // the order settled on screen, the drawer never saw the money.
         if (order) {
-          const bodyEventIds = events
-            .filter((e) => e.type === 'ORDER_CREATED' || e.type === 'ITEM_ADDED')
-            .map((e) => e.id);
-          chain.push({
-            kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id),
-            bodyEventIds, lane: laneOf(events),
-          });
+          // commands.createOrder() always fires an immediate kick (ORDER_CREATED
+          // is HIGH lane) the instant it's appended — before the awaited loop of
+          // commands.addItem() calls that every one of its callers makes right
+          // after has necessarily landed in the local event log yet. Shipping a
+          // create for an order with zero live items right now would create a
+          // real, permanent, zero-total order server-side, which then refuses to
+          // ever be completed ("zero-total order needs manager approval") —
+          // reproduced live going straight from a fresh cart to Charge. Leave it
+          // queued rather than build a task for it; ITEM_ADDED's own kick (at
+          // most ~200ms, or immediate once it lands) re-runs this the moment an
+          // item exists, and the create ships whole, atomically, in one request.
+          const hasLiveItems = order.items.some((i: any) => !i.voided);
+          if (hasLiveItems) {
+            const bodyEventIds = events
+              .filter((e) => e.type === 'ORDER_CREATED' || e.type === 'ITEM_ADDED')
+              .map((e) => e.id);
+            chain.push({
+              kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id),
+              bodyEventIds, lane: laneOf(events),
+            });
+          } else {
+            continue;
+          }
         }
       } else {
         const itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');

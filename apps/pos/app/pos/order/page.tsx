@@ -108,23 +108,6 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
   );
 }
 
-// OrderItem.options is a free-form JSON snapshot (packages/db/prisma/schema.prisma)
-// deliberately taken at order time so a later menu price/name edit never
-// changes a historical order. It previously only stored the variation ID
-// (no name) and dropped addons entirely, so receipts/KOTs had nothing to
-// render for them. This is the single shape every order-item payload in this
-// file should use — matches what ClientTableMap.tsx / receipt/page.tsx / the
-// print templates already read from a fetched order.
-function buildItemOptions(item: { selectedVariation?: { id: string; name: string }; selectedAddOns?: { id: string; name: string; price: number }[] }) {
-  const hasVariation = !!item.selectedVariation;
-  const hasAddOns = !!item.selectedAddOns?.length;
-  if (!hasVariation && !hasAddOns) return undefined;
-  return {
-    variation: hasVariation ? { id: item.selectedVariation!.id, name: item.selectedVariation!.name } : undefined,
-    addOns: hasAddOns ? item.selectedAddOns!.map(a => ({ id: a.id, name: a.name, price: a.price })) : undefined,
-  };
-}
-
 function OrderEntryPageContent() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
@@ -851,65 +834,64 @@ function OrderEntryPageContent() {
     }
 
     if (!paymentOrderId) {
+      // Local-first / event-sourced — same pattern sendToKitchen() uses below
+      // for a brand-new order (commands.createOrder + commands.addItem), just
+      // without commands.sendToKitchen() since charging directly deliberately
+      // skips the kitchen. This replaces a raw, awaited fetch() straight to
+      // POST /api/orders, which blocked the whole "Charge" tap on a network
+      // round trip (the reported slow charge) and never registered the order
+      // in useViews (the reported stale Home screen) — but the real damage
+      // was downstream: PaymentModal's collectPayment() right after used the
+      // server's raw id, which the view store had no record of under ANY key.
+      // The PAYMENT_COLLECTED reducer silently no-ops on an unknown aggregate
+      // (views.ts), and the outbox's deriveTaskChains then hits its "no task
+      // producible" invariant and marks that event CONFIRMED locally without
+      // ever shipping it — the cashier sees "Payment Successful" and the
+      // money is simply never recorded server-side. Client-owned identity
+      // from the moment of creation is what closes that gap.
       setChargeLoading(true);
       try {
-        const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
-        const shift = JSON.parse(localStorage.getItem('pos_shift') ?? '{}');
         const orderTypeStr = orderType || 'DINE_IN';
-        const tableId = selectedTableId;
+        const tableId = (selectedTableId && selectedTableId !== 'undefined') ? selectedTableId : null;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body: JSON.stringify({
-            type: orderTypeStr,
-            tableId: (tableId && tableId !== 'undefined') ? tableId : null,
-            branchId: sessionObj.branchId,
-            tenantId: sessionObj.tenantId,
-            cashierId: sessionObj.userId || sessionObj.cashierId,
-            shiftId: shift.shiftId ?? null,
-            items: cart.map(item => ({
-              itemId: item.itemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.unitPrice * item.quantity,
-              options: buildItemOptions(item),
-              notes: item.notes ?? undefined,
-            })),
-            totalAmount: subtotal,
-            taxAmount,
-            discountAmount,
-            netAmount: total,
-            notes: orderNote,
-          }),
+        const { orderId: localId, orderNumber } = await commands.createOrder({
+          type: orderTypeStr,
+          tableId,
+          tableLabel: selectedTableLabel || undefined,
+          notes: orderNote,
         });
-
-        if (res.ok) {
-          const order = await res.json();
-          setPaymentOrderId(order.id);
-          setPaymentOrderNumber(order.orderNumber);
-          setIsPaymentOpen(true);
-
-          const isHeld = searchParams.get('isHeld') === 'true';
-          const rawOrderId = searchParams.get('orderId');
-          if (isHeld && rawOrderId) {
-            try {
-              const db = getDB();
-              if (db.heldOrders) {
-                await db.heldOrders.delete(rawOrderId);
-              }
-            } catch (e) {
-              console.error('Failed to delete held order on charge', e);
-            }
-          }
-        } else {
-          toast.error('Could not create order. Check connection.');
+        for (const item of cart) {
+          await commands.addItem(localId, {
+            itemId: item.itemId,
+            itemName: item.name,
+            variationId: item.selectedVariation?.id ?? null,
+            variationName: item.selectedVariation?.name ?? null,
+            qty: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.notes ?? null,
+            addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+          });
         }
-      } catch {
-        toast.error('Could not create order. Check connection.');
+
+        setPaymentOrderId(localId);
+        setPaymentOrderNumber(orderNumber);
+        setIsPaymentOpen(true);
+
+        const isHeld = searchParams.get('isHeld') === 'true';
+        const rawOrderId = searchParams.get('orderId');
+        if (isHeld && rawOrderId) {
+          try {
+            const db = getDB();
+            if (db.heldOrders) {
+              await db.heldOrders.delete(rawOrderId);
+            }
+          } catch (e) {
+            console.error('Failed to delete held order on charge', e);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create order for charge', err);
+        toast.error('Could not open payment — please retry.');
       } finally {
         setChargeLoading(false);
       }
