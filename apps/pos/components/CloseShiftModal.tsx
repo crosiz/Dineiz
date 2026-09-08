@@ -281,7 +281,6 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       setSyncPhase('none');
       toast.success('Shift closed');
       setIsSuccess(true);
-      void saveReport();
     } catch (err: any) {
       toast.error(err.message || 'An error occurred closing the shift');
       setIsSubmitting(false);
@@ -466,8 +465,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         ) : isSuccess ? (
           // ── Closed ────────────────────────────────────────────────────────
           <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
-              <CheckCircle2 size={24} />
+            {/* A light pastel chip + line icon is the generic "success" motif
+                every dashboard template reaches for — same size and shape
+                ManagerOverrideModal uses for its own PIN icon a tier down.
+                This is the one moment in the whole shift a cashier actually
+                pauses to see, so it gets the bolder, solid-fill treatment
+                that screen already established for "this matters", not a
+                smaller echo of it. */}
+            <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-emerald-600/25">
+              <CheckCircle2 size={32} strokeWidth={2.25} />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-1">Shift Closed</h2>
 
@@ -490,8 +496,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               </div>
             </div>
 
-            {/* Report status — a real status line, not decoration: the PDF
-                starts saving the moment the shift closes. */}
+            {/* Report status — a real status line, not decoration. The PDF is
+                never generated automatically; this only ever shows something
+                once the cashier has actually tapped Generate Report below. */}
             <div className="w-full mb-5 min-h-[20px] flex items-center justify-center gap-2 text-xs">
               {reportState === 'working' && (
                 <>
@@ -523,8 +530,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 disabled={reportState === 'working'}
                 className="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex justify-center items-center gap-2"
               >
-                <Download size={15} />
-                {reportState === 'saved' ? 'Download Again' : 'Download PDF'}
+                {reportState === 'saved' ? <Download size={15} /> : <Receipt size={15} />}
+                {reportState === 'saved' ? 'Download Again' : reportState === 'failed' ? 'Try Again' : 'Generate Report'}
               </button>
               <button
                 onClick={() => router.push('/login')}
