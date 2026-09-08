@@ -2,7 +2,7 @@
   "name": "dineiz",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --parallel --filter=!@dineiz/rider",
+    "dev": "turbo run dev --parallel --filter=!@dineiz/rider --filter=!@dineiz/standalone",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo lint",

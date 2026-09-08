@@ -1,0 +1,7 @@
+{
+  "extends": "@dineiz/config/typescript/react-library.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/renderer/src/**/*", "src/preload/index.d.ts"]
+}
