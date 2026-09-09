@@ -97,6 +97,56 @@ export function getIO(): SocketIOServer | null {
   return io;
 }
 
+// ─── Socket auth (shared by /kds and /pos — the staff-facing namespaces) ────
+//
+// Neither namespace ever verified who was connecting: any client able to
+// reach this server could `join_branch`/`join_tenant` with ANY id and start
+// receiving that tenant's live order/stats/branding feed, and on /kds could
+// call kds:start_order / kds:bump_order / kds:recall_order / kds:cancel_order
+// against ANY order in the database — cancel a competitor's order, bounce it
+// between states — by id alone, no credentials at all. Both real clients
+// already send what's needed to close this without any client-side change:
+// apps/pos's SocketContext.tsx sends `auth: { token }` (the same session
+// token REST calls send as a Bearer header); apps/dashboard connects with
+// `withCredentials: true`, relying on the better-auth.session_token cookie
+// already set at login. This mirrors middleware/auth.ts's own Bearer-or-
+// cookie fallback against the same Session table.
+async function authenticateSocket(
+  socket: import('socket.io').Socket,
+  next: (err?: Error) => void,
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { prisma } = require('@dineiz/db') as typeof import('@dineiz/db');
+  try {
+    let token: string | undefined = socket.handshake.auth?.token;
+    if (!token) {
+      const cookie = socket.handshake.headers?.cookie;
+      const match = cookie?.match(/better-auth\.session_token=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
+    if (!token) {
+      console.warn(`[socket-auth] rejected ${socket.nsp.name}: no token in handshake auth or cookie`);
+      next(new Error('unauthorized'));
+      return;
+    }
+
+    const dbSession = await prisma.session.findFirst({
+      where: { token },
+      include: { user: { select: { id: true, tenantId: true, branchId: true, role: true } } },
+    });
+    if (!dbSession || !dbSession.user || !dbSession.user.tenantId || dbSession.expiresAt <= new Date()) {
+      console.warn(`[socket-auth] rejected ${socket.nsp.name}: no valid session for token`);
+      next(new Error('unauthorized'));
+      return;
+    }
+    socket.data.user = dbSession.user;
+    next();
+  } catch (e: any) {
+    console.error(`[socket-auth] error authenticating ${socket.nsp.name}:`, e?.message);
+    next(new Error('unauthorized'));
+  }
+}
+
 // ─── /kds Namespace ───────────────────────────────────────────────────────────
 
 function registerKDSNamespace(io: SocketIOServer): void {
@@ -104,18 +154,26 @@ function registerKDSNamespace(io: SocketIOServer): void {
   const { prisma } = require('@dineiz/db') as typeof import('@dineiz/db');
 
   const kds = io.of('/kds');
+  kds.use(authenticateSocket);
 
   kds.on('connection', (socket) => {
-    console.log(`[KDS] Client connected: ${socket.id}`);
+    const authedUser = socket.data.user as { id: string; tenantId: string; branchId: string | null; role: string };
+    console.log(`[KDS] Client connected: ${socket.id} (tenant ${authedUser.tenantId})`);
 
-    /** Join a branch-level room to receive all orders for this branch */
-    socket.on('join_branch', (branchId: string) => {
-      socket.join(`branch:${branchId}`);
-      console.log(`[KDS] ${socket.id} joined branch:${branchId}`);
+    /** Join a branch-level room — only if that branch actually belongs to the caller's own tenant. */
+    socket.on('join_branch', async (branchId: string) => {
+      if (typeof branchId !== 'string' || !branchId) return;
+      try {
+        const branch = await prisma.branch.findFirst({ where: { id: branchId, tenantId: authedUser.tenantId }, select: { id: true } });
+        if (!branch) return; // not this caller's tenant — refuse silently, same as a bad id
+        socket.join(`branch:${branchId}`);
+        console.log(`[KDS] ${socket.id} joined branch:${branchId}`);
+      } catch { /* ignore */ }
     });
 
-    /** Join a tenant-level room to receive all orders for this tenant */
+    /** Join a tenant-level room — only the caller's own tenant. */
     socket.on('join_tenant', (tenantId: string) => {
+      if (tenantId !== authedUser.tenantId) return;
       socket.join(`tenant:${tenantId}`);
       console.log(`[KDS] ${socket.id} joined tenant:${tenantId}`);
     });
@@ -132,7 +190,7 @@ function registerKDSNamespace(io: SocketIOServer): void {
     socket.on('kds:start_order', async ({ orderId, branchId }: { orderId: string; branchId: string }) => {
       try {
         const order = await prisma.order.update({
-          where: { id: orderId },
+          where: { id: orderId, tenantId: authedUser.tenantId },
           data: { status: 'IN_KITCHEN' },
           include: { items: { include: { item: { select: { name: true } } } } },
         });
@@ -146,7 +204,7 @@ function registerKDSNamespace(io: SocketIOServer): void {
     socket.on('kds:bump_order', async ({ orderId, branchId }: { orderId: string; branchId: string }) => {
       try {
         const order = await prisma.order.update({
-          where: { id: orderId },
+          where: { id: orderId, tenantId: authedUser.tenantId },
           data: { status: 'READY' },
           include: { items: { include: { item: { select: { name: true } } } } },
         });
@@ -160,7 +218,7 @@ function registerKDSNamespace(io: SocketIOServer): void {
     socket.on('kds:recall_order', async ({ orderId, branchId }: { orderId: string; branchId: string }) => {
       try {
         const order = await prisma.order.update({
-          where: { id: orderId },
+          where: { id: orderId, tenantId: authedUser.tenantId },
           data: { status: 'IN_KITCHEN' },
           include: { items: { include: { item: { select: { name: true } } } } },
         });
@@ -175,7 +233,7 @@ function registerKDSNamespace(io: SocketIOServer): void {
       orderId, branchId, reason,
     }: { orderId: string; branchId: string; reason?: string }) => {
       try {
-        const order = await prisma.order.update({ where: { id: orderId }, data: { status: 'CANCELLED', notes: reason } });
+        const order = await prisma.order.update({ where: { id: orderId, tenantId: authedUser.tenantId }, data: { status: 'CANCELLED', notes: reason } });
         kds.to(`branch:${branchId}`).emit('kds:order_cancelled', { orderId, reason });
         kds.to(`tenant:${order.tenantId}`).emit('kds:order_cancelled', { orderId, reason });
         io?.of('/pos').to(`branch:${branchId}`).emit('kds:order_cancelled', { orderId, reason });
@@ -192,19 +250,30 @@ function registerKDSNamespace(io: SocketIOServer): void {
 // ─── /pos Namespace ───────────────────────────────────────────────────────────
 
 function registerPOSNamespace(io: SocketIOServer): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { prisma } = require('@dineiz/db') as typeof import('@dineiz/db');
+
   const pos = io.of('/pos');
+  pos.use(authenticateSocket);
 
   pos.on('connection', (socket) => {
-    console.log(`[POS] Terminal connected: ${socket.id}`);
+    const authedUser = socket.data.user as { id: string; tenantId: string; branchId: string | null; role: string };
+    console.log(`[POS] Terminal connected: ${socket.id} (tenant ${authedUser.tenantId})`);
 
-    /** POS terminal joins its branch room to receive status updates */
-    socket.on('join_branch', (branchId: string) => {
-      socket.join(`branch:${branchId}`);
-      console.log(`[POS] ${socket.id} joined branch:${branchId}`);
+    /** POS terminal joins its branch room — only if that branch belongs to the caller's own tenant. */
+    socket.on('join_branch', async (branchId: string) => {
+      if (typeof branchId !== 'string' || !branchId) return;
+      try {
+        const branch = await prisma.branch.findFirst({ where: { id: branchId, tenantId: authedUser.tenantId }, select: { id: true } });
+        if (!branch) return;
+        socket.join(`branch:${branchId}`);
+        console.log(`[POS] ${socket.id} joined branch:${branchId}`);
+      } catch { /* ignore */ }
     });
 
-    /** Dashboard can also join tenant rooms via POS namespace if needed */
+    /** Dashboard can also join tenant rooms via POS namespace — only its own tenant. */
     socket.on('join_tenant', (tenantId: string) => {
+      if (tenantId !== authedUser.tenantId) return;
       socket.join(`tenant:${tenantId}`);
       console.log(`[POS] ${socket.id} joined tenant:${tenantId}`);
     });
