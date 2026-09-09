@@ -2245,10 +2245,20 @@ model TenantFeatureOverride {
 // that machine never phones home to check. It exists for bookkeeping,
 // support conversations, and reissuing a license if a customer's fingerprint
 // changes (e.g. they migrate to new hardware).
+// tenantId is deliberately optional: Standalone is a separate, sellable-on-its-own
+// product (an offline single-restaurant POS), not a feature of the cloud SaaS
+// product — most buyers will never have a Tenant row at all. When tenantId is
+// null, buyerName/buyerEmail/buyerPhone carry the buyer's own contact info instead
+// (captured directly on the license, not borrowed from a cloud account that
+// doesn't exist). The API enforces "at least one of tenantId or buyerName" —
+// see apps/super-admin/app/api/system/standalone-licenses/route.ts.
 model StandaloneLicense {
   id                 String    @id @default(cuid())
-  tenantId           String
-  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId           String?
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  buyerName          String? // set when there's no cloud tenant to attribute this to
+  buyerEmail         String?
+  buyerPhone         String?
   licenseId          String    @unique // matches the signed payload's own licenseId (a UUID)
   restaurantName     String
   machineFingerprint String
