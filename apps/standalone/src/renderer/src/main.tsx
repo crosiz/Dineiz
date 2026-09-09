@@ -4,15 +4,24 @@ import AppShell from './AppShell'
 import { installDevMock } from './devMock'
 import './globals.css'
 
-// Only ever true when this page was opened directly in a plain browser tab
-// (e.g. http://localhost:5173) instead of the real Electron window — the
-// real app always has a genuine window.dineiz bridge, so this branch never
-// runs there and is dead-code-eliminated from production builds entirely
-// (import.meta.env.DEV is a build-time constant). Exists purely so this
-// screen's UI can be exercised without driving a native window; it is not,
-// and must never be mistaken for, a real installation.
+// Requires an explicit ?mock=1 in the URL — plainly opening this dev
+// server's URL (e.g. http://localhost:5173, with no query string) must
+// fall through to AppShell's own "no Electron bridge" message instead of
+// silently landing in a fully-populated fake restaurant. That silent
+// fallback used to trigger on nothing more than "window.dineiz is
+// undefined," which is exactly what happens the moment anyone opens this
+// URL directly instead of using the real Electron window — indistinguishable
+// from the real app at a glance, confirmed to have actually confused a real
+// user twice. Only ever meant to be opened with ?mock=1 deliberately, for
+// exercising renderer screens without driving a native window.
+// Dead-code-eliminated from production builds entirely regardless
+// (import.meta.env.DEV is a build-time constant).
 let usingMockBridge = false
-if (import.meta.env.DEV && typeof window.dineiz === 'undefined') {
+if (
+  import.meta.env.DEV &&
+  typeof window.dineiz === 'undefined' &&
+  new URLSearchParams(window.location.search).get('mock') === '1'
+) {
   installDevMock()
   usingMockBridge = true
 }

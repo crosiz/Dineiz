@@ -63,9 +63,12 @@ export default function AppShell() {
 
   if (stage === 'no-bridge') {
     return (
-      <div className="flex h-full items-center justify-center p-8 text-center">
-        <p className="text-sm text-[var(--pos-text-secondary)]">
-          No Electron bridge available — open this app via `pnpm dev`, not a plain browser tab.
+      <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+        <span className="material-symbols-outlined text-4xl text-[var(--pos-red)]">block</span>
+        <h1 className="clash-display text-lg font-bold">This is not the real Dineiz app</h1>
+        <p className="max-w-sm text-sm text-[var(--pos-text-secondary)]">
+          You opened this page directly in a web browser. Dineiz Standalone is a desktop application — close this
+          tab and use the actual Dineiz window instead (check your taskbar, or launch it from its shortcut).
         </p>
       </div>
     )
