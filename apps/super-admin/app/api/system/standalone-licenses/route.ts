@@ -26,6 +26,9 @@ export async function GET() {
         tenantId: l.tenantId,
         tenantName: l.tenant?.name,
         tenantPlan: l.tenant?.plan,
+        buyerName: l.buyerName,
+        buyerEmail: l.buyerEmail,
+        buyerPhone: l.buyerPhone,
         licenseId: l.licenseId,
         restaurantName: l.restaurantName,
         machineFingerprint: l.machineFingerprint,
@@ -59,11 +62,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { tenantId, restaurantName, machineFingerprint, expiresInDays } = body;
+    const { tenantId, buyerName, buyerEmail, buyerPhone, restaurantName, machineFingerprint, expiresInDays } = body;
 
-    if (!tenantId || !restaurantName?.trim() || !machineFingerprint?.trim()) {
+    if (!restaurantName?.trim() || !machineFingerprint?.trim()) {
       return NextResponse.json(
-        { error: 'tenantId, restaurantName, and machineFingerprint are all required' },
+        { error: 'restaurantName and machineFingerprint are required' },
+        { status: 400 }
+      );
+    }
+    // Standalone is sellable on its own — most buyers have no cloud Tenant at
+    // all. Either link to a real tenant, or capture the buyer's own name
+    // directly; one of the two is required so a license is never issued with
+    // no record at all of who it was sold to.
+    if (!tenantId && !buyerName?.trim()) {
+      return NextResponse.json(
+        { error: 'Select an existing tenant, or enter the buyer’s name for an offline-only sale.' },
         { status: 400 }
       );
     }
@@ -74,8 +87,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'expiresInDays must be a positive number' }, { status: 400 });
     }
 
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true } });
-    if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    if (tenantId) {
+      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true } });
+      if (!tenant) return NextResponse.json({ error: 'Tenant not found' }, { status: 404 });
+    }
 
     const payload: LicensePayload = {
       licenseId: randomUUID(),
@@ -92,7 +107,10 @@ export async function POST(request: NextRequest) {
 
     const record = await prisma.standaloneLicense.create({
       data: {
-        tenantId,
+        tenantId: tenantId || null,
+        buyerName: tenantId ? null : buyerName.trim(),
+        buyerEmail: buyerEmail?.trim() || null,
+        buyerPhone: buyerPhone?.trim() || null,
         licenseId: payload.licenseId,
         restaurantName: payload.restaurantName,
         machineFingerprint: payload.machineFingerprint,
@@ -106,9 +124,11 @@ export async function POST(request: NextRequest) {
     await logAuditAction({
       superAdminId: admin.id,
       action: 'STANDALONE_LICENSE_ISSUED',
-      targetTenantId: tenantId,
-      after: { licenseId: payload.licenseId, restaurantName: payload.restaurantName, machineFingerprint: payload.machineFingerprint },
-      notes: `Issued a Standalone license for "${payload.restaurantName}"`,
+      targetTenantId: tenantId || undefined,
+      after: { licenseId: payload.licenseId, restaurantName: payload.restaurantName, machineFingerprint: payload.machineFingerprint, buyerName: tenantId ? undefined : buyerName },
+      notes: tenantId
+        ? `Issued a Standalone license for "${payload.restaurantName}"`
+        : `Issued a Standalone license for "${payload.restaurantName}" (offline-only sale, no cloud tenant — buyer: ${buyerName})`,
     });
 
     return NextResponse.json({ success: true, id: record.id, signedLicense: signed });

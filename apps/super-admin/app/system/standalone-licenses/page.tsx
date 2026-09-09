@@ -5,9 +5,12 @@ import { KeyRound, Plus, X, Ban, RefreshCw, Search, Download, AlertTriangle } fr
 
 interface StandaloneLicenseRow {
   id: string;
-  tenantId: string;
+  tenantId: string | null;
   tenantName: string | null;
   tenantPlan: string | null;
+  buyerName: string | null;
+  buyerEmail: string | null;
+  buyerPhone: string | null;
   licenseId: string;
   restaurantName: string;
   machineFingerprint: string;
@@ -44,10 +47,18 @@ export default function StandaloneLicensesPage() {
   const [formError, setFormError] = useState('');
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
+  const [buyerMode, setBuyerMode] = useState<'tenant' | 'offline'>('tenant');
+
   const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [tenantsError, setTenantsError] = useState('');
   const [tenantSearch, setTenantSearch] = useState('');
   const [selectedTenant, setSelectedTenant] = useState<TenantOption | null>(null);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
+
+  const [buyerName, setBuyerName] = useState('');
+  const [buyerEmail, setBuyerEmail] = useState('');
+  const [buyerPhone, setBuyerPhone] = useState('');
 
   const [restaurantName, setRestaurantName] = useState('');
   const [machineFingerprint, setMachineFingerprint] = useState('');
@@ -72,21 +83,35 @@ export default function StandaloneLicensesPage() {
   }, []);
 
   useEffect(() => {
-    if (!showModal) return;
+    if (!showModal || buyerMode !== 'tenant') return;
+    setTenantsLoading(true);
+    setTenantsError('');
     fetch('/api/clients')
       .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json().catch(() => null);
+        const body = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(body?.error || `Failed to load tenants (${res.status})`);
+        return body;
       })
       .then((d) => {
-        if (d?.clients) setTenants(d.clients.map((c: any) => ({ id: c.id, name: c.name })));
+        const list = (d?.clients ?? []).map((c: any) => ({ id: c.id, name: c.name }));
+        setTenants(list);
+        if (list.length === 0) setTenantsError('No tenants exist yet — create one from Clients first.');
       })
-      .catch(() => {});
-  }, [showModal]);
+      .catch((err) => {
+        setTenants([]);
+        setTenantsError(err instanceof Error ? err.message : 'Failed to load tenants');
+      })
+      .finally(() => setTenantsLoading(false));
+  }, [showModal, buyerMode]);
 
   const resetForm = () => {
+    setBuyerMode('tenant');
     setSelectedTenant(null);
     setTenantSearch('');
+    setTenantsError('');
+    setBuyerName('');
+    setBuyerEmail('');
+    setBuyerPhone('');
     setRestaurantName('');
     setMachineFingerprint('');
     setExpiresInDays('');
@@ -96,8 +121,12 @@ export default function StandaloneLicensesPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-    if (!selectedTenant) {
-      setFormError('Please select a tenant.');
+    if (buyerMode === 'tenant' && !selectedTenant) {
+      setFormError('Please select a tenant, or switch to "Offline-only sale" if this buyer has no cloud account.');
+      return;
+    }
+    if (buyerMode === 'offline' && !buyerName.trim()) {
+      setFormError("The buyer's name is required for an offline-only sale.");
       return;
     }
     if (!restaurantName.trim()) {
@@ -115,7 +144,10 @@ export default function StandaloneLicensesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: selectedTenant.id,
+          tenantId: buyerMode === 'tenant' ? selectedTenant!.id : undefined,
+          buyerName: buyerMode === 'offline' ? buyerName.trim() : undefined,
+          buyerEmail: buyerMode === 'offline' ? buyerEmail.trim() || undefined : undefined,
+          buyerPhone: buyerMode === 'offline' ? buyerPhone.trim() || undefined : undefined,
           restaurantName: restaurantName.trim(),
           machineFingerprint: machineFingerprint.trim(),
           expiresInDays: expiresInDays || undefined,
@@ -125,7 +157,8 @@ export default function StandaloneLicensesPage() {
       if (!res.ok) {
         setFormError(data.error || 'Failed to issue license');
       } else {
-        downloadJson(`dineiz-license-${selectedTenant.name.replace(/\s+/g, '-').toLowerCase()}.json`, data.signedLicense);
+        const filenameSource = buyerMode === 'tenant' ? selectedTenant!.name : buyerName;
+        downloadJson(`dineiz-license-${filenameSource.replace(/\s+/g, '-').toLowerCase()}.json`, data.signedLicense);
         setShowModal(false);
         resetForm();
         fetchLicenses();
@@ -232,7 +265,21 @@ export default function StandaloneLicensesPage() {
             ) : (
               licenses.map((l) => (
                 <tr key={l.id} className="hover:bg-slate-50">
-                  <td className="py-3 px-4 font-bold text-slate-900">{l.tenantName || 'Unknown'}</td>
+                  <td className="py-3 px-4">
+                    {l.tenantId ? (
+                      <span className="font-bold text-slate-900">{l.tenantName || 'Unknown'}</span>
+                    ) : (
+                      <div>
+                        <span className="font-bold text-slate-900">{l.buyerName || 'Unknown buyer'}</span>
+                        <span className="ml-1.5 rounded-full bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 align-middle">
+                          OFFLINE
+                        </span>
+                        {(l.buyerEmail || l.buyerPhone) && (
+                          <p className="text-[10px] text-slate-400">{[l.buyerEmail, l.buyerPhone].filter(Boolean).join(' · ')}</p>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td className="py-3 px-4">{l.restaurantName}</td>
                   <td className="py-3 px-4 max-w-[160px] truncate font-mono text-slate-500" title={l.machineFingerprint}>
                     {l.machineFingerprint}
@@ -300,21 +347,46 @@ export default function StandaloneLicensesPage() {
             </div>
 
             <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setBuyerMode('tenant')}
+                  className={`rounded-lg py-1.5 font-semibold ${buyerMode === 'tenant' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                >
+                  Existing cloud tenant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBuyerMode('offline')}
+                  className={`rounded-lg py-1.5 font-semibold ${buyerMode === 'offline' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+                >
+                  Offline-only sale
+                </button>
+              </div>
+
+              {buyerMode === 'offline' && (
+                <p className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2 text-[11px] text-slate-500">
+                  For a restaurant buying only the offline POS, with no Dineiz cloud account. No tenant record is created.
+                </p>
+              )}
+
+              {buyerMode === 'tenant' ? (
               <div className="relative">
                 <label className="block text-slate-700 font-semibold mb-1">Tenant</label>
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search tenant by name..."
+                    placeholder={tenantsLoading ? 'Loading tenants...' : 'Search tenant by name...'}
                     value={selectedTenant ? selectedTenant.name : tenantSearch}
+                    disabled={tenantsLoading}
                     onChange={(e) => {
                       setTenantSearch(e.target.value);
                       setSelectedTenant(null);
                       setTenantDropdownOpen(true);
                     }}
                     onFocus={() => setTenantDropdownOpen(true)}
-                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 disabled:opacity-60"
                   />
                 </div>
                 {tenantDropdownOpen && !selectedTenant && filteredTenants.length > 0 && (
@@ -335,7 +407,54 @@ export default function StandaloneLicensesPage() {
                     ))}
                   </div>
                 )}
+                {tenantDropdownOpen && !selectedTenant && !tenantsLoading && filteredTenants.length === 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-500 shadow-lg">
+                    {tenantsError || (tenantSearch ? `No tenant matches "${tenantSearch}".` : 'No tenants found.')}
+                  </div>
+                )}
+                {selectedTenant && (
+                  <p className="mt-1 text-[11px] text-green-700">✓ Selected — click the field again to change.</p>
+                )}
               </div>
+              ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Buyer name <span className="text-orange-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Who you sold this to"
+                    value={buyerName}
+                    onChange={(e) => {
+                      setBuyerName(e.target.value);
+                      if (!restaurantName) setRestaurantName(e.target.value);
+                    }}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Email (optional)</label>
+                    <input
+                      type="email"
+                      value={buyerEmail}
+                      onChange={(e) => setBuyerEmail(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1">Phone (optional)</label>
+                    <input
+                      type="text"
+                      value={buyerPhone}
+                      onChange={(e) => setBuyerPhone(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              )}
 
               <div>
                 <label className="block text-slate-700 font-semibold mb-1">Restaurant name (printed on the license)</label>
