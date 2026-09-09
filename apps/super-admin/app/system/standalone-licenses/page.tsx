@@ -45,6 +45,8 @@ export default function StandaloneLicensesPage() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   const [tenants, setTenants] = useState<TenantOption[]>([]);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
+  const [tenantsError, setTenantsError] = useState('');
   const [tenantSearch, setTenantSearch] = useState('');
   const [selectedTenant, setSelectedTenant] = useState<TenantOption | null>(null);
   const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
@@ -73,20 +75,30 @@ export default function StandaloneLicensesPage() {
 
   useEffect(() => {
     if (!showModal) return;
+    setTenantsLoading(true);
+    setTenantsError('');
     fetch('/api/clients')
       .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json().catch(() => null);
+        const body = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(body?.error || `Failed to load tenants (${res.status})`);
+        return body;
       })
       .then((d) => {
-        if (d?.clients) setTenants(d.clients.map((c: any) => ({ id: c.id, name: c.name })));
+        const list = (d?.clients ?? []).map((c: any) => ({ id: c.id, name: c.name }));
+        setTenants(list);
+        if (list.length === 0) setTenantsError('No tenants exist yet — create one from Clients first.');
       })
-      .catch(() => {});
+      .catch((err) => {
+        setTenants([]);
+        setTenantsError(err instanceof Error ? err.message : 'Failed to load tenants');
+      })
+      .finally(() => setTenantsLoading(false));
   }, [showModal]);
 
   const resetForm = () => {
     setSelectedTenant(null);
     setTenantSearch('');
+    setTenantsError('');
     setRestaurantName('');
     setMachineFingerprint('');
     setExpiresInDays('');
@@ -306,15 +318,16 @@ export default function StandaloneLicensesPage() {
                   <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search tenant by name..."
+                    placeholder={tenantsLoading ? 'Loading tenants...' : 'Search tenant by name...'}
                     value={selectedTenant ? selectedTenant.name : tenantSearch}
+                    disabled={tenantsLoading}
                     onChange={(e) => {
                       setTenantSearch(e.target.value);
                       setSelectedTenant(null);
                       setTenantDropdownOpen(true);
                     }}
                     onFocus={() => setTenantDropdownOpen(true)}
-                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    className="w-full pl-8 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 disabled:opacity-60"
                   />
                 </div>
                 {tenantDropdownOpen && !selectedTenant && filteredTenants.length > 0 && (
@@ -334,6 +347,14 @@ export default function StandaloneLicensesPage() {
                       </button>
                     ))}
                   </div>
+                )}
+                {tenantDropdownOpen && !selectedTenant && !tenantsLoading && filteredTenants.length === 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 text-slate-500 shadow-lg">
+                    {tenantsError || (tenantSearch ? `No tenant matches "${tenantSearch}".` : 'No tenants found.')}
+                  </div>
+                )}
+                {selectedTenant && (
+                  <p className="mt-1 text-[11px] text-green-700">✓ Selected — click the field again to change.</p>
                 )}
               </div>
 
