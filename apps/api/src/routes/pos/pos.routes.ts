@@ -509,7 +509,7 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
           }
 
           case 'CLEAN_TABLE': {
-            await prisma.table.update({ where: { id: op.aggregateId }, data: { lastCompletedAt: null } }).catch(() => {});
+            await prisma.table.update({ where: { id: op.aggregateId, tenantId }, data: { lastCompletedAt: null } }).catch(() => {});
             const resolved = await recomputeTableStatus(tenantId, op.aggregateId);
             results.push({ opId: op.opId, ok: true, status: 200, body: { id: op.aggregateId, status: resolved } });
             break;
@@ -604,12 +604,23 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
         select: { id: true, status: true },
       });
       const statusByOrderId = new Map(orders.map((o) => [o.id, o.status]));
+      // A POS terminal always reports the order's own client-generated local
+      // id here (commands.ts's `ord_${nanoid()}`) — resolveLocalOrderId keeps
+      // every command keyed by that local id even after the order reconciles
+      // to a real server order. That id NEVER matches a real Order.id,
+      // reconciled or not, so "not found in the Order table" alone proves
+      // nothing for it — treating a lookup miss as "never reconciled,
+      // nothing to settle" auto-resolved EVERY POS payment dead letter the
+      // instant a manager opened this screen, real unresolved ones included.
+      // Only trust a miss as real staleness for an id that could ever have
+      // matched a real Order.id in the first place (Prisma's default cuid
+      // shape); anything else is left for a human to resolve.
+      const looksLikeServerId = (id: string) => /^c[a-z0-9]{24}$/i.test(id);
       const staleIds = unresolved
         .filter((r) => {
           const status = statusByOrderId.get(r.aggregateId);
-          // Terminal already, OR the aggregateId is a local client id that
-          // never reconciled to a server order (nothing left to settle).
-          return (status && TERMINAL_ORDER_STATUSES.includes(status)) || !statusByOrderId.has(r.aggregateId);
+          if (status) return TERMINAL_ORDER_STATUSES.includes(status);
+          return looksLikeServerId(r.aggregateId) && !statusByOrderId.has(r.aggregateId);
         })
         .map((r) => r.id);
 
