@@ -14,7 +14,14 @@ import { join } from 'path'
 import Database from 'better-sqlite3'
 import { runMigrations } from '../src/main/db/migrate'
 import { completeSetup, isSetupComplete } from '../src/main/services/setup.service'
-import { createUser, listActiveStaff, listAllStaff, login, setUserActive } from '../src/main/services/auth.service'
+import {
+  createUser,
+  listActiveStaff,
+  listAllStaff,
+  login,
+  resetOwnerPasswordWithRecoveryCode,
+  setUserActive
+} from '../src/main/services/auth.service'
 import {
   createAddon,
   createCategory,
@@ -119,6 +126,58 @@ function phase3SetupAndAuth(db: Database.Database): { cashierId: string; ownerId
   assert(
     ownerLoginBad.ok === false && ownerLoginBad.reason === 'INVALID_CREDENTIALS',
     'owner login rejects wrong password'
+  )
+
+  // The recovery code is the only way back in if an owner forgets their
+  // password (this app is offline — no email reset exists). Verify the
+  // whole loop: a wrong code is rejected without touching the password,
+  // the real code resets it, and the old password stops working while the
+  // new one starts.
+  assert(
+    /^[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}-[A-Z2-9]{5}$/.test(setupResult.ownerRecoveryCode),
+    `completeSetup returns a recovery code in the expected XXXXX-XXXXX-XXXXX-XXXXX format (got "${setupResult.ownerRecoveryCode}")`
+  )
+
+  let threwOnWrongRecoveryCode = false
+  try {
+    resetOwnerPasswordWithRecoveryCode(db, {
+      userId: setupResult.ownerId,
+      recoveryCode: 'WRONG-WRONG-WRONG-WRONG',
+      newPassword: 'shouldnotapply'
+    })
+  } catch {
+    threwOnWrongRecoveryCode = true
+  }
+  assert(threwOnWrongRecoveryCode, 'resetOwnerPasswordWithRecoveryCode rejects an incorrect recovery code')
+  assert(
+    login(db, { userId: setupResult.ownerId, password: 'secret123' }).ok === true,
+    'a rejected recovery attempt leaves the original password untouched'
+  )
+
+  let threwOnRecoveryForNonOwner = false
+  try {
+    resetOwnerPasswordWithRecoveryCode(db, {
+      userId: 'does-not-exist',
+      recoveryCode: setupResult.ownerRecoveryCode,
+      newPassword: 'whatever123'
+    })
+  } catch {
+    threwOnRecoveryForNonOwner = true
+  }
+  assert(threwOnRecoveryForNonOwner, 'resetOwnerPasswordWithRecoveryCode rejects a userId that is not a real owner')
+
+  resetOwnerPasswordWithRecoveryCode(db, {
+    userId: setupResult.ownerId,
+    recoveryCode: setupResult.ownerRecoveryCode.toLowerCase(), // typed lowercase — must still match
+    newPassword: 'newsecret456'
+  })
+  assert(
+    login(db, { userId: setupResult.ownerId, password: 'secret123' }).ok === false,
+    'the old password no longer works after a recovery reset'
+  )
+  assert(
+    login(db, { userId: setupResult.ownerId, password: 'newsecret456' }).ok === true,
+    'the new password set via a lowercase-typed recovery code works'
   )
 
   const cashier = createUser(db, { name: 'Charlie Cashier', role: 'CASHIER', pin: '1234' })

@@ -33,6 +33,14 @@ function createWindow(): void {
     height: 800,
     show: false,
     autoHideMenuBar: true,
+    // Packaged Windows/macOS builds get their icon from electron-builder's
+    // own win.icon/mac.icon (build/icon.ico, stamped into the .exe itself
+    // via rcedit at build time) — the OS shows that regardless of this
+    // option. This is only for the *dev* window, which otherwise shows
+    // Electron's generic default icon: build/ isn't part of the packaged
+    // app's bundled files, so this relative path only resolves during
+    // development, when it's read straight off the source tree.
+    ...(isDev ? { icon: join(__dirname, '../../build/icon.png') } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false

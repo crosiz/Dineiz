@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import PinPad from '../../components/PinPad'
 import DineizLogo from '../../components/DineizLogo'
+import RecoverPasswordModal from './RecoverPasswordModal'
 
 type StaffSummary = Awaited<ReturnType<typeof window.dineiz.auth.listActiveStaff>>[number]
 
@@ -14,6 +15,8 @@ export default function Login({ onLoggedIn }: LoginProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [showRecovery, setShowRecovery] = useState(false)
+  const [recoveredMessage, setRecoveredMessage] = useState<string | null>(null)
 
   useEffect(() => {
     window.dineiz.auth.listActiveStaff().then(setStaff)
@@ -105,12 +108,34 @@ export default function Login({ onLoggedIn }: LoginProps) {
           >
             {submitting ? 'Checking…' : 'Log in'}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowRecovery(true)}
+            className="text-xs font-semibold text-[var(--pos-text-secondary)] underline"
+          >
+            Forgot password?
+          </button>
         </form>
       ) : (
         <PinPad error={Boolean(error)} onSubmit={(pin) => void attemptLogin({ pin })} />
       )}
 
       {error && <p className="text-sm text-[var(--pos-red)]">{error}</p>}
+      {recoveredMessage && <p className="text-sm text-[var(--pos-green)]">{recoveredMessage}</p>}
+
+      {showRecovery && (
+        <RecoverPasswordModal
+          userId={selected.id}
+          userName={selected.name}
+          onClose={() => setShowRecovery(false)}
+          onReset={() => {
+            setShowRecovery(false)
+            setPassword('')
+            setError(null)
+            setRecoveredMessage('Password reset — log in with your new password.')
+          }}
+        />
+      )}
     </div>
   )
 }
