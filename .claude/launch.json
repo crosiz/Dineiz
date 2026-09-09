@@ -29,7 +29,8 @@
       "name": "standalone",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "@dineiz/standalone", "exec", "electron-vite", "dev", "--", "--no-sandbox"],
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     }
   ]
 }

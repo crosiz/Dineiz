@@ -74,6 +74,7 @@ export default function MainShell({ user, restaurant, onLogout }: MainShellProps
             shiftId={shift.id}
             shiftOpenedAt={shift.openedAt}
             onGoToOrder={() => setActiveTab('order')}
+            onGoToTickets={() => setActiveTab('tickets')}
             onShiftClosed={() => {
               setActiveTab('home')
               window.dineiz.shifts.getOpen().then(setShift)
