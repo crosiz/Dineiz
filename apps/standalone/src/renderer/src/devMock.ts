@@ -230,7 +230,6 @@ export function installDevMock(): void {
           rush_hour_mode: 0
         }
         users.push({ id: 'mock-owner', name: input.ownerName, role: 'OWNER', password: input.ownerPassword, isActive: true })
-        users.push({ id: 'mock-cashier', name: 'Demo Cashier', role: 'CASHIER', pin: '1234', isActive: true })
         floors.push({ id: 'mock-floor-main', name: 'Main Floor', sortOrder: 0 })
         return delay({ restaurantId: 'mock-restaurant', ownerId: 'mock-owner' })
       }
