@@ -51,7 +51,9 @@ const api = {
   auth: {
     listActiveStaff: (): Promise<StaffSummary[]> => ipcRenderer.invoke('auth:listActiveStaff'),
     login: (input: { userId: string; password?: string; pin?: string }): Promise<AuthResult> =>
-      ipcRenderer.invoke('auth:login', input)
+      ipcRenderer.invoke('auth:login', input),
+    resetOwnerPasswordWithRecoveryCode: (input: { userId: string; recoveryCode: string; newPassword: string }): Promise<void> =>
+      ipcRenderer.invoke('auth:resetOwnerPasswordWithRecoveryCode', input)
   },
   menu: {
     getAll: (): Promise<{ categories: CategoryWithItems[] }> => ipcRenderer.invoke('menu:getAll'),

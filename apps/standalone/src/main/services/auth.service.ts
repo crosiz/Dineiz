@@ -130,3 +130,33 @@ export function changePin(db: Database.Database, userId: string, newPin: string)
     .run(hash, userId)
   if (result.changes === 0) throw new Error('User not found')
 }
+
+/**
+ * The only way back in if an owner forgets their password — this app is
+ * offline by design, so there is no "reset link emailed to you" path.
+ * Checked against the one recovery code shown once at setup (see
+ * setup.service.ts's generateRecoveryCode). Deliberately restricted to
+ * resetting OWNER accounts only: a manager/cashier who forgets a PIN is
+ * meant to have an owner reset it from Staff, not use this.
+ */
+export function resetOwnerPasswordWithRecoveryCode(
+  db: Database.Database,
+  input: { userId: string; recoveryCode: string; newPassword: string },
+): void {
+  if (input.newPassword.length < 6) throw new Error('Password must be at least 6 characters')
+
+  const restaurant = db.prepare('SELECT owner_recovery_code_hash FROM restaurant LIMIT 1').get() as
+    | { owner_recovery_code_hash: string | null }
+    | undefined
+  if (!restaurant?.owner_recovery_code_hash) {
+    throw new Error('No recovery code was ever set up for this installation.')
+  }
+  if (!bcrypt.compareSync(input.recoveryCode.trim().toUpperCase(), restaurant.owner_recovery_code_hash)) {
+    throw new Error('That recovery code is incorrect.')
+  }
+
+  const user = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'OWNER'").get(input.userId)
+  if (!user) throw new Error('Owner account not found.')
+
+  changePassword(db, input.userId, input.newPassword)
+}

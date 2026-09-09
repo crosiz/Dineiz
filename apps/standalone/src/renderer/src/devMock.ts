@@ -163,6 +163,7 @@ const printJobs: MockPrintJob[] = []
 const shiftActivities: MockShiftActivity[] = []
 const backups: MockBackup[] = []
 const MOCK_FINGERPRINT = 'DEV-MOCK-FINGERPRINT-1234'
+const mockRecoveryCode = 'DEV0X-MOCKX-CODEX-1234X'
 let mockActivated = false
 let openShift: { id: string; cashierId: string; cashierName: string; status: 'OPEN'; openingFloat: number; openedAt: string } | null =
   null
@@ -231,7 +232,7 @@ export function installDevMock(): void {
         }
         users.push({ id: 'mock-owner', name: input.ownerName, role: 'OWNER', password: input.ownerPassword, isActive: true })
         floors.push({ id: 'mock-floor-main', name: 'Main Floor', sortOrder: 0 })
-        return delay({ restaurantId: 'mock-restaurant', ownerId: 'mock-owner' })
+        return delay({ restaurantId: 'mock-restaurant', ownerId: 'mock-owner', ownerRecoveryCode: mockRecoveryCode })
       }
     },
     auth: {
@@ -248,6 +249,15 @@ export function installDevMock(): void {
         const credentialOk = input.password != null ? user.password === input.password : user.pin === input.pin
         if (!credentialOk) return delay({ ok: false as const, reason: 'INVALID_CREDENTIALS' as const })
         return delay({ ok: true as const, user: { id: user.id, name: user.name, role: user.role, isActive: true } })
+      },
+      resetOwnerPasswordWithRecoveryCode: (input) => {
+        if (input.recoveryCode.trim().toUpperCase() !== mockRecoveryCode) {
+          throw new Error('That recovery code is incorrect.')
+        }
+        const user = users.find((u) => u.id === input.userId && u.role === 'OWNER')
+        if (!user) throw new Error('Owner account not found.')
+        user.password = input.newPassword
+        return delay(undefined)
       }
     },
     staff: {
