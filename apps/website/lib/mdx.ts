@@ -30,7 +30,20 @@ export interface CaseStudy {
   content: string;
 }
 
-const contentDir = path.join(process.cwd(), 'content');
+function getContentDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'apps', 'website', 'content'),
+    path.join(process.cwd(), 'content'),
+    path.resolve(process.cwd(), '..', 'content'),
+    path.resolve(process.cwd(), '..', 'apps', 'website', 'content'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.join(process.cwd(), 'content');
+}
 
 function parseFrontmatter(fileContent: string) {
   const { data, content } = matter(fileContent);
@@ -39,7 +52,7 @@ function parseFrontmatter(fileContent: string) {
 }
 
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
-  const blogDir = path.join(contentDir, 'blog');
+  const blogDir = path.join(getContentDir(), 'blog');
   if (!fs.existsSync(blogDir)) return [];
 
   const files = fs.readdirSync(blogDir);
@@ -70,7 +83,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  const blogDir = path.join(contentDir, 'blog');
+  const blogDir = path.join(getContentDir(), 'blog');
   const filePath = path.join(blogDir, `${slug}.mdx`);
 
   if (!fs.existsSync(filePath)) return null;
@@ -93,7 +106,7 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
 }
 
 export async function getAllCaseStudies(): Promise<CaseStudy[]> {
-  const caseDir = path.join(contentDir, 'case-studies');
+  const caseDir = path.join(getContentDir(), 'case-studies');
   if (!fs.existsSync(caseDir)) return [];
 
   const files = fs.readdirSync(caseDir);
@@ -128,7 +141,7 @@ export async function getAllCaseStudies(): Promise<CaseStudy[]> {
 }
 
 export async function getCaseStudyBySlug(slug: string): Promise<CaseStudy | null> {
-  const caseDir = path.join(contentDir, 'case-studies');
+  const caseDir = path.join(getContentDir(), 'case-studies');
   const filePath = path.join(caseDir, `${slug}.mdx`);
 
   if (!fs.existsSync(filePath)) return null;

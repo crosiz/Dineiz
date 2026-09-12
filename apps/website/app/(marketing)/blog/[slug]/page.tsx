@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Clock, Calendar, ArrowLeft } from "lucide-react";
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { renderMarkdown } from "@/lib/markdown";
 import { getBlogPostBySlug, getAllBlogPosts } from "@/lib/mdx";
 import { generateSEOMetadata, generateArticleSchema } from "@/lib/seo";
 import { InternalLinks } from "@/components/seo/InternalLinks";
@@ -97,6 +97,7 @@ export default async function BlogPostPage({ params }: PageProps) {
               fill
               className="object-cover"
               priority
+              unoptimized
             />
           </div>
 
@@ -106,9 +107,10 @@ export default async function BlogPostPage({ params }: PageProps) {
             </aside>
 
             <div className="flex-1 min-w-0">
-              <div className="prose prose-lg prose-brand max-w-none prose-headings:font-bold prose-a:font-semibold prose-img:rounded-xl">
-                <MDXRemote source={post.content} />
-              </div>
+              <div
+                className="prose prose-lg prose-brand max-w-none prose-headings:font-bold prose-a:font-semibold prose-img:rounded-xl"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
+              />
 
               {/* Author Card & Share */}
               <div className="mt-16 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
