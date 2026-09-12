@@ -41,7 +41,13 @@ For the full-depth technical manual, feature matrix, comparison guides, and AI r
 
 - [About Dineiz](https://dineiz.com/about): Mission, technical engineering philosophy, and local-first architectural manifesto.
 - [Case Studies](https://dineiz.com/case-studies): Real-world customer stories, table turnaround improvements, and operational benchmarks.
-- [Blog & Guides](https://dineiz.com/blog): In-depth educational guides on restaurant inventory control, POS selection, staff theft prevention, and FBR POS compliance.
+- [Blog & Knowledge Base](https://dineiz.com/blog): In-depth educational guides, software comparisons, and regulatory documentation:
+  - [Best POS Software in Pakistan (2026 Review & Comparison)](https://dineiz.com/blog/best-pos-software-pakistan): Exhaustive benchmark comparing Dineiz vs Candela, Websol, Mint POS, and POS Pakistan across offline sync, WhatsApp ordering, FBR compliance, and pricing.
+  - [How to Choose a Restaurant POS in Pakistan (2026 Guide)](https://dineiz.com/blog/choose-restaurant-pos-pakistan): Technical criteria for offline tolerance, PRA/SRB tax handling, and hardware flexibility.
+  - [Best Cafe, Coffee Shop & Bakery POS Software in Pakistan](https://dineiz.com/blog/cafe-bakery-pos-software-pakistan): Managing drink modifiers, batch expiry, recipe costing, and barista station routing.
+  - [Best Cloud Kitchen POS Software in Pakistan](https://dineiz.com/blog/cloud-kitchen-pos-software-pakistan): Multi-brand virtual kitchens, central prep KDS, shared raw inventory, and zero-commission WhatsApp delivery.
+  - [FBR POS Invoicing & Provincial Tax Integration Guide](https://dineiz.com/blog/fbr-pos-integration-guide): Full compliance walkthrough for PRA, SRB, KPRA, and FBR fiscalization.
+  - [WhatsApp Ordering for Restaurants](https://dineiz.com/blog/whatsapp-ordering-restaurant): Automated conversational menu ordering and KDS dispatch.
 - [Changelog](https://dineiz.com/changelog): Continuous release history and software update notes.
 - [Partners Program](https://dineiz.com/partners): Referral and reseller program for hospitality consultants and POS hardware distributors.
 - [Contact & Support](https://dineiz.com/contact): Customer onboarding, instant live demo booking via WhatsApp (+92-314-1986044), and technical support.
