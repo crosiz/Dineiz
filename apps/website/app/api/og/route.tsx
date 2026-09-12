@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og'
+import { DINEIZ_LOGO_BASE64 } from '@/lib/logo-base64'
 
 export const runtime = 'edge'
 
@@ -24,27 +25,17 @@ export async function GET(request: Request) {
       >
         {/* Top Header Row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: '#FF6B35',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                fontSize: '24px',
-                fontWeight: 'bold',
-              }}
-            >
-              D
-            </div>
-            <span style={{ fontSize: '32px', fontWeight: '800', color: '#1D1D1F', letterSpacing: '-0.02em' }}>
-              Dineiz
-            </span>
-          </div>
+          <img
+            src={DINEIZ_LOGO_BASE64}
+            width="176"
+            height="44"
+            style={{
+              height: '44px',
+              width: '176px',
+              objectFit: 'contain',
+            }}
+            alt="Dineiz"
+          />
 
           <div
             style={{

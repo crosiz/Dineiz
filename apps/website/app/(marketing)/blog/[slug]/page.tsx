@@ -1,9 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Clock, Calendar, ArrowLeft } from "lucide-react";
-import { MDXRemote } from 'next-mdx-remote/rsc';
+import { renderMarkdown } from "@/lib/markdown";
 import { getBlogPostBySlug, getAllBlogPosts } from "@/lib/mdx";
 import { generateSEOMetadata, generateArticleSchema } from "@/lib/seo";
 import { InternalLinks } from "@/components/seo/InternalLinks";
@@ -59,7 +58,7 @@ export default async function BlogPostPage({ params }: PageProps) {
       <article className="bg-white py-16 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          <div className="mb-10 lg:mb-16">
+          <div className="mb-12 pb-12 border-b border-gray-100">
             <Link
               href="/blog"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-brand-600 mb-8 transition-colors"
@@ -90,25 +89,16 @@ export default async function BlogPostPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="relative w-full h-[400px] sm:h-[500px] rounded-3xl overflow-hidden mb-16 bg-gray-100">
-            <Image
-              src={post.image || '/images/blog-placeholder.jpg'}
-              alt={post.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
             <aside className="hidden lg:block lg:w-64 flex-shrink-0">
               <TableOfContents content={post.content} />
             </aside>
 
             <div className="flex-1 min-w-0">
-              <div className="prose prose-lg prose-brand max-w-none prose-headings:font-bold prose-a:font-semibold prose-img:rounded-xl">
-                <MDXRemote source={post.content} />
-              </div>
+              <div
+                className="prose prose-lg prose-brand max-w-none prose-headings:font-bold prose-a:font-semibold prose-img:rounded-xl"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(post.content) }}
+              />
 
               {/* Author Card & Share */}
               <div className="mt-16 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-6">
