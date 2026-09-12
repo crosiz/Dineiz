@@ -1027,8 +1027,31 @@ export async function refreshOrders(
       // next background refresh after creating an order silently swaps its
       // permanent number for the server's, which is the exact bug this
       // whole event-sourced order-number design exists to prevent.
+      //
+      // `tableId` / `tableLabel` are ALSO preserved from the local row:
+      // GET /api/orders/live's summary shape carries `tableLabel` but no
+      // `tableId`, so `mapped.tableId` is null — letting it through wiped the
+      // table link the ORDER_CREATED event set, and the table's derived status
+      // dropped back to FREE a second after the order was punched (table not
+      // turning red / freeing wrongly). The server list never knows a table
+      // better than the terminal that opened the order.
+      const preservedTableId = existing?.tableId ?? mapped.tableId;
+      const preservedTableLabel = existing?.tableLabel ?? mapped.tableLabel;
+      // `shiftId` too — the live list omitted it, so `mapped.shiftId` was ''
+      // and a locally-created order lost the shift stamp it needs to be counted
+      // in the POS home's local "orders served / total value".
+      const preservedShiftId = existing?.shiftId || mapped.shiftId || '';
       merged[localId ?? raw.id] = existing
-        ? { ...mapped, id: existing.id, serverId: raw.id, orderNumber: existing.orderNumber, tokenNumber: existing.tokenNumber }
+        ? {
+            ...mapped,
+            id: existing.id,
+            serverId: raw.id,
+            orderNumber: existing.orderNumber,
+            tokenNumber: existing.tokenNumber,
+            tableId: preservedTableId,
+            tableLabel: preservedTableLabel,
+            shiftId: preservedShiftId,
+          }
         : mapped;
     }
 
@@ -1039,12 +1062,33 @@ export async function refreshOrders(
     const seen = new Map<string, string>();
     for (const [id, o] of Object.entries(merged)) {
       if (!o.orderNumber) continue;
-      const kept = seen.get(o.orderNumber);
-      if (kept === undefined) { seen.set(o.orderNumber, id); continue; }
-      // Prefer the row whose key is NOT the server id — that's the local one.
-      const dropId = o.serverId === id ? id : kept;
-      if (dropId !== id) seen.set(o.orderNumber, id);
+      const keptId = seen.get(o.orderNumber);
+      if (keptId === undefined) { seen.set(o.orderNumber, id); continue; }
+      // Two rows, same client-owned order number. Keep the one whose key is NOT
+      // its own server id (the client-created row — it owns the id + number).
+      const keepId = o.serverId === id ? keptId : id;
+      const dropId = keepId === id ? keptId : id;
+      const keep = merged[keepId];
+      const drop = merged[dropId];
+      // ...but if the kept row is missing its money (a botched local create, or
+      // a row hydrated before the API sent line prices), adopt the other row's
+      // items + totals wholesale so the table popup / checkout don't read
+      // "Rs. 0" and a payment isn't blocked as "nothing to charge".
+      const keepMoneyless =
+        (keep?.netAmount ?? 0) <= 0 &&
+        (keep?.items ?? []).reduce((s, i) => s + (i.unitPrice ?? 0) * (i.qty ?? 0), 0) <= 0;
+      if (keep && drop && keepMoneyless && (drop.netAmount ?? 0) > 0) {
+        merged[keepId] = {
+          ...keep,
+          items: drop.items?.length ? drop.items : keep.items,
+          subtotal: drop.subtotal,
+          taxAmount: drop.taxAmount,
+          discountAmount: drop.discountAmount,
+          netAmount: drop.netAmount,
+        };
+      }
       delete merged[dropId];
+      seen.set(o.orderNumber, keepId);
     }
 
     useViews.getState()._setSnapshot({ orders: merged });

@@ -78,7 +78,7 @@ export async function recomputeTableStatus(
  */
 export async function markTableOrderCompleted(tenantId: string, tableId: string): Promise<void> {
   await prisma.table.update({
-    where: { id: tableId },
+    where: { id: tableId, tenantId },
     data: { lastCompletedAt: new Date() },
   }).catch(() => {});
   await recomputeTableStatus(tenantId, tableId);
@@ -94,7 +94,7 @@ export async function setTableOverride(
   override: 'RESERVED' | 'INACTIVE' | 'MERGED' | null,
 ): Promise<string | null> {
   await prisma.table.update({
-    where: { id: tableId },
+    where: { id: tableId, tenantId },
     data: {
       statusOverride: override,
       overrideAt: override ? new Date() : null,

@@ -254,7 +254,7 @@ function renderHtml(data: ShiftReportData): string {
   .masthead { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 14px; border-bottom: 2px solid ${accent}; }
   .masthead .brand-name { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
   .masthead .brand-sub { font-size: 10px; color: #64748B; margin-top: 2px; }
-  .masthead img { max-height: 34px; max-width: 150px; margin-bottom: 6px; display: block; }
+  .masthead img { max-height: 60px; max-width: 220px; margin-bottom: 8px; display: block; }
   .masthead .doc { text-align: right; }
   .masthead .doc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: ${accent}; }
   .masthead .doc-meta { font-size: 9.5px; color: #64748B; margin-top: 3px; }

@@ -7,7 +7,7 @@ import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
-import { generateSEOMetadata, generateOrganizationSchema, generateWebSiteSchema } from "@/lib/seo";
+import { generateSEOMetadata, generateOrganizationSchema, generateWebSiteSchema, generateSoftwareApplicationSchema } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,27 +35,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: 'Dineiz',
-    applicationCategory: 'BusinessApplication',
-    operatingSystem: 'Web, Android, iOS',
-    description: 'Restaurant POS and management software for Pakistan',
-    url: 'https://dineiz.com',
-    creator: {
-      '@type': 'Organization',
-      name: 'Crosiz Technologies',
-      url: 'https://crosiz.com',
-    },
-    offers: {
-      '@type': 'Offer',
-      price: '0',
-      priceCurrency: 'PKR',
-      description: 'Free plan available',
-    },
-  }
-
+  const structuredData = generateSoftwareApplicationSchema();
   const organizationSchema = generateOrganizationSchema();
   const websiteSchema = generateWebSiteSchema();
 

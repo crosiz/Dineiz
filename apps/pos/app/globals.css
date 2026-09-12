@@ -125,11 +125,15 @@
     outline-offset: 0 !important;
   }
 
-  /* ── Custom amber focus ring for inputs & textareas ─────────────── */
+  /* ── Amber keyboard-focus ring — a DEFAULT for a bare field, not a lock.
+     Was !important, which doubled up on the many inputs that sit inside a
+     `focus-within:border` wrapper (Close Shift / Cash Drawer / payment
+     amount): the wrapper drew one ring and this drew a second on top of it,
+     the "double outline". Now a nested input can `focus:shadow-none` it away. */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B) !important;
+    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B);
   }
 
   /* ── Kill the blue browser autofill background ───────────────────── */

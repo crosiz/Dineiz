@@ -451,11 +451,14 @@ export async function listActiveOrders(tenantId: string, branchId: string) {
         id: i.id,
         name: i.item?.name || 'Unknown Item',
         quantity: i.quantity,
+        unitPrice: i.unitPrice ?? 0,
         subtotal: i.subtotal,
         options: i.options,
         notes: i.notes
       })),
+      tableId: o.tableId ?? null,
       tableLabel: o.table?.label ?? o.tableLabel ?? null,
+      shiftId: o.shiftId ?? null,
       customerName: o.customer?.name ?? o.customerName ?? null,
       customerPhone: o.customer?.phone ?? o.customerPhone ?? null,
       totalItems,
@@ -657,14 +660,26 @@ export async function listLiveOrders(
     status: o.status,
     type: o.type,
     source: o.source,
+    // `tableId` so a terminal that didn't open the order can still show its
+    // table occupied; `tableLabel` alone forced a label→id lookup that the
+    // client's table-status derivation doesn't do. `shiftId` so the POS home's
+    // local "orders served / total value" (filtered by shiftId) counts a
+    // payment collected on this terminal before the outbox has shipped it.
+    tableId: o.tableId ?? null,
     tableLabel: o.table?.label ?? null,
+    shiftId: o.shiftId ?? null,
     token: o.tokenNumber ?? null,
     customerName: o.customer?.name ?? null,
     customerPhone: o.customer?.phone ?? null,
     payments: (o.payments || []).map((p: any) => ({ method: p.method, status: p.status })),
+    // `unitPrice` / `subtotal` per line — without them the client billed
+    // priced-at-0 lines (PKR 0 payments, the "735 vs 6300" undercharge, the
+    // checkout total flipping when this list overwrote local prices).
     items: (o.items || []).map((it: any) => ({
       name: it.item?.name ?? 'Item',
       qty: it.quantity,
+      unitPrice: it.unitPrice ?? 0,
+      subtotal: it.subtotal ?? (it.unitPrice ?? 0) * (it.quantity ?? 1),
       variation: null,
     })),
     total: o.netAmount ?? 0,
@@ -739,11 +754,29 @@ export async function getOrder(tenantId: string, id: string) {
 
 export async function updateOrder(tenantId: string, id: string, data: any) {
   // clientId / orderNumber ride along on the create schema (Part 4) but a PUT
-  // must never rewrite an order's identity — drop them here.
-  const { items, payments, orderDeals, clientId: _clientId, orderNumber: _orderNumber, ...orderData } = data;
+  // must never rewrite an order's identity — drop them here. redeemedPointsAmount
+  // rides along on COLLECT_PAYMENT for applyOrderStatusSideEffects (which reads
+  // it straight off the original request body, not off this function's return
+  // value) — Order has no such column at all, so passing it through to
+  // Prisma's update() unconditionally 500'd on EVERY payment, every time,
+  // regardless of tenant, order or amount: "Unknown argument
+  // `redeemedPointsAmount`". This was the actual cause behind the repeated
+  // "collected payment, still shows unpaid at close shift" reports.
+  const {
+    items, payments, orderDeals,
+    clientId: _clientId, orderNumber: _orderNumber, redeemedPointsAmount: _redeemedPointsAmount,
+    ...orderData
+  } = data;
 
   const existingOrder = await prisma.order.findUnique({ where: { id, tenantId } });
-  if (!existingOrder) throw new Error('Order not found');
+  if (!existingOrder) {
+    // No such order for this tenant — retrying won't change that. Tagged so
+    // the events/batch handler's classify() marks it permanent instead of
+    // retrying forever (pos.routes.ts).
+    const err: any = new Error('Order not found');
+    err.statusCode = 404;
+    throw err;
+  }
 
   if (payments && payments.length > 0) {
     const tenantBranding = await prisma.tenantBranding.findUnique({
@@ -873,7 +906,15 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
     where: { id, tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } }
   });
 
-  if (!existingOrder) throw new Error('Order not found or already completed');
+  if (!existingOrder) {
+    // Order is gone, or already COMPLETED/CANCELLED — an ADD_ITEMS retry can
+    // never succeed against either state. Tagged 409 so events/batch's
+    // classify() treats it as permanent (dead-letter it) instead of retrying
+    // forever, which is what an untagged throw (plain 500 → transient) did.
+    const err: any = new Error('Order not found or already completed');
+    err.statusCode = 409;
+    throw err;
+  }
 
   // Simple recalculation as requested by the user
   const newItemsTotal = newItems.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);

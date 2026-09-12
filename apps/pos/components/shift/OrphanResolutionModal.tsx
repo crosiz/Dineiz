@@ -20,6 +20,7 @@ export interface OrphanOrder {
   originalShiftId: string;
   originalShiftStatus: string | null;
   originalCashier: string | null;
+  originalCashierId: string | null;
 }
 
 interface Props {
@@ -27,6 +28,8 @@ interface Props {
   branchId: string;
   intoShiftId: string;
   token: string | null;
+  /** The signed-in user resolving this list — lets self-owned orders skip the manager PIN below. */
+  currentUserId: string;
   /** Called after each successful resolve — parent refetches; empty list dismisses. */
   onResolved: () => void;
 }
@@ -46,18 +49,21 @@ type PendingAction =
  * viable, so "Adopt all" / "Cancel all" take a single PIN + reason and apply
  * it to every order shown.
  */
-export function OrphanResolutionModal({ orphans, intoShiftId, token, onResolved }: Props) {
+export function OrphanResolutionModal({ orphans, intoShiftId, token, currentUserId, onResolved }: Props) {
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  const [selfBusyId, setSelfBusyId] = useState<string | null>(null);
 
   if (orphans.length === 0) return null;
+
+  const isSelfOwned = (o: OrphanOrder) => !!o.originalCashierId && o.originalCashierId === currentUserId;
 
   const authHeaders = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const resolveOne = async (order: OrphanOrder, action: 'ADOPT' | 'CANCEL', pin: string, reason: string) => {
+  const resolveOne = async (order: OrphanOrder, action: 'ADOPT' | 'CANCEL', pin?: string, reason?: string) => {
     const res = await fetch(`${API_URL}/api/pos/orphans/${order.id}/resolve`, {
       method: 'POST',
       headers: authHeaders,
@@ -72,6 +78,42 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, onResolved 
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || `Could not resolve ${order.orderNumber}`);
     }
+  };
+
+  // Adopting your OWN order into your OWN new shift needs no manager PIN —
+  // the server enforces the same rule (order.cashierId === the caller), this
+  // just skips showing a PIN pad for a "no" the server would never actually
+  // give here.
+  const adoptSelf = async (order: OrphanOrder) => {
+    setSelfBusyId(order.id);
+    try {
+      await resolveOne(order, 'ADOPT');
+      toast.success(`${order.orderNumber} continued into this shift`);
+      onResolved();
+    } catch (e: any) {
+      toast.error(e.message || `Could not adopt ${order.orderNumber}`);
+    } finally {
+      setSelfBusyId(null);
+    }
+  };
+
+  const adoptAllSelf = async () => {
+    setBulk({ done: 0, total: orphans.length });
+    let ok = 0;
+    const failures: string[] = [];
+    for (let i = 0; i < orphans.length; i++) {
+      try {
+        await resolveOne(orphans[i], 'ADOPT');
+        ok++;
+      } catch (e: any) {
+        failures.push(orphans[i].orderNumber);
+      }
+      setBulk({ done: i + 1, total: orphans.length });
+    }
+    setBulk(null);
+    if (ok > 0) toast.success(`${ok} order${ok === 1 ? '' : 's'} continued into this shift`);
+    if (failures.length) toast.error(`${failures.length} could not be resolved — ${failures.slice(0, 3).join(', ')}${failures.length > 3 ? '…' : ''}`);
+    onResolved();
   };
 
   const resolve = async (pin: string, reason: string) => {
@@ -123,46 +165,54 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, onResolved 
     onResolved();
   };
 
-  const busy = bulk !== null;
+  const busy = bulk !== null || selfBusyId !== null;
   const total = orphans.reduce((s, o) => s + (o.total || 0), 0);
+  const allSelfOwned = orphans.every(isSelfOwned);
 
   return (
     <>
       <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" />
 
-        {/* A hard-capped flex column: header and footer never move, only the
-            list in the middle scrolls. Without the cap + shrink-0/flex-1 split
-            the list overflowed the card and the first row was clipped under
-            the header. */}
-        <div className="relative z-10 w-full max-w-[460px] max-h-[85vh] bg-white rounded-[20px] shadow-[0_30px_80px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col">
-          <div className="p-5 border-b border-[#F1F5F9] shrink-0">
+        {/* Sized, shaped and toned to match ShiftCloseBlockerModal — its
+            closest sibling (same "resolve these orders before you can
+            proceed" job) — rather than its own one-off scale: rounded-2xl
+            not rounded-[20px], shadow-2xl not a hand-tuned rgba shadow,
+            slate-950/60 backdrop not black/70, and an actual entrance
+            animation, which this modal previously had none of at all.
+            A hard-capped flex column: header and footer never move, only
+            the list in the middle scrolls. Without the cap + shrink-0/
+            flex-1 split the list overflowed the card and the first row was
+            clipped under the header. */}
+        <div className="relative z-10 w-full max-w-[460px] min-w-[320px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+          <div className="p-6 pb-4 shrink-0">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-amber-600" />
+              <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                <AlertTriangle size={22} />
               </div>
-              <div className="min-w-0">
-                <h2 className="text-[16px] font-bold text-[#0F172A] leading-snug">
+              <div className="min-w-0 pt-0.5">
+                <h2 className="text-lg font-bold text-slate-900 leading-tight">
                   {orphans.length} order{orphans.length === 1 ? '' : 's'} from an earlier shift {orphans.length === 1 ? 'is' : 'are'} still open
                 </h2>
-                <p className="text-[12.5px] text-[#64748B] mt-1 leading-relaxed">
-                  Take them into this shift, or void them. Either way needs a
-                  manager PIN — one PIN covers the whole batch below.
+                <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                  {allSelfOwned
+                    ? 'These are your own orders from before — continue them into this shift, or void them (voiding still needs a manager PIN).'
+                    : 'Take them into this shift, or void them. Either way needs a manager PIN — one PIN covers the whole batch below.'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto shadow-[inset_0_8px_6px_-8px_rgba(0,0,0,0.12)]">
-            <div className="divide-y divide-[#F1F5F9]">
-              {orphans.map((o) => (
-                <div key={o.id} className="px-5 py-3 flex items-center gap-3">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-5 space-y-2.5 custom-scrollbar">
+            {orphans.map((o) => (
+              <div key={o.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+                <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono tabular-nums font-bold text-[13px] text-[#0F172A] truncate">{o.orderNumber}</span>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#475569] shrink-0">{o.status}</span>
+                      <span className="font-mono tabular-nums font-bold text-xs text-slate-900 truncate">{o.orderNumber}</span>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase shrink-0">{o.status}</span>
                     </div>
-                    <div className="text-[11.5px] text-[#64748B] mt-0.5 truncate">
+                    <div className="text-[11px] text-slate-500 mt-1 truncate">
                       {o.tableLabel ? `Table ${o.tableLabel}` : o.type} · {o.itemCount} item{o.itemCount === 1 ? '' : 's'} · {formatPKR(o.total)}
                       {o.originalCashier ? ` · ${o.originalCashier}` : ''}
                     </div>
@@ -170,47 +220,49 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, onResolved 
                   <div className="flex gap-1.5 shrink-0">
                     <button
                       disabled={busy}
-                      onClick={() => setPending({ kind: 'one', order: o, action: 'ADOPT' })}
-                      className="h-[34px] px-3 rounded-lg bg-[#0F172A] text-white font-bold text-[11px] hover:bg-[#1E293B] active:scale-[0.98] transition-all disabled:opacity-40"
+                      onClick={() => (isSelfOwned(o) ? adoptSelf(o) : setPending({ kind: 'one', order: o, action: 'ADOPT' }))}
+                      className="h-[34px] px-3 rounded-lg bg-slate-900 text-white font-semibold text-[11px] hover:bg-slate-800 active:scale-95 transition-all disabled:opacity-40"
                     >
-                      Adopt
+                      {selfBusyId === o.id ? '…' : isSelfOwned(o) ? 'Continue' : 'Adopt'}
                     </button>
                     <button
                       disabled={busy}
                       onClick={() => setPending({ kind: 'one', order: o, action: 'CANCEL' })}
-                      className="h-[34px] px-3 rounded-lg bg-white border border-[#E2E8F0] text-[#B91C1C] font-bold text-[11px] hover:bg-rose-50 active:scale-[0.98] transition-all disabled:opacity-40"
+                      className="h-[34px] px-3 rounded-lg bg-white border border-slate-200 text-rose-600 font-semibold text-[11px] hover:bg-rose-50 active:scale-95 transition-all disabled:opacity-40"
                     >
                       Void
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
-          <div className="p-4 bg-[#F8FAFC] border-t border-[#F1F5F9] shrink-0">
-            {busy ? (
-              <div className="flex items-center justify-center gap-2 h-[40px] text-[13px] font-semibold text-[#475569]">
+          <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
+            {bulk !== null ? (
+              <div className="flex items-center justify-center gap-2 h-10 text-xs font-semibold text-slate-600">
                 <Loader2 size={15} className="animate-spin" />
-                Resolving {bulk!.done} of {bulk!.total}…
+                Resolving {bulk.done} of {bulk.total}…
               </div>
             ) : (
               <>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPending({ kind: 'all', action: 'ADOPT' })}
-                    className="flex-1 h-[40px] rounded-lg bg-[#0F172A] text-white font-bold text-[12px] hover:bg-[#1E293B] active:scale-[0.99] transition-all"
+                    disabled={busy}
+                    onClick={() => (allSelfOwned ? adoptAllSelf() : setPending({ kind: 'all', action: 'ADOPT' }))}
+                    className="flex-1 h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-xs disabled:opacity-40"
                   >
-                    Adopt all {orphans.length}
+                    {allSelfOwned ? `Continue all ${orphans.length}` : `Adopt all ${orphans.length}`}
                   </button>
                   <button
+                    disabled={busy}
                     onClick={() => setPending({ kind: 'all', action: 'CANCEL' })}
-                    className="flex-1 h-[40px] rounded-lg bg-white border border-[#E2E8F0] text-[#B91C1C] font-bold text-[12px] hover:bg-rose-50 active:scale-[0.99] transition-all"
+                    className="flex-1 h-10 rounded-xl bg-white border border-slate-200 text-rose-600 font-semibold text-xs hover:bg-rose-50 active:scale-95 transition-all disabled:opacity-40"
                   >
                     Void all {orphans.length}
                   </button>
                 </div>
-                <p className="text-center text-[11px] text-[#94A3B8] mt-2 leading-relaxed">
+                <p className="text-center text-[11px] text-slate-400 mt-2.5 leading-relaxed">
                   {formatPKR(total)} across {orphans.length} order{orphans.length === 1 ? '' : 's'}.
                   You can’t take orders until this list is clear.
                 </p>

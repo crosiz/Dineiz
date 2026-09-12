@@ -1193,9 +1193,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
       )}
 
-      {/* Shift Summary Modal */}
+      {/* Shift Summary Modal.
+          z-[500], not 9999 — that value tied exactly with ConfirmModal's
+          real (inline-style) z-index, so if a confirm dialog is ever
+          triggered from within this view, which one paints on top would
+          have been decided by DOM order, not intent. ConfirmModal is meant
+          to out-rank everything, including this. */}
       {shiftSummaryOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShiftSummaryOpen(false)}>
+        <div className="fixed inset-0 z-[500] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShiftSummaryOpen(false)}>
           <div className="bg-white border border-slate-200 shadow-xl rounded-2xl w-full max-w-sm p-8 flex flex-col text-center" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
             <div className="text-slate-600 space-y-3 my-6 text-sm font-medium">

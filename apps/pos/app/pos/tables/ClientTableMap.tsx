@@ -52,6 +52,51 @@ interface TableData {
   assignedWaiterColor?: string | null;
 }
 
+// Adapt an event-store OrderView into the shape the occupied-table popup and
+// the checkout modal read (server-order shape). Used so the popup can paint
+// straight from useViews instead of waiting on GET /api/orders?tableId=.
+function popupFromView(o: any) {
+  const items = (o.items || [])
+    .filter((i: any) => !i.voided)
+    .map((i: any) => ({
+      quantity: i.qty ?? i.quantity ?? 1,
+      name: i.itemName ?? i.name,
+      unitPrice: i.unitPrice ?? 0,
+      subtotal: i.subtotal ?? (i.unitPrice ?? 0) * (i.qty ?? i.quantity ?? 1),
+      notes: i.note ?? null,
+    }));
+  const subtotal = items.reduce((s: number, i: any) => s + (i.subtotal || 0), 0);
+  // `??` binds looser than `+`/`-`, and only falls through on null/undefined —
+  // a stored `netAmount` of 0 (a local order whose recalc hasn't run, or a row
+  // hydrated before the API sent line prices) would win and show "Rs. 0".
+  // Take the first POSITIVE of netAmount / total / items-derived.
+  const derived = subtotal > 0 ? subtotal + (o.taxAmount ?? 0) - (o.discountAmount ?? 0) : 0;
+  const total =
+    Number(o.netAmount) > 0 ? Number(o.netAmount)
+    : Number(o.total) > 0 ? Number(o.total)
+    : Number(o.totalAmount) > 0 ? Number(o.totalAmount)
+    : derived;
+  return {
+    id: o.serverId || o.id,
+    orderNumber: o.orderNumber,
+    type: o.type,
+    status: o.status,
+    items,
+    subtotal,
+    subtotalAmount: subtotal,
+    discountAmount: o.discountAmount ?? 0,
+    taxAmount: o.taxAmount ?? 0,
+    netAmount: total,
+    total,
+    totalAmount: total,
+    assignedWaiterId: o.assignedWaiterId ?? null,
+    assignedWaiterName: o.assignedWaiterName ?? null,
+    customerId: o.customerId ?? null,
+    createdAt: o.createdAt ?? null,
+    paymentMethod: o.paymentMethod ?? 'PENDING',
+  };
+}
+
 export default function ClientTableMap() {
   const router = useRouter();
   const session = useCartStore((s) => s.session);
@@ -160,15 +205,28 @@ export default function ClientTableMap() {
     }
   }, [tables, selectedTable]);
 
-  // Fetch active order for occupied tables — paints instantly from cache
-  // (if this table's order was already viewed this session) while the
-  // network request below refreshes it silently in the background.
+  // Active order for an occupied table. It's ALWAYS already in the event store
+  // — the table only reads OCCUPIED because `deriveTableStatus` found an active
+  // order with this `tableId` — so paint from there synchronously, no spinner.
+  // The cache + network fetch below only reconcile (waiter changes from another
+  // terminal, etc.). This is what removes the "loads the first time" delay.
   const fetchActiveOrder = useCallback(async (tableId: string) => {
     setPopupError(false);
 
+    const vo = Object.values(useViews.getState().orders).find(
+      (o) => o.tableId === tableId && ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status),
+    );
+    const voPopup = vo ? popupFromView(vo) : null;
     const cacheKey = `table-order-${tableId}`;
     const cached = await getDB().ordersCache.get(cacheKey).catch(() => null);
-    if (cached?.data?.[0]) {
+
+    // Only trust the local row if it actually has a value — a zero-total view
+    // row (stale hydration, missed recalc) should fall through to cache/fetch
+    // rather than show "Rs. 0" against a real order.
+    if (voPopup && voPopup.total > 0) {
+      setPopupOrder(voPopup);
+      setPopupLoading(false);
+    } else if (cached?.data?.[0]) {
       setPopupOrder(cached.data[0]);
       setPopupLoading(false);
     } else {
@@ -769,9 +827,18 @@ export default function ClientTableMap() {
       {showOverrideModal && selectedTable && (
         <AdminPinModal
           onClose={() => setShowOverrideModal(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowOverrideModal(false);
-            handleMarkAsFree(selectedTable.id);
+            // This clears the RESERVED override, not a cleaning timer —
+            // handleMarkAsFree (markTableCleaned) only ever touches
+            // lastCompletedAt, so it left the reservation itself in place
+            // while toasting "Table marked as Free". setTableStatus with an
+            // empty status clears statusOverride AND (per its own reducer)
+            // the cleaning-timer anchor in one event, so the table actually
+            // reaches FREE instead of re-deriving back to RESERVED/DIRTY.
+            await setTableStatus(selectedTable.id, '');
+            toast.success('Reservation cleared');
+            setSelectedTable(null);
           }}
         />
       )}

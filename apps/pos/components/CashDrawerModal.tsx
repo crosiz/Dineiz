@@ -173,18 +173,20 @@ export function CashDrawerModal({
           {/* Amount */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2">Amount</label>
-            <div className="h-[58px] border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center px-4 transition-colors">
-              <span className="text-xs font-bold text-[#FF5722] mr-3">PKR</span>
-              <div className="w-[2px] h-6 bg-[#CBD5E1]" />
+            <div className="h-[58px] border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+              <span className="text-xs font-bold text-[#FF5722]">PKR</span>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
-                value={amount}
-                onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                autoComplete="off"
+                value={amount === '' ? '' : Number(amount).toLocaleString('en-US')}
+                onChange={e => {
+                  const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                  setAmount(d === '' ? '' : Number(d));
+                }}
                 placeholder="0"
                 autoFocus
-                className="w-full bg-transparent border-none text-right text-xl font-bold focus:ring-0 placeholder:text-slate-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-transparent border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 text-right text-xl font-bold text-slate-900 tabular-nums placeholder:text-slate-400 outline-none"
               />
             </div>
           </div>

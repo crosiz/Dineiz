@@ -507,7 +507,9 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
 
     fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      // credentials:'include' alone was the bug — the POS sets no session
+      // cookie, so this call carried no auth at all and likely 401'd.
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
       body: JSON.stringify({}),
       credentials: 'include',
     }).then((res) => {

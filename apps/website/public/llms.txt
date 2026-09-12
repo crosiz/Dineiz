@@ -1,30 +1,47 @@
-# Dineiz
+# Dineiz — Complete Restaurant Point of Sale & Management Platform
 
-> Dineiz is an offline-first restaurant management platform providing point-of-sale (POS), digital QR menus, kitchen display systems (KDS), inventory control, and real-time cloud analytics for restaurants, cafes, food carts, and multi-branch food businesses.
+> Dineiz is an offline-first, local-first restaurant POS and management ecosystem engineered for restaurants, cafes, dhabas, food carts, cloud kitchens, and multi-branch hospitality groups. Built by Crosiz Technologies, Dineiz combines high-speed touch billing, automated WhatsApp AI ordering in Roman Urdu and English, a real-time Kitchen Display System (KDS), raw ingredient recipe inventory management, multi-terminal cashier reconciliation, thermal/Bluetooth receipt printing, and FBR/GST tax compliance into a unified system that functions 100% offline and syncs instantly when connectivity returns.
 
-## Products & Modules
+For the full-depth technical manual, feature matrix, comparison guides, and AI reference database, see:
+- [Full LLM Knowledge Base](https://dineiz.com/llms-full.txt): Complete exhaustive technical specifications, competitive benchmarks, hardware compatibility matrices, and 25+ direct answer Q&As.
 
-- [Dineiz POS](https://dineiz.com/product/pos): Offline-first point-of-sale terminal with table layouts, split billing, thermal/Bluetooth receipt printing, and local outbox sync.
-- [Dineiz Console](https://dineiz.com/product/console): Web-based management dashboard for menu engineering, staff roles, real-time sales reporting, and multi-branch management.
-- [Dineiz Go](https://dineiz.com/product/go): Android mobile billing app designed for quick-service counters, street food vendors, and dhabas.
-- [WhatsApp Ordering](https://dineiz.com/product/whatsapp): Automated WhatsApp conversational ordering and status notifications for customer pickup and delivery.
-- [Features Overview](https://dineiz.com/features): Comprehensive feature breakdown across POS, KDS, inventory, reporting, and staff tracking.
+## Core Products & Modules
 
-## Industry Solutions
+- [Dineiz POS (Tablet & Desktop POS)](https://dineiz.com/product/pos): Touch-optimized point-of-sale terminal for iOS, Android, and Windows. Features visual floor table management, order variation pickers (half/full, custom spice levels), multi-cashier PIN logins, split billing, thermal receipt printing (ESC/POS 58mm/80mm), and local-first outbox synchronization.
+- [Dineiz Go (Free Mobile Billing App)](https://dineiz.com/product/go): Ultra-lightweight Android mobile POS designed for food trucks, roadside dhabas, street carts, and quick-service stalls. Requires zero upfront hardware; prints receipts over mobile Bluetooth printers and functions entirely offline.
+- [Dineiz WhatsApp AI Ordering](https://dineiz.com/product/whatsapp): Conversational ordering engine powered by natural language AI. Parses customer food orders sent in Roman Urdu, English, or colloquial dialects, generates automated cart drafts, collects delivery details and payment preferences, and routes confirmed orders straight to the kitchen display screen.
+- [Dineiz Console (Cloud Back-Office)](https://dineiz.com/product/console): Central web management portal for multi-branch menu engineering, staff permission matrices, real-time live telemetry, hourly sales tracking, raw recipe inventory depletion, and financial reporting.
+- [Kitchen Display System (KDS)](https://dineiz.com/features): Paperless digital kitchen display monitor with color-coded preparation timers, order bump bars, station routing (grill, tandoor, barista), and acoustic audio alerts.
+- [Features Overview](https://dineiz.com/features): Comprehensive breakdown of all platform modules including inventory stock management, shift drawer audits, and tax fiscalization.
 
-- [Restaurants](https://dineiz.com/industries/restaurant): Full dine-in workflows, floor plans, kitchen display sync, and table turn optimization.
-- [Cafes & Bakeries](https://dineiz.com/industries/cafe): Fast counter checkout, modifier customization, barista stations, and customer loyalty.
-- [Dhabas & Quick Service](https://dineiz.com/industries/dhaba): Fast cash billing, mobile receipt printing, and offline operation during network or power cuts.
-- [Food Carts & Kiosks](https://dineiz.com/industries/food-cart): Single-device Android mobile POS with low-latency billing and Bluetooth printer support.
+## Industry Solutions & Business Verticals
 
-## Pricing & Deployment
+- [Restaurants & Fine Dining](https://dineiz.com/industries/restaurant): Full table service, interactive visual floor layouts, guest pacing, server assignment, split bills, and kitchen slip synchronization.
+- [Cafes, Coffee Shops & Bakeries](https://dineiz.com/industries/cafe): High-speed counter checkout, modifier add-ons (milk alternatives, syrup shots, baking times), barista station KDS sync, and customer loyalty retention.
+- [Dhabas & Quick Service Restaurants (QSR)](https://dineiz.com/industries/dhaba): Fast-paced cash billing, heavy rush handling, 100% offline resilience during load shedding, and rapid receipt dispatch.
+- [Food Carts, Kiosks & Food Trucks](https://dineiz.com/industries/food-cart): Single-device Android mobile POS with zero capital expenditure, fast tap ordering, and portable Bluetooth battery printing.
 
-- [Pricing Plans](https://dineiz.com/pricing): Tiered plans starting with Go Free (0 PKR/mo), Go Pro (999 PKR/mo), Starter (2,999 PKR/mo), Pro (5,999 PKR/mo), and Custom Enterprise. Includes 14-day free trial on paid tiers.
+## Technical Architecture & Offline Resilience
 
-## Company & Resources
+- **Local-First Outbox Synchronization**: Every ticket, line item, payment, and shift record is saved immediately to local persistent storage (IndexedDB / SQLite) on the device before network transmission. Sales operations never pause during ISP drops or power outages.
+- **Auto-Healing Multi-Terminal Mesh**: Changes synchronize automatically with the cloud telemetry broker the instant an internet connection is established, with deterministic conflict resolution.
+- **Hardware Agnostic & Peripheral Standards**: Native support for industry-standard ESC/POS thermal receipt printers (Epson, Sunmi, Xprinter, Star Micronics) via USB, LAN/Ethernet, Wi-Fi, and Bluetooth (58mm and 80mm). Integrates with standard RJ11/RJ12 cash drawers and barcode scanners.
+- **FBR & Provincial Tax Engine**: Automated calculation and printing of GST/sales tax invoices complying with FBR POS regulations and provincial revenue authorities (PRA, SRB, KPRA, BRA) with NTN and STRN invoice validation.
 
-- [About Dineiz](https://dineiz.com/about): Mission, technical design principles, and local-first architecture overview.
-- [Case Studies](https://dineiz.com/case-studies): Customer stories and operational efficiency benchmarks.
-- [Blog & Guides](https://dineiz.com/blog): In-depth articles on restaurant inventory, billing software, staff management, and food business operations.
-- [Changelog](https://dineiz.com/changelog): Product updates, releases, and feature logs.
-- [Contact & Support](https://dineiz.com/contact): Sales inquiries, partner onboarding, and direct WhatsApp / email support channels.
+## Pricing Tiers
+
+- [Dineiz Pricing](https://dineiz.com/pricing):
+  - **Go Free (PKR 0 / month)**: Free forever plan for food carts, tea stalls, and small dhabas. 1 cashier, up to 100 orders/mo, offline mobile billing.
+  - **Go Pro (PKR 999 / month | ~$3.50 USD)**: Unlimited orders on mobile POS, Bluetooth thermal printing, WhatsApp support, daily sales exports.
+  - **Starter (PKR 2,999 / month | ~$10.50 USD)**: Tablet POS, 2 terminals, visual table layouts, digital KDS, recipe inventory management, 14-day free trial.
+  - **Pro (PKR 5,999 / month | ~$21.00 USD)**: Unlimited POS terminals, WhatsApp AI ordering engine, multi-branch centralized menu control, advanced inventory variance reports.
+  - **Enterprise (Custom)**: Custom multi-location franchise deployments, API integration, dedicated account manager, SLA guarantees, on-site onboarding.
+
+## Company & Official Documentation
+
+- [About Dineiz](https://dineiz.com/about): Mission, technical engineering philosophy, and local-first architectural manifesto.
+- [Case Studies](https://dineiz.com/case-studies): Real-world customer stories, table turnaround improvements, and operational benchmarks.
+- [Blog & Guides](https://dineiz.com/blog): In-depth educational guides on restaurant inventory control, POS selection, staff theft prevention, and FBR POS compliance.
+- [Changelog](https://dineiz.com/changelog): Continuous release history and software update notes.
+- [Partners Program](https://dineiz.com/partners): Referral and reseller program for hospitality consultants and POS hardware distributors.
+- [Contact & Support](https://dineiz.com/contact): Customer onboarding, instant live demo booking via WhatsApp (+92-314-1986044), and technical support.

@@ -82,6 +82,14 @@ interface OutboxTask {
   lane: SyncLane;
   status?: string;                 // UPDATE_STATUS / UPDATE_TABLE_STATUS
   billRequestedAt?: string | null; // REQUEST_BILL
+  // CREATE_ORDER only: the subset of eventIds actually reflected in
+  // createOrderBody (ORDER_CREATED + ITEM_ADDED). eventIds may carry other
+  // event types too — bundled in only so a create can't outrun them and to
+  // keep the "every pending event produces a task" invariant — but
+  // createOrderBody has no channel for a payment, a status change, or a
+  // bill request, so only bodyEventIds may be confirmed when this task
+  // succeeds. See deriveTaskChains and confirmShippedEvents.
+  bodyEventIds?: string[];
 }
 
 // ─── Module state ────────────────────────────────────────────────────────
@@ -253,8 +261,45 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         // count never moved, Force Sync appeared to do nothing, and the
         // stall detector restarted the engine on a loop. An order we can't
         // create yet (nothing in the store) is handled by the guard below.
+        //
+        // eventIds still carries EVERY pending event (so a payment or status
+        // change can't be missed by the invariant check below, and so the
+        // lane/opId accounting stays exactly as before) — but only
+        // ORDER_CREATED/ITEM_ADDED are ever actually reflected in
+        // createOrderBody (it reads current cart state directly for items,
+        // and has no field for a payment, a status change, or a bill
+        // request at all). bodyEventIds marks that subset so
+        // confirmShippedEvents only confirms what was genuinely sent and
+        // requeues the rest for the very next cycle, once hasServerId is
+        // true and they can ship through their own proper task kind. Without
+        // this split, a payment collected in the few seconds before a slow
+        // (Neon cold-start) create response landed was marked CONFIRMED the
+        // moment create succeeded, having never been transmitted at all —
+        // the order settled on screen, the drawer never saw the money.
         if (order) {
-          chain.push({ kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id), lane: laneOf(events) });
+          // commands.createOrder() always fires an immediate kick (ORDER_CREATED
+          // is HIGH lane) the instant it's appended — before the awaited loop of
+          // commands.addItem() calls that every one of its callers makes right
+          // after has necessarily landed in the local event log yet. Shipping a
+          // create for an order with zero live items right now would create a
+          // real, permanent, zero-total order server-side, which then refuses to
+          // ever be completed ("zero-total order needs manager approval") —
+          // reproduced live going straight from a fresh cart to Charge. Leave it
+          // queued rather than build a task for it; ITEM_ADDED's own kick (at
+          // most ~200ms, or immediate once it lands) re-runs this the moment an
+          // item exists, and the create ships whole, atomically, in one request.
+          const hasLiveItems = order.items.some((i: any) => !i.voided);
+          if (hasLiveItems) {
+            const bodyEventIds = events
+              .filter((e) => e.type === 'ORDER_CREATED' || e.type === 'ITEM_ADDED')
+              .map((e) => e.id);
+            chain.push({
+              kind: 'CREATE_ORDER', aggregateId, eventIds: events.map((e) => e.id),
+              bodyEventIds, lane: laneOf(events),
+            });
+          } else {
+            continue;
+          }
         }
       } else {
         const itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');
@@ -403,7 +448,23 @@ interface BatchOp {
   body: any;
 }
 
-async function buildOp(task: OutboxTask): Promise<BatchOp | null> {
+// TERMINAL means "this order can never take another write" — the only
+// state where a line item genuinely no longer matters to anyone.
+const ORDER_TERMINAL_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT']);
+
+// null = confirm task.eventIds as local-only, nothing to ship (safe: either
+// the aggregate is gone entirely, or the order has reached a terminal state
+// so a stale item genuinely doesn't matter any more).
+// undefined = do NOT touch task.eventIds — leave them exactly as they are so
+// the next cycle tries again. Used when addItemsBody comes back empty for a
+// still-open order: that's either a legitimate remove/void racing this
+// build, or a real bug in lineId matching — buildOp can't tell those apart
+// from here, and confirming the wrong one is silent, permanent data loss
+// (an item the cashier believes is on the order, that the kitchen and the
+// bill never see). Leaving it QUEUED costs nothing but a harmless retry in
+// the safe case, and in the unsafe case keeps the event visible in the
+// pending count (Home badge, Sync & Data) instead of vanishing.
+async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
   const orders = useViews.getState().orders;
   const order = orders[task.aggregateId];
   const opId = task.eventIds.join(',');
@@ -415,7 +476,11 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null> {
     case 'ADD_ITEMS': {
       if (!order) return null;
       const body = await addItemsBody(task, order);
-      if (!body.items.length) return null; // lines removed before shipping — nothing to add
+      if (!body.items.length) {
+        if (ORDER_TERMINAL_STATUSES.has(order.status)) return null;
+        console.warn(`[outbox] ADD_ITEMS for order ${task.aggregateId} resolved to 0 items on a non-terminal order (status=${order.status}) — leaving queued instead of confirming, to avoid silently dropping it`, task.eventIds);
+        return undefined;
+      }
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `additems:${opId}`, body };
     }
     case 'UPDATE_STATUS':
@@ -436,42 +501,51 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null> {
 
 // ─── REST fallback executors (used only if the batch endpoint 404s) ───────
 
-async function runTaskViaRest(task: OutboxTask): Promise<void> {
+// Returns whether the caller may confirm task.eventIds. Only ADD_ITEMS's
+// empty-match case (see buildOp's comment — same bug, same fix, this is the
+// REST-fallback twin of it) can come back false; everything else always
+// completes with either a genuine confirm or a thrown TaskError.
+async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
   const orders = useViews.getState().orders;
   const order = orders[task.aggregateId];
 
   if (task.kind === 'CREATE_ORDER') {
-    if (!order) return;
+    if (!order) return true;
     const res = await fetchWithTimeout(`${API_URL}/api/orders`, { method: 'POST', headers: authHeaders(task.aggregateId), body: JSON.stringify(createOrderBody(order)) });
     if (!res.ok) throw classifyHttpError(res.status);
     const created = await res.json();
     reconcileServerId(task.aggregateId, created.id);
-    return;
+    return true;
   }
   if (task.kind === 'UPDATE_TABLE_STATUS') {
     const res = await fetchWithTimeout(`${API_URL}/api/tables/${task.aggregateId}/status`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status: task.status }) });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
   if (task.kind === 'CLEAN_TABLE') {
     const res = await fetchWithTimeout(`${API_URL}/api/tables/${task.aggregateId}/clean`, { method: 'POST', headers: authHeaders() });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
 
   if (!order?.serverId) throw new TaskError('No serverId yet', false);
   if (task.kind === 'ADD_ITEMS') {
     const body = await addItemsBody(task, order);
-    if (!body.items.length) return;
+    if (!body.items.length) {
+      if (ORDER_TERMINAL_STATUSES.has(order.status)) return true;
+      console.warn(`[outbox] ADD_ITEMS (REST fallback) for order ${task.aggregateId} resolved to 0 items on a non-terminal order (status=${order.status}) — leaving queued instead of confirming`, task.eventIds);
+      return false;
+    }
     const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}/items`, { method: 'POST', headers: authHeaders(`additems:${task.eventIds.join(',')}`), body: JSON.stringify(body) });
     if (!res.ok) throw classifyHttpError(res.status);
-    return;
+    return true;
   }
   const body = task.kind === 'COLLECT_PAYMENT' ? collectPaymentBody(order)
     : task.kind === 'REQUEST_BILL' ? { billRequestedAt: task.billRequestedAt ?? null }
     : { status: task.status };
   const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) throw classifyHttpError(res.status);
+  return true;
 }
 
 // ─── Event bookkeeping ───────────────────────────────────────────────────
@@ -487,6 +561,21 @@ async function markConfirmed(eventIds: string | string[]): Promise<void> {
   const now = new Date().toISOString();
   await edb.events.where('id').anyOf(ids).modify({ syncState: 'CONFIRMED', confirmedAt: now });
   reflectOrderSyncState(ids, 'SYNCED');
+}
+
+// A successful task confirms only what it actually transmitted. For every
+// task kind except CREATE_ORDER that's simply task.eventIds. A CREATE_ORDER
+// task's eventIds can carry event types createOrderBody never sends (see
+// deriveTaskChains) — those were left INFLIGHT by markInflight(task.eventIds)
+// and must go back to QUEUED here, not be confirmed alongside the create,
+// so the next cycle ships them for real once hasServerId is set.
+async function confirmShippedEvents(task: OutboxTask): Promise<void> {
+  const toConfirm = task.kind === 'CREATE_ORDER' && task.bodyEventIds ? task.bodyEventIds : task.eventIds;
+  await markConfirmed(toConfirm);
+  if (toConfirm !== task.eventIds) {
+    const leftover = task.eventIds.filter((id) => !toConfirm.includes(id));
+    if (leftover.length) await edb.events.where('id').anyOf(leftover).modify({ syncState: 'QUEUED' });
+  }
 }
 
 async function markSuperseded(eventIds: string[]): Promise<void> {
@@ -522,11 +611,31 @@ async function reportDeadLetter(e: PosEvent, attempts: number): Promise<void> {
 }
 
 let authExpiredToastShownAt = 0;
+// Event ids already warned about by runWatchdog's stuck-payment check —
+// per-event, not time-windowed, since the same event stays non-terminal
+// across many 60s watchdog ticks and should only ever surface once.
+const stalePaymentWarned = new Set<string>();
 function notifyAuthExpiredOnce() {
   const now = Date.now();
   if (now - authExpiredToastShownAt < 10 * 60 * 1000) return;
   authExpiredToastShownAt = now;
   toast.warning('Your session has expired — sign out and back in to sync pending changes.', { duration: 8000 });
+}
+
+// A poisoned event only ever showed up as a quiet dot in the top bar
+// (SyncHealthDot) or a row in Settings -> Sync & Data — easy to miss on a
+// busy floor, and for a payment specifically the cost of missing it is
+// real money: the cashier sees "paid" on screen (views update the instant
+// the event is appended, before any server round trip) and moves on, then
+// finds out only at close-shift, hours later, that the server never
+// actually recorded it. Surface it the moment it's known, by name, instead.
+function notifyPaymentPoisoned(e: PosEvent, message: string) {
+  const order = useViews.getState().orders[e.aggregateId];
+  const label = order ? `${order.orderNumber}${order.tableLabel ? ` (Table ${order.tableLabel})` : ''}` : 'an order';
+  toast.error(`Payment for ${label} did not reach the server: ${message}`, {
+    duration: 15000,
+    description: 'The order still shows as paid here, but the drawer total will not include it until this is resolved in Settings → Sync & Data.',
+  });
 }
 
 async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> {
@@ -542,7 +651,10 @@ async function markFailed(eventIds: string[], err: TaskError): Promise<boolean> 
       syncState: poisoned ? 'POISONED' : 'DEGRADED',
       attempts, lastAttemptAt: now, lastError: err.message,
     });
-    if (poisoned) reportDeadLetter({ ...e, lastError: err.message }, attempts).catch(() => {});
+    if (poisoned) {
+      reportDeadLetter({ ...e, lastError: err.message }, attempts).catch(() => {});
+      if (e.type === 'PAYMENT_COLLECTED') notifyPaymentPoisoned(e, err.message);
+    }
   }
   reflectOrderSyncState(eventIds, anyPoisoned ? 'POISONED' : 'DEGRADED');
   return anyPoisoned;
@@ -633,11 +745,12 @@ async function runCriticalTask(task: OutboxTask): Promise<void> {
     try {
       if (batchEndpointAvailable) {
         const op = await buildOp(task);
+        if (op === undefined) return; // leave queued — see buildOp's comment
         if (!op) { await markConfirmed(task.eventIds); return; }
         await shipOps([op], [task]);
       } else {
-        await runTaskViaRest(task);
-        await markConfirmed(task.eventIds);
+        const shouldConfirm = await runTaskViaRest(task);
+        if (shouldConfirm) await confirmShippedEvents(task);
       }
       consecutiveFailures = 0;
       return;
@@ -702,7 +815,7 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
     if (!task) continue;
     if (r.ok) {
       if (task.kind === 'CREATE_ORDER' && r.body?.id) reconcileServerId(task.aggregateId, r.body.id);
-      await markConfirmed(task.eventIds);
+      await confirmShippedEvents(task);
     } else if (r.status === 424) {
       // "skipped — earlier op failed" — put it back to QUEUED for next cycle.
       failedAggs.add(task.aggregateId);
@@ -771,6 +884,7 @@ async function drain(): Promise<void> {
         const bundleTasks: OutboxTask[] = [];
         for (const task of b.tasks) {
           const op = await buildOp(task);
+          if (op === undefined) continue; // leave queued — see buildOp's comment
           if (!op) { await markConfirmed(task.eventIds); continue; }
           bundleOps.push(op);
           bundleTasks.push(task);
@@ -818,8 +932,8 @@ async function shipBundleViaRest(tasks: OutboxTask[]): Promise<void> {
     if (circuitOpen) return;
     await markInflight(task.eventIds);
     try {
-      await runTaskViaRest(task);
-      await markConfirmed(task.eventIds);
+      const shouldConfirm = await runTaskViaRest(task);
+      if (shouldConfirm) await confirmShippedEvents(task);
       consecutiveFailures = 0;
     } catch (err) {
       const te = err instanceof TaskError ? err : new TaskError((err as Error)?.message ?? 'Unknown error', false);
@@ -856,6 +970,27 @@ async function runWatchdog(): Promise<void> {
     console.warn(`[outbox] watchdog: requeueing ${stuckInflight.length} stuck INFLIGHT event(s)`);
     await edb.events.where('id').anyOf(stuckInflight.map((e) => e.id)).modify({ syncState: 'DEGRADED' });
     kickOutbox('immediate');
+  }
+
+  // A payment that's still non-terminal 90s after being collected is worth
+  // flagging even before it's formally POISONED — markFailed's toast only
+  // fires on a hard, permanent rejection, but a payment can just as easily
+  // sit DEGRADED indefinitely (a transient error keeps re-queueing it with
+  // no error ever bad enough to poison outright), and the "PKR 0 at close
+  // shift, hours later" report traces back to exactly this: the cashier's
+  // screen said paid, nothing ever told them the server disagreed.
+  const stuckPayments = nonTerminal.filter(
+    (e) => e.type === 'PAYMENT_COLLECTED' && !stalePaymentWarned.has(e.id)
+      && now - new Date(e.clientTime).getTime() > 90_000,
+  );
+  for (const e of stuckPayments) {
+    stalePaymentWarned.add(e.id);
+    const order = useViews.getState().orders[e.aggregateId];
+    const label = order ? `${order.orderNumber}${order.tableLabel ? ` (Table ${order.tableLabel})` : ''}` : 'an order';
+    toast.warning(`Payment for ${label} is still trying to sync — the server hasn't confirmed it yet.`, {
+      duration: 12000,
+      description: 'It will keep retrying automatically. Check Settings → Sync & Data if this order is still open at close-shift.',
+    });
   }
 }
 
@@ -956,9 +1091,29 @@ export function startOutbox(): () => void {
   const handleOnline = () => kickOutbox('immediate');
   window.addEventListener('online', handleOnline);
 
+  // A backgrounded/locked tab throttles setInterval (Chrome can drop the
+  // 5s kickOutbox loop to roughly once a minute, or suspend it entirely) —
+  // exactly the profile a POS tablet sees overnight or between rushes. Found
+  // live: PAYMENT_COLLECTED events dead-lettered with 0 attempts and
+  // "Exceeded 24h max lifetime" — never once picked up by deriveTaskChains
+  // in a full day, then killed by the watchdog purely on age. Re-kicking
+  // (and re-running the watchdog, in case it also missed cycles) the moment
+  // the tab is foregrounded again closes that window instead of waiting on
+  // a throttled timer to eventually resume.
+  const handleVisible = () => {
+    if (document.visibilityState === 'visible') {
+      kickOutbox('immediate');
+      runWatchdog().catch(console.error);
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisible);
+  window.addEventListener('focus', handleVisible);
+
   return () => {
     clearAllHandles();
     window.removeEventListener('online', handleOnline);
+    document.removeEventListener('visibilitychange', handleVisible);
+    window.removeEventListener('focus', handleVisible);
     started = false;
   };
 }

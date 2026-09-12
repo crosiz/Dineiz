@@ -58,7 +58,14 @@ export function ManagerOverrideModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[110] grid place-items-center p-4">
+    // This is always a follow-up confirmation ON TOP of whichever modal
+    // triggered it (OrphanResolutionModal and ShiftCloseBlockerModal both
+    // render this at z-[200]) — z-[110] put it BEHIND its own parent,
+    // making the PIN pad completely inaccessible. z-[400] is above every
+    // other stacking context in this app (the highest otherwise is
+    // StartManagerOverrideModal's z-[320]), so this always wins regardless
+    // of what opened it.
+    <div className="fixed inset-0 z-[400] grid place-items-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} />
       
       <div 

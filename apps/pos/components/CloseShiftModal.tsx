@@ -9,7 +9,7 @@ import {
   getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox,
   type SyncCategoryProgress,
 } from '@/lib/core/outbox';
-import { closeShift as emitShiftClosed } from '@/lib/core/commands';
+import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import {
@@ -17,6 +17,14 @@ import {
   Banknote, Coffee, TrendingUp, TrendingDown, FileEdit, CheckCheck, Loader2, Check,
   RefreshCw, CloudOff,
 } from 'lucide-react';
+
+interface UnpaidOrderRow {
+  id: string;
+  orderNumber: string;
+  netAmount: number;
+  status: string;
+  tableLabel: string | null;
+}
 
 const DEFAULT_SYNC_TIMEOUT_MS = 45_000; // spec Part 6 — overridable in console settings
 
@@ -91,38 +99,58 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   if (tokenRef.current === null) tokenRef.current = getToken();
   const token = tokenRef.current;
 
+  // Re-run after the cashier settles/cancels an order from the list below,
+  // so the warning (and the button it's blocking) clears the moment there's
+  // nothing left open — no need to close and reopen this modal.
+  const fetchSummary = async (showSpinner = true) => {
+    if (showSpinner) setIsLoading(true);
+    setNoOpenShift(false);
+    try {
+      const resolvedId = await resolveActiveShiftId(API_URL);
+      setShiftId(resolvedId);
+      // resolveActiveShiftId already cleared the stale `pos_shift` from
+      // localStorage — surface it plainly and route the cashier onward
+      // rather than toasting an error into a blank modal.
+      if (!resolvedId) {
+        setNoOpenShift(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Failed to fetch shift summary');
+      setSummary(await res.json());
+    } catch (err: any) {
+      toast.error(err.message || 'Error fetching shift summary');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const fetchSummary = async () => {
-      setIsLoading(true);
-      setNoOpenShift(false);
-      try {
-        const resolvedId = await resolveActiveShiftId(API_URL);
-        setShiftId(resolvedId);
-        // resolveActiveShiftId already cleared the stale `pos_shift` from
-        // localStorage — surface it plainly and route the cashier onward
-        // rather than toasting an error into a blank modal.
-        if (!resolvedId) {
-          setNoOpenShift(true);
-          setIsLoading(false);
-          return;
-        }
-
-        const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error('Failed to fetch shift summary');
-        setSummary(await res.json());
-      } catch (err: any) {
-        toast.error(err.message || 'Error fetching shift summary');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, token]);
+
+  // Cancelling here goes through the same local-first command Tickets uses
+  // — applies instantly, the outbox ships it — so the cashier never has to
+  // leave this screen, walk to Tickets, and start the close flow over.
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
+  const cancelUnpaidOrder = async (orderId: string) => {
+    setBusyOrderId(orderId);
+    try {
+      await cancelOrder(orderId);
+      toast.success('Order cancelled');
+      await fetchSummary(false);
+    } catch {
+      toast.error('Could not cancel that order — open it from Tickets.');
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
 
   // Denomination counting drives the total, so the two can never disagree.
   const denominationTotal = useMemo(
@@ -141,7 +169,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // and the dashboard used to report different variances for the same shift.
   const expectedCash = Number(summary?.expectedCash ?? 0);
   const counted = closingCash === '' ? 0 : Number(closingCash);
-  const variance = closingCash === '' ? 0 : counted - expectedCash;
+  // null, not 0 — an uncounted drawer isn't "balanced", it's simply unknown.
+  // Pinning this to 0 made the summary read "Counted PKR 0 / Variance:
+  // Balanced" whenever cash counting was optional and skipped.
+  const variance = closingCash === '' ? null : counted - expectedCash;
 
   const formatDuration = (openedAtStr: string) => {
     const ms = Date.now() - new Date(openedAtStr).getTime();
@@ -250,7 +281,6 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       setSyncPhase('none');
       toast.success('Shift closed');
       setIsSuccess(true);
-      void saveReport();
     } catch (err: any) {
       toast.error(err.message || 'An error occurred closing the shift');
       setIsSubmitting(false);
@@ -435,8 +465,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         ) : isSuccess ? (
           // ── Closed ────────────────────────────────────────────────────────
           <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
-              <CheckCircle2 size={24} />
+            {/* A light pastel chip + line icon is the generic "success" motif
+                every dashboard template reaches for — same size and shape
+                ManagerOverrideModal uses for its own PIN icon a tier down.
+                This is the one moment in the whole shift a cashier actually
+                pauses to see, so it gets the bolder, solid-fill treatment
+                that screen already established for "this matters", not a
+                smaller echo of it. */}
+            <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-emerald-600/25">
+              <CheckCircle2 size={32} strokeWidth={2.25} />
             </div>
             <h2 className="text-lg font-bold text-slate-900 mb-1">Shift Closed</h2>
 
@@ -452,15 +489,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               <div className="flex justify-between text-xs pt-2 mt-1 border-t border-slate-200">
                 <span className="font-bold text-slate-900">Variance</span>
                 <span className={`font-bold tabular-nums ${
-                  Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
+                  variance === null ? 'text-slate-400' : Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
                 }`}>
-                  {Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${pkr(Math.abs(variance))}`}
+                  {variance === null ? 'Not counted' : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${pkr(Math.abs(variance))}`}
                 </span>
               </div>
             </div>
 
-            {/* Report status — a real status line, not decoration: the PDF
-                starts saving the moment the shift closes. */}
+            {/* Report status — a real status line, not decoration. The PDF is
+                never generated automatically; this only ever shows something
+                once the cashier has actually tapped Generate Report below. */}
             <div className="w-full mb-5 min-h-[20px] flex items-center justify-center gap-2 text-xs">
               {reportState === 'working' && (
                 <>
@@ -492,8 +530,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 disabled={reportState === 'working'}
                 className="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex justify-center items-center gap-2"
               >
-                <Download size={15} />
-                {reportState === 'saved' ? 'Download Again' : 'Download PDF'}
+                {reportState === 'saved' ? <Download size={15} /> : <Receipt size={15} />}
+                {reportState === 'saved' ? 'Download Again' : reportState === 'failed' ? 'Try Again' : 'Generate Report'}
               </button>
               <button
                 onClick={() => router.push('/login')}
@@ -593,13 +631,45 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       NOT in Net Sales — nobody has paid for them — so saying so
                       here is what stops the two numbers looking contradictory. */}
                   {(summary.unpaidOrders ?? 0) > 0 && (
-                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                      <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-[12px] text-amber-900 leading-relaxed">
-                        <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
-                        {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
-                        settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} before closing.
-                      </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
+                      <div className="flex items-start gap-2.5">
+                        <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-[12px] text-amber-900 leading-relaxed">
+                          <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
+                          {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
+                          settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} below before closing.
+                        </p>
+                      </div>
+                      {Array.isArray(summary.unpaidOrdersList) && summary.unpaidOrdersList.length > 0 && (
+                        <div className="mt-2.5 space-y-1.5">
+                          {(summary.unpaidOrdersList as UnpaidOrderRow[]).map((o) => (
+                            <div key={o.id} className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-amber-200/70 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-bold text-slate-900 font-mono">#{o.orderNumber}</span>
+                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase shrink-0">
+                                  {o.tableLabel || 'Takeaway'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2.5 shrink-0">
+                                <span className="font-bold text-slate-900 font-mono">{pkr(o.netAmount)}</span>
+                                <button
+                                  onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
+                                  className="text-[11px] font-semibold text-[#FF5722] hover:underline"
+                                >
+                                  Settle
+                                </button>
+                                <button
+                                  onClick={() => cancelUnpaidOrder(o.id)}
+                                  disabled={busyOrderId === o.id}
+                                  className="text-[11px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
+                                >
+                                  {busyOrderId === o.id ? '…' : 'Cancel'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -641,15 +711,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     </div>
 
                     {countMode === 'total' ? (
-                      <div className="h-14 border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center px-4 transition-colors">
-                        <span className="text-xs font-bold text-[#FF5722] mr-3">PKR</span>
-                        <div className="w-px h-5 bg-slate-200" />
+                      <div className="h-14 border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+                        <span className="text-xs font-bold text-[#FF5722]">PKR</span>
                         <input
-                          type="number"
+                          type="text"
                           inputMode="numeric"
-                          value={closingCash}
-                          onChange={(e) => setClosingCash(e.target.value === '' ? '' : Number(e.target.value))}
-                          className="w-full bg-transparent border-none text-right text-xl font-bold text-slate-900 focus:ring-0 placeholder:text-slate-300 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          autoComplete="off"
+                          value={closingCash === '' ? '' : Number(closingCash).toLocaleString('en-US')}
+                          onChange={(e) => {
+                            const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                            setClosingCash(d === '' ? '' : Number(d));
+                          }}
+                          className="w-full bg-transparent border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 text-right text-xl font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none"
                           placeholder="0"
                           autoFocus
                         />
@@ -686,7 +759,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
 
                     {/* Variance */}
                     <div className="mt-3 min-h-[22px]">
-                      {closingCash !== '' && (
+                      {closingCash !== '' && variance !== null && (
                         <div className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold ${
                           Math.round(variance) === 0
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'

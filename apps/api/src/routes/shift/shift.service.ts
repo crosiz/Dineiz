@@ -1,4 +1,5 @@
 import { prisma } from '@dineiz/db';
+import crypto from 'crypto';
 import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
 import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
@@ -264,8 +265,14 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
   let managerId: string | null = null;
 
   if (data.overridePin) {
+    // posPin is stored SHA-256 hashed (staff.handlers.ts, user.routes.ts) —
+    // comparing the raw PIN against it can never match a real one. This
+    // compared plaintext to begin with, so a manager-PIN force-close has
+    // never actually worked; every attempt failed with "Invalid manager
+    // PIN" regardless of the PIN entered.
+    const hashedOverridePin = crypto.createHash('sha256').update(data.overridePin).digest('hex');
     const manager = await prisma.user.findFirst({
-      where: { tenantId, posPin: data.overridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } }
+      where: { tenantId, posPin: hashedOverridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } }
     });
     if (!manager) return { error: 'Invalid manager PIN or insufficient permissions' };
     if (!data.overrideReason?.trim()) return { error: 'Override reason is required' };
@@ -446,18 +453,56 @@ export async function completeShiftSync(tenantId: string, id: string) {
 
 export async function canCloseShift(tenantId: string, branchId: string, shiftId: string, userId: string) {
   const blockers: any[] = [];
-  
-  const pendingOrders = await prisma.order.findMany({
+
+  const openOrders = await prisma.order.findMany({
     where: { shiftId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
-    select: { id: true, orderNumber: true, totalAmount: true, status: true, table: { select: { label: true } } }
+    select: {
+      id: true, orderNumber: true, totalAmount: true, netAmount: true, status: true, createdAt: true,
+      table: { select: { label: true } },
+      _count: { select: { items: true, payments: true } },
+    },
   });
+
+  // Phantom orders — no items, no value, no payments — can never be "settled"
+  // (there's nothing to charge) and shouldn't trap the cashier at close. They
+  // come from a New Order that was sent with an empty cart, or an ITEM_ADDED
+  // batch that never synced.
+  //
+  // BUT this check runs on every "Close Shift" tap (GET /api/shifts/can-close,
+  // POSTopBar.handleCloseShiftClick), not just on confirm — and a table-tap
+  // creates the order server-side with zero items *before* the cashier adds
+  // anything, by design (it reserves the table/order number immediately). If
+  // the cashier punches items, sends to kitchen, collects payment, and checks
+  // Close Shift within the same window the ADD_ITEMS/COLLECT_PAYMENT ops are
+  // still in flight to the server (normal outbox latency, or a slow Neon
+  // cold-start — both observed live), this used to see the order in its
+  // still-empty server state and permanently cancel it. The cashier's local
+  // view already showed it paid, so nothing looked wrong until close-shift's
+  // drawer total came up short by exactly that order's value. Once cancelled
+  // here, the queued item/payment ops arrive too late — the order is gone.
+  // A minimum age gives any in-flight sync room to land before we treat an
+  // empty order as truly abandoned rather than merely mid-flight.
+  const PHANTOM_MIN_AGE_MS = 3 * 60 * 1000;
+  const phantoms = openOrders.filter(
+    (o) =>
+      o._count.items === 0 && o._count.payments === 0 && (o.totalAmount ?? 0) <= 0 && (o.netAmount ?? 0) <= 0 &&
+      o.createdAt.getTime() < Date.now() - PHANTOM_MIN_AGE_MS,
+  );
+  if (phantoms.length > 0) {
+    await prisma.order.updateMany({
+      where: { id: { in: phantoms.map((o) => o.id) } },
+      data: { status: 'CANCELLED', notes: 'Auto-voided at shift close: empty order (no items, no value).' },
+    });
+  }
+
+  const pendingOrders = openOrders.filter((o) => !phantoms.includes(o));
 
   if (pendingOrders.length > 0) {
     blockers.push({
       type: 'PENDING_ORDERS',
-      message: `You have ${pendingOrders.length} orders that have not been collected. Resolve these before closing your shift.`,
+      message: `You have ${pendingOrders.length} order${pendingOrders.length === 1 ? '' : 's'} that ${pendingOrders.length === 1 ? 'has' : 'have'} not been collected. Resolve ${pendingOrders.length === 1 ? 'it' : 'these'} before closing your shift.`,
       count: pendingOrders.length,
-      orders: pendingOrders,
+      orders: pendingOrders.map((o) => ({ id: o.id, orderNumber: o.orderNumber, totalAmount: o.totalAmount, status: o.status, table: o.table })),
     });
   }
 
@@ -482,6 +527,7 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
         branchId, tenantId,
         status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
         createdAt: { gte: from, lte: to },
+        items: { some: {} }, // ignore phantom empty orders (see above)
       },
     });
 
@@ -544,15 +590,23 @@ export async function getShiftSummary(tenantId: string, id: string) {
   // less expected in the drawer and looked broken. This also makes the figure
   // agree with ShiftAggregate (lib/shiftAggregate.ts), which has always
   // counted COMPLETED only. Unpaid work is reported separately below.
-  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidAgg, cashEntryAgg, breaks] = await Promise.all([
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidOrdersList, cashEntryAgg, breaks] = await Promise.all([
     prisma.order.aggregate({ where: { shiftId: id, status: 'COMPLETED' }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: { not: 'CASH' }, status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.order.count({ where: { shiftId: id, status: 'COMPLETED' } }),
-    prisma.order.aggregate({
+    // Full rows, not just the aggregate — the close-shift screen renders
+    // these directly (Settle/Cancel per order) so a cashier is never stuck
+    // on a passive "N orders still open" line with no way to act on it. This
+    // used to depend entirely on a SEPARATE /api/shifts/can-close check
+    // (which also auto-voids true phantom orders) resolving in the
+    // background; if that call failed or was slow, the cashier saw this
+    // count with nothing clickable.
+    prisma.order.findMany({
       where: { shiftId: id, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
-      _sum: { netAmount: true }, _count: { _all: true },
+      select: { id: true, orderNumber: true, netAmount: true, status: true, table: { select: { label: true } } },
+      orderBy: { createdAt: 'asc' },
     }),
     prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
     prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
@@ -576,8 +630,11 @@ export async function getShiftSummary(tenantId: string, id: string) {
     totalOrders,
     // Still-open orders on this shift — shown as their own line on the close
     // screen so the gap between sales and the drawer is explicit, not implied.
-    unpaidOrders: unpaidAgg._count._all ?? 0,
-    unpaidValue: unpaidAgg._sum.netAmount ?? 0,
+    unpaidOrders: unpaidOrdersList.length,
+    unpaidValue: unpaidOrdersList.reduce((sum, o) => sum + Number(o.netAmount ?? 0), 0),
+    unpaidOrdersList: unpaidOrdersList.map((o) => ({
+      id: o.id, orderNumber: o.orderNumber, netAmount: o.netAmount, status: o.status, tableLabel: o.table?.label ?? null,
+    })),
     cashIn,
     cashOut,
     // The close-shift screen must show the SAME expected figure the server

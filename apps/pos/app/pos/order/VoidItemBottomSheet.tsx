@@ -164,7 +164,12 @@ export function VoidItemBottomSheet({
 
   return (
     <>
-      <div className="fixed inset-0 z-[100] flex items-end justify-center pointer-events-auto sm:items-center">
+      {/* z-[110], not z-[100]: OrderDetailsModal renders this as its own
+          child at that same z-[100], which only "worked" because this
+          happens to be a later DOM sibling — no real stacking guarantee.
+          110 matches the tier OrderDetailsModal already uses for its other
+          nested overlay (the inline assign-waiter sheet). */}
+      <div className="fixed inset-0 z-[110] flex items-end justify-center pointer-events-auto sm:items-center">
         {/* Backdrop */}
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 

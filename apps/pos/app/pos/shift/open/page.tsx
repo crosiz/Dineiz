@@ -9,7 +9,7 @@ import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const DENOMS = [5000, 1000, 500, 100, 50, 20, 10, 5];
+const DENOMS = [5000, 1000, 500, 100, 50, 20, 10];
 const QUICK = [2000, 5000, 10000];
 const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 
@@ -131,12 +131,16 @@ export default function ShiftOpenGate() {
     : '';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-body-md text-slate-900">
-      <main className="w-full max-w-[420px]">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.12)] overflow-hidden">
+    <div className="h-screen bg-slate-50 flex items-center justify-center p-4 font-body-md text-slate-900">
+      {/* Bounded flex column: identity + actions are fixed, only the middle
+          (float + note-by-note breakdown) scrolls — otherwise opening the
+          breakdown grows the card past the viewport and its top/bottom get
+          clipped ("it becomes very very big"). */}
+      <main className="w-full max-w-[420px] max-h-full flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.12)] overflow-hidden flex flex-col min-h-0">
 
           {/* Identity + context */}
-          <div className="p-6 border-b border-slate-100">
+          <div className="p-6 border-b border-slate-100 shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Open shift</span>
               <span className="text-[12px] text-slate-400 tabular-nums" suppressHydrationWarning>
@@ -160,8 +164,8 @@ export default function ShiftOpenGate() {
             </div>
           </div>
 
-          {/* Float */}
-          <div className="p-6">
+          {/* Float — the only scrolling region */}
+          <div className="p-6 overflow-y-auto flex-1 min-h-0">
             <label htmlFor="floatInput" className="block text-[13px] font-bold text-slate-900">
               Opening cash float
             </label>
@@ -169,7 +173,7 @@ export default function ShiftOpenGate() {
               Count what&apos;s physically in the drawer right now.
             </p>
 
-            <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-[var(--pos-primary,#FF5722)]">
+            <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-[#FF5722]">
               <span className="text-[15px] font-semibold text-slate-400 shrink-0">PKR</span>
               {/* type="text" + inputMode: a number input renders its own inset
                   field chrome (the faint box the amount sat in) even with
@@ -186,7 +190,7 @@ export default function ShiftOpenGate() {
                   const digits = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
                   setFloat(digits === '' ? '' : Number(digits));
                 }}
-                className="flex-1 min-w-0 bg-transparent text-right text-[26px] font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none border-none focus:ring-0 disabled:text-slate-500"
+                className="flex-1 min-w-0 bg-transparent text-right text-[26px] font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 disabled:text-slate-500"
               />
             </div>
 
@@ -199,7 +203,7 @@ export default function ShiftOpenGate() {
                     onClick={() => setFloat(v)}
                     className={`h-9 rounded-lg text-[13px] font-bold border transition-colors ${
                       float === v
-                        ? 'border-[var(--pos-primary,#FF5722)] bg-[var(--pos-primary,#FF5722)]/10 text-[var(--pos-primary,#FF5722)]'
+                        ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]'
                         : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -223,7 +227,7 @@ export default function ShiftOpenGate() {
                 {DENOMS.map((d) => {
                   const c = notes[d] || 0;
                   return (
-                    <div key={d} className="flex items-center gap-3 px-3 py-2">
+                    <div key={d} className="flex items-center gap-3 px-3 py-1.5">
                       <span className="text-[13px] font-semibold text-slate-700 w-[4.5rem] tabular-nums">PKR {d.toLocaleString()}</span>
                       <span className="text-slate-300 text-[13px]">×</span>
                       <input
@@ -236,7 +240,7 @@ export default function ShiftOpenGate() {
                           const n = Number(e.target.value.replace(/[^\d]/g, '').slice(0, 4));
                           setNotes((p) => ({ ...p, [d]: n || 0 }));
                         }}
-                        className="w-14 h-8 text-center rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-900 outline-none focus:border-[var(--pos-primary,#FF5722)]"
+                        className="w-14 h-8 text-center rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-900 outline-none focus:border-[#FF5722] focus:shadow-none focus-visible:shadow-none"
                       />
                       <span className="ml-auto text-[13px] font-semibold text-slate-500 tabular-nums">{pkr(d * c)}</span>
                     </div>
@@ -250,8 +254,8 @@ export default function ShiftOpenGate() {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="px-6 pb-6">
+          {/* Actions — fixed at the bottom */}
+          <div className="px-6 pb-6 pt-4 border-t border-slate-100 shrink-0">
             <button
               type="button"
               onClick={handleStartShift}

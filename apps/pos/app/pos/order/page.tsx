@@ -18,6 +18,8 @@ import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import * as commands from '@/lib/core/commands';
 import { useViews, seedServerOrder } from '@/lib/core/views';
+import { useBrandingStore } from '@/lib/branding-store';
+import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -72,7 +74,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
               <span className="text-[13px] text-[#64748B] font-medium">{cartItem.selectedVariation.name}</span>
             )}
           </div>
-          <span className="font-mono text-[16px] font-bold text-[#0F172A]">PKR {cartItem.subtotal.toFixed(2)}</span>
+          <span className="font-mono text-[16px] font-bold text-[#0F172A]">{formatPKR(cartItem.subtotal)}</span>
         </div>
         <div className="flex justify-between items-center mt-2">
           <div className="flex flex-wrap gap-2">
@@ -106,26 +108,10 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
   );
 }
 
-// OrderItem.options is a free-form JSON snapshot (packages/db/prisma/schema.prisma)
-// deliberately taken at order time so a later menu price/name edit never
-// changes a historical order. It previously only stored the variation ID
-// (no name) and dropped addons entirely, so receipts/KOTs had nothing to
-// render for them. This is the single shape every order-item payload in this
-// file should use — matches what ClientTableMap.tsx / receipt/page.tsx / the
-// print templates already read from a fetched order.
-function buildItemOptions(item: { selectedVariation?: { id: string; name: string }; selectedAddOns?: { id: string; name: string; price: number }[] }) {
-  const hasVariation = !!item.selectedVariation;
-  const hasAddOns = !!item.selectedAddOns?.length;
-  if (!hasVariation && !hasAddOns) return undefined;
-  return {
-    variation: hasVariation ? { id: item.selectedVariation!.id, name: item.selectedVariation!.name } : undefined,
-    addOns: hasAddOns ? item.selectedAddOns!.map(a => ({ id: a.id, name: a.name, price: a.price })) : undefined,
-  };
-}
-
 function OrderEntryPageContent() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
+  const branding = useBrandingStore(s => s.branding);
   const cart = useCartStore(s => s.cart);
   const addItem = useCartStore(s => s.addItem);
   const incrementItem = useCartStore(s => s.incrementItem);
@@ -848,65 +834,64 @@ function OrderEntryPageContent() {
     }
 
     if (!paymentOrderId) {
+      // Local-first / event-sourced — same pattern sendToKitchen() uses below
+      // for a brand-new order (commands.createOrder + commands.addItem), just
+      // without commands.sendToKitchen() since charging directly deliberately
+      // skips the kitchen. This replaces a raw, awaited fetch() straight to
+      // POST /api/orders, which blocked the whole "Charge" tap on a network
+      // round trip (the reported slow charge) and never registered the order
+      // in useViews (the reported stale Home screen) — but the real damage
+      // was downstream: PaymentModal's collectPayment() right after used the
+      // server's raw id, which the view store had no record of under ANY key.
+      // The PAYMENT_COLLECTED reducer silently no-ops on an unknown aggregate
+      // (views.ts), and the outbox's deriveTaskChains then hits its "no task
+      // producible" invariant and marks that event CONFIRMED locally without
+      // ever shipping it — the cashier sees "Payment Successful" and the
+      // money is simply never recorded server-side. Client-owned identity
+      // from the moment of creation is what closes that gap.
       setChargeLoading(true);
       try {
-        const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
-        const shift = JSON.parse(localStorage.getItem('pos_shift') ?? '{}');
         const orderTypeStr = orderType || 'DINE_IN';
-        const tableId = selectedTableId;
+        const tableId = (selectedTableId && selectedTableId !== 'undefined') ? selectedTableId : null;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body: JSON.stringify({
-            type: orderTypeStr,
-            tableId: (tableId && tableId !== 'undefined') ? tableId : null,
-            branchId: sessionObj.branchId,
-            tenantId: sessionObj.tenantId,
-            cashierId: sessionObj.userId || sessionObj.cashierId,
-            shiftId: shift.shiftId ?? null,
-            items: cart.map(item => ({
-              itemId: item.itemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.unitPrice * item.quantity,
-              options: buildItemOptions(item),
-              notes: item.notes ?? undefined,
-            })),
-            totalAmount: subtotal,
-            taxAmount,
-            discountAmount,
-            netAmount: total,
-            notes: orderNote,
-          }),
+        const { orderId: localId, orderNumber } = await commands.createOrder({
+          type: orderTypeStr,
+          tableId,
+          tableLabel: selectedTableLabel || undefined,
+          notes: orderNote,
         });
-
-        if (res.ok) {
-          const order = await res.json();
-          setPaymentOrderId(order.id);
-          setPaymentOrderNumber(order.orderNumber);
-          setIsPaymentOpen(true);
-
-          const isHeld = searchParams.get('isHeld') === 'true';
-          const rawOrderId = searchParams.get('orderId');
-          if (isHeld && rawOrderId) {
-            try {
-              const db = getDB();
-              if (db.heldOrders) {
-                await db.heldOrders.delete(rawOrderId);
-              }
-            } catch (e) {
-              console.error('Failed to delete held order on charge', e);
-            }
-          }
-        } else {
-          toast.error('Could not create order. Check connection.');
+        for (const item of cart) {
+          await commands.addItem(localId, {
+            itemId: item.itemId,
+            itemName: item.name,
+            variationId: item.selectedVariation?.id ?? null,
+            variationName: item.selectedVariation?.name ?? null,
+            qty: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.notes ?? null,
+            addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+          });
         }
-      } catch {
-        toast.error('Could not create order. Check connection.');
+
+        setPaymentOrderId(localId);
+        setPaymentOrderNumber(orderNumber);
+        setIsPaymentOpen(true);
+
+        const isHeld = searchParams.get('isHeld') === 'true';
+        const rawOrderId = searchParams.get('orderId');
+        if (isHeld && rawOrderId) {
+          try {
+            const db = getDB();
+            if (db.heldOrders) {
+              await db.heldOrders.delete(rawOrderId);
+            }
+          } catch (e) {
+            console.error('Failed to delete held order on charge', e);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create order for charge', err);
+        toast.error('Could not open payment — please retry.');
       } finally {
         setChargeLoading(false);
       }
@@ -1206,7 +1191,7 @@ function OrderEntryPageContent() {
               </div>
               <span className="tracking-wide">View Order</span>
             </div>
-            <span className="text-lg tracking-tight">PKR {combinedTotal.toFixed(2)}</span>
+            <span className="text-lg tracking-tight">{formatPKR(combinedTotal)}</span>
           </button>
         </div>
 
@@ -1323,7 +1308,7 @@ function OrderEntryPageContent() {
                         {i.variationName && <span className="text-[12px] text-[#94A3B8]">{i.variationName}</span>}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[14px] text-[#64748B]">PKR {(i.subtotal || (i.quantity * i.unitPrice)).toFixed(2)}</span>
+                        <span className="font-mono text-[14px] text-[#64748B]">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
                         <button
                           onClick={() => setVoidSheetState({ isOpen: true, item: i })}
                           className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
@@ -1388,18 +1373,18 @@ function OrderEntryPageContent() {
             <div className="space-y-2 text-sm text-[#64748B] font-medium">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-[#0F172A] font-semibold">PKR {combinedSubtotal.toFixed(2)}</span>
+                <span className="text-[#0F172A] font-semibold">{formatPKR(combinedSubtotal)}</span>
               </div>
               {combinedTaxAmount > 0 && (
                 <div className="flex justify-between">
                   <span>{taxLabel}</span>
-                  <span className="text-[#0F172A] font-semibold">PKR {combinedTaxAmount.toFixed(2)}</span>
+                  <span className="text-[#0F172A] font-semibold">{formatPKR(combinedTaxAmount)}</span>
                 </div>
               )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-semibold">
                   <span>Discount</span>
-                  <span>- PKR {discountAmount.toFixed(2)}</span>
+                  <span>- {formatPKR(discountAmount)}</span>
                 </div>
               )}
             </div>
@@ -1407,7 +1392,7 @@ function OrderEntryPageContent() {
             <div className="flex justify-between items-end pt-2 border-t border-[#E2E8F0]">
               <span className="text-[16px] font-bold uppercase tracking-wider text-[#0F172A]">Order Total</span>
               <div className="text-right">
-                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">PKR {combinedTotal.toFixed(2)}</p>
+                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
               </div>
             </div>
 
@@ -1524,7 +1509,7 @@ function OrderEntryPageContent() {
           item={voidSheetState.item}
           onClose={() => setVoidSheetState({ isOpen: false, item: null })}
           onSuccess={handleVoidSuccess}
-          voidRequiresManagerApproval={(session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true}
+          voidRequiresManagerApproval={branding?.pos?.voidRequiresManagerApproval ?? true}
         />
       )}
 
