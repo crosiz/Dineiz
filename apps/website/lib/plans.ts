@@ -133,3 +133,38 @@ export const PLANS = [
     }
   }
 ];
+
+export const PRICING_FAQS = [
+  {
+    question: "Can I change my plan anytime?",
+    answer: "Yes, upgrade takes effect immediately. Downgrade takes effect at your next billing date."
+  },
+  {
+    question: "How do I pay for the subscription?",
+    answer: "JazzCash, EasyPaisa, debit/credit card, or annual bank transfer. Monthly reminders sent via WhatsApp and email."
+  },
+  {
+    question: "What happens when my free trial ends?",
+    answer: "You continue with the free features of that plan. To restore premium features, subscribe from the dashboard."
+  },
+  {
+    question: "Is there a setup fee?",
+    answer: "Never. No setup fees, no onboarding fees, no hidden charges."
+  },
+  {
+    question: "Do you offer refunds?",
+    answer: "Yes. 7-day refund for monthly plans. 30-day prorated refund for annual plans."
+  },
+  {
+    question: "Can multiple cashiers use Dineiz POS simultaneously?",
+    answer: "Yes, any number of tablets can be connected simultaneously. Each cashier logs in with their own PIN."
+  },
+  {
+    question: "Does Dineiz work without internet?",
+    answer: "Yes. The POS works offline and syncs automatically when the connection returns."
+  },
+  {
+    question: "What support do I get?",
+    answer: "All plans get community support. Go Pro and above get WhatsApp support. Enterprise gets a dedicated account manager."
+  }
+];

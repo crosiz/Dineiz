@@ -1,6 +1,6 @@
 import React from "react";
-import { generateSEOMetadata } from "@/lib/seo";
-import { PLANS } from "@/lib/plans";
+import { generateSEOMetadata, generateFAQSchema } from "@/lib/seo";
+import { PLANS, PRICING_FAQS } from "@/lib/plans";
 import { PricingClient } from "@/components/pricing/PricingClient";
 
 export const metadata = generateSEOMetadata({
@@ -41,11 +41,17 @@ const jsonLd = {
 export const dynamic = 'force-static';
 
 export default function PricingPage() {
+  const faqJsonLd = generateFAQSchema(PRICING_FAQS);
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <PricingClient />
     </>
