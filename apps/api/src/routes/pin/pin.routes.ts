@@ -4,6 +4,7 @@ import { prisma } from '@dineiz/db';
 import { z } from 'zod';
 import crypto from 'crypto';
 import { upstash } from '../../lib/redis';
+import { buildPosBranding } from '../../lib/posBranding';
 
 /**
  * Simple SHA-256 hash for PIN storage (enough for a short numeric PIN,
@@ -110,167 +111,11 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
       await upstash.del(attemptsKey);
     } catch {}
 
-    // Fetch tenant branding (including dual-tax config)
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: user.tenantId! },
-      select: { name: true, colorPrimary: true, logoUrl: true, settings: true }
-    });
-
-    // Branch-level operational config — previously never reached the
-    // terminal at all, so every branch silently behaved like a PKR/Asia
-    // Karachi branch with only the tenant-wide Kitchen toggle in effect.
-    const branch = await prisma.branch.findUnique({
-      where: { id: branchId },
-      select: {
-        currency: true,
-        timezone: true,
-        kdsEnabled: true,
-        kotAutoPrint: true,
-        openingTime: true,
-        closingTime: true,
-      }
-    });
-
-    const tenantBranding = await prisma.tenantBranding.findUnique({
-      where: { tenantId: user.tenantId! },
-      select: {
-        restaurantName: true,
-        primaryColor: true,
-        secondaryColor: true,
-        accentColor: true,
-        logoUrl: true,
-        fbrNtn: true,
-        receiptFooter: true,
-        receiptHeader: true,
-        showCashierName: true,
-        showTableNumber: true,
-        // Dual-tax fields
-        cashTaxEnabled: true,
-        cashTaxRate: true,
-        cashTaxLabel: true,
-        cardTaxEnabled: true,
-        cardTaxRate: true,
-        cardTaxLabel: true,
-        showDualTaxOnReceipt: true,
-        cashTaxNote: true,
-        cardTaxNote: true,
-        taxRoundingMethod: true,
-        serviceChargeEnabled: true,
-        serviceChargeRate: true,
-        // Receipt rendering fields — print.service.ts on the POS already
-        // reads these (logo gate, paper size, layout, PDF-vs-printer mode,
-        // "powered by" footer); previously omitted here, so a freshly
-        // logged-in terminal fell back to receipt defaults until a live
-        // tenant:branding_updated socket event happened to arrive later.
-        showLogoOnReceipt: true,
-        receiptPaperSize: true,
-        receiptLayout: true,
-        downloadPdfReceipt: true,
-        showPoweredBy: true,
-        // Part 13 operational settings — the POS Settings screen shows these
-        // read-only; the sync engine, close flow and jobs read them live.
-        orderNumberFormat: true, tenantShortCode: true, tableCleaningMinutes: true,
-        requireShiftOpen: true, allowLoginWithoutShift: true,
-        allowOrderReopen: true, orderReopenWindowMinutes: true,
-        maxDiscountPercent: true, allowCashierDiscounts: true,
-        voidRequiresManagerApproval: true, autoKotPrint: true, autoReceiptPrint: true,
-        blockOutOfStock: true, kotEnabled: true, posMarkReadyEnabled: true,
-        staleShiftWarnHours: true, autoCloseAbandonedHours: true,
-        cashCountRequired: true, varianceAlertThreshold: true,
-        managerOverlayEnabled: true, managerOverlayIdleMinutes: true, managerOverlayRequireReason: true,
-        syncBatchSize: true, syncRequestTimeoutMs: true, syncMaxEventLifetimeHours: true,
-        shiftCloseSyncTimeoutSec: true, allowCloseWithUnsynced: true, closeWithUnsyncedRequiresPin: true,
-      }
-    });
-    const tb = tenantBranding as any;
-
-    const branding = {
-      restaurantName: tenantBranding?.restaurantName || tenant?.name || 'Dineiz Go',
-      primaryColor: tenantBranding?.primaryColor || tenant?.colorPrimary || '#F59E0B',
-      secondaryColor: tenantBranding?.secondaryColor || '#1A1A2E',
-      accentColor: tenantBranding?.accentColor || '#FFB300',
-      logoUrl: tenantBranding?.logoUrl || tenant?.logoUrl,
-      fbrNtn: tenantBranding?.fbrNtn,
-      receiptFooter: tenantBranding?.receiptFooter,
-      receiptHeader: tenantBranding?.receiptHeader,
-      showCashierName: tenantBranding?.showCashierName ?? false,
-      showTableNumber: tenantBranding?.showTableNumber ?? false,
-      // Dual-tax config (these travel with pos_branding into localStorage)
-      cashTaxEnabled: tenantBranding?.cashTaxEnabled ?? false,
-      cashTaxRate: tenantBranding?.cashTaxRate ?? 5,
-      cashTaxLabel: tenantBranding?.cashTaxLabel ?? 'GST (Cash)',
-      cardTaxEnabled: tenantBranding?.cardTaxEnabled ?? false,
-      cardTaxRate: tenantBranding?.cardTaxRate ?? 17,
-      cardTaxLabel: tenantBranding?.cardTaxLabel ?? 'GST (Card/Digital)',
-      showDualTaxOnReceipt: tenantBranding?.showDualTaxOnReceipt ?? true,
-      cashTaxNote: tenantBranding?.cashTaxNote ?? null,
-      cardTaxNote: tenantBranding?.cardTaxNote ?? null,
-      taxRoundingMethod: tenantBranding?.taxRoundingMethod ?? 'ROUND',
-      serviceChargeEnabled: tenantBranding?.serviceChargeEnabled ?? false,
-      serviceChargeRate: tenantBranding?.serviceChargeRate ?? 10,
-      // Receipt rendering config — print.service.ts reads these directly;
-      // without them a fresh login silently fell back to 80mm/CLASSIC/PDF
-      // defaults and never showed the tenant's logo until a live socket
-      // update happened to arrive.
-      showLogoOnReceipt: tenantBranding?.showLogoOnReceipt ?? true,
-      receiptPaperSize: tenantBranding?.receiptPaperSize ?? '80mm',
-      receiptLayout: tenantBranding?.receiptLayout ?? 'CLASSIC',
-      downloadPdfReceipt: tenantBranding?.downloadPdfReceipt ?? false,
-      showPoweredBy: tenantBranding?.showPoweredBy ?? true,
-      // Branch-level operational config — this branch's own currency/timezone
-      // and KDS/auto-print hardware presence, previously never sent to the
-      // terminal at all (it silently assumed PKR/Asia-Karachi and only the
-      // tenant-wide Kitchen tab for every branch).
-      currency: branch?.currency ?? 'PKR',
-      timezone: branch?.timezone ?? 'Asia/Karachi',
-      branchKdsEnabled: branch?.kdsEnabled ?? false,
-      branchKotAutoPrint: branch?.kotAutoPrint ?? false,
-      openingTime: branch?.openingTime ?? null,
-      closingTime: branch?.closingTime ?? null,
-      // Tenant-wide POS/Kitchen settings blob (Settings → Point of Sale /
-      // Kitchen tabs) — same gap: configurable in the admin UI, never read
-      // by the terminal. The structured Part 13 TenantBranding columns are
-      // layered on top so the POS Settings screen and the sync engine see
-      // the authoritative values.
-      pos: {
-        ...((tenant?.settings as any)?.pos ?? {}),
-        orderNumberFormat: tb?.orderNumberFormat ?? 'STANDARD',
-        tenantShortCode: tb?.tenantShortCode ?? null,
-        tableCleaningMinutes: tb?.tableCleaningMinutes ?? 5,
-        requireShiftOpen: tb?.requireShiftOpen ?? true,
-        requireShiftOpening: tb?.requireShiftOpen ?? true, // POSLayout reads this alias
-        allowLoginWithoutShift: tb?.allowLoginWithoutShift ?? false,
-        allowOrderReopen: tb?.allowOrderReopen ?? false,
-        orderReopenWindowMinutes: tb?.orderReopenWindowMinutes ?? 30,
-        maxDiscountPercent: tb?.maxDiscountPercent ?? 0,
-        allowCashierDiscounts: tb?.allowCashierDiscounts ?? false,
-        voidRequiresManagerApproval: tb?.voidRequiresManagerApproval ?? true,
-        autoKotPrint: tb?.autoKotPrint ?? true,
-        autoReceiptPrint: tb?.autoReceiptPrint ?? true,
-        blockOutOfStock: tb?.blockOutOfStock ?? true,
-        kotEnabled: tb?.kotEnabled ?? true,
-        posMarkReadyEnabled: tb?.posMarkReadyEnabled ?? true,
-        staleShiftWarnHours: tb?.staleShiftWarnHours ?? 16,
-        autoCloseAbandonedHours: tb?.autoCloseAbandonedHours ?? 24,
-        cashCountRequired: tb?.cashCountRequired ?? true,
-        varianceAlertThreshold: tb?.varianceAlertThreshold ?? 500,
-        managerOverlayEnabled: tb?.managerOverlayEnabled ?? true,
-        managerOverlayIdleMinutes: tb?.managerOverlayIdleMinutes ?? 5,
-        managerOverlayRequireReason: tb?.managerOverlayRequireReason ?? true,
-        syncBatchSize: tb?.syncBatchSize ?? 50,
-        syncRequestTimeoutMs: tb?.syncRequestTimeoutMs ?? 8000,
-        syncMaxEventLifetimeHours: tb?.syncMaxEventLifetimeHours ?? 24,
-        shiftCloseSyncTimeoutSec: tb?.shiftCloseSyncTimeoutSec ?? 45,
-        allowCloseWithUnsynced: tb?.allowCloseWithUnsynced ?? true,
-        closeWithUnsyncedRequiresPin: tb?.closeWithUnsyncedRequiresPin ?? true,
-      },
-      // Also flat, so print.service / branding-store consumers that read
-      // b.orderNumberFormat directly keep working.
-      orderNumberFormat: tb?.orderNumberFormat ?? 'STANDARD',
-      tenantShortCode: tb?.tenantShortCode ?? null,
-      tableCleaningMinutes: tb?.tableCleaningMinutes ?? 5,
-      kitchen: (tenant?.settings as any)?.kitchen ?? {},
-    };
+    // Tenant branding, dual-tax config, receipt rendering, branch-level
+    // operational config, and the Part 13 settings blob — shared with
+    // GET /api/pos/branding (the reconnect re-sync) via buildPosBranding()
+    // so the two never drift into different shapes.
+    const branding = await buildPosBranding(user.tenantId!, branchId);
 
     // â”€â”€ Create a Better Auth-compatible session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const sessionToken = crypto.randomBytes(32).toString('hex');
