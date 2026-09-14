@@ -397,10 +397,20 @@ function OrderEntryPageContent() {
           toast.error('Held order not found');
           return;
         }
-        useCartStore.setState({ cart: order.cart || [] });
+        // holdOrder() below also captures tableId/tableLabel/orderType — a
+        // held dine-in order used to come back as "no table selected" with
+        // no order type, forcing the cashier to redo everything except the
+        // items (and re-tripping the CHARGE-greyed-out guard, since
+        // canSubmitOrder requires orderType to be set).
+        useCartStore.setState({
+          cart: order.cart || [],
+          orderType: order.orderType || 'DINE_IN',
+          selectedTableId: order.tableId ?? null,
+          selectedTableLabel: order.tableLabel ?? null,
+        });
         useCartStore.getState().setSourceOrderId(order.id);
         setHeldOrderId(order.id);
-        
+
         // After loading, delete the held order record so it cannot be double-loaded
         getDB().heldOrders.delete(order.id).catch(console.error);
 
