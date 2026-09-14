@@ -16,9 +16,15 @@ import { getDB } from './db';
 
 export interface TerminalSettings {
   terminalName: string;
-  // Printer
-  printMode: 'PDF' | 'PRINTER';
+  // Printer. PRINTER sends raw ESC/POS over `printerTransport`; SYSTEM hands
+  // a generated PDF to the OS print dialog instead (the path for WiFi/LAN and
+  // any Bluetooth printer already paired at the OS level — see
+  // lib/print.service.ts's executeSystemPrint for why that's the only honest
+  // way to reach those from a browser tab).
+  printMode: 'PDF' | 'PRINTER' | 'SYSTEM';
   paperWidth: '58mm' | '80mm';
+  // Which transport PRINTER mode uses. Irrelevant for PDF/SYSTEM.
+  printerTransport: 'USB' | 'BLUETOOTH';
   // Sound
   soundEnabled: boolean;
   soundVolume: number; // 0–100
@@ -30,6 +36,7 @@ export const DEFAULT_TERMINAL_SETTINGS: TerminalSettings = {
   terminalName: '',
   printMode: 'PDF',
   paperWidth: '80mm',
+  printerTransport: 'USB',
   soundEnabled: true,
   soundVolume: 70,
   keepAwake: false,

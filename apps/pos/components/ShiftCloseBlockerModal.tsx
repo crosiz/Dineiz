@@ -59,8 +59,8 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" onClick={onClose} />
       
-      <div 
-        className="relative z-10 w-full max-w-[460px] min-w-[320px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+      <div
+        className="relative z-10 w-full max-w-[460px] max-h-[calc(100dvh-32px)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
       >
         <div className="p-6 pb-4 flex flex-col items-center text-center">
           <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mb-3">
@@ -70,7 +70,7 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
           <p className="text-xs text-slate-500 font-medium">Unresolved items require attention before closing this shift.</p>
         </div>
 
-        <div className="px-6 pb-5 max-h-[48vh] overflow-y-auto space-y-2.5 custom-scrollbar">
+        <div className="px-6 pb-5 max-h-[48dvh] overflow-y-auto space-y-2.5 custom-scrollbar shrink-0">
           {blockers.map((blocker, idx) => (
             <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
               <div className="flex items-start gap-3">

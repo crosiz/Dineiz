@@ -55,7 +55,8 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="h-16 shrink-0 flex items-center justify-around px-4 bg-white border-t border-[#E2E8F0] shadow-md relative z-40">
+      <nav className="shrink-0 bg-white border-t border-[#E2E8F0] shadow-md relative z-[var(--z-nav)] pb-safe">
+        <div className="h-16 flex items-center justify-around px-1 sm:px-4">
         {NAV_ITEMS.map(item => {
           // Role-based visibility
           if (item.id === 'admin' && !isManager) return null;
@@ -83,15 +84,16 @@ export function BottomNav() {
                   go(path)
                 }
               }}
-              className="flex flex-col items-center gap-1 min-w-[60px] py-2 transition-colors duration-150 cursor-pointer"
+              className="flex flex-col items-center justify-center gap-1 min-w-[48px] sm:min-w-[60px] flex-1 sm:flex-none max-w-[84px] h-full transition-colors duration-150 cursor-pointer"
             >
               <Icon size={22} style={{ color }} />
-              <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
                 {item.label}
               </span>
             </a>
           )
         })}
+        </div>
       </nav>
       <ConfirmModal
         isOpen={!!pendingNavPath}

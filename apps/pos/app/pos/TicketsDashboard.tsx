@@ -74,6 +74,24 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   }, []);
 
+  // The view-mode switcher below is `hidden sm:flex` — Kanban's fixed-width
+  // horizontal-scroll columns aren't a workable layout on a phone, so the
+  // switcher simply doesn't offer it there. Without this guard, a terminal
+  // that had Kanban selected on a tablet (view mode persists via
+  // localStorage) would open straight into it on a phone with no visible way
+  // back to Grid/List, since the only control that could change it is the
+  // one that's hidden. Forces back to Grid whenever the viewport narrows
+  // past sm, whatever's saved.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const enforce = () => {
+      if (mq.matches) setViewMode((m) => (m === 'kanban' ? 'grid' : m));
+    };
+    enforce();
+    mq.addEventListener('change', enforce);
+    return () => mq.removeEventListener('change', enforce);
+  }, []);
+
   const handleSetViewMode = (mode: 'grid' | 'list' | 'kanban') => {
     setViewMode(mode);
     localStorage.setItem('pos_viewMode', mode);

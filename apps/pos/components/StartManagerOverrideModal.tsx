@@ -47,7 +47,7 @@ export function StartManagerOverrideModal({ onClose }: { onClose: () => void }) 
 
   return (
     <div className="fixed inset-0 z-[320] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-[380px] bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
+      <div className="w-full max-w-[380px] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
         <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-4">
           <Unlock size={19} />
         </div>
@@ -71,7 +71,7 @@ export function StartManagerOverrideModal({ onClose }: { onClose: () => void }) 
         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reason</label>
         <textarea
           value={reason} onChange={(e) => setReason(e.target.value)}
-          className="w-full h-16 rounded-xl border border-slate-200 p-2.5 text-[13px] outline-none focus:border-[#FF5722] resize-none mb-3"
+          className="w-full h-16 rounded-xl border border-slate-200 p-2.5 text-[16px] outline-none focus:border-[#FF5722] resize-none mb-3"
           placeholder="e.g. Customer changed their order"
         />
 

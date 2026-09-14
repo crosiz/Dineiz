@@ -77,11 +77,18 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in"
+      className="fixed inset-0 z-[var(--z-modal-nested)] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
+      {/* w-[360px] with no min-w — this modal is opened from flows that can
+          already have another dialog on screen (e.g. Force Sign Out during
+          "Finishing Sync…"), and used to also overflow every viewport under
+          ~400px: min-w-[360px] beat max-w-[90vw] in CSS's conflict
+          resolution, so it rendered at a fixed 360px even inside a narrower,
+          padded viewport. z-[var(--z-modal-nested)] (400) instead of the
+          base modal tier (200) so it always wins over whatever opened it. */}
       <div
-        className={`w-[360px] min-w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-[#E2E8F0] shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
+        className={`w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-[#E2E8F0] shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
       >
         {/* Lock icon */}
         <div className="text-center mb-2">

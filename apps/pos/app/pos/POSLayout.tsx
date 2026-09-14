@@ -529,7 +529,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const hideBottomNav = pathname.startsWith('/pos/kds');
 
   return (
-    <div className="flex flex-col h-screen select-none bg-[var(--pos-bg-base)] text-[#0F172A] overflow-hidden font-body-md">
+    <div className="flex flex-col h-dvh select-none bg-[var(--pos-bg-base)] text-[#0F172A] overflow-hidden font-body-md">
       <NavigationProgress />
       {!hideTopBar && <POSTopBar />}
       <ManagerOverlayBar />
