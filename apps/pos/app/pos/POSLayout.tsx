@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCartStore } from '@/lib/store';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,6 +33,78 @@ function liveOrdersScope(): { shiftId?: string | null } {
   const isManager = sess?.role === 'BRANCH_MANAGER' || sess?.role === 'TENANT_ADMIN';
   if (isManager) return {};
   return { shiftId: getPosShift()?.shiftId ?? null };
+}
+
+// Reads whatever is currently in useBrandingStore and pushes its derived
+// effects (CSS var, cart-store tax config, currency) out to the rest of the
+// app. Module-level (not just the mount effect's closure) so the socket
+// reconnect handler can call it again after setBranding() with fresh data —
+// see the "missed while disconnected" comment on that handler below.
+function applyBranding() {
+  const branding = useBrandingStore.getState().branding;
+  const root = document.documentElement;
+  if (branding.primaryColor) {
+    root.style.setProperty('--pos-primary', branding.primaryColor);
+    root.style.setProperty('--pos-primary-dim', branding.primaryColor + '1F');
+  }
+
+  if (branding.cashTaxRate !== undefined || branding.cardTaxRate !== undefined) {
+    useCartStore.getState().setSession({
+      cashTaxEnabled: branding.cashTaxEnabled ?? false,
+      cashTaxRate: (branding.cashTaxRate ?? 5) / 100,
+      cashTaxLabel: branding.cashTaxLabel ?? 'GST (Cash)',
+      cashTaxNote: branding.cashTaxNote ?? null,
+      cardTaxEnabled: branding.cardTaxEnabled ?? false,
+      cardTaxRate: (branding.cardTaxRate ?? 17) / 100,
+      cardTaxLabel: branding.cardTaxLabel ?? 'GST (Card/Digital)',
+      cardTaxNote: branding.cardTaxNote ?? null,
+      showDualTaxOnReceipt: branding.showDualTaxOnReceipt ?? true,
+      taxRoundingMethod: branding.taxRoundingMethod ?? 'ROUND',
+      serviceChargeEnabled: branding.serviceChargeEnabled ?? false,
+      serviceChargeRate: branding.serviceChargeRate ?? 10,
+    });
+  }
+
+  if (branding.currency) {
+    useCartStore.getState().setSession({ currency: branding.currency });
+  }
+}
+
+// Re-pulls tables + this terminal's live orders from the server. Called on
+// mount and again on every socket reconnect (see below) — a replay of the
+// local event log is a best-effort optimisation, but the network pull is
+// what actually guarantees the board is correct after a cold start or after
+// missing an unknown number of order:*/table:* events while disconnected.
+function pullServerState() {
+  const s = getPosSession();
+  if (!s?.branchId) return;
+  seedTablesFromServer(s.branchId).catch(console.error);
+  refreshOrders(s.branchId, liveOrdersScope()).catch(console.error);
+}
+
+// GET /api/pos/branding + reapply — the reconciliation half of the reconnect
+// handler. A terminal only ever learns branding/tax/Part-13 config two ways:
+// the pin-login response, or a live tenant:branding_updated socket push.
+// Socket.IO does not replay missed events to a reconnecting client, so
+// whatever an admin changed while this terminal's socket was down (laptop
+// sleep, wifi drop) would otherwise sit stale until the next unrelated push
+// happened to arrive — which might be never. The fetched object is always a
+// complete, defaulted snapshot (never a partial diff like the live push), so
+// a full replace is correct here, unlike handleBrandingUpdated's merge.
+async function syncBrandingFromServer(setBranding: (b: Record<string, any>) => void) {
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/branding`, {
+      headers: { Authorization: `Bearer ${getToken()}` },
+    });
+    if (!res.ok) return;
+    const { branding } = await res.json();
+    if (!branding) return;
+    setBranding(branding);
+    localStorage.setItem('pos_branding', JSON.stringify(branding));
+    applyBranding();
+  } catch {
+    // Best-effort — the next live push or the next reconnect will retry.
+  }
 }
 
 const ROUTE_SKIP = ['/login', '/pos/shift', '/pos/settings'];
@@ -94,6 +166,11 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const { setBranding } = useBrandingStore();
   const [stockAlert, setStockAlert] = useState<StockAlertPayload | null>(null);
   const [orphans, setOrphans] = useState<OrphanOrder[]>([]);
+  // Set true on this terminal's first successful connect; a later 'connect'
+  // (Socket.IO auto-reconnecting after a drop) then reads as a genuine
+  // reconnect, not just an initial-mount connect the mount effect already
+  // covers — see the resync handler in the socket-listeners effect below.
+  const hasConnectedBefore = useRef(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -138,45 +215,6 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       } catch (e) {}
     }
     setBranding(stored);
-
-    const applyBranding = () => {
-      const branding = useBrandingStore.getState().branding;
-      const root = document.documentElement;
-      if (branding.primaryColor) {
-        root.style.setProperty('--pos-primary', branding.primaryColor);
-        // Calculate dim version:
-        root.style.setProperty('--pos-primary-dim', branding.primaryColor + '1F');
-      }
-
-      // Sync dual-tax config from branding into the Zustand session so
-      // CheckoutModal always uses the latest tenant-configured rates
-      if (branding.cashTaxRate !== undefined || branding.cardTaxRate !== undefined) {
-        useCartStore.getState().setSession({
-          cashTaxEnabled: branding.cashTaxEnabled ?? false,
-          cashTaxRate: (branding.cashTaxRate ?? 5) / 100,
-          cashTaxLabel: branding.cashTaxLabel ?? 'GST (Cash)',
-          cashTaxNote: branding.cashTaxNote ?? null,
-          cardTaxEnabled: branding.cardTaxEnabled ?? false,
-          cardTaxRate: (branding.cardTaxRate ?? 17) / 100,
-          cardTaxLabel: branding.cardTaxLabel ?? 'GST (Card/Digital)',
-          cardTaxNote: branding.cardTaxNote ?? null,
-          showDualTaxOnReceipt: branding.showDualTaxOnReceipt ?? true,
-          taxRoundingMethod: branding.taxRoundingMethod ?? 'ROUND',
-          serviceChargeEnabled: branding.serviceChargeEnabled ?? false,
-          serviceChargeRate: branding.serviceChargeRate ?? 10,
-        });
-      }
-
-      // This branch's own currency — previously the session always kept
-      // its hardcoded 'PKR' default no matter what the branch was actually
-      // configured with in Add/Edit Branch. (Timezone isn't wired the same
-      // way: nothing in the POS UI currently reads a session-level
-      // timezone at all — every date/time display uses the browser's own
-      // local time — so storing one here wouldn't change any behavior yet.)
-      if (branding.currency) {
-        useCartStore.getState().setSession({ currency: branding.currency });
-      }
-    };
     applyBranding();
 
     // Outbox drain loop (lib/core/outbox.ts) — ships queued events from the
@@ -221,12 +259,6 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     // local log is a best-effort optimisation, but a rejection there (a
     // corrupt IndexedDB row, a quota error mid-read) must NOT be what leaves
     // the terminal with no orders and no floor plan. `finally`, not `then`.
-    const pullServerState = () => {
-      const s = getPosSession();
-      if (!s?.branchId) return;
-      seedTablesFromServer(s.branchId).catch(console.error);
-      refreshOrders(s.branchId, liveOrdersScope()).catch(console.error);
-    };
     rebuildViews().catch(console.error).finally(pullServerState);
 
     // Prefetch every POS route bundle right after login so tab switching
@@ -428,6 +460,22 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       });
     };
 
+    // Reconnect reconciliation. Socket.IO does not replay events a client
+    // missed while disconnected (laptop sleep, wifi drop) — anything an
+    // admin changed, or any order/table event that fired, during the outage
+    // would otherwise sit stale until the next unrelated push happened to
+    // arrive. Treat a reconnect like a remount: re-pull branding + tables +
+    // this terminal's live orders. The very first connect on mount is
+    // skipped since the mount effect just did exactly this a moment ago.
+    const handleConnect = () => {
+      if (hasConnectedBefore.current) {
+        syncBrandingFromServer(setBranding);
+        pullServerState();
+      }
+      hasConnectedBefore.current = true;
+    };
+
+    socket.on('connect', handleConnect);
     socket.on('menu:published', handleMenuPublished);
     socket.on('menu:price_changed', handleMenuPriceChanged);
     socket.on('tenant:branding_updated', handleBrandingUpdated);
@@ -460,6 +508,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     window.addEventListener('focus', handleVisible);
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('menu:published', handleMenuPublished);
       socket.off('menu:price_changed', handleMenuPriceChanged);
       socket.off('tenant:branding_updated', handleBrandingUpdated);

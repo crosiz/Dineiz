@@ -4,6 +4,7 @@ import { getPersistedPrinter, sendToPrinter } from './printer/webusb';
 import { buildReceipt, buildKOT, buildCancellationKOT, type PrintOrder } from './printer/templates';
 import { useBrandingStore } from './branding-store';
 import { useTerminalSettings, ensureTerminalSettings } from './terminal-settings';
+import { formatPKR, formatAmount } from './utils';
 
 export type PrintDocumentType = 'KOT' | 'CUSTOMER_BILL' | 'PAID_RECEIPT' | 'CANCELLATION_KOT' | 'SHIFT_REPORT' | 'TEST_PRINT';
 
@@ -210,22 +211,37 @@ function printRow(doc: jsPDF, leftText: string, rightText: string, y: number) {
 }
 
 async function addFooter(doc: jsPDF, y: number, showThankYou = false) {
+  const branding = useBrandingStore.getState().branding;
+
   if (showThankYou) {
     doc.setFont(FONT, 'italic');
-    doc.text('Thank you for dining with us!', PAPER_WIDTH / 2, y, { align: 'center' });
-    y += 4;
+    // A tenant's own receiptFooter (return policy, a thank-you line in their
+    // own words, …) was fetched into branding but never actually reached the
+    // template — every tenant's receipt printed this same hardcoded line
+    // regardless of what they'd configured.
+    const footerText = branding.receiptFooter || 'Thank you for dining with us!';
+    const footerLines = doc.splitTextToSize(footerText, PAPER_WIDTH - MARGIN * 2);
+    doc.text(footerLines, PAPER_WIDTH / 2, y, { align: 'center' });
+    y += 4 * footerLines.length;
     doc.setFont(FONT, 'normal');
     doc.text(DASHES, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
   }
-  
+
+  // showPoweredBy defaults true (buildPosBranding()) so behavior is
+  // unchanged for every tenant who hasn't touched the setting — but a
+  // tenant who explicitly turned it off was still getting "POWERED BY
+  // [Dineiz logo]" on every receipt, which is exactly backwards for
+  // anyone paying for white-label branding.
+  if (branding.showPoweredBy === false) return;
+
   doc.setFontSize(8);
   doc.setTextColor(150);
   doc.setFont(FONT, 'normal');
-  
+
   const poweredBy = 'POWERED BY';
   const logoBase64 = await loadLogoAsBase64();
-  
+
   if (logoBase64) {
     // Dynamically calculate width to perfectly center both text and logo inline
     const textWidth = doc.getTextWidth(poweredBy);
@@ -233,10 +249,10 @@ async function addFooter(doc: jsPDF, y: number, showThankYou = false) {
     const gap = 0.5; // Reduced gap so it looks like it's written as one block
     const totalWidth = textWidth + gap + logoSize;
     const startX = (PAPER_WIDTH - totalWidth) / 2;
-    
+
     // Draw text with left alignment at calculated startX (y is text baseline)
     doc.text(poweredBy, startX, y);
-    // Vertically center the 16mm logo with the text. Text is ~3mm tall. 
+    // Vertically center the 16mm logo with the text. Text is ~3mm tall.
     // We want the middle of the logo to align with the middle of the text.
     doc.addImage(logoBase64, 'PNG', startX + textWidth + gap, y - (logoSize / 2) - 1, logoSize, logoSize);
   } else {
@@ -452,8 +468,8 @@ async function buildBill(data: any, isPaid: boolean) {
     if (item.variationName) name += ` (${item.variationName})`;
 
     // Value part
-    const priceStr = Number(item.unitPrice || 0).toLocaleString();
-    const amtStr = Number(item.subtotal || 0).toLocaleString();
+    const priceStr = formatAmount(item.unitPrice || 0);
+    const amtStr = formatAmount(item.subtotal || 0);
 
     const nameWidth = layout === 'MINIMAL' ? (PAPER_WIDTH - MARGIN * 2 - 20) : (PAPER_WIDTH - MARGIN * 2 - 6 - (PAPER_WIDTH <= 58 ? 24 : 32));
     const lines = doc.splitTextToSize(name, Math.max(10, nameWidth));
@@ -516,11 +532,11 @@ async function buildBill(data: any, isPaid: boolean) {
   doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
 
-  printRow(doc, 'Subtotal', `PKR ${Number(data.subtotal || 0).toLocaleString()}`, y);
+  printRow(doc, 'Subtotal', formatPKR(data.subtotal || 0), y);
   y += 4.5;
 
   if (data.discountAmount > 0) {
-    printRow(doc, 'Discount', `-PKR ${Number(data.discountAmount).toLocaleString()}`, y);
+    printRow(doc, 'Discount', `-${formatPKR(data.discountAmount)}`, y);
     y += 4.5;
   }
 
@@ -538,35 +554,35 @@ async function buildBill(data: any, isPaid: boolean) {
     const cashTax = applyRounding(taxable * config.cashTaxRate, config.taxRoundingMethod);
     const cashTotal = taxable + cashTax;
     
-    printRow(doc, `${config.cashTaxLabel} ${config.cashTaxRate * 100}%`, `PKR ${cashTax.toLocaleString()}`, y);
+    printRow(doc, `${config.cashTaxLabel} ${config.cashTaxRate * 100}%`, formatPKR(cashTax), y);
     y += 4.5;
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
     doc.setFont(FONT, 'bold');
-    printRow(doc, 'TOTAL (ON CASH)', `PKR ${cashTotal.toLocaleString()}`, y);
+    printRow(doc, 'TOTAL (ON CASH)', formatPKR(cashTotal), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
-    
+
     // Separator
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
-    
+
     // Block 2: Card Tax
-    printRow(doc, 'Subtotal', `PKR ${Number(data.subtotal || 0).toLocaleString()}`, y);
+    printRow(doc, 'Subtotal', formatPKR(data.subtotal || 0), y);
     y += 4.5;
     if (data.discountAmount > 0) {
-      printRow(doc, 'Discount', `-PKR ${Number(data.discountAmount).toLocaleString()}`, y);
+      printRow(doc, 'Discount', `-${formatPKR(data.discountAmount)}`, y);
       y += 4.5;
     }
     const cardTax = applyRounding(taxable * config.cardTaxRate, config.taxRoundingMethod);
     const cardTotal = taxable + cardTax;
-    
-    printRow(doc, `${config.cardTaxLabel} ${config.cardTaxRate * 100}%`, `PKR ${cardTax.toLocaleString()}`, y);
+
+    printRow(doc, `${config.cardTaxLabel} ${config.cardTaxRate * 100}%`, formatPKR(cardTax), y);
     y += 4.5;
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
     doc.setFont(FONT, 'bold');
-    printRow(doc, 'TOTAL (ON CARD)', `PKR ${cardTotal.toLocaleString()}`, y);
+    printRow(doc, 'TOTAL (ON CARD)', formatPKR(cardTotal), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
   } else {
@@ -582,23 +598,23 @@ async function buildBill(data: any, isPaid: boolean) {
     }
 
     if (data.taxAmount > 0) {
-      printRow(doc, taxLabel, `PKR ${Number(data.taxAmount).toLocaleString()}`, y);
+      printRow(doc, taxLabel, formatPKR(data.taxAmount), y);
       y += 4.5;
     }
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
 
     doc.setFont(FONT, 'bold');
-    printRow(doc, isPaid ? 'TOTAL' : 'TOTAL DUE', `PKR ${Number(data.total || 0).toLocaleString()}`, y);
+    printRow(doc, isPaid ? 'TOTAL' : 'TOTAL DUE', formatPKR(data.total || 0), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
   }
 
   if (isPaid) {
     if (data.cashTendered && data.cashTendered > 0) {
-      printRow(doc, 'Cash', `PKR ${Number(data.cashTendered).toLocaleString()}`, y);
+      printRow(doc, 'Cash', formatPKR(data.cashTendered), y);
       y += 4.5;
-      printRow(doc, 'Change', `PKR ${Number(data.changeGiven || 0).toLocaleString()}`, y);
+      printRow(doc, 'Change', formatPKR(data.changeGiven || 0), y);
       y += 4.5;
     } else {
       printRow(doc, 'Paid via', data.paymentMethod || 'CARD', y);

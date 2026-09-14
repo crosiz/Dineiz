@@ -10,9 +10,27 @@ import {
 import { recomputeTableStatus, setTableOverride } from '../../lib/tableStatus';
 import { withIdempotency } from '../../lib/idempotency';
 import { upstash } from '../../lib/redis';
+import { buildPosBranding } from '../../lib/posBranding';
 import crypto from 'crypto';
 
 export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
+  // A terminal only ever learns branding/tax/Part-13 config two ways: the
+  // pin-login response, or a live tenant:branding_updated socket push. Both
+  // are missed entirely while the socket is disconnected (laptop sleep, wifi
+  // drop) — Socket.IO doesn't replay events to a reconnecting client — so
+  // whatever the admin changed during the outage silently never arrives.
+  // The POS calls this once on every socket reconnect to reconcile.
+  fastify.get('/api/pos/branding', {
+    preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const branchId = request.user!.branchId as string | null;
+    if (!branchId) return reply.status(400).send({ error: 'No branch assigned' });
+
+    const branding = await buildPosBranding(tenantId, branchId);
+    return reply.send({ branding });
+  });
+
   fastify.get('/api/pos/stats', {
     schema: {
       querystring: z.object({ shiftId: z.string() })
