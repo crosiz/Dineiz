@@ -55,7 +55,10 @@ export default function QrOrderingPage() {
     });
   };
 
-  const domainUrl = `https://menu.dineiz.com/${currentTenant?.domain || currentTenant?.id}`;
+  // The guest qr-menu app resolves tenant/branch from query params, not the path — so the
+  // generated link (and every per-table QR code below) must carry both, or the guest's menu
+  // request has nothing to look up.
+  const domainUrl = `https://menu.dineiz.com?tenantId=${currentTenant?.id ?? ''}&branchId=${branchId ?? ''}`;
 
   const handlePrintAll = () => {
     window.print();
@@ -133,8 +136,8 @@ export default function QrOrderingPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-h-[300px] overflow-y-auto p-1">
                     {tables.map((table: any) => (
                       <div key={table.id} className="flex flex-col items-center justify-center p-4 border border-[#E2E8F0] rounded-xl bg-white hover:border-[#CBD5E1] transition-all">
-                        <QRCodeSVG 
-                          value={`${domainUrl}?table=${table.id}`} 
+                        <QRCodeSVG
+                          value={`${domainUrl}&table=${table.id}`}
                           size={100} 
                           fgColor={form.qrColor || '#000000'}
                           className="bg-white p-2 rounded-lg shadow-sm"
@@ -252,7 +255,7 @@ export default function QrOrderingPage() {
 
                 {/* Checkout Bar Preview */}
                 <div className="pt-2">
-                  <div className="bg-[#FF5722] text-white rounded-lg py-2 px-3 font-semibold flex justify-between text-xs items-center shadow-xs">
+                  <div className="bg-brand-primary text-white rounded-lg py-2 px-3 font-semibold flex justify-between text-xs items-center shadow-xs">
                     <span>View Cart (2)</span>
                     <span className="font-mono">PKR 1,200</span>
                   </div>
@@ -268,7 +271,7 @@ export default function QrOrderingPage() {
                   type="text" 
                   value={form.welcomeMessage || ''}
                   onChange={e => handleChange('welcomeMessage', e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-[#FF5722]"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs outline-none focus:ring-1 focus:ring-brand-primary"
                   placeholder="Welcome to our digital menu."
                 />
               </div>

@@ -6,7 +6,7 @@ import { recomputeTableStatus, markTableOrderCompleted } from '../../lib/tableSt
 import { incrementShiftAggregate, decrementShiftAggregate, getBranchTodayAggregate } from '../../lib/shiftAggregate';
 import { invalidatePattern } from '../../lib/cache';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
-import { enqueueZapierEvent } from '../../lib/webhooks';
+import { enqueueZapierEvent, enqueueCustomWebhookEvent } from '../../lib/webhooks';
 import { erpSyncQueue, analyticsQueue } from '../../lib/queue';
 import { redeemLoyaltyForOrder, earnLoyaltyForOrder } from '../loyalty/loyalty.service';
 import { deductInventoryForOrder, reverseOrDiscardInventoryForCancelledOrder } from '../inventory/inventory.service';
@@ -351,6 +351,7 @@ export async function createOrder(
   }
 
   enqueueZapierEvent({ tenantId, event: 'order.created', payload: order }).catch(() => {});
+  enqueueCustomWebhookEvent({ tenantId, event: 'order.created', payload: order }).catch(() => {});
 
   // Asynchronously process loyalty redemption (if any) during order creation
   if (orderData.redeemedPointsAmount) {
@@ -954,9 +955,16 @@ export async function enqueueOrderEvents(
   redeemedPointsAmount?: number
 ) {
   await enqueueZapierEvent({ tenantId, event: 'order.updated', payload: order }).catch(() => {});
+  if (order.status === 'IN_KITCHEN') {
+    await enqueueCustomWebhookEvent({ tenantId, event: 'order.sent_to_kitchen', payload: order }).catch(() => {});
+  }
+  if (order.status === 'READY') {
+    await enqueueCustomWebhookEvent({ tenantId, event: 'order.marked_ready', payload: order }).catch(() => {});
+  }
   if (order.status === 'CANCELLED') {
     recordOrderVoided(order, { amount: Number(order.netAmount ?? 0), wholeOrder: true });
     await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
+    await enqueueCustomWebhookEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
     // If this order had already completed (a rare reopen-then-void), back it
     // out of the shift's running totals (spec Part 7 / Part 12).
     if (order.sideEffectsAppliedAt) {
@@ -999,8 +1007,29 @@ export async function enqueueOrderEvents(
         redeemLoyaltyForOrder(order, redeemedPointsAmount).catch(e => console.error('Loyalty Redeem Error:', e));
       }
 
-      deductInventoryForOrder(order.id).catch(e => console.error('Inventory Deduction Error:', e));
+      deductInventoryForOrder(order.id).catch(async (e) => {
+        console.error('Inventory Deduction Error:', e);
+        // Fire-and-forget by design (must not block payment) — but a failure here means stock
+        // silently drifts from reality, so surface it in the same Anomalies feed the deduction
+        // logic itself already uses for negative-stock cases, instead of only a server log.
+        try {
+          await prisma.anomalyEvent.create({
+            data: {
+              tenantId, branchId: order.branchId, type: 'STOCK_DISCREPANCY', severity: 'HIGH',
+              description: `Automatic stock deduction failed for order #${order.orderNumber}: ${e?.message || 'unknown error'}`,
+              affectedEntityId: order.id,
+            },
+          });
+        } catch (anomalyErr) {
+          console.error('Failed to record inventory-deduction-failure anomaly:', anomalyErr);
+        }
+      });
       await enqueueZapierEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
+      await enqueueCustomWebhookEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
+      // This POS's order lifecycle has no separate "payment collected" step distinct from
+      // completion — an order is marked COMPLETED exactly when its payment is taken — so
+      // payment.collected fires here, with the actual payment rows as its payload.
+      await enqueueCustomWebhookEvent({ tenantId, event: 'payment.collected', payload: { order, payments: payments ?? order.payments } }).catch(() => {});
       await erpSyncQueue.add('erp.sync', { tenantId }, {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },

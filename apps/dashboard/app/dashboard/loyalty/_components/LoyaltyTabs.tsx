@@ -34,7 +34,7 @@ export function LoyaltyTabs({ settings, onRefresh }: { settings: any, onRefresh:
                   : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              <IconComponent size={14} className={activeTab === tab.id ? 'text-[#FF5722]' : 'text-slate-400'} />
+              <IconComponent size={14} className={activeTab === tab.id ? 'text-brand-primary' : 'text-slate-400'} />
               {tab.label}
             </button>
           );

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { getCustomers } from '@/lib/api/customers';
 import { Pagination } from '@/components/ui/Pagination';
 import { Sparkles } from 'lucide-react';
 import { SkeletonTableRows } from '@/components/ui/skeleton';
+import { formatPKR } from '@/lib/formatters';
 
 export function MembersTab() {
   const [loading, setLoading] = useState(true);
@@ -17,8 +18,10 @@ export function MembersTab() {
     setLoading(true);
     setIsError(false);
     try {
-      // Sort by loyalty points to get members
-      const res = await apiFetch<any>(`/api/customers?page=${currentPage}&limit=${pageSize}&sortBy=loyaltyPoints&sortOrder=desc`);
+      // CustomerQuerySchema's sortBy enum has no `loyaltyPoints` field — sort by
+      // lifetime spend instead (highest-spend customers correlate closely with
+      // highest-points members, and it's a real, supported sort key).
+      const res = await getCustomers({ page: currentPage, limit: pageSize, sortBy: 'totalSpend', sortOrder: 'desc' });
       setData(res);
     } catch (e) {
       console.error(e);
@@ -58,7 +61,7 @@ export function MembersTab() {
                   <td colSpan={4}>
                     <div className="p-10 text-center flex flex-col items-center">
                       <p className="text-xs font-bold text-red-500 mb-2">Couldn't load loyalty members.</p>
-                      <button onClick={fetchMembers} className="text-xs font-semibold text-[#FF5722] hover:underline">
+                      <button onClick={fetchMembers} className="text-xs font-semibold text-brand-primary hover:underline">
                         Try again
                       </button>
                     </div>
@@ -94,26 +97,25 @@ export function MembersTab() {
                         <div>
                           <p className="text-[13px] font-bold text-slate-900">{c.name}</p>
                           <span className="text-[11px] font-medium text-slate-500">
-                            Member since {new Date(c.createdAt).toLocaleDateString()}
+                            {c.phone || c.email || `Member since ${new Date(c.createdAt).toLocaleDateString()}`}
                           </span>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-[13px] font-medium text-slate-700">{c.phone || '—'}</p>
-                      <p className="text-[11px] text-slate-500">{c.email || '—'}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      {c.tierBadgeColor ? (
-                        <span className="px-2 py-1 text-[10px] font-bold uppercase rounded" style={{ backgroundColor: `${c.tierBadgeColor}15`, color: c.tierBadgeColor }}>
-                          {c.tierName}
+                      {c.currentTier ? (
+                        <span className="px-2 py-1 text-[10px] font-bold uppercase rounded" style={{ backgroundColor: `${c.currentTier.badgeColor}15`, color: c.currentTier.badgeColor }}>
+                          {c.currentTier.name}
                         </span>
                       ) : (
                         <span className="text-[12px] font-medium text-slate-500">—</span>
                       )}
                     </td>
+                    <td className="px-6 py-4">
+                      <span className="text-[14px] font-bold text-brand-primary font-mono">{c.loyaltyPoints}</span>
+                    </td>
                     <td className="px-6 py-4 text-right">
-                      <span className="text-[14px] font-bold text-[#FF5722]">{c.loyaltyPoints}</span>
+                      <span className="text-[13px] font-bold text-slate-900 font-mono">{formatPKR(c.totalSpend)}</span>
                     </td>
                   </tr>
                 ))

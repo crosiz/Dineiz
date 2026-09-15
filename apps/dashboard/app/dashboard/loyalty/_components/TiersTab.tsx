@@ -2,26 +2,33 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
+import { toast } from 'sonner';
 import { Button } from '@dineiz/ui/src/components/button';
 import { Input } from '@dineiz/ui/src/components/input';
 import { Pagination } from '@/components/ui/Pagination';
 import { SkeletonList } from '@/components/ui/skeleton';
-import { Trash2, Award, Plus } from 'lucide-react';
+import { Trash2, Award, Plus, AlertTriangle } from 'lucide-react';
 
 export function TiersTab() {
   const [tiers, setTiers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({ name: '', minPoints: 0, multiplier: 1, badgeColor: '#FF5722' });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchTiers = async () => {
+    setLoading(true);
+    setIsError(false);
     try {
       const res = await apiFetch<any[]>('/api/loyalty/tiers');
       setTiers(res);
     } catch (e) {
       console.error(e);
+      setIsError(true);
     } finally {
       setLoading(false);
     }
@@ -40,25 +47,40 @@ export function TiersTab() {
       });
       setIsCreating(false);
       setFormData({ name: '', minPoints: 0, multiplier: 1, badgeColor: '#FF5722' });
+      toast.success('Tier created');
       fetchTiers();
-    } catch (e) {
-      alert('Failed to create tier');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to create tier');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure?')) return;
+  const confirmDeleteTier = async () => {
+    if (!deleteConfirmId) return;
+    setIsDeleting(true);
     try {
-      await apiFetch(`/api/loyalty/tiers/${id}`, {
-        method: 'DELETE',
-      });
+      await apiFetch(`/api/loyalty/tiers/${deleteConfirmId}`, { method: 'DELETE' });
+      toast.success('Tier deleted');
+      setDeleteConfirmId(null);
       fetchTiers();
-    } catch (e) {
-      alert('Failed to delete tier');
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete tier');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   if (loading) return <SkeletonList rows={4} />;
+
+  if (isError) {
+    return (
+      <div className="p-10 text-center flex flex-col items-center">
+        <p className="text-xs font-bold text-red-500 mb-2">Couldn't load membership tiers.</p>
+        <button onClick={fetchTiers} className="text-xs font-semibold text-brand-primary hover:underline">
+          Try again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -70,7 +92,7 @@ export function TiersTab() {
         {!isCreating && (
           <button 
             onClick={() => setIsCreating(true)}
-            className="h-9 px-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+            className="h-9 px-3.5 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
           >
             <Plus size={15} /> Add Tier
           </button>
@@ -135,7 +157,7 @@ export function TiersTab() {
             </button>
             <button
               type="submit"
-              className="h-8 px-4 text-xs font-semibold rounded-lg bg-[#FF5722] hover:bg-[#F4511E] text-white shadow-xs"
+              className="h-8 px-4 text-xs font-semibold rounded-lg bg-brand-primary hover:bg-brand-primary/90 text-white shadow-xs"
             >
               Save Tier
             </button>
@@ -163,9 +185,9 @@ export function TiersTab() {
                     </span>
                   </td>
                   <td className="py-3 px-5 font-mono font-bold text-slate-900">{tier.minPoints} pts</td>
-                  <td className="py-3 px-5 font-mono font-bold text-[#FF5722]">{tier.multiplier}x</td>
+                  <td className="py-3 px-5 font-mono font-bold text-brand-primary">{tier.multiplier}x</td>
                   <td className="py-3 px-5 text-right">
-                    <button onClick={() => handleDelete(tier.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors">
+                    <button onClick={() => setDeleteConfirmId(tier.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition-colors">
                       <Trash2 size={14} />
                     </button>
                   </td>
@@ -194,7 +216,7 @@ export function TiersTab() {
             <Pagination 
               currentPage={currentPage} 
               totalPages={Math.ceil(tiers.length / pageSize)} 
-              onPageChange={setCurrentPage} 
+              onPageChange={setCurrentPage}
               pageSize={pageSize}
               onPageSizeChange={(size) => {
                 setPageSize(size);
@@ -204,6 +226,35 @@ export function TiersTab() {
           </div>
         )}
       </div>
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !isDeleting && setDeleteConfirmId(null)} />
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Delete this tier?</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Members currently sitting in this tier will lose its multiplier and benefits. This can't be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setDeleteConfirmId(null)} disabled={isDeleting} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-50">
+                Keep Tier
+              </button>
+              <button
+                onClick={confirmDeleteTier}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Tier'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

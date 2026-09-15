@@ -1,63 +1,108 @@
 ---
 import CartIsland from "./CartIsland";
-const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8080";
-const tenantId = Astro.url.searchParams.get("tenantId");
-const branchId = Astro.url.searchParams.get("branchId");
+
+const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:4000";
+// Astro.url is built from the matched route pattern, not the live request, on a page
+// that isn't explicitly opted out of static prerendering (the default here) — it never
+// carries real query params, even under `astro dev`. Astro.request.url is the actual
+// incoming request URL and does.
+const requestUrl = new URL(Astro.request.url);
+const tenantId = requestUrl.searchParams.get("tenantId");
+const branchId = requestUrl.searchParams.get("branchId");
+const table = requestUrl.searchParams.get("table");
 
 let categories: any[] = [];
-if (tenantId) {
-  // For now we reuse /api/menu (auth-based). In a real QR menu we’d expose a public endpoint.
-  // This is a scaffold for tasks 78–79.
+let menuEnabled = true;
+let loadError: string | null = null;
+let settings: any = null;
+
+if (tenantId && branchId) {
   try {
-    const res = await fetch(`${API_URL}/api/menu`, { credentials: "include" as any });
-    categories = await res.json();
+    const res = await fetch(
+      `${API_URL}/api/qr/menu?tenantId=${encodeURIComponent(tenantId)}&branchId=${encodeURIComponent(branchId)}`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      menuEnabled = data.enabled;
+      categories = data.categories ?? [];
+      settings = data.settings ?? null;
+    } else {
+      loadError = "Couldn't load the menu. Please try scanning the QR code again.";
+    }
   } catch {
-    categories = [];
+    loadError = "Couldn't load the menu. Please try scanning the QR code again.";
   }
+}
+
+function formatPKR(n: number) {
+  return `PKR ${Math.round(n).toLocaleString("en-US")}`;
 }
 ---
 
 <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap">
   <div style="flex: 1; min-width: 320px">
     <h1 style="margin: 8px 0 4px; font-size: 24px;">QR Menu</h1>
-    <p style="margin: 0 0 12px; color:#94a3b8; font-size: 13px;">
-      Mobile menu + island cart scaffold.
-    </p>
-
-    {!tenantId && (
-      <div style="padding:12px; border:1px solid #334155; border-radius:12px; background:#0f172a;">
-        Add <code>?tenantId=...</code> to URL to load menu.
-      </div>
+    {settings?.welcomeMessage && (
+      <p style="margin: 0 0 12px; color:#94a3b8; font-size: 13px;">{settings.welcomeMessage}</p>
     )}
 
-    {categories?.map((cat) => (
-      <div style="margin-top: 14px;">
-        <h2 style="margin: 0 0 8px; font-size: 16px; color:#f1f5f9;">{cat.name}</h2>
-        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">
-          {cat.items?.map((item: any) => (
-            <button
-              class="item"
-              data-id={item.id}
-              data-name={item.name}
-              data-price={item.basePrice}
-              style="text-align:left; padding:12px; border-radius:14px; background:#0f172a; border:1px solid #334155; cursor:pointer; color:#f1f5f9;"
-            >
-              <div style="font-weight:700; font-size:14px;">{item.name}</div>
-              <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Rs. {Math.round(item.basePrice)}</div>
-            </button>
-          ))}
-        </div>
+    {(!tenantId || !branchId) ? (
+      <div style="padding:14px; border:1px solid #334155; border-radius:12px; background:#0f172a; color:#f1f5f9;">
+        This link is missing some details — please scan the QR code at your table.
       </div>
-    ))}
+    ) : loadError ? (
+      <div style="padding:14px; border:1px solid #7f1d1d; border-radius:12px; background:#1e1215; color:#fca5a5;">
+        {loadError}
+      </div>
+    ) : !menuEnabled ? (
+      <div style="padding:14px; border:1px solid #334155; border-radius:12px; background:#0f172a; color:#f1f5f9;">
+        Online ordering isn't available for this restaurant right now.
+      </div>
+    ) : categories.length === 0 ? (
+      <div style="padding:14px; border:1px solid #334155; border-radius:12px; background:#0f172a; color:#94a3b8;">
+        No menu items are available right now.
+      </div>
+    ) : (
+      categories.map((cat: any) => (
+        <div style="margin-top: 14px;">
+          <h2 style="margin: 0 0 8px; font-size: 16px; color:#f1f5f9;">{cat.name}</h2>
+          <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px;">
+            {cat.items?.map((item: any) => (
+              <button
+                class="item"
+                data-id={item.id}
+                data-name={item.name}
+                data-price={item.basePrice}
+                style="text-align:left; padding:12px; border-radius:14px; background:#0f172a; border:1px solid #334155; cursor:pointer; color:#f1f5f9;"
+              >
+                <div style="font-weight:700; font-size:14px;">{item.name}</div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">{formatPKR(item.basePrice)}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))
+    )}
+
+    {settings?.footerMessage && (
+      <p style="margin: 20px 0 0; color:#64748b; font-size: 12px;">{settings.footerMessage}</p>
+    )}
   </div>
 
   <div style="width: 340px; min-width: 320px;">
-    <CartIsland client:load />
+    <CartIsland
+      client:load
+      apiUrl={API_URL}
+      tenantId={tenantId}
+      branchId={branchId}
+      tableId={table}
+      allowModifications={settings?.allowModifications ?? false}
+    />
   </div>
 </div>
 
 <script>
-  // Click-to-add bridge to island
+  // Click-to-add bridge to the CartIsland
   document.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest("button.item") as HTMLButtonElement | null;
     if (!btn) return;
@@ -71,27 +116,48 @@ if (tenantId) {
 </script>
 
 <script>
-  // Waiter call (Task 80) — emits to Socket.IO /qr namespace
-  const API_URL = (import.meta.env.PUBLIC_API_URL || "http://localhost:8080");
+  // Call-waiter button — emits to the Socket.IO /qr namespace
+  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:4000";
   const branchId = new URL(location.href).searchParams.get("branchId");
-  const table = new URL(location.href).searchParams.get("table") || "T1";
+  const table = new URL(location.href).searchParams.get("table");
+
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed; bottom:16px; left:16px; display:flex; flex-direction:column; align-items:flex-start; gap:8px; z-index:20;";
 
   const btn = document.createElement("button");
   btn.textContent = "Call Waiter";
-  btn.style.cssText = "position:fixed; bottom:16px; left:16px; padding:12px 14px; border-radius:14px; border:1px solid #334155; background:#f97316; font-weight:900; cursor:pointer;";
-  document.body.appendChild(btn);
+  btn.style.cssText = "padding:12px 14px; border-radius:14px; border:none; background:#ea580c; color:#fff; font-weight:700; cursor:pointer;";
+  wrap.appendChild(btn);
+
+  const statusEl = document.createElement("span");
+  statusEl.style.cssText = "font-size:12px; color:#e2e8f0; background:#1e293b; border:1px solid #334155; border-radius:8px; padding:6px 10px; display:none; max-width:220px;";
+  wrap.appendChild(statusEl);
+
+  document.body.appendChild(wrap);
+
+  const showStatus = (text: string) => {
+    statusEl.textContent = text;
+    statusEl.style.display = "inline-block";
+    window.setTimeout(() => { statusEl.style.display = "none"; }, 4000);
+  };
 
   btn.addEventListener("click", async () => {
+    if (!branchId) {
+      showStatus("Can't call a waiter from this link — please rescan the QR code at your table.");
+      return;
+    }
+    btn.setAttribute("disabled", "true");
     try {
       const { io } = await import("https://cdn.socket.io/4.8.1/socket.io.esm.min.js");
       const socket = io(`${API_URL}/qr`, { transports: ["websocket"] });
-      if (branchId) socket.emit("join_branch", branchId);
-      socket.emit("waiter:call", { branchId, table });
-      alert("Waiter called.");
-      socket.disconnect();
+      socket.emit("join_branch", branchId);
+      socket.emit("waiter:call", { branchId, table: table || undefined });
+      showStatus("Waiter called — someone will be with you shortly.");
+      window.setTimeout(() => socket.disconnect(), 500);
     } catch {
-      alert("Could not call waiter (socket import failed).");
+      showStatus("Couldn't reach the restaurant — please flag down staff directly.");
+    } finally {
+      btn.removeAttribute("disabled");
     }
   });
 </script>
-

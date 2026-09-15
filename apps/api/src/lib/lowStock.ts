@@ -1,14 +1,12 @@
 import { prisma } from '@dineiz/db';
 import { getFcm } from './fcm';
+import { enqueueCustomWebhookEvent } from './webhooks';
 
 export async function sendLowStockIfNeeded(args: {
   tenantId: string;
   branchId: string;
   ingredientId: string;
 }) {
-  const messaging = getFcm();
-  if (!messaging) return;
-
   const stock = await prisma.stock.findUnique({
     where: { branchId_ingredientId: { branchId: args.branchId, ingredientId: args.ingredientId } },
     include: { ingredient: true, branch: true },
@@ -16,6 +14,24 @@ export async function sendLowStockIfNeeded(args: {
   if (!stock) return;
   if (stock.reorderLevel <= 0) return;
   if (stock.quantity > stock.reorderLevel) return;
+
+  // Webhook delivery is a separate notification channel from FCM push — it must not be
+  // gated behind FCM being configured (the original early-return on `!messaging` above
+  // this check meant a tenant with a working webhook but no FCM setup never got notified).
+  enqueueCustomWebhookEvent({
+    tenantId: args.tenantId,
+    event: 'stock.low_alert',
+    payload: {
+      branchId: args.branchId,
+      ingredientId: args.ingredientId,
+      ingredientName: stock.ingredient.name,
+      quantity: stock.quantity,
+      reorderLevel: stock.reorderLevel,
+    },
+  }).catch(() => {});
+
+  const messaging = getFcm();
+  if (!messaging) return;
 
   const devices = await prisma.userDevice.findMany({
     where: {

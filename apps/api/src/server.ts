@@ -22,7 +22,6 @@ import { notificationRoutes } from './routes/notifications/index';
 import { analyticsRoutes } from './routes/analytics/index';
 import { aiRoutes } from './routes/ai/index';
 import { searchSyncRoutes } from './routes/search-sync/index';
-import { crmRoutes } from './routes/crm/index';
 import { customerRoutes } from './routes/customers/customers.routes';
 import { loyaltyRoutes } from './routes/loyalty/loyalty.routes';
 import { rewardsRoutes } from './routes/rewards/index';
@@ -60,7 +59,7 @@ import { reconcileShiftAggregates } from './jobs/shiftAggregateReconcile';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
 import { startKeepAlive } from './jobs/keep-alive.job';
-import { anomalyQueue, reportsQueue, inventoryQueue } from './lib/queue';
+import { anomalyQueue, reportsQueue, inventoryQueue, customersQueue } from './lib/queue';
 import { sendManagerInviteEmail, sendPasswordResetEmail, sendAnomalyAlertEmail, sendScheduledReportEmail } from './lib/email.service';
 
 // Prevent transient network errors (like Redis ECONNRESET promise rejections) from crashing the server
@@ -155,7 +154,6 @@ async function build() {
   await fastify.register(analyticsRoutes);
   await fastify.register(aiRoutes);
   await fastify.register(searchSyncRoutes);
-  await fastify.register(crmRoutes);
   await fastify.register(customerRoutes, { prefix: '/api/customers' });
   await fastify.register(loyaltyRoutes, { prefix: '/api/loyalty' });
   await fastify.register(rewardsRoutes);
@@ -356,6 +354,7 @@ async function start() {
       // Schedule repeatable jobs
       anomalyQueue.add('detectAnomalies', {}, { repeat: { pattern: '*/15 * * * *' } });
       inventoryQueue.add('checkExpiringIngredients', {}, { repeat: { pattern: '0 6 * * *' } });
+      customersQueue.add('recalculateSegments', {}, { repeat: { pattern: '0 4 * * *' } });
     }
     reportsQueue.add('runReportsJob', {}, { repeat: { pattern: '* * * * *' } });
 

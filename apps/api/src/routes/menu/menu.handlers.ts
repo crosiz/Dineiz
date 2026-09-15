@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 import {
   getFullMenu,
   getCategoriesForTenant,
@@ -89,7 +90,10 @@ export async function handleCreateItem(request: FastifyRequest, reply: FastifyRe
 
 export async function handleUpdateItem(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as any;
-  return updateItem(request.user!.tenantId!, id, request.body as any);
+  const tenantId = request.user!.tenantId!;
+  const item = await updateItem(tenantId, id, request.body as any);
+  enqueueCustomWebhookEvent({ tenantId, event: 'menu.item_updated', payload: item }).catch(() => {});
+  return item;
 }
 
 export async function handleDeleteItem(request: FastifyRequest, reply: FastifyReply) {
@@ -222,5 +226,6 @@ export async function handleBulkUpload(request: FastifyRequest, reply: FastifyRe
 export async function handlePublishMenu(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user!.tenantId!;
   const result = await publishMenu(tenantId, request.body as any);
+  enqueueCustomWebhookEvent({ tenantId, event: 'menu.published', payload: result }).catch(() => {});
   return result;
 }

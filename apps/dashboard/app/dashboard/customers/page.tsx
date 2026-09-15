@@ -8,9 +8,11 @@ import { AdminOnly } from '@/components/admin-only';
 import { toast } from 'sonner';
 import { CustomerDetailSlideOver } from './_components/CustomerDetailSlideOver';
 import { CreateCustomerSlideOver } from './_components/CreateCustomerSlideOver';
+import { ImportCustomersModal } from './_components/ImportCustomersModal';
 import { Pagination } from '@/components/ui/Pagination';
 import { Upload, Download, UserPlus, Search, Users } from 'lucide-react';
 import { SkeletonTableRows } from '@/components/ui/skeleton';
+import { formatPKR } from '@/lib/formatters';
 
 export default function CRMCustomersPage() {
   const searchParams = useSearchParams();
@@ -22,6 +24,7 @@ export default function CRMCustomersPage() {
     () => searchParams.get('customerId')
   );
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
@@ -59,7 +62,7 @@ export default function CRMCustomersPage() {
   const customers = data?.data || [];
   const pagination = data?.meta || { total: 0, page: 1, limit: 25, totalPages: 1 };
 
-  const segmentPills = ['ALL', 'VIP', 'REGULAR', 'NEW', 'AT_RISK', 'LOST'];
+  const segmentPills = ['ALL', 'VIP', 'REGULAR', 'ACTIVE', 'NEW', 'AT_RISK', 'LOST'];
 
   const [isExporting, setIsExporting] = useState(false);
   const handleExport = async () => {
@@ -116,7 +119,7 @@ export default function CRMCustomersPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => toast.info('Bulk import is available via CSV upload')}
+              onClick={() => setIsImportOpen(true)}
               className="h-9 px-3 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors flex items-center gap-1.5 shadow-xs"
             >
               <Upload size={14} className="text-slate-400" /> Import
@@ -130,7 +133,7 @@ export default function CRMCustomersPage() {
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="h-9 px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
+              className="h-9 px-4 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1.5"
             >
               <UserPlus size={15} /> Add Customer
             </button>
@@ -153,7 +156,7 @@ export default function CRMCustomersPage() {
           </div>
           <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500 mb-1">Avg Lifetime Value</p>
-            <h3 className="text-xl font-bold text-slate-900 font-mono">PKR {Math.round(stats.avgLtv).toLocaleString()}</h3>
+            <h3 className="text-xl font-bold text-slate-900 font-mono">{formatPKR(stats.avgLtv)}</h3>
           </div>
         </div>
 
@@ -163,7 +166,7 @@ export default function CRMCustomersPage() {
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              className="w-full h-8 pl-9 pr-3 rounded-lg border border-slate-200 bg-slate-50 text-xs outline-none focus:ring-1 focus:ring-[#FF5722] focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+              className="w-full h-8 pl-9 pr-3 rounded-lg border border-slate-200 bg-slate-50 text-xs outline-none focus:ring-1 focus:ring-brand-primary focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
               placeholder="Search by name, phone, email..."
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -204,7 +207,7 @@ export default function CRMCustomersPage() {
                     <td colSpan={4}>
                       <div className="p-12 text-center flex flex-col items-center">
                         <p className="text-xs font-bold text-red-500 mb-2">Couldn't load customers.</p>
-                        <button onClick={fetchCustomers} className="text-xs font-semibold text-[#FF5722] hover:underline">
+                        <button onClick={fetchCustomers} className="text-xs font-semibold text-brand-primary hover:underline">
                           Try again
                         </button>
                       </div>
@@ -263,7 +266,7 @@ export default function CRMCustomersPage() {
                       {/* Spend */}
                       <td className="px-5 py-3">
                         <div className="text-xs">
-                          <span className="font-bold text-slate-900 font-mono">PKR {(c.totalSpend || 0).toLocaleString()}</span>
+                          <span className="font-bold text-slate-900 font-mono">{formatPKR(c.totalSpend || 0)}</span>
                           <span className="text-slate-400 ml-1.5">({c.totalOrders || 0} orders)</span>
                         </div>
                       </td>
@@ -315,6 +318,12 @@ export default function CRMCustomersPage() {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSubmit={handleCreateCustomer}
+      />
+
+      <ImportCustomersModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImported={fetchCustomers}
       />
     </AdminOnly>
   );

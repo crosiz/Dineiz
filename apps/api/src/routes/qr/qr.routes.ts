@@ -1,10 +1,11 @@
 import { FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/auth';
-import { getQrSettings, updateQrSettings, createQrOrder } from './qr.handlers';
+import { getQrSettings, updateQrSettings, createQrOrder, getGuestMenu } from './qr.handlers';
 
 const qrRoutes: FastifyPluginAsync = async (fastify) => {
-  
+
   // Public endpoints for customers
+  fastify.get('/menu', getGuestMenu);
   fastify.post('/orders', createQrOrder);
 
   // Authenticated endpoints for Dashboard

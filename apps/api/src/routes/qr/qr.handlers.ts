@@ -1,6 +1,20 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { getSettings, saveSettings, handleCreateOrder } from './qr.service';
+import { getSettings, saveSettings, handleCreateOrder, getPublicMenu } from './qr.service';
+
+const qrMenuQuerySchema = z.object({
+  tenantId: z.string().min(1),
+  branchId: z.string().min(1),
+});
+
+export async function getGuestMenu(request: FastifyRequest, reply: FastifyReply) {
+  const parsed = qrMenuQuerySchema.safeParse(request.query);
+  if (!parsed.success) {
+    return reply.status(400).send({ error: parsed.error });
+  }
+  const result = await getPublicMenu(parsed.data.tenantId, parsed.data.branchId);
+  return reply.send(result);
+}
 
 export async function getQrSettings(request: FastifyRequest, reply: FastifyReply) {
   const tenantId = request.user?.tenantId;
@@ -34,9 +48,16 @@ const createOrderSchema = z.object({
 export async function createQrOrder(request: FastifyRequest, reply: FastifyReply) {
   const parsed = createOrderSchema.safeParse(request.body);
   if (!parsed.success) {
-    return reply.status(400).send({ error: parsed.error });
+    return reply.status(400).send({ error: 'Invalid order details.' });
   }
-  
-  const order = await handleCreateOrder(parsed.data);
-  return reply.status(201).send({ order });
+
+  try {
+    const order = await handleCreateOrder(parsed.data);
+    return reply.status(201).send({ order });
+  } catch (e: any) {
+    // handleCreateOrder throws real, readable messages ("QR Ordering is disabled...",
+    // "Some items are invalid...") — without this catch they'd hit Fastify's generic
+    // 500 handler and the guest would never see why their order failed.
+    return reply.status(400).send({ error: e.message || 'Could not place your order.' });
+  }
 }

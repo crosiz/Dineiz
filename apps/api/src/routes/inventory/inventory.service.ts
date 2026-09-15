@@ -6,6 +6,7 @@ import {
 } from '../../lib/socket';
 import { sendWhatsAppMessage } from '../../lib/whatsapp';
 import { sendEmail } from '../../lib/email.service';
+import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SHARED HELPERS — threshold checks, socket emits, auto-disable menu items
@@ -701,7 +702,7 @@ export async function createPurchaseOrder(tenantId: string, data: any, createdBy
   const poNumber = await generatePoNumber(tenantId);
   const estimatedTotal = data.lines.reduce((sum: number, l: any) => sum + (l.orderedQty * (l.estimatedUnitCost || 0)), 0);
 
-  return prisma.purchaseOrder.create({
+  const po = await prisma.purchaseOrder.create({
     data: {
       tenantId,
       branchId: data.branchId,
@@ -726,6 +727,8 @@ export async function createPurchaseOrder(tenantId: string, data: any, createdBy
     },
     include: { lines: { include: { ingredient: true } }, supplier: true },
   });
+  enqueueCustomWebhookEvent({ tenantId, event: 'stock.purchase_order_created', payload: po }).catch(() => {});
+  return po;
 }
 
 export async function updatePurchaseOrder(tenantId: string, id: string, data: any) {
@@ -928,6 +931,7 @@ export async function autoGeneratePurchaseOrder(tenantId: string, branchId: stri
       },
       include: { lines: { include: { ingredient: true } }, supplier: true },
     });
+    enqueueCustomWebhookEvent({ tenantId, event: 'stock.purchase_order_created', payload: po }).catch(() => {});
     created.push(po);
   }
 

@@ -5,6 +5,7 @@ import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../..
 import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
 import { getBusinessDayRange } from '../../lib/date-utils';
 import { applyOrderStatusSideEffects } from '../order/order.service';
+import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 import {
   OpenShiftSchema, CloseShiftSchema, CashEntrySchema,
 } from './shift.schema';
@@ -205,6 +206,7 @@ export async function openShift(tenantId: string, userId: string, data: { branch
   });
   emitShiftEvent(data.branchId, 'opened', shift.id);
   emitDashboardStatsUpdated(tenantId, data.branchId);
+  enqueueCustomWebhookEvent({ tenantId, event: 'shift.opened', payload: shift }).catch(() => {});
   return { conflict: false, shift };
 }
 
@@ -415,6 +417,9 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
 
   emitShiftEvent(shift.branchId, data.pendingSync ? 'pending_sync' : 'closed', id);
   emitDashboardStatsUpdated(tenantId, shift.branchId);
+  if (!data.pendingSync) {
+    enqueueCustomWebhookEvent({ tenantId, event: 'shift.closed', payload: closed }).catch(() => {});
+  }
   return closed;
 }
 

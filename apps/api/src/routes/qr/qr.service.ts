@@ -1,6 +1,28 @@
 import { prisma, OrderStatus, OrderType } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
 import { nextNonPosOrderNumber, type OrderNumberFormat } from '../../lib/orderNumber';
+import { getFullMenu } from '../menu/menu.service';
+
+/** Guest-facing menu — no session required. Returns an explicit `enabled: false` when QR
+ * ordering is off for this tenant, distinct from a genuinely empty menu. */
+export async function getPublicMenu(tenantId: string, branchId: string) {
+  const settings = await getSettings(tenantId);
+  if (!settings.isEnabled) {
+    return { enabled: false, categories: [], settings: null };
+  }
+  const categories = await getFullMenu(tenantId, branchId);
+  return {
+    enabled: true,
+    categories,
+    settings: {
+      allowModifications: settings.allowModifications,
+      showImages: settings.showImages,
+      welcomeMessage: settings.welcomeMessage,
+      footerMessage: settings.footerMessage,
+      allowOnlinePayment: settings.allowOnlinePayment,
+    },
+  };
+}
 
 export async function getSettings(tenantId: string) {
   let settings = await prisma.qrSettings.findUnique({ where: { tenantId } });

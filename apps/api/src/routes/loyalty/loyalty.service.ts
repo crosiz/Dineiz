@@ -1,4 +1,5 @@
 import { prisma } from '@dineiz/db';
+import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 
 export async function redeemLoyaltyForOrder(order: any, redeemedPointsAmount: number) {
   if (!order.customerId || !redeemedPointsAmount || redeemedPointsAmount <= 0) return;
@@ -104,6 +105,14 @@ export async function earnLoyaltyForOrder(order: any) {
     });
 
     for (const camp of activeCampaigns) {
+      if (camp.condition) {
+        try {
+          const condition = JSON.parse(camp.condition);
+          if (condition?.minSpend && order.netAmount < condition.minSpend) continue;
+        } catch {
+          // Malformed condition JSON — treat as "no condition" rather than blocking earning entirely.
+        }
+      }
       if (camp.type === 'MULTIPLIER') {
         earnedPoints *= camp.value;
       } else if (camp.type === 'BONUS') {
@@ -168,7 +177,18 @@ export async function earnLoyaltyForOrder(order: any) {
           data: { currentTierId: nextTier.id }
         });
         // Flag for congratulations whatsapp message
+        enqueueCustomWebhookEvent({
+          tenantId,
+          event: 'loyalty.tier_changed',
+          payload: { customerId: customer.id, fromTierId: customer.currentTierId, toTier: nextTier },
+        }).catch(() => {});
       }
+
+      enqueueCustomWebhookEvent({
+        tenantId,
+        event: 'loyalty.points_earned',
+        payload: { customerId: customer.id, orderId: order.id, points: earnedPoints },
+      }).catch(() => {});
     }
   }
 }

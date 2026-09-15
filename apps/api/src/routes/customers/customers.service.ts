@@ -1,5 +1,6 @@
 import { prisma } from '@dineiz/db';
 import { Prisma } from '@dineiz/db';
+import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
 
 export class CustomersService {
   static normalizePhone(phone: string) {
@@ -36,6 +37,7 @@ export class CustomersService {
         skip,
         take: limit,
         orderBy: { [sortBy]: sortOrder },
+        include: { currentTier: true },
       }),
       prisma.customer.count({ where }),
     ]);
@@ -116,19 +118,23 @@ export class CustomersService {
   }
 
   static async createCustomer(tenantId: string, data: any) {
-    return prisma.customer.create({
+    const customer = await prisma.customer.create({
       data: {
         ...data,
         tenantId,
       },
     });
+    enqueueCustomWebhookEvent({ tenantId, event: 'customer.created', payload: customer }).catch(() => {});
+    return customer;
   }
 
   static async updateCustomer(tenantId: string, customerId: string, data: any) {
-    return prisma.customer.update({
+    const customer = await prisma.customer.update({
       where: { id: customerId, tenantId },
       data,
     });
+    enqueueCustomWebhookEvent({ tenantId, event: 'customer.updated', payload: customer }).catch(() => {});
+    return customer;
   }
 
   static async deleteCustomer(tenantId: string, customerId: string) {
@@ -203,7 +209,7 @@ export class CustomersService {
         data: {
           tenantId,
           customerId,
-          type: data.points > 0 ? 'ADJUST_ADD' : 'ADJUST_DEDUCT',
+          type: 'ADJUST',
           points: data.points,
           note: data.reason,
           reference: `manual_${userId}`
@@ -229,7 +235,12 @@ export class CustomersService {
           results.errors.push({ customer: c, error: 'Phone number is required for deduplication' });
           continue;
         }
-        
+
+        const existing = await prisma.customer.findUnique({
+          where: { tenantId_phone: { tenantId, phone } },
+          select: { id: true },
+        });
+
         await prisma.customer.upsert({
           where: { tenantId_phone: { tenantId, phone } },
           update: {
@@ -249,8 +260,9 @@ export class CustomersService {
             loyaltyPoints: c.loyaltyPoints || 0,
           }
         });
-        // We cannot accurately count created vs updated without checking first, but for performance we just use upsert
-        results.updated++; 
+
+        if (existing) results.updated++;
+        else results.created++;
       } catch (e: any) {
         results.errors.push({ customer: c, error: e.message });
       }

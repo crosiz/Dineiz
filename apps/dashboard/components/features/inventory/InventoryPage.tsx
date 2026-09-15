@@ -8,6 +8,7 @@ import { InventoryFilters } from './InventoryFilters';
 import { InventoryTable } from './InventoryTable';
 import { RecipesTab } from './RecipesTab';
 import { PurchaseOrdersTab } from './purchase-orders/PurchaseOrdersTab';
+import { TransfersTab } from './transfers/TransfersTab';
 import { WastageTab } from './wastage/WastageTab';
 import { PhysicalCountTab } from './counts/PhysicalCountTab';
 import { SuppliersTab } from './suppliers/SuppliersTab';
@@ -82,7 +83,7 @@ export function InventoryPage() {
     setFilters,
   } = useInventory();
 
-  const tabs = ['Stock Levels', 'Ingredients', 'Recipes', 'Purchase Orders', 'Wastage Log', 'Physical Count', 'Suppliers'];
+  const tabs = ['Stock Levels', 'Ingredients', 'Recipes', 'Purchase Orders', 'Transfers', 'Wastage Log', 'Physical Count', 'Suppliers'];
 
   return (
     <div className="p-6 max-w-7xl mx-auto pb-20 relative">
@@ -158,6 +159,12 @@ export function InventoryPage() {
       {activeTab === 'Purchase Orders' && (
         <div className="mt-6">
           <PurchaseOrdersTab />
+        </div>
+      )}
+
+      {activeTab === 'Transfers' && (
+        <div className="mt-6">
+          <TransfersTab />
         </div>
       )}
 

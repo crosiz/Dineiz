@@ -8,8 +8,11 @@ type CreateCustomerSlideOverProps = {
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
   /** Pass an existing customer to edit it in place instead of creating a new one. */
-  initialData?: { name?: string; phone?: string; email?: string; birthday?: string } | null;
+  initialData?: { name?: string; phone?: string; email?: string; birthDate?: string } | null;
 };
+
+// Prisma/API send birthDate as a full ISO timestamp; <input type="date"> requires YYYY-MM-DD.
+const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : '');
 
 export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData }: CreateCustomerSlideOverProps) {
   const isEditing = !!initialData;
@@ -18,7 +21,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
     name: initialData?.name ?? '',
     phone: initialData?.phone ?? '',
     email: initialData?.email ?? '',
-    birthday: initialData?.birthday ?? '',
+    birthDate: toDateInputValue(initialData?.birthDate),
     notes: '',
   });
 
@@ -28,7 +31,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
         name: initialData?.name ?? '',
         phone: initialData?.phone ?? '',
         email: initialData?.email ?? '',
-        birthday: initialData?.birthday ?? '',
+        birthDate: toDateInputValue(initialData?.birthDate),
         notes: '',
       });
     }
@@ -76,7 +79,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
               <input
                 type="text"
                 required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all"
                 placeholder="e.g. Ali Khan"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -88,7 +91,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
               <input
                 type="tel"
                 required
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all"
                 placeholder="e.g. +923001234567"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -99,7 +102,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
               <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address (Optional)</label>
               <input
                 type="email"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all"
                 placeholder="e.g. ali@example.com"
                 value={formData.email}
                 onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -110,9 +113,9 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
               <label className="block text-xs font-semibold text-slate-700 mb-1">Birthday (Optional)</label>
               <input
                 type="date"
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#FF5722] focus:border-[#FF5722] transition-all"
-                value={formData.birthday}
-                onChange={e => setFormData({ ...formData, birthday: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                value={formData.birthDate}
+                onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
               />
             </div>
 
@@ -142,7 +145,7 @@ export function CreateCustomerSlideOver({ isOpen, onClose, onSubmit, initialData
             type="submit"
             onClick={handleSubmit}
             disabled={loading}
-            className="h-9 px-5 bg-[#FF5722] hover:bg-[#F4511E] text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center min-w-[120px] text-xs disabled:opacity-70 disabled:cursor-not-allowed gap-1.5"
+            className="h-9 px-5 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center justify-center min-w-[120px] text-xs disabled:opacity-70 disabled:cursor-not-allowed gap-1.5"
           >
             {loading ? <Loader2 size={15} className="animate-spin" /> : isEditing ? 'Save Changes' : 'Create Customer'}
           </button>

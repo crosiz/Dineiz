@@ -10,6 +10,18 @@ import { listDeliveries, listRiders, createRider, assignRider, updateDeliverySta
 
 const LOCATION_PREFIX = 'rider:loc:';
 
+// Great-circle distance in km between two lat/lng points.
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 interface GetRidersQuery {
   tenantId: string;
   branchId: string;
@@ -44,7 +56,7 @@ export async function getRidersHandler(
           status: { in: ['ASSIGNED', 'PICKED_UP'] }
         },
         include: {
-          order: true
+          order: { include: { deliveryZone: true } }
         }
       }
     }
@@ -66,26 +78,8 @@ export async function getRidersHandler(
   const parsedRiders = await Promise.all(riders.map(async (rider) => {
     // Determine status
     let computedStatus: 'AVAILABLE' | 'ON_DELIVERY' | 'OFFLINE' = rider.status === 'ACTIVE' ? 'AVAILABLE' : 'OFFLINE';
-    
-    let currentDelivery = null;
-    const activeAssignment = rider.riderAssignments[0];
-    
-    if (activeAssignment) {
-      computedStatus = 'ON_DELIVERY';
-      const order = activeAssignment.order;
-      currentDelivery = {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: order.notes?.includes('customer:') ? order.notes.split('customer:')[1].trim() : 'Customer', // best effort without customer relation
-        etaMinutes: Math.round((order.deliveryEtaSec || 1800) / 60),
-        distanceKm: 2.5, // Mocked or calculated if we have branch location
-        stage: activeAssignment.status === 'ASSIGNED' ? 'EN_ROUTE' : activeAssignment.status === 'PICKED_UP' ? 'PICKED_UP' : 'COMPLETED',
-        destinationLat: order.deliveryLat || 24.8607,
-        destinationLng: order.deliveryLng || 67.0011,
-      };
-    }
 
-    // Get location from Redis
+    // Get location from Redis first — distanceKm below is computed from it, not mocked.
     const locStr = await redis.get(`${LOCATION_PREFIX}${rider.id}`);
     let location = null;
     if (locStr) {
@@ -94,11 +88,35 @@ export async function getRidersHandler(
       } catch (e) {}
     }
 
+    let currentDelivery = null;
+    const activeAssignment = rider.riderAssignments[0];
+
+    if (activeAssignment) {
+      computedStatus = 'ON_DELIVERY';
+      const order = activeAssignment.order;
+      const destinationLat = order.deliveryLat || 24.8607;
+      const destinationLng = order.deliveryLng || 67.0011;
+      currentDelivery = {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: order.notes?.includes('customer:') ? order.notes.split('customer:')[1].trim() : 'Customer', // best effort without customer relation
+        etaMinutes: Math.round((order.deliveryEtaSec || 1800) / 60),
+        // Real haversine distance from the rider's last known location — null (not a fake
+        // number) when we have no recent location ping for them.
+        distanceKm: location ? Number(haversineKm(location.lat, location.lng, destinationLat, destinationLng).toFixed(1)) : null,
+        stage: activeAssignment.status === 'ASSIGNED' ? 'EN_ROUTE' : activeAssignment.status === 'PICKED_UP' ? 'PICKED_UP' : 'COMPLETED',
+        destinationLat,
+        destinationLng,
+      };
+    }
+
     // Calculate today's stats
     const riderCompleted = completedAssignments.filter(a => a.riderId === rider.id);
     const deliveries = riderCompleted.length;
-    const earnings = deliveries * 200; // Mock: PKR 200 per delivery
-    const rating = 4.8; // Mock rating
+    // No commission/fee field exists anywhere on RiderAssignment/Order, and no rating/review
+    // model exists in the schema — earnings and rating used to be fabricated numbers here
+    // (deliveries * 200, a flat 4.8). Showing a gig worker a made-up money figure is worse
+    // than not showing one, so these are intentionally omitted until real data exists.
 
     return {
       id: rider.id,
@@ -107,13 +125,11 @@ export async function getRidersHandler(
       avatarInitials: rider.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
       avatarColor: rider.avatarColor || '#FF5722',
       status: computedStatus,
-      zone: 'Downtown Zone', // Mocked or from delivery zones
+      zone: activeAssignment?.order?.deliveryZone?.name ?? null,
       currentDelivery,
       location,
       todayStats: {
         deliveries,
-        earnings,
-        rating
       }
     };
   }));
@@ -127,7 +143,8 @@ export async function getRidersHandler(
   const onDelivery = parsedRiders.filter(r => r.status === 'ON_DELIVERY').length;
   const offline = parsedRiders.filter(r => r.status === 'OFFLINE').length;
   const activeDeliveries = onDelivery;
-  const avgDeliveryTimeMin = 28; // Mocked
+  // avgDeliveryTimeMin was a hardcoded `28` — no real per-delivery timing data exists to
+  // compute it from, so it's omitted rather than shown as a fabricated number.
 
   return reply.send({
     summary: {
@@ -136,7 +153,6 @@ export async function getRidersHandler(
       onDelivery,
       offline,
       activeDeliveries,
-      avgDeliveryTimeMin
     },
     riders: filteredRiders
   });
@@ -161,7 +177,7 @@ export async function assignOrderHandler(
     return reply.status(400).send({ error: 'Rider is already on a delivery' });
   }
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { customer: true } });
   if (!order || order.status !== 'READY') {
     return reply.status(400).send({ error: 'Order is not READY for delivery' });
   }
@@ -185,7 +201,7 @@ export async function assignOrderHandler(
     delivery: {
       orderId: order.id,
       orderNumber: order.orderNumber,
-      customerName: 'Customer', // mock
+      customerName: order.customer?.name || 'Customer',
       etaMinutes: 15,
       distanceKm: 2.5,
       stage: 'EN_ROUTE',

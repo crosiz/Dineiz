@@ -3,7 +3,6 @@ import { requireAuth } from './auth';
 
 const TENANT_ADMIN_ONLY_ROUTES = [
   '/api/deals',
-  '/api/crm',
   '/api/loyalty',
   '/api/integrations',
   '/api/fleet',

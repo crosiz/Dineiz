@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { getCustomer, addCustomerNote, updateCustomer } from '@/lib/api/customers';
+import { getCustomer, addCustomerNote, updateCustomer, deleteCustomer, adjustLoyaltyPoints } from '@/lib/api/customers';
 import { apiFetch } from '@/lib/api';
 import { toast } from 'sonner';
 import { CreateCustomerSlideOver } from './CreateCustomerSlideOver';
 import {
   X, Phone, Mail, Award, MessageSquare, FileText, Edit2,
-  User, Tag, Receipt, PlusCircle, MinusCircle, Send, Sparkles
+  User, Tag, Receipt, PlusCircle, MinusCircle, Send, Sparkles, Trash2, AlertTriangle, Loader2
 } from 'lucide-react';
 import { Skeleton, SkeletonDetail } from '@/components/ui/skeleton';
+import { formatPKR } from '@/lib/formatters';
 
 type LoyaltyTier = { id: string; name: string; minPoints: number; badgeColor: string };
 
@@ -26,6 +27,12 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
   const [newNote, setNewNote] = useState('');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [tiers, setTiers] = useState<LoyaltyTier[]>([]);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAdjustingPoints, setIsAdjustingPoints] = useState(false);
+  const [adjustPointsValue, setAdjustPointsValue] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
+  const [isSubmittingAdjust, setIsSubmittingAdjust] = useState(false);
 
   React.useEffect(() => {
     async function load() {
@@ -60,6 +67,40 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
     } catch (e) {
       console.error(e);
       toast.error('Failed to add note');
+    }
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCustomer(customerId);
+      toast.success('Customer deleted');
+      setIsDeleteConfirmOpen(false);
+      onUpdate();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to delete customer');
+      setIsDeleting(false);
+    }
+  };
+
+  const submitAdjustPoints = async () => {
+    const points = Math.round(Number(adjustPointsValue));
+    if (!points || !adjustReason.trim()) return;
+    setIsSubmittingAdjust(true);
+    try {
+      await adjustLoyaltyPoints(customerId, points, adjustReason.trim());
+      toast.success('Points adjusted');
+      setIsAdjustingPoints(false);
+      setAdjustPointsValue('');
+      setAdjustReason('');
+      const res = await getCustomer(customerId);
+      setCustomer(res);
+      onUpdate();
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to adjust points');
+    } finally {
+      setIsSubmittingAdjust(false);
     }
   };
 
@@ -106,7 +147,7 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 bg-[#FF5722]/10 text-[#FF5722] rounded-xl flex items-center justify-center text-xl font-bold border border-[#FF5722]/20">
+            <div className="h-14 w-14 bg-brand-primary/10 text-brand-primary rounded-xl flex items-center justify-center text-xl font-bold border border-brand-primary/20">
               {customer.name ? customer.name.substring(0, 2).toUpperCase() : 'G'}
             </div>
             <div>
@@ -142,15 +183,15 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
             </div>
             <div className="bg-slate-50 rounded-lg p-2.5 text-center border border-slate-200/60">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Spend</div>
-              <div className="text-sm font-bold text-slate-900 font-mono">PKR {customer.totalSpend.toLocaleString()}</div>
+              <div className="text-sm font-bold text-slate-900 font-mono">{formatPKR(customer.totalSpend)}</div>
             </div>
             <div className="bg-slate-50 rounded-lg p-2.5 text-center border border-slate-200/60">
               <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-0.5">Avg Order</div>
-              <div className="text-sm font-bold text-slate-900 font-mono">PKR {customer.totalOrders > 0 ? Math.round(customer.totalSpend / customer.totalOrders).toLocaleString() : 0}</div>
+              <div className="text-sm font-bold text-slate-900 font-mono">{formatPKR(customer.totalOrders > 0 ? customer.totalSpend / customer.totalOrders : 0)}</div>
             </div>
-            <div className="bg-[#FF5722]/10 rounded-lg p-2.5 text-center border border-[#FF5722]/20">
-              <div className="text-[10px] font-semibold text-[#FF5722] uppercase tracking-wider mb-0.5">Points</div>
-              <div className="text-sm font-bold text-[#FF5722] font-mono">{customer.loyaltyPoints}</div>
+            <div className="bg-brand-primary/10 rounded-lg p-2.5 text-center border border-brand-primary/20">
+              <div className="text-[10px] font-semibold text-brand-primary uppercase tracking-wider mb-0.5">Points</div>
+              <div className="text-sm font-bold text-brand-primary font-mono">{customer.loyaltyPoints}</div>
             </div>
           </div>
           
@@ -171,6 +212,13 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
             <button onClick={() => setIsEditOpen(true)} className="flex-1 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-slate-200 shadow-xs">
               <Edit2 size={13} /> Edit Profile
             </button>
+            <button
+              onClick={() => setIsDeleteConfirmOpen(true)}
+              title="Delete customer"
+              className="w-8 h-8 shrink-0 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-slate-200 hover:border-red-200"
+            >
+              <Trash2 size={13} />
+            </button>
           </div>
         </div>
         
@@ -179,12 +227,12 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
           {(['PROFILE', 'ORDERS', 'LOYALTY', 'NOTES'] as const).map(tab => (
             <button 
               key={tab}
-              className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors relative ${activeTab === tab ? 'text-[#FF5722]' : 'text-slate-400 hover:text-slate-700'}`}
+              className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider transition-colors relative ${activeTab === tab ? 'text-brand-primary' : 'text-slate-400 hover:text-slate-700'}`}
               onClick={() => setActiveTab(tab)}
             >
               {tab}
               {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF5722] rounded-t-full" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary rounded-t-full" />
               )}
             </button>
           ))}
@@ -213,7 +261,7 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                   </div>
                   <div>
                     <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-0.5">Birthday</label>
-                    <div className="text-xs text-slate-900">{customer.birthday ? new Date(customer.birthday).toLocaleDateString() : '—'}</div>
+                    <div className="text-xs text-slate-900">{customer.birthDate ? new Date(customer.birthDate).toLocaleDateString() : '—'}</div>
                   </div>
                 </div>
               </div>
@@ -263,7 +311,7 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-slate-900 text-xs font-mono">PKR {o.netAmount.toLocaleString()}</div>
+                    <div className="font-bold text-slate-900 text-xs font-mono">{formatPKR(o.netAmount)}</div>
                     <div className="text-[10px] font-semibold px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded inline-block mt-0.5 uppercase border border-emerald-200">
                       {o.status}
                     </div>
@@ -296,7 +344,7 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                         {nextTier && <span className="text-slate-400">{nextTier.name}</span>}
                       </div>
                       <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#FF5722] rounded-full" style={{ width: `${tierProgressPercent}%` }} />
+                        <div className="h-full bg-brand-primary rounded-full" style={{ width: `${tierProgressPercent}%` }} />
                       </div>
                       <div className="text-[11px] text-slate-400 text-right">
                         {nextTier ? `${nextTier.minPoints - points} points to ${nextTier.name}` : 'Highest tier reached'}
@@ -307,9 +355,53 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
               </div>
               
               <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-slate-100">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <h3 className="text-xs font-bold text-slate-900">Points History</h3>
+                  {!isAdjustingPoints && (
+                    <button
+                      onClick={() => setIsAdjustingPoints(true)}
+                      className="text-xs font-semibold text-brand-primary hover:underline"
+                    >
+                      Adjust Points
+                    </button>
+                  )}
                 </div>
+                {isAdjustingPoints && (
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 space-y-2.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        placeholder="e.g. 100 or -50"
+                        value={adjustPointsValue}
+                        onChange={e => setAdjustPointsValue(e.target.value)}
+                        className="w-32 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Reason (required)"
+                        value={adjustReason}
+                        onChange={e => setAdjustReason(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-primary focus:border-brand-primary"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setIsAdjustingPoints(false); setAdjustPointsValue(''); setAdjustReason(''); }}
+                        className="h-7 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={submitAdjustPoints}
+                        disabled={isSubmittingAdjust || !adjustPointsValue || !Number(adjustPointsValue) || !adjustReason.trim()}
+                        className="h-7 px-3 bg-brand-primary hover:bg-brand-primary/90 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {isSubmittingAdjust ? <Loader2 size={12} className="animate-spin" /> : null}
+                        Save Adjustment
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="divide-y divide-slate-100 text-xs">
                   {customer.points?.map((p: any) => (
                     <div key={p.id} className="px-4 py-3 flex justify-between items-center hover:bg-slate-50/60 transition-colors">
@@ -382,7 +474,7 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
                 <button 
                   onClick={addNote} 
                   disabled={!newNote.trim()}
-                  className="h-8 px-3 bg-[#FF5722] hover:bg-[#F4511E] text-white rounded-lg flex items-center justify-center disabled:opacity-50 transition-colors shrink-0 gap-1 text-xs font-semibold"
+                  className="h-8 px-3 bg-brand-primary hover:bg-brand-primary/90 text-white rounded-lg flex items-center justify-center disabled:opacity-50 transition-colors shrink-0 gap-1 text-xs font-semibold"
                 >
                   <Send size={13} /> Add
                 </button>
@@ -409,6 +501,39 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
           }
         }}
       />
+
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => !isDeleting && setIsDeleteConfirmOpen(false)} />
+          <div className="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} className="text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Delete {customer.name}?</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              This removes their profile and personal details from your customer list. Their past orders stay on record, but can no longer be attributed to a named customer. This can't be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-50"
+              >
+                Keep Customer
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Customer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

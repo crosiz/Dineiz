@@ -83,6 +83,17 @@ export async function dispatchTransfer(
           note: `Dispatched on transfer ${transfer.transferNumber}`,
         },
       });
+
+      if (quantityBefore - dispatchedQty < 0) {
+        const ingredient = await tx.ingredient.findUnique({ where: { id: line.ingredientId }, select: { name: true } });
+        await tx.anomalyEvent.create({
+          data: {
+            tenantId, branchId: transfer.fromBranchId, type: 'STOCK_DISCREPANCY', severity: 'HIGH',
+            description: `Transfer ${transfer.transferNumber} dispatched ${dispatchedQty} of ${ingredient?.name ?? 'an ingredient'} but only ${quantityBefore} was on hand. Stock reset to 0.`,
+            affectedEntityId: id,
+          },
+        });
+      }
     }
 
     await tx.stockTransfer.update({ where: { id }, data: { status: 'IN_TRANSIT', dispatchedAt: new Date(), approvedById: dispatchedBy.id } });
