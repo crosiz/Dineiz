@@ -10,108 +10,24 @@ import { Plus } from 'lucide-react';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { AllBranchesBanner } from '@/components/AllBranchesBanner';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { SkeletonTable } from '@/components/ui/skeleton';
 
-// ─── Skeleton that exactly matches the real StaffTable columns ────────────────
+// ─── Skeleton that tracks the real StaffTable columns ────────────────────────
 function StaffTableSkeleton({ showBranchColumn }: { showBranchColumn: boolean }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="border-b border-slate-100 text-[11px] uppercase text-slate-500 font-bold tracking-wider">
-            <tr>
-              <th className="w-[280px] px-6 py-4">Name</th>
-              <th className="w-40 px-6 py-4">Role</th>
-              {showBranchColumn && <th className="w-40 px-6 py-4">Branch</th>}
-              <th className="w-32 px-6 py-4">Status</th>
-              <th className="w-32 px-6 py-4">Last Active</th>
-              <th className="w-32 px-6 py-4">Biometric</th>
-              <th className="w-20 px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {[0, 80, 160, 240, 320].map((delay) => (
-              <tr key={delay} className="border-b border-slate-100">
-                {/* NAME: avatar + two lines */}
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full bg-slate-200 animate-pulse shrink-0"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                    <div className="space-y-1.5">
-                      <div
-                        className="h-3.5 w-32 bg-slate-200 rounded animate-pulse"
-                        style={{ animationDelay: `${delay}ms` }}
-                      />
-                      <div
-                        className="h-3 w-24 bg-slate-100 rounded animate-pulse"
-                        style={{ animationDelay: `${delay + 40}ms` }}
-                      />
-                    </div>
-                  </div>
-                </td>
-                {/* ROLE: pill */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-6 w-24 bg-slate-200 rounded-full animate-pulse"
-                    style={{ animationDelay: `${delay}ms` }}
-                  />
-                </td>
-                {/* BRANCH */}
-                {showBranchColumn && (
-                  <td className="px-6 py-4">
-                    <div
-                      className="h-6 w-20 bg-slate-200 rounded-full animate-pulse"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                  </td>
-                )}
-                {/* STATUS: dot + label */}
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-2 h-2 rounded-full bg-slate-200 animate-pulse shrink-0"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                    <div
-                      className="h-3.5 w-14 bg-slate-200 rounded animate-pulse"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                  </div>
-                </td>
-                {/* LAST ACTIVE */}
-                <td className="px-6 py-4">
-                  <div
-                    className="h-3.5 w-20 bg-slate-200 rounded animate-pulse"
-                    style={{ animationDelay: `${delay}ms` }}
-                  />
-                </td>
-                {/* BIOMETRIC */}
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-1.5">
-                    <div
-                      className="w-3.5 h-3.5 rounded bg-slate-200 animate-pulse shrink-0"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                    <div
-                      className="h-3.5 w-16 bg-slate-200 rounded animate-pulse"
-                      style={{ animationDelay: `${delay}ms` }}
-                    />
-                  </div>
-                </td>
-                {/* ACTIONS: icon button */}
-                <td className="px-6 py-4 text-right">
-                  <div
-                    className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse ml-auto"
-                    style={{ animationDelay: `${delay}ms` }}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <SkeletonTable
+      className="!border-slate-100 shadow-sm"
+      rows={6}
+      columns={[
+        { w: 150, avatar: true },
+        { w: 88, pill: true },
+        ...(showBranchColumn ? [{ w: 72, pill: true } as const] : []),
+        88,
+        72,
+        88,
+        { w: 32, align: 'right' as const },
+      ]}
+    />
   );
 }
 

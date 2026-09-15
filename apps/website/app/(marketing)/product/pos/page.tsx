@@ -1,7 +1,7 @@
 import React from "react";
-import { Tablet, ShieldCheck, Zap, WifiOff, Layout, CreditCard } from "lucide-react";
+import { Tablet, ShieldCheck, Zap, WifiOff, Layout, CreditCard, HelpCircle } from "lucide-react";
 import Link from "next/link";
-import { generateSEOMetadata, generateSoftwareApplicationSchema } from "@/lib/seo";
+import { generateSEOMetadata, generateSoftwareApplicationSchema, generateFAQSchema } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({
   title: "Dineiz POS — Tablet Point of Sale System for Restaurants in Pakistan",
@@ -43,6 +43,8 @@ const features = [
   },
 ];
 
+import { POS_FAQS } from "@/lib/faqs";
+
 export const dynamic = 'force-static';
 
 export default function POSPage() {
@@ -51,12 +53,17 @@ export default function POSPage() {
     "Touch-optimized tablet point of sale system for Pakistani restaurants.",
     "2999"
   );
+  const faqJsonLd = generateFAQSchema(POS_FAQS);
 
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
       {/* Hero */}
@@ -150,7 +157,30 @@ export default function POSPage() {
           </div>
         </div>
       </section>
+
+      {/* POS Specific FAQ Section */}
+      <section className="bg-gray-50 py-16 lg:py-24 border-t border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-brand-600 text-xs font-semibold mb-3">
+              <HelpCircle size={14} className="text-brand-500" />
+              POS Questions Answered
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+              Frequently Asked Questions about Dineiz POS
+            </h2>
+          </div>
+
+          <div className="space-y-4">
+            {POS_FAQS.map((faq, idx) => (
+              <div key={idx} className="bg-white border border-gray-200 rounded-xl p-6 shadow-xs">
+                <h3 className="text-base font-bold text-gray-900 mb-2">{faq.question}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{faq.answer}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </>
   );
 }
-

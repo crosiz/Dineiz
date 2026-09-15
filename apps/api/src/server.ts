@@ -55,6 +55,8 @@ import { zktecoService } from './services/zkteco.service';
 import { processPunch } from './services/attendance.service';
 import { initSmsWorker } from './jobs/sms.worker';
 import { processAbandonedShifts } from './jobs/abandonedShifts';
+import { reconcileTableStatuses } from './jobs/tableStatusReconcile';
+import { reconcileShiftAggregates } from './jobs/shiftAggregateReconcile';
 import { initAnomalyWorker } from './jobs/anomalyWorker';
 import { initReportsWorker } from './jobs/reportsWorker';
 import { startKeepAlive } from './jobs/keep-alive.job';
@@ -231,25 +233,44 @@ async function build() {
   await fastify.register(webhooksRoutes, { prefix: '/api/webhooks' });
 
   fastify.get('/health', async (request, reply) => {
+    // Database and Redis are checked independently, and only the database
+    // can fail this check. Every Redis call site in the app (cache.ts,
+    // tokenGenerator.ts) already degrades gracefully when Redis is
+    // unreachable — a cache miss, a fallback order number — so Redis being
+    // down does not mean the API can't serve requests.
+    //
+    // This matters beyond monitoring: the POS outbox's circuit breaker
+    // (apps/pos/lib/core/outbox.ts) probes this exact endpoint to decide when
+    // to resume syncing after a failure. Reporting 503 for a Redis-only
+    // outage meant the breaker could trip on an ordinary transient error
+    // (e.g. a slow Neon cold-start) and then never close again as long as
+    // Redis stayed flaky — every terminal's queue stopped draining
+    // indefinitely even though Postgres, the only hard dependency for order
+    // sync, was healthy the whole time. That's what "orders never settle in
+    // the background" traced back to.
+    let dbOk = false;
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      dbOk = true;
+    } catch (e: any) {
+      fastify.log.error('Health check: database unreachable — ' + e.message);
+    }
+
+    let redisOk = false;
     try {
       const { redis } = await import('./lib/redis.js');
-      await prisma.$queryRaw`SELECT 1`;
       await redis.ping();
-      
-      return { 
-        status: 'ok', 
-        database: 'connected', 
-        redis: 'connected', 
-        timestamp: new Date().toISOString() 
-      };
+      redisOk = true;
     } catch (e: any) {
-      fastify.log.error('Health check failed: ' + e.message);
-      return reply.status(503).send({
-        status: 'error',
-        message: 'Service unavailable',
-        timestamp: new Date().toISOString()
-      });
+      fastify.log.error('Health check: redis unreachable — ' + e.message);
     }
+
+    return reply.status(dbOk ? 200 : 503).send({
+      status: dbOk ? 'ok' : 'error',
+      database: dbOk ? 'connected' : 'error',
+      redis: redisOk ? 'connected' : 'degraded',
+      timestamp: new Date().toISOString(),
+    });
   });
 
   /**
@@ -344,6 +365,18 @@ async function start() {
     }, 60 * 60 * 1000);
     // Also run once on startup
     processAbandonedShifts().catch(e => app.log.error('Abandoned shifts job failed on startup', e));
+
+    // Table-status drift sweep every 5 minutes (spec Part 3). recomputeTableStatus
+    // keeps it right on every order event; this catches anything that wrote
+    // table status outside the derivation.
+    setInterval(() => {
+      reconcileTableStatuses().catch(e => app.log.error('Table status reconcile failed', e));
+    }, 5 * 60 * 1000);
+
+    // Shift-aggregate drift sweep every 15 minutes (spec Part 7).
+    setInterval(() => {
+      reconcileShiftAggregates().catch(e => app.log.error('Shift aggregate reconcile failed', e));
+    }, 15 * 60 * 1000);
 
     // Written and documented (CLAUDE.md: "Keep-alive ping every 4 minutes
     // to prevent Neon DB cold starts") but never actually called — the dev

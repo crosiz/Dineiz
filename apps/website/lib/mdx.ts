@@ -30,7 +30,20 @@ export interface CaseStudy {
   content: string;
 }
 
-const contentDir = path.join(process.cwd(), 'content');
+function getContentDir(): string {
+  const candidates = [
+    path.join(process.cwd(), 'apps', 'website', 'content'),
+    path.join(process.cwd(), 'content'),
+    path.resolve(process.cwd(), '..', 'content'),
+    path.resolve(process.cwd(), '..', 'apps', 'website', 'content'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.join(process.cwd(), 'content');
+}
 
 function parseFrontmatter(fileContent: string) {
   const { data, content } = matter(fileContent);
@@ -39,7 +52,7 @@ function parseFrontmatter(fileContent: string) {
 }
 
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
-  const blogDir = path.join(contentDir, 'blog');
+  const blogDir = path.join(getContentDir(), 'blog');
   if (!fs.existsSync(blogDir)) return [];
 
   const files = fs.readdirSync(blogDir);
@@ -60,7 +73,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
         authorRole: frontmatter.authorRole || 'POS Specialist',
         category: frontmatter.category || 'Guide',
         readTime: frontmatter.readTime || readTime,
-        image: frontmatter.ogImage || frontmatter.image || '/images/blog-placeholder.jpg',
+        image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.title || 'Dineiz Blog')}`,
         content,
       };
     })
@@ -70,7 +83,7 @@ export async function getAllBlogPosts(): Promise<BlogPost[]> {
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
-  const blogDir = path.join(contentDir, 'blog');
+  const blogDir = path.join(getContentDir(), 'blog');
   const filePath = path.join(blogDir, `${slug}.mdx`);
 
   if (!fs.existsSync(filePath)) return null;
@@ -87,13 +100,13 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
     authorRole: frontmatter.authorRole || 'POS Specialist',
     category: frontmatter.category || 'Guide',
     readTime: frontmatter.readTime || readTime,
-    image: frontmatter.ogImage || frontmatter.image || '/images/blog-placeholder.jpg',
+    image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.title || 'Dineiz Blog')}`,
     content,
   };
 }
 
 export async function getAllCaseStudies(): Promise<CaseStudy[]> {
-  const caseDir = path.join(contentDir, 'case-studies');
+  const caseDir = path.join(getContentDir(), 'case-studies');
   if (!fs.existsSync(caseDir)) return [];
 
   const files = fs.readdirSync(caseDir);
@@ -113,13 +126,13 @@ export async function getAllCaseStudies(): Promise<CaseStudy[]> {
         challenge: frontmatter.challenge || '',
         solution: frontmatter.solution || '',
         results: [
-          { metric: frontmatter.metric1 || '+35%', label: frontmatter.label1 || 'Revenue Growth' },
-          { metric: frontmatter.metric2 || '15 min', label: frontmatter.label2 || 'Daily Reconciliation' },
-          { metric: frontmatter.metric3 || '0', label: frontmatter.label3 || 'Cash Discrepancies' },
+          { metric: frontmatter.metric1 || '—', label: frontmatter.label1 || 'Key Result' },
+          { metric: frontmatter.metric2 || '—', label: frontmatter.label2 || 'Key Result' },
+          { metric: frontmatter.metric3 || '—', label: frontmatter.label3 || 'Key Result' },
         ],
         quote: frontmatter.quote || '',
         author: frontmatter.author || 'Owner',
-        image: frontmatter.image || '/images/case-study-placeholder.jpg',
+        image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.restaurantName || 'Dineiz Case Study')}`,
         content,
       };
     });
@@ -128,7 +141,7 @@ export async function getAllCaseStudies(): Promise<CaseStudy[]> {
 }
 
 export async function getCaseStudyBySlug(slug: string): Promise<CaseStudy | null> {
-  const caseDir = path.join(contentDir, 'case-studies');
+  const caseDir = path.join(getContentDir(), 'case-studies');
   const filePath = path.join(caseDir, `${slug}.mdx`);
 
   if (!fs.existsSync(filePath)) return null;
@@ -144,13 +157,13 @@ export async function getCaseStudyBySlug(slug: string): Promise<CaseStudy | null
     challenge: frontmatter.challenge || '',
     solution: frontmatter.solution || '',
     results: [
-      { metric: frontmatter.metric1 || '+35%', label: frontmatter.label1 || 'Revenue Growth' },
-      { metric: frontmatter.metric2 || '15 min', label: frontmatter.label2 || 'Daily Reconciliation' },
-      { metric: frontmatter.metric3 || '0', label: frontmatter.label3 || 'Cash Discrepancies' },
+      { metric: frontmatter.metric1 || '—', label: frontmatter.label1 || 'Key Result' },
+      { metric: frontmatter.metric2 || '—', label: frontmatter.label2 || 'Key Result' },
+      { metric: frontmatter.metric3 || '—', label: frontmatter.label3 || 'Key Result' },
     ],
     quote: frontmatter.quote || '',
     author: frontmatter.author || 'Owner',
-    image: frontmatter.image || '/images/case-study-placeholder.jpg',
+    image: frontmatter.image || `/api/og?title=${encodeURIComponent(frontmatter.restaurantName || 'Dineiz Case Study')}`,
     content,
   };
 }

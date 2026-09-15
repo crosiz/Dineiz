@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { CachedMenuItem } from '@/lib/db';
 import { useCartStore } from '@/lib/store';
+import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 
 // ─── Variation Picker Bottom Sheet ──────────────────────────────
@@ -161,6 +162,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
 export function DiscountModal({ onClose }: { onClose: () => void }) {
   const setDiscount = useCartStore((s) => s.setDiscount);
   const session = useCartStore((s) => s.session);
+  const subtotal = useCartStore((s) => s.subtotal());
   const [type, setType] = useState<'percent' | 'fixed'>('percent');
   const [value, setValue] = useState('');
   const [pin, setPin] = useState('');
@@ -169,7 +171,21 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
   const [verifying, setVerifying] = useState(false);
 
   const isManager = session?.role === 'BRANCH_MANAGER' || session?.role === 'TENANT_ADMIN';
-  const needsOverride = type === 'percent' && parseFloat(value || '0') > 10;
+  // Tenant-configured ceiling (Settings → Point of Sale); 0 if never set, which
+  // correctly requires approval for any manual discount — matching
+  // allowCashierDiscounts' own default of false for an unconfigured tenant.
+  const maxDiscountPercent = useBrandingStore((s) => s.branding?.pos?.maxDiscountPercent ?? 0);
+  const numValue = parseFloat(value || '0');
+  // A fixed amount was previously exempt from this check entirely — switching
+  // the discount type to "Fixed Amount" needed no PIN/reason at any value, so
+  // a cashier could zero out any bill with zero approval. Converting it to
+  // the equivalent percentage of the same subtotal the discount is actually
+  // applied against (store.discountAmount() uses this same `subtotal()`)
+  // makes both discount types answer to the one real limit.
+  const effectivePercent = type === 'percent'
+    ? numValue
+    : (subtotal > 0 ? (numValue / subtotal) * 100 : (numValue > 0 ? Infinity : 0));
+  const needsOverride = effectivePercent > maxDiscountPercent;
 
   const handleApply = async () => {
     const num = parseFloat(value);
@@ -201,7 +217,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
         }
         setVerifying(false);
       } else if (!reason.trim()) {
-        setPinError('A reason is required for discounts over 10%.');
+        setPinError(`A reason is required for discounts over ${maxDiscountPercent}%.`);
         return;
       }
     }
@@ -253,7 +269,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
             <div className="animate-in slide-in-from-top-1 duration-200">
               {!isManager ? (
                 <>
-                  <label className="text-[11px] font-bold text-[#C4362E] uppercase tracking-wider mb-1.5 block">Manager PIN required — discount over 10%</label>
+                  <label className="text-[11px] font-bold text-[#C4362E] uppercase tracking-wider mb-1.5 block">Manager PIN required — discount over {maxDiscountPercent}%</label>
                   <input
                     type="password"
                     inputMode="numeric"
@@ -266,7 +282,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
                 </>
               ) : (
                 <>
-                  <label className="text-[11px] font-bold text-[#B4770B] uppercase tracking-wider mb-1.5 block">Reason required — discount over 10%</label>
+                  <label className="text-[11px] font-bold text-[#B4770B] uppercase tracking-wider mb-1.5 block">Reason required — discount over {maxDiscountPercent}%</label>
                   <input
                     type="text"
                     value={reason}

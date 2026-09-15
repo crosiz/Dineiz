@@ -132,6 +132,41 @@ export async function getTenantBranding(tenantId: string) {
     easypaisaEnabled: branding.easypaisaEnabled,
     discountLimit: branding.discountLimit,
     voidRequiresManagerApproval: branding.voidRequiresManagerApproval,
+    orderNumberFormat: branding.orderNumberFormat,
+    tenantShortCode: branding.tenantShortCode,
+    tableCleaningMinutes: branding.tableCleaningMinutes,
+    // Part 13 — one blob of operational config the POS Settings screen shows
+    // read-only and the sync engine / close flow / jobs read live.
+    pos: {
+      orderNumberFormat: branding.orderNumberFormat,
+      tenantShortCode: branding.tenantShortCode,
+      tableCleaningMinutes: branding.tableCleaningMinutes,
+      requireShiftOpen: branding.requireShiftOpen,
+      allowLoginWithoutShift: branding.allowLoginWithoutShift,
+      allowOrderReopen: branding.allowOrderReopen,
+      orderReopenWindowMinutes: branding.orderReopenWindowMinutes,
+      maxDiscountPercent: branding.maxDiscountPercent,
+      allowCashierDiscounts: branding.allowCashierDiscounts,
+      voidRequiresManagerApproval: branding.voidRequiresManagerApproval,
+      autoKotPrint: branding.autoKotPrint,
+      autoReceiptPrint: branding.autoReceiptPrint,
+      blockOutOfStock: branding.blockOutOfStock,
+      kotEnabled: branding.kotEnabled,
+      posMarkReadyEnabled: branding.posMarkReadyEnabled,
+      staleShiftWarnHours: branding.staleShiftWarnHours,
+      autoCloseAbandonedHours: branding.autoCloseAbandonedHours,
+      cashCountRequired: branding.cashCountRequired,
+      varianceAlertThreshold: branding.varianceAlertThreshold,
+      managerOverlayEnabled: branding.managerOverlayEnabled,
+      managerOverlayIdleMinutes: branding.managerOverlayIdleMinutes,
+      managerOverlayRequireReason: branding.managerOverlayRequireReason,
+      syncBatchSize: branding.syncBatchSize,
+      syncRequestTimeoutMs: branding.syncRequestTimeoutMs,
+      syncMaxEventLifetimeHours: branding.syncMaxEventLifetimeHours,
+      shiftCloseSyncTimeoutSec: branding.shiftCloseSyncTimeoutSec,
+      allowCloseWithUnsynced: branding.allowCloseWithUnsynced,
+      closeWithUnsyncedRequiresPin: branding.closeWithUnsyncedRequiresPin,
+    },
   };
 }
 
@@ -203,6 +238,37 @@ export async function updateTenantBranding(tenantId: string, data: any) {
   if (data.easypaisaEnabled != null) brandingData.easypaisaEnabled = Boolean(data.easypaisaEnabled);
   if (data.discountLimit != null) brandingData.discountLimit = Number(data.discountLimit);
   if (data.voidRequiresManagerApproval != null) brandingData.voidRequiresManagerApproval = Boolean(data.voidRequiresManagerApproval);
+
+  // ── Part 13 operational settings ────────────────────────────────────────
+  // Accept them flat or under a `pos` key (the shape getTenantBranding returns).
+  const p = { ...(data.pos ?? {}), ...data };
+  const num = (v: any) => Number(v);
+  const bool = (v: any) => Boolean(v);
+  if (p.orderNumberFormat != null) brandingData.orderNumberFormat = String(p.orderNumberFormat).toUpperCase();
+  if (p.tenantShortCode !== undefined) brandingData.tenantShortCode = p.tenantShortCode ? String(p.tenantShortCode).toUpperCase().slice(0, 3) : null;
+  if (p.tableCleaningMinutes != null) brandingData.tableCleaningMinutes = num(p.tableCleaningMinutes);
+  if (p.requireShiftOpen != null) brandingData.requireShiftOpen = bool(p.requireShiftOpen);
+  if (p.allowLoginWithoutShift != null) brandingData.allowLoginWithoutShift = bool(p.allowLoginWithoutShift);
+  if (p.allowOrderReopen != null) brandingData.allowOrderReopen = bool(p.allowOrderReopen);
+  if (p.orderReopenWindowMinutes != null) brandingData.orderReopenWindowMinutes = num(p.orderReopenWindowMinutes);
+  if (p.maxDiscountPercent != null) brandingData.maxDiscountPercent = num(p.maxDiscountPercent);
+  if (p.allowCashierDiscounts != null) brandingData.allowCashierDiscounts = bool(p.allowCashierDiscounts);
+  if (p.autoKotPrint != null) brandingData.autoKotPrint = bool(p.autoKotPrint);
+  if (p.autoReceiptPrint != null) brandingData.autoReceiptPrint = bool(p.autoReceiptPrint);
+  if (p.blockOutOfStock != null) brandingData.blockOutOfStock = bool(p.blockOutOfStock);
+  if (p.staleShiftWarnHours != null) brandingData.staleShiftWarnHours = num(p.staleShiftWarnHours);
+  if (p.autoCloseAbandonedHours != null) brandingData.autoCloseAbandonedHours = num(p.autoCloseAbandonedHours);
+  if (p.cashCountRequired != null) brandingData.cashCountRequired = bool(p.cashCountRequired);
+  if (p.varianceAlertThreshold != null) brandingData.varianceAlertThreshold = num(p.varianceAlertThreshold);
+  if (p.managerOverlayEnabled != null) brandingData.managerOverlayEnabled = bool(p.managerOverlayEnabled);
+  if (p.managerOverlayIdleMinutes != null) brandingData.managerOverlayIdleMinutes = num(p.managerOverlayIdleMinutes);
+  if (p.managerOverlayRequireReason != null) brandingData.managerOverlayRequireReason = bool(p.managerOverlayRequireReason);
+  if (p.syncBatchSize != null) brandingData.syncBatchSize = num(p.syncBatchSize);
+  if (p.syncRequestTimeoutMs != null) brandingData.syncRequestTimeoutMs = num(p.syncRequestTimeoutMs);
+  if (p.syncMaxEventLifetimeHours != null) brandingData.syncMaxEventLifetimeHours = num(p.syncMaxEventLifetimeHours);
+  if (p.shiftCloseSyncTimeoutSec != null) brandingData.shiftCloseSyncTimeoutSec = num(p.shiftCloseSyncTimeoutSec);
+  if (p.allowCloseWithUnsynced != null) brandingData.allowCloseWithUnsynced = bool(p.allowCloseWithUnsynced);
+  if (p.closeWithUnsyncedRequiresPin != null) brandingData.closeWithUnsyncedRequiresPin = bool(p.closeWithUnsyncedRequiresPin);
 
   let branding = await prisma.tenantBranding.findUnique({ where: { tenantId } });
   branding = await prisma.tenantBranding.upsert({

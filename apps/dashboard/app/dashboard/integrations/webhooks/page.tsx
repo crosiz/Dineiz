@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { Webhook, Plus, Edit2, Trash2, Activity, ShieldCheck, RefreshCw, X, Play, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
-import { Spinner, PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTable, SkeletonList } from '@/components/ui/skeleton';
 
 const EVENTS = [
   { id: 'order.created', label: 'Order Created', category: 'Orders' },
@@ -106,7 +106,11 @@ export default function WebhooksPage() {
         {/* Webhooks List */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           {isLoading ? (
-            <PageLoader label="Loading webhooks..." />
+            <SkeletonTable
+              className="border-0 shadow-none rounded-none"
+              rows={5}
+              columns={[220, { w: 72, pill: true }, { w: 60, pill: true }, 96, 100, { w: 72, align: 'right' }]}
+            />
           ) : webhooks.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-brand-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -324,7 +328,7 @@ function WebhookDeliveryLog({ webhookId }: { webhookId: string }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['webhook-deliveries', webhookId] })
   });
 
-  if (isLoading) return <div className="bg-slate-50/50"><PageLoader label="Loading logs..." /></div>;
+  if (isLoading) return <div className="bg-slate-50/80 p-6"><SkeletonList rows={4} /></div>;
 
   return (
     <div className="bg-slate-50/80 p-6 shadow-inner">

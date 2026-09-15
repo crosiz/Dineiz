@@ -115,7 +115,7 @@ export function CashDrawerModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in ">
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-slide-up">
+      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92dvh] animate-slide-up">
 
         <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -173,18 +173,20 @@ export function CashDrawerModal({
           {/* Amount */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2">Amount</label>
-            <div className="h-[58px] border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center px-4 transition-colors">
-              <span className="text-xs font-bold text-[#FF5722] mr-3">PKR</span>
-              <div className="w-[2px] h-6 bg-[#CBD5E1]" />
+            <div className="h-[58px] border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+              <span className="text-xs font-bold text-[#FF5722]">PKR</span>
               <input
-                type="number"
+                type="text"
                 inputMode="numeric"
-                min={0}
-                value={amount}
-                onChange={e => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                autoComplete="off"
+                value={amount === '' ? '' : Number(amount).toLocaleString('en-US')}
+                onChange={e => {
+                  const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
+                  setAmount(d === '' ? '' : Number(d));
+                }}
                 placeholder="0"
                 autoFocus
-                className="w-full bg-transparent border-none text-right text-xl font-bold focus:ring-0 placeholder:text-slate-400 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="w-full bg-transparent border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 text-right text-xl font-bold text-slate-900 tabular-nums placeholder:text-slate-400 outline-none"
               />
             </div>
           </div>
@@ -211,7 +213,7 @@ export function CashDrawerModal({
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="Or type your own reason…"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-[#FF5722] transition-colors placeholder:text-slate-400"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[16px] outline-none focus:border-[#FF5722] transition-colors placeholder:text-slate-400"
             />
           </div>
 

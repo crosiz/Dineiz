@@ -13,7 +13,8 @@ import { getDB } from '@/lib/db';
 import { toast } from 'sonner';
 import { useTopBar } from '@/hooks/useTopBar';
 import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views';
-import { setTableStatus } from '@/lib/core/commands';
+import { setTableStatus, markTableCleaned } from '@/lib/core/commands';
+import { isViewMode } from '@/lib/view-mode';
 import {
   ZoomIn,
   ZoomOut,
@@ -49,6 +50,51 @@ interface TableData {
   assignedWaiterId?: string | null;
   assignedWaiterName?: string | null;
   assignedWaiterColor?: string | null;
+}
+
+// Adapt an event-store OrderView into the shape the occupied-table popup and
+// the checkout modal read (server-order shape). Used so the popup can paint
+// straight from useViews instead of waiting on GET /api/orders?tableId=.
+function popupFromView(o: any) {
+  const items = (o.items || [])
+    .filter((i: any) => !i.voided)
+    .map((i: any) => ({
+      quantity: i.qty ?? i.quantity ?? 1,
+      name: i.itemName ?? i.name,
+      unitPrice: i.unitPrice ?? 0,
+      subtotal: i.subtotal ?? (i.unitPrice ?? 0) * (i.qty ?? i.quantity ?? 1),
+      notes: i.note ?? null,
+    }));
+  const subtotal = items.reduce((s: number, i: any) => s + (i.subtotal || 0), 0);
+  // `??` binds looser than `+`/`-`, and only falls through on null/undefined —
+  // a stored `netAmount` of 0 (a local order whose recalc hasn't run, or a row
+  // hydrated before the API sent line prices) would win and show "Rs. 0".
+  // Take the first POSITIVE of netAmount / total / items-derived.
+  const derived = subtotal > 0 ? subtotal + (o.taxAmount ?? 0) - (o.discountAmount ?? 0) : 0;
+  const total =
+    Number(o.netAmount) > 0 ? Number(o.netAmount)
+    : Number(o.total) > 0 ? Number(o.total)
+    : Number(o.totalAmount) > 0 ? Number(o.totalAmount)
+    : derived;
+  return {
+    id: o.serverId || o.id,
+    orderNumber: o.orderNumber,
+    type: o.type,
+    status: o.status,
+    items,
+    subtotal,
+    subtotalAmount: subtotal,
+    discountAmount: o.discountAmount ?? 0,
+    taxAmount: o.taxAmount ?? 0,
+    netAmount: total,
+    total,
+    totalAmount: total,
+    assignedWaiterId: o.assignedWaiterId ?? null,
+    assignedWaiterName: o.assignedWaiterName ?? null,
+    customerId: o.customerId ?? null,
+    createdAt: o.createdAt ?? null,
+    paymentMethod: o.paymentMethod ?? 'PENDING',
+  };
 }
 
 export default function ClientTableMap() {
@@ -87,6 +133,7 @@ export default function ClientTableMap() {
   const [panY, setPanY] = useState<number>(0);
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Selected Table & Popups
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
@@ -101,10 +148,16 @@ export default function ClientTableMap() {
   const initialTouchDistanceRef = useRef<number | null>(null);
   const initialZoomRef = useRef<number>(1.0);
 
-  // Status Legend Component for POSTopBar
+  // Status Legend Component for POSTopBar. hidden below sm: at phone width
+  // POSTopBar's rightActions slot has only ~40-95px free once the always-
+  // visible avatar/sync cluster takes its share, and this pill wants ~360px
+  // unwrapped — rather than a barely-discoverable horizontal-scroll sliver,
+  // it's dropped in favor of the table colors on the canvas itself (which
+  // this legend is only a supplementary key for; tapping a table also shows
+  // its status by name).
   const legendElement = useMemo(
     () => (
-      <div className="flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
+      <div className="hidden sm:flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" />
           <span>Free</span>
@@ -159,15 +212,28 @@ export default function ClientTableMap() {
     }
   }, [tables, selectedTable]);
 
-  // Fetch active order for occupied tables — paints instantly from cache
-  // (if this table's order was already viewed this session) while the
-  // network request below refreshes it silently in the background.
+  // Active order for an occupied table. It's ALWAYS already in the event store
+  // — the table only reads OCCUPIED because `deriveTableStatus` found an active
+  // order with this `tableId` — so paint from there synchronously, no spinner.
+  // The cache + network fetch below only reconcile (waiter changes from another
+  // terminal, etc.). This is what removes the "loads the first time" delay.
   const fetchActiveOrder = useCallback(async (tableId: string) => {
     setPopupError(false);
 
+    const vo = Object.values(useViews.getState().orders).find(
+      (o) => o.tableId === tableId && ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status),
+    );
+    const voPopup = vo ? popupFromView(vo) : null;
     const cacheKey = `table-order-${tableId}`;
     const cached = await getDB().ordersCache.get(cacheKey).catch(() => null);
-    if (cached?.data?.[0]) {
+
+    // Only trust the local row if it actually has a value — a zero-total view
+    // row (stale hydration, missed recalc) should fall through to cache/fetch
+    // rather than show "Rs. 0" against a real order.
+    if (voPopup && voPopup.total > 0) {
+      setPopupOrder(voPopup);
+      setPopupLoading(false);
+    } else if (cached?.data?.[0]) {
       setPopupOrder(cached.data[0]);
       setPopupLoading(false);
     } else {
@@ -218,6 +284,16 @@ export default function ClientTableMap() {
     const status = table.status.toUpperCase();
 
     if (status === 'FREE' || status === 'AVAILABLE') {
+      // Spec Part 11 — starting an order needs an open shift. In View Mode
+      // a free table still opens its detail sheet (mark clean/reserved,
+      // assign waiter) but can't jump straight into order-building.
+      if (isViewMode()) {
+        toast.message('Open a shift to take orders', {
+          action: { label: 'Open Shift', onClick: () => router.push('/pos/shift/open') },
+        });
+        setSelectedTable(table);
+        return;
+      }
       router.push(
         `/pos/order?type=dine-in&tableId=${table.id}&tableLabel=${encodeURIComponent(table.label)}&guests=${table.capacity}`
       );
@@ -231,14 +307,16 @@ export default function ClientTableMap() {
     }
   };
 
-  // Local-first: flips the table green in the shared view store immediately
-  // and queues a TABLE_STATUS_CHANGED event; the outbox
-  // (lib/core/outbox.ts's UPDATE_TABLE_STATUS task) ships the PUT with its
-  // own retry/backoff, replacing the old blocking fetch-then-command call
-  // (which used to silently skip the local update too whenever the PUT
-  // failed, leaving the table stuck showing the wrong color).
+  // "Mark as Free" on a table the cashier has just cleared means CLEANED, and
+  // that's a different event from a manager override. TABLE_STATUS_CHANGED
+  // only clears `statusOverride`; the DIRTY the table is actually showing
+  // comes from `lastCompletedAt` (stamped by the payment), which only
+  // TABLE_CLEANED resets. Emitting the override event here re-derived the
+  // table straight back to DIRTY — the table could never be freed by hand.
+  // markTableCleaned clears the anchor, re-derives to FREE, and the outbox
+  // ships POST /api/tables/:id/clean with its own retry.
   const handleMarkAsFree = async (tableId: string) => {
-    await setTableStatus(tableId, 'FREE');
+    await markTableCleaned(tableId);
     toast.success('Table marked as Free');
     setSelectedTable(null);
   };
@@ -372,6 +450,56 @@ export default function ClientTableMap() {
 
   const floorTables = tables.filter((t) => (t.floor || 1) === activeFloor);
 
+  // Fit-to-viewport: on first paint of a floor (and when the container is
+  // resized, or the table count on it changes) compute a zoom/pan that
+  // brings the whole floor plan into view. Previously this always started
+  // at zoomLevel 1.0 / pan (0,0) against the fixed 1200x700 design surface —
+  // fine on a desktop monitor, but on a phone-sized container that showed
+  // only the top-left corner, with most tables off-screen until the user
+  // manually zoomed out via the controls below. Deliberately depends on
+  // `floorTables.length`, not the array itself: table positions don't change
+  // live during service (only `status` does, which changes the array's
+  // identity every socket update) — refitting on every status flip would
+  // yank the view out from under a cashier mid-task.
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container || floorTables.length === 0) return;
+
+    const fit = () => {
+      const { width: cw, height: ch } = container.getBoundingClientRect();
+      if (cw === 0 || ch === 0) return;
+
+      // Fixed margin rather than table.width/height: PremiumTable renders
+      // tables centered on (x, y) at sizes from ~88-180px depending on
+      // capacity/shape, and the render code below already offsets by a flat
+      // 20px, not by each table's own dimensions — a fixed margin covering
+      // the largest table plus its label/waiter-badge decoration is more
+      // robust here than trusting width/height to line up with x/y exactly.
+      const MARGIN = 110;
+      const xs = floorTables.map((t) => t.x);
+      const ys = floorTables.map((t) => t.y);
+      const minX = Math.min(...xs) - MARGIN;
+      const minY = Math.min(...ys) - MARGIN;
+      const maxX = Math.max(...xs) + MARGIN;
+      const maxY = Math.max(...ys) + MARGIN;
+      const boundsW = Math.max(1, maxX - minX);
+      const boundsH = Math.max(1, maxY - minY);
+
+      const fitZoom = Math.min(cw / boundsW, ch / boundsH, 1.5);
+      const zoom = Math.min(2.0, Math.max(0.5, fitZoom));
+
+      setZoomLevel(zoom);
+      setPanX((cw - boundsW * zoom) / 2 - minX * zoom);
+      setPanY((ch - boundsH * zoom) / 2 - minY * zoom);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(container);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFloor, floorTables.length]);
+
   // Position popup card relative to table center
   const getPopupPosition = (table: TableData) => {
     const posX = table.x * zoomLevel + panX;
@@ -384,9 +512,15 @@ export default function ClientTableMap() {
   };
 
   return (
-    <div className="w-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
-      {/* Main Floor Canvas Container */}
+    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
+      {/* Main Floor Canvas Container. height:100% (not the old hardcoded
+          calc(100vh - 72px - 64px)) — this root now fills POSLayout's
+          already-correctly-sized flex-1 content slot via h-full above, so
+          this just needs to fill its parent rather than re-deriving the
+          shell heights itself (see the same fix + reasoning in
+          HomeDashboard.tsx). */}
       <div
+        ref={canvasContainerRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -395,7 +529,7 @@ export default function ClientTableMap() {
         onTouchEnd={handleTouchEnd}
         style={{
           width: '100%',
-          height: 'calc(100vh - 72px - 64px)',
+          height: '100%',
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: '#F8FAFC',
@@ -404,15 +538,16 @@ export default function ClientTableMap() {
         }}
         className="cursor-grab active:cursor-grabbing"
       >
-        {/* Floating Glassmorphism Floor Switcher */}
+        {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
+            3-4 floors instead of running off the edge of a narrow screen. */}
         {floors.length > 1 && (
-          <div className="absolute top-6 left-6 z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
-            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5" />
+          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-auto z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
+            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5 shrink-0" />
             {floors.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFloor(f)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all shrink-0 ${
                   activeFloor === f
                     ? 'bg-amber-500 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -529,7 +664,7 @@ export default function ClientTableMap() {
       {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-80 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
@@ -602,19 +737,31 @@ export default function ClientTableMap() {
           </div>
 
           <div className="grid grid-cols-1 gap-2 pt-1">
-            <button
-              onClick={() => {
-                router.push(
-                  `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
-                );
-              }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Items</span>
-            </button>
+            {/* Spec Part 11 — View Mode: no add-items, no payment. Print Bill
+                and Assign Waiter stay; the rest becomes an "open a shift" prompt. */}
+            {isViewMode() ? (
+              <button
+                onClick={() => router.push('/pos/shift/open')}
+                className="w-full flex flex-col items-center justify-center gap-0.5 py-2 px-3 bg-sky-50 border border-sky-200 text-sky-700 font-bold text-xs rounded-xl transition-all leading-tight"
+              >
+                Open a shift to add items or take payment
+                <span className="text-[9px] font-medium text-sky-500">You’re in view-only mode</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  router.push(
+                    `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
+                  );
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Items</span>
+              </button>
+            )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className={`grid ${isViewMode() ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
               <button
                 onClick={handlePrintBill}
                 className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
@@ -623,6 +770,7 @@ export default function ClientTableMap() {
                 <span>Print Bill</span>
               </button>
 
+              {!isViewMode() && (
               <button
                 onClick={() => {
                   if (!popupOrder) {
@@ -651,8 +799,9 @@ export default function ClientTableMap() {
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Collect Payment</span>
               </button>
+              )}
             </div>
-            
+
             {/* Assign Waiter Button */}
             <button
               onClick={() => setIsAssignWaiterOpen(true)}
@@ -680,7 +829,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'RESERVED' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-purple-600">
@@ -711,7 +860,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'DIRTY' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-600">
@@ -742,9 +891,18 @@ export default function ClientTableMap() {
       {showOverrideModal && selectedTable && (
         <AdminPinModal
           onClose={() => setShowOverrideModal(false)}
-          onSuccess={() => {
+          onSuccess={async () => {
             setShowOverrideModal(false);
-            handleMarkAsFree(selectedTable.id);
+            // This clears the RESERVED override, not a cleaning timer —
+            // handleMarkAsFree (markTableCleaned) only ever touches
+            // lastCompletedAt, so it left the reservation itself in place
+            // while toasting "Table marked as Free". setTableStatus with an
+            // empty status clears statusOverride AND (per its own reducer)
+            // the cleaning-timer anchor in one event, so the table actually
+            // reaches FREE instead of re-deriving back to RESERVED/DIRTY.
+            await setTableStatus(selectedTable.id, '');
+            toast.success('Reservation cleared');
+            setSelectedTable(null);
           }}
         />
       )}

@@ -1,0 +1,19 @@
+{
+  "name": "@dineiz/pos-logic",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "pnpm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint \"**/*.ts*\""
+  },
+  "devDependencies": {
+    "@dineiz/config": "workspace:*",
+    "typescript": "^5.4.5",
+    "vitest": "^2.1.9"
+  }
+}

@@ -53,7 +53,7 @@ export default function RestaurantPage() {
           </h1>
           
           <p className="text-[20px] text-[#6e6e73] font-medium leading-relaxed max-w-2xl mx-auto mb-10">
-            Stop cash leakage. Automate your kitchen. Scale to multiple branches. Our theft-prevention controls save the average restaurant 5-10% in monthly revenue.
+            Stop cash leakage. Automate your kitchen. Scale to multiple branches. Our theft-prevention controls catch discrepancies before they become a habit.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

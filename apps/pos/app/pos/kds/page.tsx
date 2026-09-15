@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { useSocket } from '@/contexts/SocketContext';
 import { getPosSession, clearPosSession, getToken } from '@/lib/pos-session';
+import { useTerminalSettings } from '@/lib/terminal-settings';
 import { toast } from 'sonner';
 import { Check, Settings, RefreshCw, LogOut, X } from 'lucide-react';
 import { DineizLogo } from '@/components/ui/DineizLogo';
@@ -205,52 +206,57 @@ export default function KDSPage() {
         .font-size-large { --kds-font-base: 16px; --kds-font-lg: 20px; --kds-font-xl: 24px; }
       `}} />
 
-      {/* Top Bar (72px) */}
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-6 py-3 shrink-0 h-[72px] relative z-10 shadow-sm">
-        
+      {/* Top Bar (72px) — same min-w-[280px]/min-w-[300px] overflow this
+          shares with POSTopBar.tsx, fixed the same way: no width floors,
+          secondary text hidden below sm, safe-area gutter added above
+          without changing the 72px content height. */}
+      <div className="shrink-0 relative z-10 pt-safe">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
+
         {/* Left Slot: Logo & Titles */}
-        <div className="flex items-center gap-3.5 text-[#0F172A] min-w-[280px]">
-          <DineizLogo 
-            size="md" 
+        <div className="flex items-center gap-2 sm:gap-3.5 text-[#0F172A] min-w-0 shrink-0">
+          <DineizLogo
+            size="md"
             variant="light"
-            showBadge={true} 
+            showBadge={true}
             badgeText="KDS"
           />
 
-          <div className="flex items-center gap-3 pl-2 border-l border-[#E2E8F0]">
-            <div>
-              <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A]">Kitchen Display</h2>
-              <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold">
+          <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-[#E2E8F0] min-w-0">
+            <div className="min-w-0">
+              <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A] truncate">Kitchen Display</h2>
+              <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold truncate">
                 {isMounted ? (session?.branchName || 'Branch') : 'Branch'}
               </div>
             </div>
           </div>
         </div>
-        
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+
+        <div className="hidden sm:flex items-center justify-center px-2 min-w-0">
           <Clock />
         </div>
 
-        <div className="flex items-center justify-end gap-4 min-w-[300px]">
-          <div className="flex items-center gap-2 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+        <div className="flex items-center justify-end gap-1.5 sm:gap-4 min-w-0 shrink-0">
+          <div className="hidden md:flex items-center gap-2 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shrink-0">
             <span className="w-2 h-2 bg-emerald-500 rounded-full pulse-green"></span>
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Live</span>
           </div>
 
-          <div className="w-[1px] h-6 bg-[#CBD5E1] mx-2"></div>
+          <div className="w-[1px] h-6 bg-[#CBD5E1] mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>
 
-          <button onClick={fetchDashboard} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1]">
+          <button onClick={fetchDashboard} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1] shrink-0">
             <RefreshCw size={20} className="text-[#475569]" />
           </button>
-          <button onClick={() => setShowSettings(true)} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1]">
+          <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1] shrink-0">
             <Settings size={20} className="text-[#475569]" />
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200">
+          <button onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200 shrink-0">
             <LogOut size={16} />
-            <span className="text-[14px] font-medium">Log Out</span>
+            <span className="hidden md:inline text-[14px] font-medium">Log Out</span>
           </button>
         </div>
       </header>
+      </div>
 
       {/* Station Filter Tabs */}
       <div className="h-[48px] bg-white border-b border-[#E2E8F0] flex items-center px-2 overflow-x-auto no-scrollbar shrink-0">
@@ -332,8 +338,8 @@ export default function KDSPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm">
-          <div className="bg-white border border-[#E2E8F0] rounded-xl w-[400px] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-[400px] max-h-[85vh] overflow-y-auto bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-[20px] font-semibold text-[#0F172A]">KDS Settings</h2>
               <button onClick={() => setShowSettings(false)} className="text-[#64748B] hover:text-[#0F172A]">
@@ -401,6 +407,12 @@ export default function KDSPage() {
 
 function playLoudRing() {
   try {
+    // Spec Part 9 — the terminal's own Sound setting gates the chime and sets
+    // its volume. Read straight from the store (already hydrated by POSLayout).
+    const snd = useTerminalSettings.getState().settings;
+    if (!snd.soundEnabled) return;
+    const vol = Math.max(0, Math.min(1, (snd.soundVolume ?? 70) / 100));
+
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
     const ctx = new AudioContext();
@@ -410,16 +422,16 @@ function playLoudRing() {
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      
+
       // A triangle wave gives that digital "pop" or "app notification bell" sound
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, startTime);
-      
+
       // Fast attack, punchy short decay (marimba/bell style)
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(isHigh ? 0.8 : 0.6, startTime + 0.01); 
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + (isHigh ? 0.4 : 0.2)); 
-      
+      gain.gain.linearRampToValueAtTime((isHigh ? 0.8 : 0.6) * vol, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + (isHigh ? 0.4 : 0.2));
+
       osc.start(startTime);
       osc.stop(startTime + 0.5);
     };
@@ -500,7 +512,9 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
 
     fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      // credentials:'include' alone was the bug — the POS sets no session
+      // cookie, so this call carried no auth at all and likely 401'd.
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
       body: JSON.stringify({}),
       credentials: 'include',
     }).then((res) => {
@@ -590,14 +604,14 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
         <button
           onClick={handleReprintKOT}
           disabled={isReprinting}
-          className="flex-[0.8] py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
+          className="flex-[0.8] h-11 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
         >
           <span className="material-symbols-outlined text-[16px]">{isReprinting ? 'hourglass_top' : 'print'}</span>
           KOT
         </button>
         <button
           onClick={handleMarkReady}
-          className="flex-[1.2] py-2 rounded-md bg-[#10b981] hover:bg-[#059669] text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
+          className="flex-[1.2] h-11 rounded-md bg-[#10b981] hover:bg-[#059669] text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
         >
           <span className="material-symbols-outlined text-[16px]">check_circle</span>
           Bump

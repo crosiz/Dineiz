@@ -7,6 +7,16 @@
 
 import { EscPosBuilder } from './escpos';
 import { useBrandingStore } from '../branding-store';
+import { formatPKR } from '../utils';
+import { useTerminalSettings } from '../terminal-settings';
+
+// Callers (print.service.ts) always await ensureTerminalSettings() before
+// building bytes, so this is safe to read synchronously here rather than
+// threading a `cols` param through every builder/helper call site.
+function newBuilder(): EscPosBuilder {
+  const width = useTerminalSettings.getState().settings.paperWidth;
+  return new EscPosBuilder(width === '58mm' ? 32 : 48);
+}
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
@@ -25,6 +35,7 @@ export interface PrintOrder {
   tokenNumber: string;
   type: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   cashierName?: string;
+  terminalName?: string; // terminal-local (Settings → This Terminal); KOT header only
   tenantName: string;
   branchName: string;
   branchAddress?: string;
@@ -53,7 +64,11 @@ function formatDate(d?: Date): string {
 }
 
 function formatCurrency(n: number): string {
-  return `Rs.${n.toFixed(0)}`;
+  // Was its own `Rs.${n.toFixed(0)}` — the global rule is "PKR 1,234", never
+  // "Rs" and never ungrouped (a real order total like 116900 printed as
+  // "Rs.116900" with no thousands separator). Delegate to the one shared
+  // formatter instead of a second, drifted implementation.
+  return formatPKR(n);
 }
 
 function orderTypeLabel(type: PrintOrder['type']): string {
@@ -93,7 +108,7 @@ function orderTypeLabel(type: PrintOrder['type']): string {
  *   [CUT]
  */
 export function buildReceipt(order: PrintOrder): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
   p.init();
 
   const branding = useBrandingStore.getState().branding;
@@ -265,7 +280,12 @@ export function buildReceipt(order: PrintOrder): Uint8Array {
   if (branding.receiptDisclaimer) {
     p.center().println(branding.receiptDisclaimer).feed(1);
   }
-  p.center().println('Powered by Dineiz POS');
+  // showPoweredBy defaults true — unconditional before this, so a tenant
+  // who explicitly turned it off (white-label) still got it on every
+  // physical receipt regardless.
+  if (branding.showPoweredBy !== false) {
+    p.center().println('Powered by Dineiz POS');
+  }
 
   p.cut();
   return p.build();
@@ -291,7 +311,7 @@ export function buildReceipt(order: PrintOrder): Uint8Array {
  *   [CUT]
  */
 export function buildKOT(order: PrintOrder): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
 
   p.init();
 
@@ -306,6 +326,7 @@ export function buildKOT(order: PrintOrder): Uint8Array {
 
   p.twoCol(order.orderNumber, formatDate(order.createdAt));
   if (order.cashierName) p.println(`Cashier: ${order.cashierName}`);
+  if (order.terminalName) p.println(`Terminal: ${order.terminalName}`);
   p.doubleSeparator();
 
   // ── Items (large text) ──────────────────────────────────────────────────
@@ -341,7 +362,7 @@ export function buildKOT(order: PrintOrder): Uint8Array {
  * Builds a Cancellation KOT ticket byte array (ESC/POS).
  */
 export function buildCancellationKOT(order: PrintOrder, cancelledItem: PrintItem, reason: string): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
 
   p.init();
 

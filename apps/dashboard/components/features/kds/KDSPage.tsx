@@ -110,7 +110,7 @@ export function KDSPage() {
           <main className="flex-1 p-6" style={getDotGridStyle(isDark)}>
             <div className="grid grid-cols-4 gap-4">
               {[0, 1, 2, 3].map(i => (
-                <div key={i} className={`rounded-xl p-4 animate-pulse ${isDark ? 'bg-[#1A1A2E]' : 'bg-white shadow-sm'}`} style={{ height: '280px' }} />
+                <div key={i} className={`rounded-xl p-4 ${isDark ? 'bg-[#1A1A2E] animate-pulse' : 'skeleton-shimmer shadow-sm'}`} style={{ height: '280px' }} />
               ))}
             </div>
           </main>

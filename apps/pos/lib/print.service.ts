@@ -1,18 +1,42 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getPersistedPrinter, sendToPrinter } from './printer/webusb';
+import { getPersistedBluetoothPrinter, sendToBluetoothPrinter } from './printer/webbluetooth';
 import { buildReceipt, buildKOT, buildCancellationKOT, type PrintOrder } from './printer/templates';
 import { useBrandingStore } from './branding-store';
+import { useTerminalSettings, ensureTerminalSettings } from './terminal-settings';
+import { formatPKR, formatAmount } from './utils';
 
 export type PrintDocumentType = 'KOT' | 'CUSTOMER_BILL' | 'PAID_RECEIPT' | 'CANCELLATION_KOT' | 'SHIFT_REPORT' | 'TEST_PRINT';
 
 // We reuse the PrintOrder type but can extend it for specific docs if needed
 export async function printDocument(type: PrintDocumentType, data: PrintOrder & { cancellationReason?: string, cancelledBy?: string, approvedBy?: string }): Promise<void> {
-  // 1. Resolve Print Mode
+  // 1. Resolve Print Mode.
+  // The printer + paper width are TERMINAL-LOCAL (spec Part 9) — a device
+  // with a thermal printer attached and one without can't share one setting.
+  // So the terminal's own choice (Settings → Printer) wins when it's been
+  // set to PRINTER; otherwise fall back to the tenant/branding default,
+  // which stays PDF unless the console explicitly turned it off.
   let printMode = 'PRINTER';
   const branding = useBrandingStore.getState().branding;
-  
-  if (branding.downloadPdfReceipt) {
+  // Awaited, not read synchronously: the store starts on DEFAULT_TERMINAL_SETTINGS
+  // (printMode PDF) until the IndexedDB read lands, so an early print on a
+  // terminal set to PRINTER would silently produce a PDF instead.
+  const terminal = await ensureTerminalSettings();
+
+  // Stamp the terminal's own name so the KOT header can show which till fired
+  // the ticket (multi-POS branches). Terminal-local, never from the server.
+  if (terminal.terminalName && !data.terminalName) {
+    (data as any).terminalName = terminal.terminalName;
+  }
+
+  if (terminal.printMode === 'PRINTER') {
+    printMode = 'PRINTER';
+  } else if (terminal.printMode === 'SYSTEM') {
+    printMode = 'SYSTEM';
+  } else if (terminal.printMode === 'PDF') {
+    printMode = 'PDF';
+  } else if (branding.downloadPdfReceipt) {
     printMode = 'PDF';
   } else {
     try {
@@ -33,9 +57,33 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
 
   // 2. Route to Mode
   if (printMode === 'PRINTER') {
-    await executeUsbPrint(type, data);
+    if (terminal.printerTransport === 'BLUETOOTH') {
+      await executeBluetoothPrint(type, data);
+    } else {
+      await executeUsbPrint(type, data);
+    }
+  } else if (printMode === 'SYSTEM') {
+    await executeSystemPrint(type, data);
   } else {
     await executePdfPrint(type, data);
+  }
+}
+
+// ─── Byte building — shared by both raw-printer transports ──────────────────
+
+function buildBytesFor(type: PrintDocumentType, data: PrintOrder): Uint8Array {
+  switch (type) {
+    case 'KOT':
+      return buildKOT(data);
+    case 'CANCELLATION_KOT':
+      return buildCancellationKOT(data, data.items[0], (data as any).cancellationReason || 'No reason');
+    case 'CUSTOMER_BILL':
+    case 'PAID_RECEIPT':
+    case 'SHIFT_REPORT': // Not fully mapped to ESC/POS yet, fallback to receipt
+    case 'TEST_PRINT':
+      return buildReceipt(data);
+    default:
+      return buildReceipt(data);
   }
 }
 
@@ -46,66 +94,117 @@ async function executeUsbPrint(type: PrintDocumentType, data: PrintOrder) {
   // (the picker dialog) requires a direct, synchronous user gesture — it can
   // never succeed when called from this auto-print path, which always runs
   // after an awaited order-creation request. Pairing happens explicitly via
-  // the Connect Printer action in Settings/Admin (see usePrinter.ts), which
-  // calls requestPrinter() directly from a click handler.
+  // the Connect action in Settings → This Terminal → Printing (usePrinter.ts),
+  // which calls requestPrinter() directly from a click handler.
   const device = await getPersistedPrinter();
   if (!device) {
-    throw new Error('No thermal printer paired. Connect one in Settings before printing.');
+    throw new Error('No USB printer paired. Connect one in Settings before printing.');
   }
+  await sendToPrinter(device, buildBytesFor(type, data));
+}
 
-  let bytes: Uint8Array;
+// ─── Bluetooth / ESC/POS PRINTER EXECUTION ───────────────────────────────────
+
+async function executeBluetoothPrint(type: PrintDocumentType, data: PrintOrder) {
+  // Same "reconnect only, never re-pair" rule as executeUsbPrint — Web
+  // Bluetooth's requestDevice() has the identical direct-user-gesture
+  // requirement as WebUSB's.
+  const device = await getPersistedBluetoothPrinter();
+  if (!device) {
+    throw new Error('No Bluetooth printer paired. Connect one in Settings before printing.');
+  }
+  await sendToBluetoothPrinter(device, buildBytesFor(type, data));
+}
+
+// ─── SYSTEM PRINT DIALOG EXECUTION ───────────────────────────────────────────
+//
+// The honest way to reach a WiFi/LAN printer, or a Bluetooth printer already
+// paired at the OS level, from a browser tab: browsers can't open a raw TCP
+// socket (what a real "network" ESC/POS printer needs on port 9100) or
+// rediscover an OS-paired Bluetooth Classic/SPP device — but the tablet's own
+// OS print system (Android Mopria / a manufacturer's print-service plugin /
+// iOS AirPrint) already knows how to find and talk to exactly those, and
+// every browser can hand it a job via window.print(). Reuses the same jsPDF
+// generators as PDF mode (already sized correctly to the terminal's paper
+// width) — only the output step differs: a hidden iframe + print() instead
+// of forcing a download.
+
+async function executeSystemPrint(type: PrintDocumentType, data: any) {
+  const doc = await buildPdfDocument(type, data);
+  await printPdfViaSystemDialog(doc);
+}
+
+function printPdfViaSystemDialog(doc: jsPDF): Promise<void> {
+  return new Promise((resolve) => {
+    const blobUrl = doc.output('bloburl') as unknown as string;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+
+    const cleanup = () => {
+      URL.revokeObjectURL(blobUrl);
+      // A beat before removing the frame — tearing it down immediately can
+      // cancel an in-flight print job in some browsers.
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        resolve();
+        cleanup();
+      }
+    };
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
+  });
+}
+
+// ─── PDF document building — shared by download (PDF mode) and the System
+//     Print Dialog (SYSTEM mode) ───────────────────────────────────────────
+
+async function buildPdfDocument(type: PrintDocumentType, data: any): Promise<jsPDF> {
+  const branding = useBrandingStore.getState().branding;
+  // Terminal's own paper width wins (Settings → Printer); branding is the
+  // fallback (it also carries the tenant-wide A4 option, which the terminal
+  // setting doesn't expose).
+  const terminalPaper = useTerminalSettings.getState().settings.paperWidth;
+  const paper: string = terminalPaper || branding.receiptPaperSize || '80mm';
+  if (paper === '58mm') PAPER_WIDTH = 58;
+  else if (paper === 'A4') PAPER_WIDTH = 210;
+  else PAPER_WIDTH = 80;
+
   switch (type) {
     case 'KOT':
-      bytes = buildKOT(data);
-      break;
-    case 'CANCELLATION_KOT':
-      bytes = buildCancellationKOT(data, data.items[0], (data as any).cancellationReason || 'No reason');
-      break;
+      return await generateKOT(data);
     case 'CUSTOMER_BILL':
+      return await generateCustomerBill(data);
     case 'PAID_RECEIPT':
-    case 'SHIFT_REPORT': // Not fully mapped to ESC/POS yet, fallback to receipt
-    case 'TEST_PRINT':
-      bytes = buildReceipt(data);
-      break;
+      return await generatePaidReceipt(data);
+    case 'CANCELLATION_KOT':
+      return await generateCancellationKOT(data);
+    case 'SHIFT_REPORT':
+    case 'TEST_PRINT': {
+      // Basic placeholder implementation for others
+      const doc = new jsPDF({ format: [80, 200] });
+      doc.text(`Doc Type: ${type}`, 10, 10);
+      return doc;
+    }
     default:
-      bytes = buildReceipt(data);
+      throw new Error(`Unknown print type: ${type}`);
   }
-
-  await sendToPrinter(device, bytes);
 }
 
 // ─── PDF PRINTER EXECUTION ───────────────────────────────────────────────────
 
 async function executePdfPrint(type: PrintDocumentType, data: any) {
-  const branding = useBrandingStore.getState().branding;
-  if (branding.receiptPaperSize === '58mm') PAPER_WIDTH = 58;
-  else if (branding.receiptPaperSize === 'A4') PAPER_WIDTH = 210;
-  else PAPER_WIDTH = 80;
-  
-  let doc: jsPDF;
-
-  switch (type) {
-    case 'KOT':
-      doc = await generateKOT(data);
-      break;
-    case 'CUSTOMER_BILL':
-      doc = await generateCustomerBill(data);
-      break;
-    case 'PAID_RECEIPT':
-      doc = await generatePaidReceipt(data);
-      break;
-    case 'CANCELLATION_KOT':
-      doc = await generateCancellationKOT(data);
-      break;
-    case 'SHIFT_REPORT':
-    case 'TEST_PRINT':
-      // Basic placeholder implementation for others
-      doc = new jsPDF({ format: [80, 200] });
-      doc.text(`Doc Type: ${type}`, 10, 10);
-      break;
-    default:
-      throw new Error(`Unknown print type: ${type}`);
-  }
+  const doc = await buildPdfDocument(type, data);
 
   // Determine filename
   const time = data.createdAt ? new Date(data.createdAt).toTimeString().substring(0,5) : '00:00';
@@ -185,22 +284,37 @@ function printRow(doc: jsPDF, leftText: string, rightText: string, y: number) {
 }
 
 async function addFooter(doc: jsPDF, y: number, showThankYou = false) {
+  const branding = useBrandingStore.getState().branding;
+
   if (showThankYou) {
     doc.setFont(FONT, 'italic');
-    doc.text('Thank you for dining with us!', PAPER_WIDTH / 2, y, { align: 'center' });
-    y += 4;
+    // A tenant's own receiptFooter (return policy, a thank-you line in their
+    // own words, …) was fetched into branding but never actually reached the
+    // template — every tenant's receipt printed this same hardcoded line
+    // regardless of what they'd configured.
+    const footerText = branding.receiptFooter || 'Thank you for dining with us!';
+    const footerLines = doc.splitTextToSize(footerText, PAPER_WIDTH - MARGIN * 2);
+    doc.text(footerLines, PAPER_WIDTH / 2, y, { align: 'center' });
+    y += 4 * footerLines.length;
     doc.setFont(FONT, 'normal');
     doc.text(DASHES, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
   }
-  
+
+  // showPoweredBy defaults true (buildPosBranding()) so behavior is
+  // unchanged for every tenant who hasn't touched the setting — but a
+  // tenant who explicitly turned it off was still getting "POWERED BY
+  // [Dineiz logo]" on every receipt, which is exactly backwards for
+  // anyone paying for white-label branding.
+  if (branding.showPoweredBy === false) return;
+
   doc.setFontSize(8);
   doc.setTextColor(150);
   doc.setFont(FONT, 'normal');
-  
+
   const poweredBy = 'POWERED BY';
   const logoBase64 = await loadLogoAsBase64();
-  
+
   if (logoBase64) {
     // Dynamically calculate width to perfectly center both text and logo inline
     const textWidth = doc.getTextWidth(poweredBy);
@@ -208,10 +322,10 @@ async function addFooter(doc: jsPDF, y: number, showThankYou = false) {
     const gap = 0.5; // Reduced gap so it looks like it's written as one block
     const totalWidth = textWidth + gap + logoSize;
     const startX = (PAPER_WIDTH - totalWidth) / 2;
-    
+
     // Draw text with left alignment at calculated startX (y is text baseline)
     doc.text(poweredBy, startX, y);
-    // Vertically center the 16mm logo with the text. Text is ~3mm tall. 
+    // Vertically center the 16mm logo with the text. Text is ~3mm tall.
     // We want the middle of the logo to align with the middle of the text.
     doc.addImage(logoBase64, 'PNG', startX + textWidth + gap, y - (logoSize / 2) - 1, logoSize, logoSize);
   } else {
@@ -252,6 +366,10 @@ async function generateKOT(data: any) {
   y += 4.5;
   if (data.cashierName) {
     printRow(doc, 'Waiter', data.cashierName, y);
+    y += 4.5;
+  }
+  if (data.terminalName) {
+    printRow(doc, 'Terminal', data.terminalName, y);
     y += 4.5;
   }
   doc.text(DASHES, PAPER_WIDTH / 2, y, { align: 'center' });
@@ -423,8 +541,8 @@ async function buildBill(data: any, isPaid: boolean) {
     if (item.variationName) name += ` (${item.variationName})`;
 
     // Value part
-    const priceStr = Number(item.unitPrice || 0).toLocaleString();
-    const amtStr = Number(item.subtotal || 0).toLocaleString();
+    const priceStr = formatAmount(item.unitPrice || 0);
+    const amtStr = formatAmount(item.subtotal || 0);
 
     const nameWidth = layout === 'MINIMAL' ? (PAPER_WIDTH - MARGIN * 2 - 20) : (PAPER_WIDTH - MARGIN * 2 - 6 - (PAPER_WIDTH <= 58 ? 24 : 32));
     const lines = doc.splitTextToSize(name, Math.max(10, nameWidth));
@@ -487,11 +605,11 @@ async function buildBill(data: any, isPaid: boolean) {
   doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
   y += 5;
 
-  printRow(doc, 'Subtotal', `PKR ${Number(data.subtotal || 0).toLocaleString()}`, y);
+  printRow(doc, 'Subtotal', formatPKR(data.subtotal || 0), y);
   y += 4.5;
 
   if (data.discountAmount > 0) {
-    printRow(doc, 'Discount', `-PKR ${Number(data.discountAmount).toLocaleString()}`, y);
+    printRow(doc, 'Discount', `-${formatPKR(data.discountAmount)}`, y);
     y += 4.5;
   }
 
@@ -509,35 +627,35 @@ async function buildBill(data: any, isPaid: boolean) {
     const cashTax = applyRounding(taxable * config.cashTaxRate, config.taxRoundingMethod);
     const cashTotal = taxable + cashTax;
     
-    printRow(doc, `${config.cashTaxLabel} ${config.cashTaxRate * 100}%`, `PKR ${cashTax.toLocaleString()}`, y);
+    printRow(doc, `${config.cashTaxLabel} ${config.cashTaxRate * 100}%`, formatPKR(cashTax), y);
     y += 4.5;
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
     doc.setFont(FONT, 'bold');
-    printRow(doc, 'TOTAL (ON CASH)', `PKR ${cashTotal.toLocaleString()}`, y);
+    printRow(doc, 'TOTAL (ON CASH)', formatPKR(cashTotal), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
-    
+
     // Separator
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
-    
+
     // Block 2: Card Tax
-    printRow(doc, 'Subtotal', `PKR ${Number(data.subtotal || 0).toLocaleString()}`, y);
+    printRow(doc, 'Subtotal', formatPKR(data.subtotal || 0), y);
     y += 4.5;
     if (data.discountAmount > 0) {
-      printRow(doc, 'Discount', `-PKR ${Number(data.discountAmount).toLocaleString()}`, y);
+      printRow(doc, 'Discount', `-${formatPKR(data.discountAmount)}`, y);
       y += 4.5;
     }
     const cardTax = applyRounding(taxable * config.cardTaxRate, config.taxRoundingMethod);
     const cardTotal = taxable + cardTax;
-    
-    printRow(doc, `${config.cardTaxLabel} ${config.cardTaxRate * 100}%`, `PKR ${cardTax.toLocaleString()}`, y);
+
+    printRow(doc, `${config.cardTaxLabel} ${config.cardTaxRate * 100}%`, formatPKR(cardTax), y);
     y += 4.5;
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
     doc.setFont(FONT, 'bold');
-    printRow(doc, 'TOTAL (ON CARD)', `PKR ${cardTotal.toLocaleString()}`, y);
+    printRow(doc, 'TOTAL (ON CARD)', formatPKR(cardTotal), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
   } else {
@@ -553,23 +671,23 @@ async function buildBill(data: any, isPaid: boolean) {
     }
 
     if (data.taxAmount > 0) {
-      printRow(doc, taxLabel, `PKR ${Number(data.taxAmount).toLocaleString()}`, y);
+      printRow(doc, taxLabel, formatPKR(data.taxAmount), y);
       y += 4.5;
     }
     doc.text(SEPARATOR, PAPER_WIDTH / 2, y, { align: 'center' });
     y += 5;
 
     doc.setFont(FONT, 'bold');
-    printRow(doc, isPaid ? 'TOTAL' : 'TOTAL DUE', `PKR ${Number(data.total || 0).toLocaleString()}`, y);
+    printRow(doc, isPaid ? 'TOTAL' : 'TOTAL DUE', formatPKR(data.total || 0), y);
     doc.setFont(FONT, 'normal');
     y += 4.5;
   }
 
   if (isPaid) {
     if (data.cashTendered && data.cashTendered > 0) {
-      printRow(doc, 'Cash', `PKR ${Number(data.cashTendered).toLocaleString()}`, y);
+      printRow(doc, 'Cash', formatPKR(data.cashTendered), y);
       y += 4.5;
-      printRow(doc, 'Change', `PKR ${Number(data.changeGiven || 0).toLocaleString()}`, y);
+      printRow(doc, 'Change', formatPKR(data.changeGiven || 0), y);
       y += 4.5;
     } else {
       printRow(doc, 'Paid via', data.paymentMethod || 'CARD', y);

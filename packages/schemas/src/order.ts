@@ -43,6 +43,13 @@ export const OrderCreateSchema = z.object({
   tenantId: z.string().optional().nullable(),
   shiftId: z.string().optional().nullable(),
 
+  // Part 4 — the terminal owns the order number. When the POS supplies one
+  // (with the client-generated order id it was minted alongside), the server
+  // trusts it verbatim instead of generating its own; `generateOrderNumber`
+  // is only the fallback for sources that don't carry a number.
+  orderNumber: z.string().min(1).max(24).optional(),
+  clientId: z.string().min(1).optional(),
+
   status: OrderStatusEnum.default('PENDING'),
   type: OrderTypeEnum.default('DINE_IN'),
   
@@ -60,4 +67,10 @@ export const OrderCreateSchema = z.object({
 
 export const OrderUpdateSchema = OrderCreateSchema.partial().extend({
   tokenNumber: z.string().optional(),
+  // Part 3 — guest asked for / cancelled the bill request. ISO string to set,
+  // null to clear.
+  billRequestedAt: z.string().datetime().nullable().optional(),
+  // Part 12 — required to complete a zero-total order; audit-only, not an
+  // Order column.
+  managerApprovalId: z.string().optional(),
 });

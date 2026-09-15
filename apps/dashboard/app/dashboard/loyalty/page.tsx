@@ -36,7 +36,7 @@ export default function LoyaltyPage() {
   };
 
   if (isLoading) {
-    return <PageLoader label="Loading loyalty program..." variant="cards" />;
+    return <PageLoader label="Loading loyalty program..." variant="tabs" />;
   }
 
   if (!settings?.isActive) {

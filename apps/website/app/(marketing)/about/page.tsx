@@ -16,13 +16,6 @@ const values = [
   { title: "Transparent & Honest", desc: "No hidden charges, no surprise fees, and simple affordable pricing for everyone.", icon: Building },
 ];
 
-const team = [
-  { name: "Muhammad Ahmed", role: "Co-Founder & CEO", initials: "MA" },
-  { name: "Hamza Shafiq", role: "Co-Founder & CTO", initials: "HS" },
-  { name: "Zainab Malik", role: "Head of Product & Design", initials: "ZM" },
-  { name: "Bilal Hassan", role: "Lead Customer Success", initials: "BH" },
-];
-
 export const dynamic = 'force-static';
 
 export default function AboutPage() {
@@ -63,26 +56,6 @@ export default function AboutPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Team */}
-      <section className="bg-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8 tracking-tight">The team</h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {team.map((member) => (
-              <div key={member.name} className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-sm shrink-0">
-                  {member.initials}
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">{member.name}</div>
-                  <div className="text-xs text-gray-500">{member.role}</div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>

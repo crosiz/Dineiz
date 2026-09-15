@@ -52,8 +52,8 @@ export default function BillingSettingsPage() {
   if (!sub || !plans) {
     return (
       <AdminOnly>
-        <div className="py-12 max-w-6xl mx-auto">
-          <PageLoader label="Loading billing data..." />
+        <div className="max-w-6xl mx-auto">
+          <PageLoader label="Loading billing data..." variant="cards" />
         </div>
       </AdminOnly>
     );

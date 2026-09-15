@@ -12,9 +12,10 @@ import { useViews } from '@/lib/core/views';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
-import { syncOfflineOrders, syncOfflinePayments, syncPendingItemAdds } from '@/lib/sync';
+import { getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { isViewMode } from '@/lib/view-mode';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
@@ -75,12 +76,50 @@ export default function HomeDashboard() {
   const [shiftStatus, setShiftStatus] = useState<string>('LOCAL');
   const [shiftElapsed, setShiftElapsed] = useState<string>('0h 0m');
 
-  // Instant paint from cache, refreshed in the background — replaces the
-  // old fetchStats()/useState pair that showed zeros on every mount.
+  // Server-side shift totals — instant paint from cache, refreshed in the
+  // background + on payment:confirmed. The authoritative number once sync
+  // catches up (it also folds in refunds / other terminals).
   const { stats, invalidate: invalidateStats } = useShiftStats(
     session?.branchId ?? null,
     activeShift?.shiftId || activeShift?.id || null
   );
+
+  // Local-first "Today's Performance": derived straight from the event store
+  // for this shift's completed orders. Ticks up the instant a payment is
+  // collected on this terminal — before the outbox has shipped it — which is
+  // what "the numbers aren't updating" was really about. The server figure
+  // above is used as a ceiling so another terminal's activity still shows.
+  const activeShiftId = activeShift?.shiftId || activeShift?.id || null;
+  const localPerf = useViews((s) => {
+    if (!activeShiftId) return { count: 0, value: 0 };
+    const done = Object.values(s.orders).filter(
+      (o) => o.status === 'COMPLETED' && o.shiftId === activeShiftId,
+    );
+    const value = done.reduce((sum, o) => sum + Number(o.netAmount ?? o.subtotal ?? 0), 0);
+    return { count: done.length, value };
+  });
+  const perf = (() => {
+    const ordersServed = Math.max(localPerf.count, Math.round(stats.ordersServed || 0));
+    const totalValue = Math.max(localPerf.value, Number(stats.totalValue || 0));
+    return {
+      ordersServed,
+      totalValue,
+      averagePerOrder: ordersServed ? totalValue / ordersServed : 0,
+    };
+  })();
+
+  // Spec Part 11 — in View Mode (signed in, no shift) order-entry CTAs stop
+  // navigating and explain themselves with an inline "Open a shift" prompt.
+  const viewMode = isMounted && isViewMode();
+  const guardOrderEntry = (go: () => void) => {
+    if (viewMode) {
+      toast.message('Open a shift to take orders', {
+        action: { label: 'Open Shift', onClick: () => router.push('/pos/shift/open') },
+      });
+      return;
+    }
+    go();
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -170,40 +209,49 @@ export default function HomeDashboard() {
     () => tables.filter((t: any) => t.status === 'BILL_REQUESTED'),
     [tables]
   );
-  const unsyncedOrders = useLiveQuery(() => {
-    const db = getDB();
-    return db.offlineOrders ? db.offlineOrders.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedPayments = useLiveQuery(() => {
-    const db = getDB();
-    return db.offlinePayments ? db.offlinePayments.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedItemAdds = useLiveQuery(() => {
-    const db = getDB();
-    return db.pendingItemAdds ? db.pendingItemAdds.where('syncStatus').anyOf(['pending', 'failed']).toArray() : [];
-  }, []) ?? [];
-  const unsyncedCount = unsyncedOrders.length + unsyncedPayments.length + unsyncedItemAdds.length;
+  // lib/sync.ts's queueOfflineOrder/queueOfflinePayment/queueItemAdd (and the
+  // offlineOrders/offlinePayments/pendingItemAdds tables they wrote to) are
+  // dead code — nothing has written to those tables since the outbox
+  // (lib/core/outbox.ts) took over. This card used to read only those tables,
+  // so it always reported 0 unsynced and "Retry Now" always "succeeded"
+  // regardless of the real backlog. Poll the actual outbox summary instead —
+  // the same source SyncHealthDot in the top bar already uses, so the two
+  // indicators can't disagree.
+  const [syncSummary, setSyncSummary] = useState<UnsyncedSummary | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const tick = () => getUnsyncedSummary().then((s) => { if (alive) setSyncSummary(s); }).catch(() => {});
+    tick();
+    const h = setInterval(tick, 4000);
+    return () => { alive = false; clearInterval(h); };
+  }, []);
+  const unsyncedCount = syncSummary?.count ?? 0;
+  const stuckCount = (syncSummary?.poisoned ?? 0) + (syncSummary?.abandoned ?? 0);
 
   const [isRetryingSync, setIsRetryingSync] = useState(false);
   const retrySync = async () => {
     setIsRetryingSync(true);
-    try {
-      await syncOfflineOrders();
-      await syncPendingItemAdds();
-      await syncOfflinePayments();
-      toast.success('Sync attempted for pending offline data');
-    } finally {
-      setIsRetryingSync(false);
-    }
+    kickOutbox('immediate');
+    toast.success('Sync attempted for pending offline data');
+    // Give the drain a moment to actually move something before the summary
+    // re-polls on its own 4s cadence — otherwise the button's own state
+    // clears before there's anything new to see.
+    setTimeout(() => setIsRetryingSync(false), 1000);
   };
 
   const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedCount;
 
+  // h-full, not a hardcoded calc(100vh - 72px - 64px): POSLayout's content
+  // slot is already exactly "viewport minus top bar minus bottom nav" via
+  // flex-1 in a flex column, so this only needs to fill that — a hardcoded
+  // calc against the shells' own current pixel heights silently goes stale
+  // the moment either one changes (as it did the moment BottomNav grew by a
+  // device's safe-area inset).
   return (
-    <div className="flex flex-col h-[calc(100vh-72px-64px)] w-full bg-[#F8FAFC] overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[#F8FAFC] overflow-hidden">
       {/* Search Header Strip */}
       <div className="bg-white border-b border-[#E2E8F0] px-8 py-4 shrink-0 shadow-xs flex items-center justify-between">
-        <div className="relative w-96">
+        <div className="relative w-full sm:w-96">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] text-xl">
             search
           </span>
@@ -212,7 +260,7 @@ export default function HomeDashboard() {
             placeholder="Search orders, tables, or tickets..."
             value={homeSearch}
             onChange={(e) => setHomeSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] placeholder-[#94A3B8] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:bg-white transition-all"
+            className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] placeholder-[#94A3B8] text-[16px] font-medium focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:bg-white transition-all"
           />
           {homeSearch && (
             <button
@@ -225,10 +273,14 @@ export default function HomeDashboard() {
         </div>
       </div>
 
-      {/* Main Grid Content Area */}
-      <main className="flex-1 grid grid-cols-12 overflow-hidden">
+      {/* Main Grid Content Area — single column, whole-page scroll below lg
+          (each panel's own overflow-y-auto only makes sense once the grid
+          row's shrunk it to a fixed cross-axis size the way lg:grid-cols-12
+          does); side-by-side 7/5 split with two independently-scrolling
+          panels from lg up, as before. */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto lg:overflow-hidden no-scrollbar">
         {/* Left Column (60%) */}
-        <div className="col-span-7 p-8 overflow-y-auto no-scrollbar flex flex-col gap-8">
+        <div className="lg:col-span-7 p-4 sm:p-8 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
           {/* Hero Actions Grid (4 Cards 2x2 Layout) */}
           <section>
             <div className="grid grid-cols-2 gap-5">
@@ -238,14 +290,14 @@ export default function HomeDashboard() {
                   sublabel: 'Table service & floor plan',
                   icon: 'restaurant',
                   usePrimary: true,
-                  onClick: () => router.push('/pos/tables'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/tables')),
                 },
                 {
                   label: 'Takeaway Order',
                   sublabel: 'Quick pick-up & counter order',
                   icon: 'shopping_bag',
                   usePrimary: false,
-                  onClick: () => router.push('/pos/order?type=takeaway'),
+                  onClick: () => guardOrderEntry(() => router.push('/pos/order?type=takeaway')),
                 },
                 {
                   label: 'Active Orders',
@@ -416,18 +468,22 @@ export default function HomeDashboard() {
                 ))}
 
                 {unsyncedCount > 0 && (
-                  <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between shadow-sm">
+                  <div className={`p-4 rounded-xl flex items-center justify-between shadow-sm border ${
+                    stuckCount > 0 ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
+                  }`}>
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-sky-600">cloud_off</span>
+                      <span className={`material-symbols-outlined ${stuckCount > 0 ? 'text-rose-600' : 'text-sky-600'}`}>
+                        {stuckCount > 0 ? 'error' : 'cloud_off'}
+                      </span>
                       <div>
                         <p className="font-bold text-[#0F172A]">
-                          {[
-                            unsyncedOrders.length > 0 ? `${unsyncedOrders.length} order${unsyncedOrders.length > 1 ? 's' : ''}` : null,
-                            unsyncedPayments.length > 0 ? `${unsyncedPayments.length} payment${unsyncedPayments.length > 1 ? 's' : ''}` : null,
-                            unsyncedItemAdds.length > 0 ? `${unsyncedItemAdds.length} item update${unsyncedItemAdds.length > 1 ? 's' : ''}` : null,
-                          ].filter(Boolean).join(', ')} saved offline, not yet synced
+                          {stuckCount > 0
+                            ? `${stuckCount} change${stuckCount > 1 ? 's' : ''} the server rejected — needs a manager`
+                            : `${unsyncedCount} change${unsyncedCount > 1 ? 's' : ''} not yet synced`}
                         </p>
-                        <p className="text-xs text-[#64748B]">Will sync automatically when back online</p>
+                        <p className="text-xs text-[#64748B]">
+                          {stuckCount > 0 ? 'Review in Settings → Sync & Data' : 'Will sync automatically in the background'}
+                        </p>
                       </div>
                     </div>
                     <button
@@ -445,7 +501,7 @@ export default function HomeDashboard() {
         </div>
 
         {/* Right Column (40%) */}
-        <div className="col-span-5 bg-[#F8FAFC] border-l border-[#E2E8F0] p-6 overflow-y-auto no-scrollbar flex flex-col gap-8">
+        <div className="lg:col-span-5 bg-[#F8FAFC] border-t lg:border-t-0 lg:border-l border-[#E2E8F0] p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
           {/* Shift Info Card */}
           <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
             <div className="flex justify-between items-start mb-6">
@@ -487,21 +543,21 @@ export default function HomeDashboard() {
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Orders served</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-[36px] font-bold text-[#0F172A] leading-none">{Math.round(stats.ordersServed)}</span>
+                  <span className="clash-display text-[36px] font-bold text-[#0F172A] leading-none">{perf.ordersServed}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Total value</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(stats.totalValue))}</span>
+                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.totalValue))}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
               <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
                 <span className="text-[#64748B] font-semibold">Average per order</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(stats.averagePerOrder))}</span>
+                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.averagePerOrder))}</span>
                   <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'Per order this shift' : 'No shift open'}</span>
                 </div>
               </div>
@@ -548,17 +604,19 @@ export default function HomeDashboard() {
                               Floor {fNum}
                             </h5>
                           )}
-                          <div className="grid grid-cols-7 gap-x-2 gap-y-4 justify-items-center w-full px-2 pt-1 pb-6">
+                          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-x-1 gap-y-2 justify-items-center w-full px-2 pt-1 pb-6">
                             {tablesByFloor[fNum].map((t: any) => (
                               <div
                                 key={t.id}
                                 onClick={() =>
-                                  router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  guardOrderEntry(() =>
+                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                  )
                                 }
-                                className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110"
+                                className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110 p-1.5"
                               >
                                 <div
-                                  className={`size-8 rounded-full ${
+                                  className={`size-10 rounded-full ${
                                     t.status !== 'FREE' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
                                   } ring-4 shadow-sm`}
                                 />

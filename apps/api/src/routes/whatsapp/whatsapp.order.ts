@@ -1,10 +1,7 @@
 import { prisma, WhatsAppConversation } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
 import { cartTotal, CartLine } from './whatsapp.state-machine';
-
-function generateOrderNumber() {
-  return `WA-${Date.now().toString().slice(-6)}`;
-}
+import { nextNonPosOrderNumber, type OrderNumberFormat } from '../../lib/orderNumber';
 
 function normalizePhone(phone: string): string {
   let p = phone.replace(/[\s-]/g, '');
@@ -45,11 +42,22 @@ export async function createOrderFromConversation(
     },
   });
 
+  const waBranding = await prisma.tenantBranding.findUnique({
+    where: { tenantId: conversation.tenantId },
+    select: { orderNumberFormat: true, tenantShortCode: true },
+  });
+  const orderNumber = await nextNonPosOrderNumber({
+    tenantId: conversation.tenantId,
+    source: 'WHATSAPP',
+    format: (waBranding?.orderNumberFormat as OrderNumberFormat) ?? 'STANDARD',
+    shortCode: waBranding?.tenantShortCode,
+  });
+
   const order = await prisma.order.create({
     data: {
       tenantId: conversation.tenantId,
       branchId: conversation.branchId,
-      orderNumber: generateOrderNumber(),
+      orderNumber,
       source: 'WHATSAPP',
       type: conversation.orderType ?? 'TAKEAWAY',
       status: 'PENDING',

@@ -1,4 +1,4 @@
-﻿import { FastifyPluginAsync } from 'fastify';
+import { FastifyPluginAsync } from 'fastify';
 import { auth } from '../../lib/auth';
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -37,9 +37,14 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     reply.status(res.status);
     res.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
       // Fastify supports multiple set-cookie headers via repeated calls.
-      if (key.toLowerCase() === 'set-cookie') reply.header('set-cookie', value);
-      else reply.header(key, value);
+      if (lower === 'set-cookie') {
+        reply.header('set-cookie', value);
+      } else if (!lower.startsWith('access-control-')) {
+        // Prevent Better Auth response from overriding @fastify/cors headers
+        reply.header(key, value);
+      }
     });
 
     const buf = Buffer.from(await res.arrayBuffer());

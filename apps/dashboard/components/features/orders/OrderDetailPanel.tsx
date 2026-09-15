@@ -2,7 +2,7 @@
 import { formatPKR } from '@/lib/formatters';
 import React, { useState } from 'react';
 import { X, User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, CheckCircle2, ChevronRight, Maximize2, FileText, Plus } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonDetail } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -182,8 +182,24 @@ export function OrderDetailPanel({ orderId, onClose, onReverse }: OrderDetailPan
         onClick={e => e.stopPropagation()}
       >
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <PageLoader label="Loading order..." />
+          <div className="flex-1 flex flex-col" role="status" aria-busy="true">
+            <span className="sr-only">Loading order</span>
+            <div className="p-6 border-b border-slate-100 shrink-0 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-5 w-16 rounded-lg" />
+                <Skeleton className="h-5 w-16 rounded-lg" />
+              </div>
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+            <div className="px-6 py-4 border-b border-slate-100 flex gap-2 shrink-0">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-28" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <SkeletonDetail sections={3} />
+            </div>
           </div>
         ) : !order ? (
           <div className="flex-1 flex items-center justify-center text-slate-400">Order not found</div>

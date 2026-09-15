@@ -26,6 +26,10 @@ export const OrderHistoryQuerySchema = z.object({
 
 export const OrderLiveQuerySchema = z.object({
   branchId: z.string().optional(),
+  // Spec Part 2 — a cashier's board is scoped to their own shift. The POS
+  // sends its open shift id here; the server also enforces it by role (a
+  // CASHIER with no shiftId is resolved to their current open shift).
+  shiftId: z.string().optional(),
 });
 
 export const OrderIdParamSchema = z.object({ id: z.string() });

@@ -6,7 +6,7 @@ export function FinalCTASection() {
   return (
     <section className="bg-white py-24 lg:py-32">
       <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
-        <p className="text-sm font-semibold text-[#FF6B35] tracking-wide mb-5">
+        <p className="text-sm font-semibold text-brand-700 tracking-wide mb-5">
           Get started today
         </p>
         <h2

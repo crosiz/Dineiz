@@ -1,5 +1,6 @@
 import { prisma, OrderStatus, OrderType } from '@dineiz/db';
 import { emitNewOrder } from '../../lib/socket';
+import { nextNonPosOrderNumber, type OrderNumberFormat } from '../../lib/orderNumber';
 
 export async function getSettings(tenantId: string) {
   let settings = await prisma.qrSettings.findUnique({ where: { tenantId } });
@@ -34,10 +35,6 @@ export async function saveSettings(tenantId: string, data: any) {
     create: { ...safeData, tenantId }
   });
   return settings;
-}
-
-function generateOrderNumber() {
-  return `QR-${Date.now().toString().slice(-6)}`;
 }
 
 export async function handleCreateOrder(data: any) {
@@ -77,14 +74,26 @@ export async function handleCreateOrder(data: any) {
 
   // 3. Status and Payment logic
   const status: OrderStatus = settings.autoConfirm ? 'IN_KITCHEN' : 'PENDING';
-  
+
+  // Part 4 — one generator. QR orders read "Q-0912-001".
+  const qrBranding = await prisma.tenantBranding.findUnique({
+    where: { tenantId },
+    select: { orderNumberFormat: true, tenantShortCode: true },
+  });
+  const orderNumber = await nextNonPosOrderNumber({
+    tenantId,
+    source: 'QR_CODE',
+    format: (qrBranding?.orderNumberFormat as OrderNumberFormat) ?? 'STANDARD',
+    shortCode: qrBranding?.tenantShortCode,
+  });
+
   // Create order
   const order = await prisma.order.create({
     data: {
       tenantId,
       branchId,
       tableId,
-      orderNumber: generateOrderNumber(),
+      orderNumber,
       source: 'QR_CODE',
       type: 'DINE_IN', // QR implies table ordering in this context
       status,

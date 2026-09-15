@@ -8,7 +8,7 @@ import { CreateDealSlideOver } from './_components/CreateDealSlideOver';
 import { useBranchFilter } from '@/hooks/useBranchFilter';
 import { Pagination } from '@/components/ui/Pagination';
 import { Plus, Tag, Ticket, Utensils, Trash2, ShoppingBag } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTableRows } from '@/components/ui/skeleton';
 
 type Item = { id: string; name: string; basePrice: number };
 type Category = { id: string; name: string; items: Item[] };
@@ -190,11 +190,10 @@ export default function DealsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr>
-                    <td colSpan={5}>
-                      <PageLoader label="Fetching promotions..." className="min-h-0 py-16" />
-                    </td>
-                  </tr>
+                  <SkeletonTableRows
+                    rows={8}
+                    columns={[{ w: 160, avatar: true }, 90, { w: 140, align: 'left' }, { w: 32, pill: true }, { w: 28, align: 'right' }]}
+                  />
                 ) : paginatedDeals.length === 0 ? (
                   <tr>
                     <td colSpan={5}>

@@ -15,6 +15,7 @@ import {
   History,
   Mail,
   Sliders,
+  KeyRound,
   Activity,
   ShieldCheck,
   Shield,
@@ -77,6 +78,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Plans & Pricing', href: '/plans', icon: Package, ownerOnly: true },
       { label: 'Plan Overrides', href: '/system/plan-overrides', icon: Sliders },
+      { label: 'Standalone Licenses', href: '/system/standalone-licenses', icon: KeyRound },
       { label: 'API Health', href: '/system/api-health', icon: Activity },
       { label: 'Audit Trail', href: '/system/audit-trail', icon: ShieldCheck },
       { label: 'Super Admins', href: '/system/super-admins', icon: Shield, ownerOnly: true },

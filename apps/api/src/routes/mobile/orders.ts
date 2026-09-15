@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@dineiz/db";
 import { mobileAuthMiddleware, MobileJwtPayload } from "../../middleware/mobileAuth.middleware";
 import { applyOrderStatusSideEffects } from "../order/order.service";
+import { nextNonPosOrderNumber, type OrderNumberFormat } from "../../lib/orderNumber";
 
 export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.addHook('preHandler', mobileAuthMiddleware);
@@ -96,7 +97,22 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return reply.status(400).send({ success: false, error: "No valid menu items in order payload" });
       }
 
-      let orderNumber = `ORD-${1000 + (await prisma.order.count({ where: { tenantId: mobileUserReq.tenantId } })) + 1}`;
+      // Part 4 — one generator. The mobile app is its own source ("M-…"),
+      // running through the shared per-source/per-day Redis sequence instead
+      // of this count()-based TOCTOU race that also shared the POS's "ORD-"
+      // prefix.
+      const mobileTenantId = mobileUserReq.tenantId; // narrowed non-null by the guard above
+      const mobileBranding = await prisma.tenantBranding.findUnique({
+        where: { tenantId: mobileTenantId },
+        select: { orderNumberFormat: true, tenantShortCode: true },
+      });
+      const nextMobileOrderNumber = () => nextNonPosOrderNumber({
+        tenantId: mobileTenantId,
+        source: 'MOBILE',
+        format: (mobileBranding?.orderNumberFormat as OrderNumberFormat) ?? 'STANDARD',
+        shortCode: mobileBranding?.tenantShortCode,
+      });
+      let orderNumber = await nextMobileOrderNumber();
 
       // Resolve table if tableName provided
       let resolvedTableId = data.tableId;
@@ -115,11 +131,9 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         notesContent = `${notesContent} [Payment:${data.paymentMethod}]`.trim();
       }
 
-      // orderNumber has a @@unique([tenantId, orderNumber]) constraint —
-      // this count()-based scheme is a classic TOCTOU race under concurrent
-      // creates, and shares the same "ORD-" prefix as the POS's Redis-based
-      // generator, so it can also collide with a POS-created order. Retry
-      // with a freshly recomputed number on that specific violation.
+      // @@unique([tenantId, orderNumber]) backstop — retry with a fresh
+      // number on that specific violation (Redis-down fallback jitter can
+      // still, rarely, collide).
       let order;
       for (let attempt = 0; ; attempt++) {
         try {
@@ -153,7 +167,7 @@ export const mobileOrdersRoutes: FastifyPluginAsyncZod = async (fastify) => {
         } catch (e: any) {
           const isOrderNumberCollision = e?.code === 'P2002' && e?.meta?.target?.includes?.('orderNumber');
           if (!isOrderNumberCollision || attempt >= 2) throw e;
-          orderNumber = `ORD-${1000 + (await prisma.order.count({ where: { tenantId: mobileUserReq.tenantId } })) + 1}`;
+          orderNumber = await nextMobileOrderNumber();
         }
       }
 

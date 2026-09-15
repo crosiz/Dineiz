@@ -13,7 +13,7 @@ const featureList = [
   { title: "Tablet POS Order Punching", icon: Tablet, desc: "Lightning fast checkout with dish variation pickers & offline sync." },
   { title: "Kitchen Display System (KDS)", icon: ChefHat, desc: "Digital station routing & preparation timer alerts for kitchen staff." },
   { title: "Real-time Sales Analytics", icon: TrendingUp, desc: "Hourly revenue breakdown, dish popularity metrics, and cash flow." },
-  { title: "WhatsApp AI Ordering Bot", icon: MessageSquare, desc: "24/7 automated order taking sent straight to your kitchen." },
+  { title: "WhatsApp Ordering", icon: MessageSquare, desc: "AI reads customer orders sent via WhatsApp in Urdu or English; staff confirms and sends to kitchen." },
   { title: "Recipe Raw Inventory", icon: Boxes, desc: "Automatic ingredient deduction per dish sold & low stock alerts." },
   { title: "Multi-branch Command", icon: Building2, desc: "Central web admin to compare revenue across all restaurant locations." },
   { title: "GST Tax Configuration", icon: ShieldCheck, desc: "Configurable cash & card GST rates, NTN on every receipt, and exportable tax summaries." },

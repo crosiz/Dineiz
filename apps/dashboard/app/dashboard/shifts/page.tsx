@@ -52,7 +52,9 @@ function BreakDuration({ startedAt }: { startedAt: string | null }) {
 }
 
 function StatusPill({ shift }: { shift: any }) {
-  const [label, tone] = shift.closedReason
+  const [label, tone] = shift.status === "PENDING_SYNC"
+    ? ["Pending sync", "bg-amber-50 text-amber-700 border-amber-200"]
+    : shift.closedReason
     ? ["Force closed", "bg-amber-50 text-amber-700 border-amber-200"]
     : shift.status === "OPEN"
     ? ["Open", "bg-emerald-50 text-emerald-700 border-emerald-200"]
@@ -314,7 +316,7 @@ export default function ShiftManagementPage() {
     enabled: activeTab === "live",
   });
 
-  const { data: historyData, isLoading: isHistoryLoading, isFetching: isHistoryFetching } = useQuery({
+  const { data: historyData, isLoading: isHistoryLoading, isFetching: isHistoryFetching, refetch: refetchHistory } = useQuery({
     queryKey: ["shift-history", historyParams],
     queryFn: () => apiGet<any>("/api/shifts", historyParams),
     enabled: activeTab === "history" && rangeReady,
@@ -322,6 +324,22 @@ export default function ShiftManagementPage() {
     // collapsing to skeletons on every keystroke.
     placeholderData: keepPreviousData,
   });
+
+  // Spec Part 6 / Part 12 — a PENDING_SYNC shift whose terminal never came
+  // back online. Manually finalise it from whatever reached the server.
+  const [finalisingId, setFinalisingId] = useState<string | null>(null);
+  const finaliseShift = async (id: string) => {
+    setFinalisingId(id);
+    try {
+      await apiFetch(`/api/shifts/${id}/sync-complete`, { method: "POST", body: "{}" });
+      refetchHistory();
+      refetchLive();
+    } catch {
+      /* surfaced by the row not changing; the sweeper will get it in 6h regardless */
+    } finally {
+      setFinalisingId(null);
+    }
+  };
 
   const liveShifts: any[] = liveData?.shifts ?? [];
   const shifts: any[] = historyData?.data ?? [];
@@ -491,7 +509,7 @@ export default function ShiftManagementPage() {
 
             {isLiveLoading ? (
               <div className="space-y-2">
-                {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-50 rounded-lg animate-pulse" />)}
+                {[1, 2, 3].map(i => <div key={i} className="h-12 skeleton-shimmer rounded-lg" />)}
               </div>
             ) : liveShifts.length === 0 ? (
               <div className="py-20 text-center">
@@ -553,6 +571,7 @@ export default function ShiftManagementPage() {
               >
                 <option value="">All statuses</option>
                 <option value="OPEN">Open</option>
+                <option value="PENDING_SYNC">Pending sync</option>
                 <option value="CLOSED">Closed</option>
                 <option value="ABANDONED">Abandoned</option>
               </select>
@@ -649,7 +668,7 @@ export default function ShiftManagementPage() {
                         Array.from({ length: 8 }).map((_, i) => (
                           <tr key={i}>
                             {Array.from({ length: showBranchColumn ? 14 : 13 }).map((_, j) => (
-                              <td key={j} className="px-4 py-3"><div className="h-3 bg-slate-100 rounded animate-pulse w-14" /></td>
+                              <td key={j} className="px-4 py-3"><div className="h-3 skeleton-shimmer rounded w-14" /></td>
                             ))}
                           </tr>
                         ))
@@ -717,7 +736,17 @@ export default function ShiftManagementPage() {
                               </td>
                               <td className="py-3 px-4"><StatusPill shift={s} /></td>
                               <td className="py-3 pr-5 text-right">
-                                <div className="flex items-center justify-end gap-0.5">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {s.status === "PENDING_SYNC" && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); finaliseShift(s.id); }}
+                                      disabled={finalisingId === s.id}
+                                      className="px-2 py-1 rounded-md text-[11px] font-medium border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                                      title="Finalise this shift from data already on the server"
+                                    >
+                                      {finalisingId === s.id ? "Finalising…" : "Finalise"}
+                                    </button>
+                                  )}
                                   <ShiftPdfButton shiftId={s.id} />
                                   <ChevronRight className="w-3.5 h-3.5 text-slate-200 group-hover:text-slate-400 transition-colors" />
                                 </div>

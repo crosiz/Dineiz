@@ -14,7 +14,6 @@ const entries = [
     tag: "Major Release",
     tagColor: "bg-brand-100 text-brand-700",
     changes: [
-      "WhatsApp AI now understands Roman Urdu mix naturally",
       "New table map with drag-and-drop floor plan editor",
     ],
   },

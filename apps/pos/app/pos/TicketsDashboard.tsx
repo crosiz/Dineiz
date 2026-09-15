@@ -74,6 +74,24 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   }, []);
 
+  // The view-mode switcher below is `hidden sm:flex` — Kanban's fixed-width
+  // horizontal-scroll columns aren't a workable layout on a phone, so the
+  // switcher simply doesn't offer it there. Without this guard, a terminal
+  // that had Kanban selected on a tablet (view mode persists via
+  // localStorage) would open straight into it on a phone with no visible way
+  // back to Grid/List, since the only control that could change it is the
+  // one that's hidden. Forces back to Grid whenever the viewport narrows
+  // past sm, whatever's saved.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const enforce = () => {
+      if (mq.matches) setViewMode((m) => (m === 'kanban' ? 'grid' : m));
+    };
+    enforce();
+    mq.addEventListener('change', enforce);
+    return () => mq.removeEventListener('change', enforce);
+  }, []);
+
   const handleSetViewMode = (mode: 'grid' | 'list' | 'kanban') => {
     setViewMode(mode);
     localStorage.setItem('pos_viewMode', mode);
@@ -1193,9 +1211,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
       )}
 
-      {/* Shift Summary Modal */}
+      {/* Shift Summary Modal.
+          z-[500], not 9999 — that value tied exactly with ConfirmModal's
+          real (inline-style) z-index, so if a confirm dialog is ever
+          triggered from within this view, which one paints on top would
+          have been decided by DOM order, not intent. ConfirmModal is meant
+          to out-rank everything, including this. */}
       {shiftSummaryOpen && (
-        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShiftSummaryOpen(false)}>
+        <div className="fixed inset-0 z-[500] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShiftSummaryOpen(false)}>
           <div className="bg-white border border-slate-200 shadow-xl rounded-2xl w-full max-w-sm p-8 flex flex-col text-center" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
             <div className="text-slate-600 space-y-3 my-6 text-sm font-medium">

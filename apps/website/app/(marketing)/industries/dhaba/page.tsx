@@ -7,7 +7,7 @@ import { InternalLinks } from "@/components/seo/InternalLinks";
 
 export const metadata = generateSEOMetadata({
   title: 'Dhaba Billing Software Pakistan — Dineiz Free App',
-  description: 'Billing software for dhabas in Pakistan. Download free. Works on any Android phone. Bluetooth printer support. No monthly fee. Used by 200+ dhabas.',
+  description: 'Billing software for dhabas in Pakistan. Download free. Works on any Android phone. Bluetooth printer support. No monthly fee.',
   keywords: ['dhaba billing software', 'dhaba POS Pakistan', 'dhaba billing app free', 'road dhaba billing system'],
   canonical: 'https://dineiz.com/industries/dhaba',
 });
@@ -118,7 +118,7 @@ export default function DhabaPage() {
                 Puraani khata book ko choro, <br/><span className="text-[#FF6B35]">digital hisaab rakho.</span>
               </h2>
               <p className="text-[18px] text-[#6e6e73] mb-8 leading-relaxed">
-                We know how hard you work. 14-hour shifts, managing staff, ensuring the khana is fresh. You shouldn't be worrying about manual ledger errors or staff taking extra money.
+                We know how hard you work. 14-hour shifts, managing staff, ensuring the khana is fresh. You shouldn't be worrying about manual ledger errors or cash going missing.
               </p>
               
               <ul className="space-y-6">
@@ -146,7 +146,7 @@ export default function DhabaPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-[#1d1d1f] text-[16px]">Stop Cash Leakage</h4>
-                    <p className="text-[15px] text-[#6e6e73] mt-1 leading-relaxed">Customers ask for printed receipts. Staff must punch orders to print them. Theft stops immediately.</p>
+                    <p className="text-[15px] text-[#6e6e73] mt-1 leading-relaxed">Customers ask for printed receipts. Staff must punch orders to print them, so every sale is accounted for.</p>
                   </div>
                 </li>
               </ul>
@@ -189,11 +189,11 @@ export default function DhabaPage() {
         </div>
       </section>
 
-      {/* PRICING & SOCIAL PROOF */}
+      {/* PRICING */}
       <section className="bg-[#f5f5f7] py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          
-          <div className="mb-16">
+
+          <div>
             <h2 className="text-[32px] md:text-[40px] font-bold text-[#1d1d1f] mb-6 tracking-tight">Start for absolutely nothing.</h2>
             <div className="inline-block bg-white border border-[#d2d2d7] rounded-[24px] p-8 sm:p-12 shadow-sm max-w-md w-full text-center">
               <div className="text-[#6e6e73] font-bold tracking-widest uppercase text-[12px] mb-4">Go Free Plan</div>
@@ -205,22 +205,6 @@ export default function DhabaPage() {
               >
                 Create Free Account
               </Link>
-            </div>
-          </div>
-
-          <div className="max-w-3xl mx-auto">
-            <blockquote className="text-[20px] font-medium text-[#1d1d1f] italic leading-relaxed mb-8">
-              "Pehle mujhe lagta tha POS software sirf barey restaurants ke liye hota hai. Dineiz Go ne meri soch badal di. Mere purane Android phone pe chalta hai, aur hisaab ab kabhi ghalat nahi hota."
-            </blockquote>
-            <div className="flex items-center justify-center gap-4">
-              <div className="w-12 h-12 bg-gray-200 rounded-full overflow-hidden flex items-center justify-center">
-                 {/* Placeholder for avatar */}
-                 <Users size={24} className="text-gray-400" />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-[#1d1d1f] text-[15px]">Muhammad Tariq</div>
-                <div className="text-[13px] text-gray-500 font-medium">Owner, Tariq Bhai Dhaba (Lahore)</div>
-              </div>
             </div>
           </div>
 

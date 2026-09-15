@@ -341,7 +341,7 @@ export function TenantAdminDashboard() {
 
             {!shiftStats ? (
               <div className="space-y-2">
-                {[1, 2].map(i => <div key={i} className="h-10 bg-slate-50 rounded-lg animate-pulse" />)}
+                {[1, 2].map(i => <div key={i} className="h-10 skeleton-shimmer rounded-lg" />)}
               </div>
             ) : (shiftStats.count ?? 0) === 0 ? (
               <div className="flex items-center gap-3 py-3 text-slate-400">

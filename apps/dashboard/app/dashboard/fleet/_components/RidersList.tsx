@@ -3,7 +3,13 @@ import { Phone, MessageSquare } from 'lucide-react';
 
 export function RidersList({ riders, isLoading }: any) {
   if (isLoading) {
-    return <div className="animate-pulse space-y-4"><div className="h-20 bg-white border border-slate-100 rounded-xl" /></div>;
+    return (
+      <div className="space-y-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-20 skeleton-shimmer border border-slate-100 rounded-xl" />
+        ))}
+      </div>
+    );
   }
 
   return (

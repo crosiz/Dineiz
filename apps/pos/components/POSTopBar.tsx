@@ -4,7 +4,9 @@ import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopBarStateContext } from '../contexts/TopBarContext';
 import { useCartStore } from '@/lib/store';
-import { getPosSession, getPosShift, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
+import { getPosSession, getPosShift, getToken, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
+import { getDB } from '@/lib/db';
+import { v4 as uuid } from 'uuid';
 import { toast } from 'sonner';
 import { CloseShiftModal } from '@/components/CloseShiftModal';
 import { CashDrawerModal } from '@/components/CashDrawerModal';
@@ -12,7 +14,10 @@ import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { DineizLogo } from './ui/DineizLogo';
-import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag } from 'lucide-react';
+import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
+import { SyncHealthDot } from '@/components/SyncHealthDot';
+import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startBreak } from '@/lib/core/commands';
 import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
@@ -36,9 +41,18 @@ export function POSTopBar() {
   const [showTakeBreakConfirm, setShowTakeBreakConfirm] = useState(false);
   const [isCloseShiftOpen, setIsCloseShiftOpen] = useState(false);
   const [isCashDrawerOpen, setIsCashDrawerOpen] = useState(false);
+  const [showManagerOverride, setShowManagerOverride] = useState(false);
+  const overlayActive = useManagerOverlay((s) => !!s.overlay);
+  const exitOverlay = useManagerOverlay((s) => s.exit);
   const [pendingBackConfirm, setPendingBackConfirm] = useState(false);
   const [isBlockerOpen, setIsBlockerOpen] = useState(false);
   const [blockers, setBlockers] = useState<any[]>([]);
+
+  // Spec Part 11 — signing out with items still in the cart builder (never
+  // sent to the kitchen, so nothing durable exists for them) prompts
+  // Hold It / Discard / Cancel before the session actually ends.
+  const [showCartWarning, setShowCartWarning] = useState(false);
+  const [holdBusy, setHoldBusy] = useState(false);
 
   // Sign-out sync guard — blocks signing out while this terminal still has
   // events queued for the server, instead of silently abandoning them.
@@ -58,6 +72,29 @@ export function POSTopBar() {
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
+
+  // Re-run the can-close check after the cashier settles/cancels a blocking
+  // order from inside the blocker list. Clears the blocker modal and drops
+  // them into the close flow the moment nothing is blocking any more, so they
+  // never have to re-open the menu and start over.
+  const recheckCanClose = async () => {
+    if (!session.branchId || !session.shiftId) return;
+    try {
+      const token = localStorage.getItem('pos_token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.canClose) {
+        setIsBlockerOpen(false);
+        setBlockers([]);
+        setIsCloseShiftOpen(true);
+      } else {
+        setBlockers(data.blockers || []);
+      }
+    } catch { /* offline — the list stays as-is, override is still available */ }
+  };
 
   const handleCloseShiftClick = async () => {
     setIsDropdownOpen(false);
@@ -175,6 +212,64 @@ export function POSTopBar() {
   // would sit idle until someone logs back in here. Rather than silently
   // abandon it, block the sign-out and show what's still in flight.
   const handleSignOut = async () => {
+    // Spec Part 11 — an unfinished cart isn't durable anywhere (it only
+    // becomes an event once sent to the kitchen). Never let it vanish on
+    // sign-out: offer Hold It / Discard / Cancel first.
+    if (useCartStore.getState().cart.length > 0) {
+      setShowSignOutConfirm(false);
+      setShowCartWarning(true);
+      return;
+    }
+    await continueSignOut();
+  };
+
+  // Persists the in-builder cart to the same `heldOrders` store the order
+  // screen's "Hold" button writes to, so it reappears under Tickets → On Hold.
+  const holdCurrentCart = async () => {
+    const c = useCartStore.getState();
+    if (c.cart.length === 0) return;
+    const heldOrder = {
+      id: uuid(),
+      tableId: c.selectedTableId,
+      tableLabel: c.selectedTableLabel,
+      orderType: c.orderType || 'DINE_IN',
+      guests: '1',
+      cashierId: c.session?.cashierId ?? getPosSession()?.userId ?? null,
+      cart: c.cart,
+      heldAt: new Date().toISOString(),
+    };
+    try {
+      const db = getDB();
+      if (db.heldOrders) await db.heldOrders.put(heldOrder);
+      if (navigator.onLine && getToken()) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/held`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          body: JSON.stringify(heldOrder),
+        }).catch(() => { /* saved locally is enough */ });
+      }
+    } catch {
+      /* local storage unavailable — fall through, the cart is still cleared */
+    }
+  };
+
+  const holdCartThenSignOut = async () => {
+    setHoldBusy(true);
+    await holdCurrentCart();
+    useCartStore.getState().clearCart();
+    setHoldBusy(false);
+    setShowCartWarning(false);
+    toast.success('Order held. Find it in Tickets → On Hold');
+    await continueSignOut();
+  };
+
+  const discardCartThenSignOut = async () => {
+    useCartStore.getState().clearCart();
+    setShowCartWarning(false);
+    await continueSignOut();
+  };
+
+  const continueSignOut = async () => {
     const pending = await hasUnsyncedEvents();
     if (!pending) {
       finishSignOut();
@@ -230,10 +325,29 @@ export function POSTopBar() {
 
   return (
     <>
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-6 py-3 shrink-0 h-[72px] sticky top-0 z-40 shadow-sm">
+      {/* Outer wrapper carries the safe-area gutter as EXTRA space above the
+          header (box-sizing:border-box means padding-top on the h-[72px] row
+          itself would eat into its content height instead) — needed since
+          layout.tsx declares statusBarStyle "black-translucent", which draws
+          content under the iOS status bar/notch in standalone PWA mode. The
+          header's own 72px height is left untouched: ClientTableMap.tsx hard-
+          codes `calc(100vh - 72px - 64px)` against this exact value. */}
+      <div className="shrink-0 sticky top-0 z-[var(--z-nav)] bg-white pt-safe">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
 
-        {/* Left Slot: Logo & Titles */}
-        <div className="flex items-center gap-3.5 text-[#0F172A] min-w-[280px]">
+        {/* Left Slot: Logo & Titles. max-w caps this slot's own footprint —
+            a page's pageTitle/breadcrumb can be arbitrarily wide (order/
+            page.tsx's breadcrumb is 4 separate badges) and flexbox never
+            actually shrinks a sibling whose flex-basis is content-derived
+            (this slot's `flex: 0 1 auto`) as long as the OTHER siblings are
+            flex-1 (basis 0%, they just grow into whatever's left) — removing
+            shrink-0 alone did nothing, the shrink algorithm was never even
+            triggered. On a 768px tablet, order/page.tsx's breadcrumb alone
+            pushed this slot to 550px, leaving ~100px split between the
+            order-type selector and the avatar cluster. A real max-width is
+            what forces the title/breadcrumb block below to actually need
+            its own truncate/scroll. */}
+        <div className="flex items-center gap-2 sm:gap-3.5 text-[#0F172A] min-w-0 max-w-[45%] sm:max-w-[40%]">
           {config.showBackButton && config.backPath && (
             <button
               onClick={() => {
@@ -245,10 +359,10 @@ export function POSTopBar() {
                   router.push(config.backPath!);
                 }
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm"
+              className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm shrink-0"
             >
               <ArrowLeft size={15} />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </button>
           )}
 
@@ -259,47 +373,68 @@ export function POSTopBar() {
           />
 
           {(config.pageTitle || config.breadcrumb) && (
-            <div className="flex items-center gap-3 pl-2 border-l border-[#E2E8F0]">
-              <div>
-                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A]">{config.pageTitle}</h2>}
-                {config.breadcrumb && <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold">{config.breadcrumb}</div>}
+            <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-[#E2E8F0] min-w-0 shrink">
+              <div className="min-w-0 shrink">
+                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A] truncate">{config.pageTitle}</h2>}
+                {config.breadcrumb && <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Center Slot: Dynamic Tools */}
-        <div className="flex-1 flex justify-center px-4">
-          {config.centerSlot}
-        </div>
+        {/* Center Slot: Dynamic Tools — min-w-0/overflow-hidden so page-
+            injected content (a legend, a filter row) clips inside its own
+            slot instead of forcing the header wider than the viewport.
+            Rendered (and only then given flex-1) solely when a page actually
+            sets one: an unconditional flex-1 wrapper here was claiming an
+            equal share of header width against the right slot even while
+            empty, halving how much room pages without a centerSlot (most of
+            them) actually had for rightActions + the avatar cluster. */}
+        {config.centerSlot && (
+          <div className="flex-1 flex justify-center px-1 sm:px-4 min-w-0 overflow-hidden">
+            {config.centerSlot}
+          </div>
+        )}
 
-        {/* Right Slot: Actions + Permanent Info */}
-        <div className="flex items-center justify-end gap-4 min-w-[300px]">
-          {/* Dynamic Actions */}
-          {config.rightActions}
+        {/* Right Slot: Actions + Permanent Info — no min-width floor. The
+            "permanent" cluster (offline badge / sync dot / clock / avatar —
+            the only way to reach Sign Out, Settings, Close Shift) is
+            shrink-0 so it is NEVER the part that gives way; a page's
+            variable-width rightActions gets its own scrollable slot instead
+            of being able to push that cluster off-screen. */}
+        <div className="flex items-center justify-end gap-2 sm:gap-4 min-w-0 flex-1">
+          {config.rightActions && (
+            <div className="flex items-center gap-2 min-w-0 overflow-x-auto no-scrollbar">
+              {config.rightActions}
+            </div>
+          )}
 
-          {/* Separator if rightActions exist */}
-          {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-2"></div>}
+          {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>}
 
           {/* Permanent Info — deliberately minimal: only surface the
               exception (offline), not the default (online); the clock is
               plain text, not a bordered widget; fullscreen and identity
               details live one tap away in the avatar menu instead of
               sitting in the bar permanently. */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {!isOnline && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 pulse-red"></span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Offline</span>
               </div>
             )}
+            {!isOnline && (
+              <span className="sm:hidden w-2 h-2 rounded-full bg-rose-500 pulse-red shrink-0" title="Offline" />
+            )}
+
+            {isMounted && <SyncHealthDot />}
 
             <span className="hidden md:inline font-mono text-[13px] font-semibold text-[#64748B] tabular-nums">{clockStr}</span>
 
             <div className="relative" ref={dropdownRef}>
               <button
                 data-testid="avatar-menu"
-                className="w-8.5 h-8.5 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-xs"
+                className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-xs"
                 style={{ backgroundColor: avatarColor }}
                 title={avatarTitle}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -307,10 +442,10 @@ export function POSTopBar() {
               >
                 {avatarInitial}
               </button>
-              
+
               {/* Profile Dropdown Popover */}
               {isDropdownOpen && (
-                <div className="absolute top-11 right-0 w-64 bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
+                <div className="absolute top-11 right-0 w-64 max-w-[calc(100vw-24px)] bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
                   {/* User Info Header */}
                   <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80">
                     <div className="flex items-center justify-between gap-2">
@@ -329,22 +464,23 @@ export function POSTopBar() {
                     </div>
                   </div>
 
-                  {/* Menu Actions */}
+                  {/* Menu actions, ordered by what they DO and how often —
+                      shift actions (the ones taken during service) first, then
+                      the money drawer, then elevated access, then app/device
+                      settings, then leaving. The previous order interleaved all
+                      four kinds (fullscreen, drawer, settings, override, close,
+                      break) so nothing predicted where anything was. */}
                   <div className="p-1.5 flex flex-col gap-0.5">
+                    {/* — Your shift — */}
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        setShowTakeBreakConfirm(true);
+                      }}
                     >
-                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
-                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
-                    </button>
-
-                    <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
-                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
-                    >
-                      <Wallet size={15} className="text-slate-500" />
-                      <span>Cash Drawer</span>
+                      <Coffee size={15} className="text-slate-500" />
+                      <span>Take a Break</span>
                     </button>
 
                     <button
@@ -357,13 +493,42 @@ export function POSTopBar() {
 
                     <button
                       className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
+                    >
+                      <Wallet size={15} className="text-slate-500" />
+                      <span>Cash Drawer</span>
+                    </button>
+
+                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+
+                    {/* — Elevated access — */}
+                    <button
+                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-amber-700 hover:bg-amber-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70'}`}
                       onClick={() => {
                         setIsDropdownOpen(false);
-                        setShowTakeBreakConfirm(true);
+                        if (overlayActive) exitOverlay('MANUAL');
+                        else setShowManagerOverride(true);
                       }}
                     >
-                      <Coffee size={15} className="text-slate-500" />
-                      <span>Take a Break</span>
+                      <Unlock size={15} className={overlayActive ? 'text-amber-600' : 'text-slate-500'} />
+                      <span>{overlayActive ? 'Exit Manager Mode' : 'Manager Override'}</span>
+                    </button>
+
+                    {/* — This terminal — */}
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); router.push('/pos/settings'); }}
+                    >
+                      <Settings size={15} className="text-slate-500" />
+                      <span>Settings</span>
+                    </button>
+
+                    <button
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
+                    >
+                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
+                      <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
                     </button>
 
                     <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
@@ -385,6 +550,7 @@ export function POSTopBar() {
           </div>
         </div>
       </header>
+      </div>
 
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (
@@ -412,6 +578,52 @@ export function POSTopBar() {
               >
                 Sign Out
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spec Part 11 — unfinished cart on sign-out. Hold It / Discard / Cancel. */}
+      {showCartWarning && (
+        <div className="fixed inset-0 z-[205] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+              <ShoppingBag size={20} />
+            </div>
+
+            <h3 className="font-bold text-slate-900 text-base mb-1">You have an unfinished order</h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              There {useCartStore.getState().cart.length === 1 ? 'is' : 'are'}{' '}
+              <strong className="text-slate-700">
+                {useCartStore.getState().cart.length} item{useCartStore.getState().cart.length === 1 ? '' : 's'}
+              </strong>{' '}
+              in the cart that {useCartStore.getState().cart.length === 1 ? 'hasn’t' : 'haven’t'} been sent to the
+              kitchen. Signing out now will lose {useCartStore.getState().cart.length === 1 ? 'it' : 'them'} unless you hold the order.
+            </p>
+
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={holdCartThenSignOut}
+                disabled={holdBusy}
+                className="w-full h-10 rounded-xl bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+              >
+                {holdBusy ? <RefreshCw size={13} className="animate-spin" /> : <ShoppingBag size={13} />}
+                Hold It &amp; Sign Out
+              </button>
+              <div className="flex gap-2.5 w-full">
+                <button
+                  onClick={() => setShowCartWarning(false)}
+                  className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={discardCartThenSignOut}
+                  className="flex-1 h-10 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
+                >
+                  Discard &amp; Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -518,6 +730,10 @@ export function POSTopBar() {
         />
       )}
 
+      {showManagerOverride && (
+        <StartManagerOverrideModal onClose={() => setShowManagerOverride(false)} />
+      )}
+
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
@@ -587,14 +803,19 @@ export function POSTopBar() {
                     if (res.ok) {
                       const data = await res.json();
                       setPosBreak({ breakId: data.breakId, shiftId, startedAt: data.startedAt });
+                      // Local audit-trail record — only once the server has
+                      // actually confirmed the break. This event is
+                      // auto-confirmed locally the moment it's appended
+                      // (SHIFT-lane events don't retry through the outbox),
+                      // so recording it unconditionally meant a break the
+                      // server explicitly rejected still showed up "confirmed
+                      // forever" in the local log, with nothing to ever
+                      // surface the mismatch.
+                      startBreak(shiftId).catch(console.error);
                     } else {
                       const body = await res.json().catch(() => ({}));
                       toast.error(body?.error || "Couldn't start your break — it may not be recorded.");
                     }
-                    // Local audit-trail record — the break API call above is
-                    // still what the server actually relies on; this just
-                    // keeps the local event log complete.
-                    startBreak(shiftId).catch(console.error);
                   } catch {
                     toast.error("Couldn't reach the server — your break may not be recorded.");
                   }
@@ -632,6 +853,7 @@ export function POSTopBar() {
         isOpen={isBlockerOpen}
         onClose={() => setIsBlockerOpen(false)}
         blockers={blockers}
+        onResolved={recheckCanClose}
         onForceClose={async (pin, reason) => {
           setIsBlockerOpen(false);
           localStorage.setItem('shift_override_pin', pin);

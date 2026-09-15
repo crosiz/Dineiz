@@ -61,7 +61,7 @@ export default function QrOrderingPage() {
     window.print();
   };
 
-  if (!settingsData) return <PageLoader label="Loading QR ordering settings..." />;
+  if (!settingsData) return <PageLoader label="Loading QR ordering settings..." variant="split" />;
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8">

@@ -87,6 +87,22 @@
 
 @layer base {
   :root {
+    /* ── z-index scale — a shared vocabulary instead of ad hoc numbers.
+       Existing overlays already cluster into these bands; this names them so
+       the next overlay picks a tier instead of guessing a literal that
+       happens to collide (a PIN modal at z-200 rendering underneath an
+       unrelated z-210 sync dialog was exactly that: invisible and
+       unreachable, not a design choice). New overlays should use var(--z-*);
+       existing z-[N] literals don't all need to migrate on sight, but should
+       when the file is next touched. */
+    --z-nav: 40;            /* bottom nav, sticky top bar */
+    --z-page-modal: 90;     /* full-screen page-level panels (Settings) */
+    --z-modal: 200;         /* standard dialogs/sheets */
+    --z-overlay-bar: 300;   /* manager overlay bar, view-mode banner */
+    --z-modal-nested: 400;  /* a dialog opened from inside another dialog/overlay */
+    --z-picker: 500;        /* pickers/assign sheets stacked over a modal */
+    --z-top: 9999;          /* confirm dialogs — must always win */
+
     --pos-primary: #F59E0B;
     --pos-primary-dim: rgba(245, 158, 11, 0.12);
     --pos-primary-glow: 0 0 0 3px rgba(245, 158, 11, 0.25);
@@ -125,11 +141,15 @@
     outline-offset: 0 !important;
   }
 
-  /* ── Custom amber focus ring for inputs & textareas ─────────────── */
+  /* ── Amber keyboard-focus ring — a DEFAULT for a bare field, not a lock.
+     Was !important, which doubled up on the many inputs that sit inside a
+     `focus-within:border` wrapper (Close Shift / Cash Drawer / payment
+     amount): the wrapper drew one ring and this drew a second on top of it,
+     the "double outline". Now a nested input can `focus:shadow-none` it away. */
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B) !important;
+    box-shadow: 0 0 0 2px var(--pos-primary, #F59E0B);
   }
 
   /* ── Kill the blue browser autofill background ───────────────────── */
@@ -173,17 +193,27 @@
   /* Touch feedback */
   button:active { opacity: 0.85; }
 
-  /* Input base style */
+  /* Input base style — a sensible default for a bare <input>, NOT a lock.
+     These were `!important`, which meant no component could style its own
+     inputs with Tailwind (every field rendered as a slate-100 filled box with
+     a forced border, whatever the component asked for — the "why does this
+     input have an outline" complaint). Tailwind utilities live in a later
+     @layer, so plain declarations here still apply to unstyled inputs but
+     yield the moment a component sets `bg-*` / `border-*` / `rounded-*`. */
   input, textarea, select {
-    background-color: var(--pos-bg-elevated) !important;
-    color: var(--pos-text-primary) !important;
-    border: 1px solid var(--pos-border-strong) !important;
-    border-radius: 10px !important;
+    background-color: var(--pos-bg-elevated);
+    color: var(--pos-text-primary);
+    border: 1px solid var(--pos-border-strong);
+    border-radius: 10px;
+    /* Floor, not a lock (see comment above on this block) — a component's own
+       text-[Npx] utility still wins. Below 16px, iOS Safari auto-zooms the
+       page on focus, and with viewport maximumScale=1 (app/layout.tsx) the
+       user has no way to zoom back out. */
+    font-size: 16px;
   }
   input:focus, textarea:focus, select:focus {
-    outline: none !important;
-    border-color: var(--pos-primary) !important;
-    box-shadow: var(--pos-primary-glow) !important;
+    outline: none;
+    border-color: var(--pos-primary);
   }
 
   /* Placeholder */
@@ -294,6 +324,16 @@
   
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Safe-area padding for edge-pinned fixed elements (notch / status bar /
+     home-indicator gesture area) — required now that layout.tsx declares
+     appleWebApp statusBarStyle "black-translucent", which draws content
+     underneath the status bar on iOS. env() resolves to 0 on devices/
+     browsers without a safe-area inset, so these are harmless everywhere else. */
+  .pt-safe { padding-top: env(safe-area-inset-top); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pl-safe { padding-left: env(safe-area-inset-left); }
+  .pr-safe { padding-right: env(safe-area-inset-right); }
   
   @keyframes pulse-red {
     0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }

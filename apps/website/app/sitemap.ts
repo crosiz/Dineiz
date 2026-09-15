@@ -20,6 +20,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/about`, priority: 0.6, changeFrequency: 'monthly' },
     { url: `${BASE}/contact`, priority: 0.6, changeFrequency: 'monthly' },
     { url: `${BASE}/blog`, priority: 0.7, changeFrequency: 'daily' },
+    { url: `${BASE}/case-studies`, priority: 0.5, changeFrequency: 'monthly' },
+    { url: `${BASE}/changelog`, priority: 0.4, changeFrequency: 'weekly' },
+    { url: `${BASE}/careers`, priority: 0.4, changeFrequency: 'weekly' },
+    { url: `${BASE}/partners`, priority: 0.4, changeFrequency: 'monthly' },
+    { url: `${BASE}/privacy-policy`, priority: 0.2, changeFrequency: 'monthly' },
+    { url: `${BASE}/terms-of-service`, priority: 0.2, changeFrequency: 'monthly' },
+    { url: `${BASE}/refund-policy`, priority: 0.2, changeFrequency: 'monthly' },
+    { url: `${BASE}/cookie-policy`, priority: 0.2, changeFrequency: 'monthly' },
   ].map(page => ({ ...page, lastModified: now, changeFrequency: page.changeFrequency as "weekly" | "monthly" | "daily" }))
 
   const blogPosts = await getAllBlogPosts()

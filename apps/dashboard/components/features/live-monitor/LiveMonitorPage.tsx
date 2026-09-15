@@ -66,20 +66,20 @@ export function LiveMonitorPage() {
           {[0, 1, 2, 3].map(colIdx => (
             <div key={colIdx} className="bg-slate-50 h-full flex flex-col overflow-hidden">
               <div className="h-[65px] bg-white border-b border-slate-200 px-6 flex items-center shrink-0">
-                <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+                <div className="h-4 w-32 skeleton-shimmer rounded" />
               </div>
               <div className="flex-1 p-4 space-y-3">
                 {[0, 100, 200].map(delay => (
-                  <div key={delay} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200" style={{ animationDelay: `${delay}ms` }}>
+                  <div key={delay} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
                     <div className="flex justify-between items-center mb-4">
-                      <div className="h-6 w-24 bg-slate-100 rounded animate-pulse" />
-                      <div className="h-4 w-12 bg-slate-100 rounded-full animate-pulse" />
+                      <div className="h-6 w-24 skeleton-shimmer rounded" style={{ animationDelay: `${delay}ms` }} />
+                      <div className="h-4 w-12 skeleton-shimmer rounded-full" style={{ animationDelay: `${delay}ms` }} />
                     </div>
                     <div className="space-y-2 mb-4">
-                      <div className="h-3 w-full bg-slate-100 rounded animate-pulse" />
-                      <div className="h-3 w-3/4 bg-slate-100 rounded animate-pulse" />
+                      <div className="h-3 w-full skeleton-shimmer rounded" style={{ animationDelay: `${delay}ms` }} />
+                      <div className="h-3 w-3/4 skeleton-shimmer rounded" style={{ animationDelay: `${delay}ms` }} />
                     </div>
-                    <div className="h-10 w-full bg-slate-50 rounded animate-pulse mt-4" />
+                    <div className="h-10 w-full skeleton-shimmer rounded mt-4" style={{ animationDelay: `${delay}ms` }} />
                   </div>
                 ))}
               </div>

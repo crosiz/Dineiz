@@ -3,13 +3,18 @@ import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ShieldAlert, AlertTriangle, Info, CheckCircle2, MoreVertical, X } from 'lucide-react';
 import { apiPost } from '@/lib/api-client';
-import { PageLoader } from '@/components/ui/Spinner';
+import { SkeletonTable } from '@/components/ui/skeleton';
 
 export function AnomalyList({ anomalies, loading, onRefresh }: { anomalies: any[], loading: boolean, onRefresh: () => void }) {
   const [selectedAnomaly, setSelectedAnomaly] = useState<any>(null);
 
   if (loading) {
-    return <PageLoader label="Loading anomalies..." />;
+    return (
+      <SkeletonTable
+        rows={6}
+        columns={[{ w: 80, pill: true }, 200, 96, 140, { w: 72, pill: true }, { w: 64, align: 'right' }]}
+      />
+    );
   }
 
   if (anomalies.length === 0) {

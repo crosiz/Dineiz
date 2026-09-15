@@ -1,0 +1,23 @@
+appId: com.dineiz.standalone
+productName: Dineiz
+directories:
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - '**/*.node'
+win:
+  target: nsis
+  artifactName: Dineiz-Standalone-Setup-${version}.${ext}
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  category: public.app-category.business
+  icon: build/icon.png
+linux:
+  target: AppImage
+  icon: build/icon.png

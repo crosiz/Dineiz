@@ -2,7 +2,7 @@
   "name": "dineiz",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev --parallel --filter=!@dineiz/rider",
+    "dev": "turbo run dev --parallel --filter=!@dineiz/rider --filter=!@dineiz/standalone",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo lint",
@@ -15,5 +15,10 @@
   "packageManager": "pnpm@9.0.0",
   "dependencies": {
     "material-symbols": "^0.45.10"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "lazystream@1.0.1": "patches/lazystream@1.0.1.patch"
+    }
   }
 }

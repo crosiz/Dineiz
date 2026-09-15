@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { Button } from '@dineiz/ui/src/components/button';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Category {
   id: string;
@@ -69,7 +69,16 @@ export function MenuVisibilityTab({ config, onRefresh }: { config: any; onRefres
 
         {!showFullMenu && (
           loadingMenu ? (
-            <PageLoader label="Loading categories..." className="min-h-0 py-8" />
+            <div className="space-y-2" role="status" aria-busy="true">
+              <span className="sr-only">Loading categories</span>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 border border-gray-100 rounded-xl p-3">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-3.5 w-40" />
+                  <Skeleton className="h-3 w-12 ml-auto" />
+                </div>
+              ))}
+            </div>
           ) : categories.length === 0 ? (
             <div className="text-sm text-gray-400">No categories found. Add menu categories first.</div>
           ) : (

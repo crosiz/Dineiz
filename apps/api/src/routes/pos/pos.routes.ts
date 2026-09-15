@@ -2,8 +2,35 @@ import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { requireRole } from '../../middleware/auth';
 import { z } from 'zod';
 import { prisma } from '@dineiz/db';
+import { parseTableOverride } from '@dineiz/schemas';
+import { emitOrderUpdated, emitOrderCancelled, emitNewOrder } from '../../lib/socket';
+import {
+  applyOrderStatusSideEffects, createOrder, updateOrder, appendOrderItems,
+} from '../order/order.service';
+import { recomputeTableStatus, setTableOverride } from '../../lib/tableStatus';
+import { withIdempotency } from '../../lib/idempotency';
+import { upstash } from '../../lib/redis';
+import { buildPosBranding } from '../../lib/posBranding';
+import crypto from 'crypto';
 
 export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
+  // A terminal only ever learns branding/tax/Part-13 config two ways: the
+  // pin-login response, or a live tenant:branding_updated socket push. Both
+  // are missed entirely while the socket is disconnected (laptop sleep, wifi
+  // drop) — Socket.IO doesn't replay events to a reconnecting client — so
+  // whatever the admin changed during the outage silently never arrives.
+  // The POS calls this once on every socket reconnect to reconcile.
+  fastify.get('/api/pos/branding', {
+    preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER', 'KITCHEN_STAFF']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const branchId = request.user!.branchId as string | null;
+    if (!branchId) return reply.status(400).send({ error: 'No branch assigned' });
+
+    const branding = await buildPosBranding(tenantId, branchId);
+    return reply.send({ branding });
+  });
+
   fastify.get('/api/pos/stats', {
     schema: {
       querystring: z.object({ shiftId: z.string() })
@@ -25,6 +52,498 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       totalValue: Math.round(Number(total)),
       avgPerOrder: count > 0 ? Math.round(Number(total) / count) : 0
     });
+  });
+
+  // ── Orphan orders (spec Part 2 — Shift Ownership) ───────────────────────
+  // An order still PENDING/IN_KITCHEN/READY whose shift has CLOSED or been
+  // ABANDONED. It must never silently reappear in a new shift — the POS
+  // blocks the home screen with a resolution modal on shift open and calls
+  // these two endpoints.
+
+  fastify.get('/api/pos/orphans', {
+    schema: {
+      querystring: z.object({
+        branchId: z.string(),
+        withinHours: z.coerce.number().min(1).max(168).optional(),
+      }),
+    },
+    preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const { branchId, withinHours } = request.query as { branchId: string; withinHours?: number };
+
+    // The orphan modal is a blocking, one-order-at-a-time (manager PIN each)
+    // gate on the home screen. Its purpose is "a shift closed and left food
+    // that may still be cooking" — a live operational hand-off, not a
+    // historical-data cleanup. Without a window it also surfaces every order
+    // ever abandoned in a non-terminal state (dev seed data alone leaves
+    // dozens), producing an un-clearable modal. Bound it to the recent past;
+    // anything older is stale and belongs to an admin cleanup path, not the
+    // next cashier. Also hard-cap the list so the modal can never be
+    // unbounded even inside the window.
+    const ORPHAN_WINDOW_HOURS = withinHours ?? 24;
+    const ORPHAN_LIMIT = 40;
+    const cutoff = new Date(Date.now() - ORPHAN_WINDOW_HOURS * 3600_000);
+
+    const [orphans, totalInWindow] = await Promise.all([
+      prisma.order.findMany({
+        where: {
+          tenantId,
+          branchId,
+          status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+          shiftId: { not: null },
+          shift: { status: { not: 'OPEN' } },
+          createdAt: { gte: cutoff },
+        },
+        select: {
+          id: true, orderNumber: true, status: true, type: true,
+          netAmount: true, totalAmount: true, createdAt: true, shiftId: true, cashierId: true,
+          table: { select: { label: true } },
+          shift: { select: { id: true, status: true, closedAt: true, user: { select: { name: true } } } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: ORPHAN_LIMIT,
+      }),
+      prisma.order.count({
+        where: {
+          tenantId,
+          branchId,
+          status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+          shiftId: { not: null },
+          shift: { status: { not: 'OPEN' } },
+          createdAt: { gte: cutoff },
+        },
+      }),
+    ]);
+
+    reply.header('x-orphan-total', String(totalInWindow));
+
+    return reply.send(orphans.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      status: o.status,
+      type: o.type,
+      total: o.netAmount ?? o.totalAmount ?? 0,
+      itemCount: o._count.items,
+      tableLabel: o.table?.label ?? null,
+      createdAt: o.createdAt.toISOString(),
+      originalShiftId: o.shiftId,
+      originalShiftStatus: o.shift?.status ?? null,
+      originalCashier: o.shift?.user?.name ?? null,
+      originalCashierId: o.cashierId ?? null,
+    })));
+  });
+
+  fastify.post('/api/pos/orphans/:orderId/resolve', {
+    schema: {
+      params: z.object({ orderId: z.string() }),
+      body: z.object({
+        action: z.enum(['ADOPT', 'CANCEL']),
+        intoShiftId: z.string().optional(),
+        // Optional now — a cashier adopting their OWN orphaned order doesn't
+        // need a manager PIN at all (see isSelfAdopt below). Still required
+        // for every other case, checked by hand once we know which case
+        // this is.
+        overridePin: z.string().optional(),
+        overrideReason: z.string().optional(),
+      }),
+    },
+    preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const userId = request.user!.id!;
+    const { orderId } = request.params as { orderId: string };
+    const { action, intoShiftId, overridePin, overrideReason } = request.body as {
+      action: 'ADOPT' | 'CANCEL'; intoShiftId?: string; overridePin?: string; overrideReason?: string;
+    };
+
+    const order = await prisma.order.findFirst({
+      where: { id: orderId, tenantId, status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] } },
+      select: { id: true, branchId: true, shiftId: true, tableId: true, orderNumber: true, cashierId: true },
+    });
+    if (!order) return reply.status(404).send({ error: 'Order not found or already resolved' });
+
+    // A cashier picking their OWN unfinished order back up into their OWN
+    // new shift is a routine continuation of service, not an override — it
+    // was requiring a manager's PIN here that turned "the previous shift
+    // left 2 orders open" into "you can't serve anyone until a manager
+    // answers their phone" for a lone cashier. Voiding an order always
+    // needs a manager regardless of whose it is — that's a real write-off
+    // of revenue, not a continuation — and adopting someone ELSE's order
+    // still needs one too.
+    const isSelfAdopt = action === 'ADOPT' && !!order.cashierId && order.cashierId === userId;
+
+    let authorizerId: string;
+    let authorizerName: string;
+    let reasonText: string;
+
+    if (isSelfAdopt) {
+      const self = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      authorizerId = userId;
+      authorizerName = self?.name ?? 'Cashier';
+      reasonText = overrideReason?.trim() || 'Continuing my own order into this shift';
+    } else {
+      if (!overridePin) return reply.status(400).send({ error: 'Manager PIN is required' });
+      if (!overrideReason?.trim()) return reply.status(400).send({ error: 'A reason is required' });
+      // Manager PIN gate — same lookup shift.service.closeShift uses.
+      // posPin is stored SHA-256 hashed (staff.handlers.ts, user.routes.ts);
+      // this compared the raw PIN against it, so no PIN — right or wrong —
+      // could ever pass here. Every orphan-adopt/void needing a real manager
+      // PIN has always failed with "Invalid manager PIN".
+      const hashedOverridePin = crypto.createHash('sha256').update(overridePin).digest('hex');
+      const manager = await prisma.user.findFirst({
+        where: { tenantId, posPin: hashedOverridePin, role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
+        select: { id: true, name: true },
+      });
+      if (!manager) return reply.status(403).send({ error: 'Invalid manager PIN or insufficient permissions' });
+      authorizerId = manager.id;
+      authorizerName = manager.name;
+      reasonText = overrideReason.trim();
+    }
+
+    if (action === 'ADOPT') {
+      if (!intoShiftId) return reply.status(400).send({ error: 'intoShiftId is required to adopt' });
+      const target = await prisma.shift.findFirst({
+        where: { id: intoShiftId, tenantId, branchId: order.branchId, status: 'OPEN' },
+        select: { id: true },
+      });
+      if (!target) return reply.status(400).send({ error: 'Target shift is not open at this branch' });
+
+      const updated = await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          shiftId: intoShiftId,
+          adoptedFromShiftId: order.shiftId,
+          adoptedByUserId: authorizerId,
+        },
+      });
+
+      // Audit trail on BOTH shifts. Revenue attribution in reports still
+      // keys off adoptedFromShiftId, not the adopting shift.
+      await prisma.shiftActivity.createMany({
+        data: [
+          {
+            shiftId: order.shiftId!,
+            activityType: 'FORCE_CLOSED' as any, // no ADOPTED enum yet — closest existing marker
+            performedById: authorizerId,
+            notes: `Order ${order.orderNumber} adopted OUT to shift ${intoShiftId} by ${authorizerName} — ${reasonText}`,
+            metadata: { orderId, adoptedIntoShiftId: intoShiftId, kind: 'ORDER_ADOPTED_OUT', selfAdopt: isSelfAdopt },
+          },
+          {
+            shiftId: intoShiftId,
+            activityType: 'OPENED' as any,
+            performedById: authorizerId,
+            notes: `Order ${order.orderNumber} adopted IN from shift ${order.shiftId} by ${authorizerName} — ${reasonText}`,
+            metadata: { orderId, adoptedFromShiftId: order.shiftId, kind: 'ORDER_ADOPTED_IN', selfAdopt: isSelfAdopt },
+          },
+        ],
+      }).catch((e) => console.warn('[orphans] shift activity write failed', e));
+
+      emitOrderUpdated(tenantId, order.branchId, updated);
+      if (order.tableId) recomputeTableStatus(tenantId, order.tableId).catch(() => {});
+      return reply.send({ ok: true, action, order: updated });
+    }
+
+    // CANCEL — always manager-gated above, regardless of whose order it is:
+    // this writes off real revenue, not a continuation of service.
+    const priorStatus = (await prisma.order.findUnique({ where: { id: orderId }, select: { status: true } }))?.status ?? null;
+    const cancelled = await prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'CANCELLED', notes: `Orphan cancelled by ${authorizerName} — ${reasonText}` },
+    });
+    await applyOrderStatusSideEffects(tenantId, cancelled, priorStatus, {});
+    await prisma.shiftActivity.create({
+      data: {
+        shiftId: order.shiftId!,
+        activityType: 'ORDER_VOIDED' as any,
+        performedById: authorizerId,
+        notes: `Orphan order ${order.orderNumber} cancelled by ${authorizerName} — ${reasonText}`,
+        metadata: { orderId, kind: 'ORPHAN_CANCELLED' },
+      },
+    }).catch(() => {});
+    emitOrderCancelled(tenantId, order.branchId, orderId);
+    return reply.send({ ok: true, action, order: cancelled });
+  });
+
+  // ── Manager overlay (spec Part 10) ─────────────────────────────────────
+  // A temporary elevated session a manager runs ON a cashier's terminal.
+  // The cashier's session is never touched; this is purely the
+  // authorisation + audit record.
+
+  fastify.post('/api/pos/manager-override/start', {
+    schema: {
+      body: z.object({
+        pin: z.string(),
+        reason: z.string().optional(),
+        oneShot: z.boolean().optional(),
+        shiftId: z.string().optional(),
+        cashierId: z.string().optional(),
+        cashierName: z.string().optional(),
+        terminalId: z.string().optional(),
+        branchId: z.string(),
+      }),
+    },
+    preHandler: requireRole(['CASHIER', 'WAITER', 'BRANCH_MANAGER', 'TENANT_ADMIN']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const sessionUserId = request.user!.id!;
+    const b = request.body as {
+      pin: string; reason?: string; oneShot?: boolean;
+      shiftId?: string; cashierId?: string; cashierName?: string; terminalId?: string; branchId: string;
+    };
+
+    // Part 12 — 5 wrong PINs locks override attempts on this terminal for 5 min.
+    const lockKey = `mgr_override_lock:${sessionUserId}`;
+    const attemptsKey = `mgr_override_attempts:${sessionUserId}`;
+    try {
+      if (await upstash.get(lockKey)) {
+        const ttl = await upstash.ttl(lockKey).catch(() => 300);
+        return reply.status(429).send({ error: 'Too many failed attempts. Try again shortly.', retryAfter: typeof ttl === 'number' && ttl > 0 ? ttl : 300 });
+      }
+    } catch { /* Redis down — proceed without lockout */ }
+
+    const hashedPin = crypto.createHash('sha256').update(b.pin).digest('hex');
+    const manager = await prisma.user.findFirst({
+      where: { tenantId, posPin: hashedPin, status: 'ACTIVE', role: { in: ['BRANCH_MANAGER', 'TENANT_ADMIN'] } },
+      select: { id: true, name: true, role: true },
+    });
+
+    if (!manager) {
+      try {
+        const n = await upstash.incr(attemptsKey);
+        if (n === 1) await upstash.expire(attemptsKey, 300);
+        if (n >= 5) { await upstash.set(lockKey, '1', { ex: 300 }); await upstash.del(attemptsKey); }
+      } catch { /* ignore */ }
+      return reply.status(401).send({ error: 'Invalid manager PIN' });
+    }
+    try { await upstash.del(attemptsKey); } catch { /* ignore */ }
+
+    // A branch that requires a reason but none was given.
+    const branding = await prisma.tenantBranding.findUnique({ where: { tenantId }, select: { managerOverlayEnabled: true, managerOverlayRequireReason: true } });
+    if (branding && branding.managerOverlayEnabled === false) {
+      return reply.status(403).send({ error: 'Manager override is disabled for this business' });
+    }
+    if (branding?.managerOverlayRequireReason && !b.reason?.trim()) {
+      return reply.status(400).send({ error: 'A reason is required to start a manager override' });
+    }
+
+    const row = await prisma.managerOverride.create({
+      data: {
+        tenantId, branchId: b.branchId, terminalId: b.terminalId ?? null,
+        shiftId: b.shiftId ?? null, cashierId: b.cashierId ?? null, cashierName: b.cashierName ?? null,
+        managerId: manager.id, managerName: manager.name, reason: b.reason?.trim() || null,
+        oneShot: !!b.oneShot,
+      },
+      select: { id: true },
+    });
+
+    return reply.send({ id: row.id, manager: { id: manager.id, name: manager.name, role: manager.role } });
+  });
+
+  fastify.post('/api/pos/manager-override/:id/action', {
+    schema: {
+      params: z.object({ id: z.string() }),
+      body: z.object({ action: z.string(), targetId: z.string().optional(), meta: z.any().optional() }),
+    },
+    preHandler: requireRole(['CASHIER', 'WAITER', 'BRANCH_MANAGER', 'TENANT_ADMIN']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const { id } = request.params as { id: string };
+    const { action, targetId, meta } = request.body as { action: string; targetId?: string; meta?: unknown };
+
+    const row = await prisma.managerOverride.findFirst({ where: { id, tenantId }, select: { actions: true, endedAt: true } });
+    if (!row) return reply.status(404).send({ error: 'Override session not found' });
+
+    const actions = Array.isArray(row.actions) ? (row.actions as any[]) : [];
+    actions.push({ at: new Date().toISOString(), action, targetId: targetId ?? null, meta: meta ?? null });
+    await prisma.managerOverride.update({ where: { id }, data: { actions } });
+    return reply.send({ ok: true, actionCount: actions.length });
+  });
+
+  fastify.post('/api/pos/manager-override/:id/end', {
+    schema: {
+      params: z.object({ id: z.string() }),
+      body: z.object({ exitReason: z.string().optional() }),
+    },
+    preHandler: requireRole(['CASHIER', 'WAITER', 'BRANCH_MANAGER', 'TENANT_ADMIN']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const { id } = request.params as { id: string };
+    const { exitReason } = request.body as { exitReason?: string };
+
+    const row = await prisma.managerOverride.findFirst({ where: { id, tenantId }, select: { startedAt: true, endedAt: true } });
+    if (!row) return reply.status(404).send({ error: 'Override session not found' });
+    if (row.endedAt) return reply.send({ ok: true, alreadyEnded: true });
+
+    const endedAt = new Date();
+    await prisma.managerOverride.update({
+      where: { id },
+      data: { endedAt, durationSec: Math.round((endedAt.getTime() - row.startedAt.getTime()) / 1000), exitReason: exitReason ?? 'MANUAL' },
+    });
+    return reply.send({ ok: true });
+  });
+
+  // ── Batch event ingestion (spec Part 5 — the sync engine) ───────────────
+  //
+  // The POS outbox (apps/pos/lib/core/outbox.ts) derives a small set of
+  // typed operations from its local event log and ships up to 50 of them in
+  // ONE request instead of a fan-out of 40. Each op is executed in order
+  // against the same domain services the individual REST endpoints use
+  // (createOrder / updateOrder / appendOrderItems / table status), so there
+  // is exactly one code path for the business logic. The response is a
+  // per-op result array — partial success is normal, and the client applies
+  // each result to its own event log independently.
+
+  const BatchOpSchema = z.object({
+    opId: z.string(),
+    kind: z.enum([
+      'CREATE_ORDER', 'ADD_ITEMS', 'UPDATE_STATUS', 'COLLECT_PAYMENT',
+      'UPDATE_TABLE_STATUS', 'REQUEST_BILL', 'CLEAN_TABLE',
+    ]),
+    aggregateId: z.string(),
+    targetId: z.string().nullable().optional(),
+    idempotencyKey: z.string().optional(),
+    body: z.any(),
+  });
+
+  fastify.post('/api/pos/events/batch', {
+    schema: {
+      body: z.object({
+        terminalId: z.string().optional(),
+        ops: z.array(BatchOpSchema).min(1).max(50),
+      }),
+    },
+    preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', 'WAITER']),
+  }, async (request, reply) => {
+    const tenantId = request.user!.tenantId!;
+    const userId = request.user!.id!;
+    const { ops } = request.body as {
+      ops: Array<{ opId: string; kind: string; aggregateId: string; targetId?: string | null; idempotencyKey?: string; body: any }>;
+    };
+
+    type OpResult = { opId: string; ok: boolean; status: number; body?: any; error?: string; permanent?: boolean };
+    const results: OpResult[] = [];
+
+    // aggregateId -> server id for CREATE_ORDER ops earlier in this same
+    // batch, so a dependent op that arrives before reconcileServerId ran on
+    // the client can still resolve its target.
+    const createdIdByAggregate = new Map<string, string>();
+    // Once an op for an aggregate fails, its later ops in this batch are
+    // skipped rather than executed against a half-applied state.
+    const failedAggregates = new Set<string>();
+
+    const classify = (e: any): { status: number; permanent: boolean } => {
+      const status = typeof e?.statusCode === 'number' ? e.statusCode
+        : e?.code === 'P2002' ? 409
+        : e?.code === 'P2025' ? 404
+        : 500;
+      const permanent = status >= 400 && status < 500 && status !== 408 && status !== 429;
+      return { status, permanent };
+    };
+
+    for (const op of ops) {
+      if (failedAggregates.has(op.aggregateId)) {
+        results.push({ opId: op.opId, ok: false, status: 424, permanent: false, error: 'skipped — earlier op for this aggregate failed' });
+        continue;
+      }
+
+      const target = op.targetId || createdIdByAggregate.get(op.aggregateId) || null;
+
+      try {
+        switch (op.kind) {
+          case 'CREATE_ORDER': {
+            const { statusCode, body } = await withIdempotency(
+              tenantId, 'POST /api/orders', op.idempotencyKey,
+              async () => {
+                const order = await createOrder(tenantId, userId, op.body);
+                emitNewOrder(tenantId, op.body.branchId, order);
+                if (op.body.tableId) recomputeTableStatus(tenantId, op.body.tableId).catch(() => {});
+                return { statusCode: 201, body: order };
+              },
+            );
+            let responseBody: any = body;
+            if (statusCode >= 200 && statusCode < 300 && body?.id) {
+              createdIdByAggregate.set(op.aggregateId, body.id);
+              // A retried CREATE_ORDER (its first attempt's response was lost
+              // to a client-side timeout, not a real failure — a Neon
+              // cold-start routinely exceeds the client's 8s budget) replays
+              // that FIRST attempt's cached response verbatim, by design:
+              // withIdempotency must never create a second order for the
+              // same key. But the client rebuilds this op's body from its
+              // current cart on every attempt, so if items were added
+              // between the lost response and this retry, they're real items
+              // that never reached a code path that persists them — the
+              // cache hit returns before createOrder() runs again. Items
+              // only ever get appended, never reordered or removed before
+              // shipping (createOrderBody filters voided lines out
+              // entirely), so a plain length comparison safely finds
+              // exactly what's missing and appends it.
+              const sentItems = Array.isArray(op.body?.items) ? op.body.items : [];
+              const persistedCount = Array.isArray(body.items) ? body.items.length : 0;
+              if (sentItems.length > persistedCount) {
+                try {
+                  responseBody = await appendOrderItems(tenantId, body.id, sentItems.slice(persistedCount));
+                } catch {
+                  // Order reached a terminal state before this could apply —
+                  // the cached response is the best available answer.
+                }
+              }
+            }
+            results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body: responseBody });
+            if (statusCode >= 300) failedAggregates.add(op.aggregateId);
+            break;
+          }
+
+          case 'ADD_ITEMS': {
+            if (!target) { results.push({ opId: op.opId, ok: false, status: 409, permanent: false, error: 'no target order yet' }); break; }
+            const { statusCode, body } = await withIdempotency(
+              tenantId, 'POST /api/orders/:id/items', op.idempotencyKey,
+              async () => ({ statusCode: 200, body: await appendOrderItems(tenantId, target, op.body.items) }),
+            );
+            results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body });
+            break;
+          }
+
+          case 'UPDATE_STATUS':
+          case 'COLLECT_PAYMENT':
+          case 'REQUEST_BILL': {
+            if (!target) { results.push({ opId: op.opId, ok: false, status: 409, permanent: false, error: 'no target order yet' }); break; }
+            const prior = await prisma.order.findUnique({ where: { id: target, tenantId }, select: { status: true } });
+            const order = await updateOrder(tenantId, target, op.body);
+            await applyOrderStatusSideEffects(tenantId, order, prior?.status ?? null, {
+              payments: op.body?.payments,
+              redeemedPointsAmount: op.body?.redeemedPointsAmount,
+            });
+            results.push({ opId: op.opId, ok: true, status: 200, body: { id: order.id, status: order.status } });
+            break;
+          }
+
+          case 'UPDATE_TABLE_STATUS': {
+            const parsed = parseTableOverride(op.body?.status);
+            const resolved = await setTableOverride(tenantId, op.aggregateId, parsed === 'CLEAR' ? null : parsed);
+            results.push({ opId: op.opId, ok: true, status: 200, body: { id: op.aggregateId, status: resolved } });
+            break;
+          }
+
+          case 'CLEAN_TABLE': {
+            await prisma.table.update({ where: { id: op.aggregateId, tenantId }, data: { lastCompletedAt: null } }).catch(() => {});
+            const resolved = await recomputeTableStatus(tenantId, op.aggregateId);
+            results.push({ opId: op.opId, ok: true, status: 200, body: { id: op.aggregateId, status: resolved } });
+            break;
+          }
+
+          default:
+            results.push({ opId: op.opId, ok: false, status: 400, permanent: true, error: `unknown op kind ${op.kind}` });
+        }
+      } catch (e: any) {
+        const { status, permanent } = classify(e);
+        results.push({ opId: op.opId, ok: false, status, permanent, error: e?.message ?? 'op failed' });
+        failedAggregates.add(op.aggregateId);
+      }
+    }
+
+    return reply.send({ results });
   });
 
   // ── Dead letters — Phase 6 of the local-first rewrite ────────────────────
@@ -68,6 +587,8 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
     return reply.status(201).send(row);
   });
 
+  const TERMINAL_ORDER_STATUSES = ['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT'];
+
   fastify.get('/api/pos/dead-letters', {
     schema: {
       querystring: z.object({ branchId: z.string().optional(), includeResolved: z.string().optional() }),
@@ -85,6 +606,53 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       orderBy: { poisonedAt: 'desc' },
       take: 200,
     });
+
+    // A dead letter records a moment the sync FAILED — it says nothing about
+    // whether the order it's about was later resolved some other way (a
+    // manager completing it by hand, a force-closed shift cancelling it, or
+    // — for a PAYMENT_COLLECTED whose aggregateId never reconciled to a real
+    // server order at all — the order simply never having existed). Without
+    // this check, a real fix elsewhere leaves a phantom alert here forever;
+    // this is what caught 11 stale rows from Aug 28-31 during a live
+    // investigation, none pointing at an order that still needed attention.
+    const unresolved = rows.filter((r) => !r.resolvedAt && r.aggregateType === 'ORDER');
+    if (unresolved.length > 0) {
+      const orders = await prisma.order.findMany({
+        where: { id: { in: unresolved.map((r) => r.aggregateId) }, tenantId },
+        select: { id: true, status: true },
+      });
+      const statusByOrderId = new Map(orders.map((o) => [o.id, o.status]));
+      // A POS terminal always reports the order's own client-generated local
+      // id here (commands.ts's `ord_${nanoid()}`) — resolveLocalOrderId keeps
+      // every command keyed by that local id even after the order reconciles
+      // to a real server order. That id NEVER matches a real Order.id,
+      // reconciled or not, so "not found in the Order table" alone proves
+      // nothing for it — treating a lookup miss as "never reconciled,
+      // nothing to settle" auto-resolved EVERY POS payment dead letter the
+      // instant a manager opened this screen, real unresolved ones included.
+      // Only trust a miss as real staleness for an id that could ever have
+      // matched a real Order.id in the first place (Prisma's default cuid
+      // shape); anything else is left for a human to resolve.
+      const looksLikeServerId = (id: string) => /^c[a-z0-9]{24}$/i.test(id);
+      const staleIds = unresolved
+        .filter((r) => {
+          const status = statusByOrderId.get(r.aggregateId);
+          if (status) return TERMINAL_ORDER_STATUSES.includes(status);
+          return looksLikeServerId(r.aggregateId) && !statusByOrderId.has(r.aggregateId);
+        })
+        .map((r) => r.id);
+
+      if (staleIds.length > 0) {
+        await prisma.posDeadLetter.updateMany({
+          where: { id: { in: staleIds } },
+          data: { resolvedAt: new Date(), resolvedBy: 'system:auto-resolved-stale' },
+        }).catch((e) => console.warn('[dead-letters] auto-resolve failed', e));
+        if (includeResolved !== 'true') {
+          return reply.send(rows.filter((r) => !staleIds.includes(r.id)));
+        }
+      }
+    }
+
     return reply.send(rows);
   });
 

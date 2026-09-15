@@ -1,8 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { apiGet, apiPut, apiDelete } from '@/lib/api-client';
-import { CalendarClock, Download, Play, Pause, Trash2, Loader2, Clock } from 'lucide-react';
+import { CalendarClock, Download, Play, Pause, Trash2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { SkeletonTable } from '@/components/ui/skeleton';
 
 export function ScheduledReportsList() {
   const [reports, setReports] = useState<any[]>([]);
@@ -54,9 +55,11 @@ export function ScheduledReportsList() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
-          <div className="p-12 flex justify-center text-slate-400">
-            <Loader2 className="animate-spin" size={32} />
-          </div>
+          <SkeletonTable
+            className="border-0 shadow-none rounded-none"
+            rows={5}
+            columns={[{ w: 160, avatar: false }, 120, { w: 48, pill: true }, 90, { w: 64, pill: true }, 100, { w: 72, align: 'right' }]}
+          />
         ) : reports.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">

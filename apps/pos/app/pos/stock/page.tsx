@@ -7,7 +7,6 @@ import { getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { useTopBar } from '@/hooks/useTopBar';
 import { toast } from 'sonner';
-import { ScreenLoader } from '@/components/ui/ScreenLoader';
 import {
   AlertTriangle,
   AlertCircle,
@@ -275,8 +274,16 @@ export default function StockPage() {
     refetchStock();
   };
 
+  // Stock is one of the few screens with a genuine remote first load (it isn't
+  // in the event store). Say so plainly — the same quiet, centred line Tickets
+  // uses for order history — rather than drawing placeholder bars that don't
+  // match the rows they stand in for.
   if (loading && !data) {
-    return <ScreenLoader label="Loading stock status…" />;
+    return (
+      <div className="flex-1 min-h-0 flex items-center justify-center bg-[var(--pos-bg-base,#F8FAFC)]">
+        <p className="text-[#94A3B8] text-[13px] font-medium">Loading stock status…</p>
+      </div>
+    );
   }
 
   const items = data?.items ?? [];

@@ -92,7 +92,7 @@ export default function CafePage() {
               <ul className="space-y-3">
                 <li className="flex items-center gap-3 text-[#1d1d1f] font-medium"><Star size={16} className="text-[#FF6B35]" /> Instant digital menu updates</li>
                 <li className="flex items-center gap-3 text-[#1d1d1f] font-medium"><Star size={16} className="text-[#FF6B35]" /> Customers can request the bill digitally</li>
-                <li className="flex items-center gap-3 text-[#1d1d1f] font-medium"><Star size={16} className="text-[#FF6B35]" /> Increase average order value by 15%</li>
+                <li className="flex items-center gap-3 text-[#1d1d1f] font-medium"><Star size={16} className="text-[#FF6B35]" /> Customers browse the full menu before ordering</li>
               </ul>
             </div>
             

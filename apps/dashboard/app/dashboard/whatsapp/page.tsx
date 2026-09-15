@@ -21,7 +21,7 @@ export default function WhatsAppBotPage() {
   const fetchConfig = () => queryClient.invalidateQueries({ queryKey: ['whatsapp', 'config'] });
 
   if (loading) {
-    return <PageLoader label="Loading WhatsApp bot settings..." variant="form" />;
+    return <PageLoader label="Loading WhatsApp bot settings..." variant="tabs" />;
   }
 
   return (

@@ -124,14 +124,20 @@ export const tenantRoutes: FastifyPluginAsyncZod = async (fastify) => {
         name: 'Owner',
         email: `${phone}@dineizgo.local`, // Generate a fake email or use phone
         role: 'TENANT_ADMIN',
-        posPin: pin,
+        // Every posPin reader (pin.routes.ts PIN login, the POS manager-PIN
+        // gates) compares against a SHA-256 hash — storing the raw PIN here
+        // meant a freshly self-signed-up tenant's own owner PIN could never
+        // successfully log in or pass a manager check anywhere.
+        posPin: crypto.createHash('sha256').update(pin).digest('hex'),
         password: '', // Password not used for posPin login, but field might be required
         phone,
       }
     });
 
-    // Create Session (like pin-login)
-    const crypto = require('crypto');
+    // Create Session (like pin-login) — crypto is the top-level import;
+    // this used to re-require and shadow it locally, which broke the
+    // posPin hash above (a block-scoped redeclaration is in temporal dead
+    // zone for the whole function, not just after this line).
     const { redis } = require('../../lib/redis');
     const SESSION_TTL_SECONDS = 12 * 60 * 60;
     const sessionToken = crypto.randomBytes(32).toString('hex');

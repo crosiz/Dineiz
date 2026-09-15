@@ -12,7 +12,9 @@ import { AdminPinModal } from '@/components/AdminPinModal';
 import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
 import { useViews } from '@/lib/core/views';
+import { useBrandingStore } from '@/lib/branding-store';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
+import { isViewMode } from '@/lib/view-mode';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -35,6 +37,53 @@ interface OrderDetailsModalProps {
   initialOrder?: any;
 }
 
+// Spec Part 8 — the modal renders entirely from local state for any order the
+// terminal knows about. `useViews` (lib/core/views.ts) already holds every
+// current-shift order with full per-item detail, because this terminal created
+// it or the socket-fed refreshOrders merged it. Map that OrderView into the
+// same shape `/api/orders/:id` returns so the render path is unchanged — but
+// with zero network and no spinner. Only a historical order outside this shift
+// still needs the fetch.
+function detailFromView(v: any) {
+  const liveItems = Array.isArray(v.items) ? v.items.filter((it: any) => !it.voided) : [];
+  return {
+    id: v.id,
+    serverId: v.serverId ?? null,
+    orderNumber: v.orderNumber,
+    tokenNumber: v.tokenNumber ?? null,
+    status: v.status,
+    type: v.type,
+    createdAt: v.createdAt,
+    table: v.tableLabel ? { label: v.tableLabel } : null,
+    tableId: v.tableId ?? null,
+    assignedWaiter: v.assignedWaiterName ? { name: v.assignedWaiterName } : null,
+    assignedWaiterId: v.assignedWaiterId ?? null,
+    customerId: v.customerId ?? null,
+    // Match the fields (and order) the Active Orders card falls back through —
+    // otherwise the card shows PKR 893 while this modal hands PaymentModal
+    // orderTotal 0, and payment for an unpriced-lines order gets blocked.
+    netAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    totalAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    taxAmount: v.taxAmount ?? 0,
+    discountAmount: v.discountAmount ?? 0,
+    billRequestedAt: v.billRequestedAt ?? null,
+    items: liveItems.map((it: any) => ({
+      id: it.lineId,
+      itemId: it.itemId,
+      quantity: it.qty,
+      unitPrice: it.unitPrice,
+      subtotal: (it.unitPrice ?? 0) * (it.qty ?? 1),
+      notes: it.note ?? null,
+      item: { name: it.itemName },
+      options: {
+        variation: it.variationName ? { id: it.variationId ?? null, name: it.variationName } : null,
+        addOns: it.addOns ?? [],
+      },
+    })),
+    __fromView: true,
+  };
+}
+
 // Adapts the lightweight /api/orders/live shape into a stand-in for the full
 // /api/orders/:id detail shape, so the header/status/total can render before
 // the detailed fetch returns. Item rows are marked __partial and rendered as
@@ -53,8 +102,8 @@ function shellFromSummary(summary: any) {
     table: summary.tableLabel ? { label: summary.tableLabel } : null,
     tableId: summary.tableId ?? null,
     assignedWaiter: summary.assignedWaiterName ? { name: summary.assignedWaiterName } : null,
-    netAmount: summary.netAmount ?? summary.total ?? 0,
-    totalAmount: summary.netAmount ?? summary.total ?? 0,
+    netAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
+    totalAmount: summary.netAmount ?? summary.totalAmount ?? summary.total ?? summary.subtotal ?? 0,
     items: [],
     __partial: true,
   };
@@ -62,8 +111,21 @@ function shellFromSummary(summary: any) {
 
 export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChanged, initialOrder }: OrderDetailsModalProps) {
   const router = useRouter();
+  const viewMode = isViewMode(); // spec Part 11 — no payments without a shift
   const session = useCartStore(s => s.session);
-  const [order, setOrder] = useState<any>(null);
+  const branding = useBrandingStore(s => s.branding);
+  // Live subscription to the event-derived store. When the order lives here
+  // (any current-shift order), this is the whole data source — it re-renders
+  // the modal the instant a command lands, with no fetch.
+  const viewOrder = useViews((s) => (orderId ? s.orders[orderId] : undefined));
+  const inStore = !!viewOrder;
+  // Lazy-init from the store so an in-store order paints on the very first
+  // render — no spinner frame, no effect round-trip.
+  const [order, setOrder] = useState<any>(() => {
+    if (!orderId) return null;
+    const v = useViews.getState().orders[orderId];
+    return v ? detailFromView(v) : (initialOrder ? shellFromSummary(initialOrder) : null);
+  });
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -100,9 +162,15 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       setOrder(null);
       return;
     }
+    if (viewOrder) {
+      // Fully local — paint from the store and keep painting as it changes.
+      // No network call at all (spec Part 8).
+      setOrder(detailFromView(viewOrder));
+      return;
+    }
     if (initialOrder) {
-      // Instant paint from data the list screen already had — no spinner —
-      // then quietly upgrade to the full-detail response in the background.
+      // Known to a list screen but not the store (a historical order) — paint
+      // the summary shell instantly, fill in detail from the one fetch.
       setOrder(shellFromSummary(initialOrder));
       fetchOrder(true);
     } else {
@@ -110,7 +178,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       fetchOrder();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderId]);
+  }, [orderId, viewOrder]);
 
   useEffect(() => {
     if (!assignOpen || !session?.branchId || waiters.length > 0) return;
@@ -126,7 +194,9 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   if (!orderId) return null;
 
   const refreshAfterChange = () => {
-    fetchOrder(true);
+    // In-store orders re-render from the `viewOrder` subscription already;
+    // only a fetched (historical) order needs a re-pull.
+    if (!inStore) fetchOrder(true);
     onChanged?.();
   };
 
@@ -160,6 +230,8 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       if (!res.ok) throw new Error();
       toast.success(waiter ? `Assigned to ${waiter.name}` : 'Waiter unassigned');
       setAssignOpen(false);
+      // Reflect it locally too so an in-store order updates without a re-pull.
+      setOrder((prev: any) => (prev ? { ...prev, assignedWaiter: waiter ? { name: waiter.name } : null, assignedWaiterId: waiter?.id ?? null } : prev));
       refreshAfterChange();
     } catch {
       toast.error('Failed to assign waiter');
@@ -198,7 +270,11 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
     }
   };
 
-  const voidRequiresManagerApproval = (session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true;
+  // `session` (the PIN-login identity) never carried a `tenantBranding` field —
+  // this always read undefined and silently defaulted to true. The real
+  // setting lives in the branding store, same as every other Settings →
+  // Point of Sale toggle.
+  const voidRequiresManagerApproval = branding?.pos?.voidRequiresManagerApproval ?? true;
   const isManager = session?.role === 'BRANCH_MANAGER' || session?.role === 'TENANT_ADMIN';
 
   const requestCancel = () => setCancelConfirmOpen(true);
@@ -228,7 +304,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92vh] flex flex-col">
+      <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92dvh] flex flex-col">
         {!order ? (
           <div className="flex items-center justify-center h-64">
             <span className="material-symbols-outlined animate-spin text-[#94A3B8] text-3xl">progress_activity</span>
@@ -300,7 +376,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-bold text-[#0F172A] text-[14px]">{formatPKR(item.subtotal)}</span>
-                    {canAct && (
+                    {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
@@ -323,10 +399,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             {/* Actions */}
             <div className="p-4 border-t border-[#E2E8F0] shrink-0 space-y-2">
               {canAct && (
-                <div className="grid grid-cols-3 gap-2">
-                  <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
-                  </button>
+                // Spec Part 11 — View Mode keeps the non-financial actions
+                // (assign waiter, reprint KOT) but drops "Add Item".
+                <div className={`grid ${viewMode ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
+                  {!viewMode && (
+                    <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                      <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
+                    </button>
+                  )}
                   <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
                     <span className="material-symbols-outlined text-[18px]">person_add</span> Waiter
                   </button>
@@ -338,15 +418,26 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
               {canAct && (
                 <div className="flex gap-2">
-                  <button
-                    onClick={requestCancel}
-                    disabled={busy}
-                    className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
-                  >
-                    Cancel Order
-                  </button>
+                  {/* Spec Part 11 — voiding an order is blocked in View Mode. */}
+                  {!viewMode && (
+                    <button
+                      onClick={requestCancel}
+                      disabled={busy}
+                      className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
 
-                  {isReady ? (
+                  {isReady && viewMode ? (
+                    <button
+                      onClick={() => { router.push('/pos/shift/open'); }}
+                      className="flex-1 h-12 rounded-xl font-bold text-[13px] border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors flex flex-col items-center justify-center leading-tight"
+                    >
+                      Open a shift to take payment
+                      <span className="text-[10px] font-medium text-sky-500">You’re in view-only mode</span>
+                    </button>
+                  ) : isReady ? (
                     <button
                       onClick={() => setIsPaymentOpen(true)}
                       disabled={busy}
@@ -391,7 +482,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       {assignOpen && (
         <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setAssignOpen(false)} />
-          <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70vh] overflow-y-auto">
+          <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70dvh] overflow-y-auto">
             <h3 className="font-bold text-[16px] text-[#0F172A] mb-4">Assign Waiter</h3>
             <div className="space-y-1.5">
               <button onClick={() => handleAssign(null)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#F1F5F9] text-[#64748B] font-medium text-[14px]">

@@ -1,14 +1,16 @@
 import React from "react";
 import { HeroSection } from "@/components/sections/HeroSection";
-import { LogoBar } from "@/components/sections/LogoBar";
-import { ProblemStatement } from "@/components/sections/ProblemStatement";
+import { ValueStrip } from "@/components/sections/ValueStrip";
 import { CoreFeatures } from "@/components/sections/CoreFeatures";
+import { AudienceSolutions } from "@/components/sections/AudienceSolutions";
 import { ProductCards } from "@/components/sections/ProductCards";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { OfflineFirst } from "@/components/sections/OfflineFirst";
+import { FAQSection } from "@/components/sections/FAQSection";
+import { HOMEPAGE_FAQS } from "@/lib/faqs";
 import { PricingPreview } from "@/components/sections/PricingPreview";
 import { FinalCTASection } from "@/components/sections/FinalCTASection";
-import { generateSEOMetadata } from "@/lib/seo";
+import { generateSEOMetadata, generateFAQSchema } from "@/lib/seo";
 
 export const metadata = generateSEOMetadata({
   title: "Dineiz — Best Restaurant POS System in Pakistan & MENA",
@@ -20,15 +22,22 @@ export const metadata = generateSEOMetadata({
 export const dynamic = 'force-static';
 
 export default function Homepage() {
+  const faqJsonLd = generateFAQSchema(HOMEPAGE_FAQS);
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <HeroSection />
-      <LogoBar />
-      <ProblemStatement />
+      <ValueStrip />
       <CoreFeatures />
+      <AudienceSolutions />
       <ProductCards />
       <HowItWorks />
       <OfflineFirst />
+      <FAQSection />
       <PricingPreview />
       <FinalCTASection />
     </>

@@ -43,6 +43,14 @@ export function NavigationProgress() {
 
   // ── Wrap history so any screen change lights the bar ──────────────────────
   useEffect(() => {
+    // Next's App Router (React 19) calls history.pushState/replaceState from
+    // inside a useInsertionEffect during its route sync. Calling a store
+    // setter synchronously from our wrapper at that moment throws
+    // "useInsertionEffect must not schedule updates". Defer every start() to a
+    // microtask so the set lands after the insertion phase unwinds — still the
+    // same frame, still imperceptible.
+    const kick = () => queueMicrotask(start);
+
     const wrap = (key: 'pushState' | 'replaceState') => {
       const original = history[key];
       if ((original as any).__navProgressWrapped) return () => {};
@@ -51,10 +59,10 @@ export function NavigationProgress() {
           const target = new URL(String(args[2] ?? ''), window.location.href);
           const cur = window.location;
           if (args[2] != null && target.pathname + target.search !== cur.pathname + cur.search) {
-            start();
+            kick();
           }
         } catch {
-          if (args[2] != null) start();
+          if (args[2] != null) kick();
         }
         return original.apply(this, args as any);
       } as History['pushState'];
@@ -71,7 +79,7 @@ export function NavigationProgress() {
 
     const unpush = wrap('pushState');
     const unreplace = wrap('replaceState');
-    const onPop = () => start();
+    const onPop = () => kick();
     window.addEventListener('popstate', onPop);
 
     return () => {

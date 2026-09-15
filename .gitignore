@@ -46,6 +46,16 @@ next-env.d.ts
 # Transient locally-generated files (e.g. scheduled report exports)
 apps/api/storage/
 
+# apps/standalone dev-harness build output (verification-only, never shipped)
+apps/standalone/.harness-build/
+
+# NOT build output despite the name — electron-builder's own convention
+# (directories.buildResources: build) for source-controlled installer
+# resources (icon.ico, icon.png). Must stay committed or packaging breaks
+# for anyone else. The generic `build` rule above would otherwise catch it.
+!apps/standalone/build/
+!apps/standalone/build/**
+
 # IDEs and Editors
 .idea/
 .vscode/

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useUser } from '@/contexts/user-context';
 import { useCategories, useMenuItems, useToggleAvailability, useToggleCategoryAvailability } from '@/components/features/menu/hooks/useMenuQueries';
-import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /** Branch-scoped view: a branch manager can toggle whether items/categories
  * are sellable at their branch today, but can't add, edit price, or delete —
@@ -70,7 +70,18 @@ export default function MenuAvailabilityPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center gap-2 text-sm text-slate-400 py-12"><Spinner size={16} />Loading menu…</div>
+        <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100" role="status" aria-busy="true">
+          <span className="sr-only">Loading menu</span>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between px-5 py-3.5">
+              <div className="space-y-1.5">
+                <Skeleton className="h-3.5 w-40" />
+                <Skeleton className="h-2.5 w-24" />
+              </div>
+              <Skeleton className="h-6 w-11 rounded-full" />
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="text-sm text-slate-400 py-12 text-center">No items in this category.</div>
       ) : (

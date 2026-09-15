@@ -23,7 +23,6 @@ const legalLinks = [
   { label: "Terms of Service", href: "/terms-of-service" },
   { label: "Refund Policy", href: "/refund-policy" },
   { label: "Cookie Policy", href: "/cookie-policy" },
-  { label: "System Status", href: "/status" },
 ];
 
 export function Footer() {
@@ -36,7 +35,7 @@ export function Footer() {
           {/* Column 1: Brand & Socials */}
           <div className="flex flex-col gap-5">
             <Link href="/" className="inline-block mb-6">
-              <Image src="/logo.svg" alt="Dineiz Logo" width={110} height={28} className="h-7 w-auto object-contain hover:scale-105 transition-transform duration-300" />
+              <Image src="/logo.png" alt="Dineiz Logo" width={112} height={28} className="h-[23px] md:h-7 w-auto object-contain" />
             </Link>
             <p className="text-[14px] text-gray-500 leading-snug">
               Smart billing for Pakistan&apos;s restaurants.
@@ -100,7 +99,7 @@ export function Footer() {
           <div className="text-[13px] text-gray-500 font-medium">
             &copy; {new Date().getFullYear()} Dineiz by Crosiz Technologies
           </div>
-          <div className="text-[13px] text-gray-400">
+          <div className="text-[13px] text-gray-500">
             Made with <span className="text-red-500">❤</span> in Pakistan
           </div>
         </div>

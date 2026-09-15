@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '@/lib/api-client';
 import { formatPKR } from '@/lib/formatters';
 import { Receipt } from 'lucide-react';
-import { InlineLoader } from '@/components/ui/Spinner';
+import { SkeletonStatCards, SkeletonList } from '@/components/ui/skeleton';
 
 export default function ShiftReportPage() {
   const { data: currentShift, isLoading: shiftLoading } = useQuery({
@@ -32,7 +32,11 @@ export default function ShiftReportPage() {
       </div>
 
       {isLoading ? (
-        <InlineLoader />
+        <div className="space-y-6" role="status" aria-busy="true">
+          <span className="sr-only">Loading shift report</span>
+          <SkeletonStatCards count={3} />
+          <SkeletonList rows={5} />
+        </div>
       ) : !shiftId ? (
         <div className="text-sm text-slate-400 py-12 text-center">No shift is currently open — open a shift to see its report here.</div>
       ) : isError ? (

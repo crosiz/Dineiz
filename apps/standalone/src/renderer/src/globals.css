@@ -1,0 +1,212 @@
+@import "tailwindcss";
+@import "material-symbols/outlined.css";
+
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/space-mono/400.css";
+@import "@fontsource/space-mono/700.css";
+
+/*
+ * Layout/spacing/typography recreate the real POS's look (apps/pos/app/globals.css)
+ * locally — this app does not depend on packages/ui's theme, which is dark
+ * and built for the dashboard. See dineiz/decisions/0003-standalone-architecture.
+ *
+ * Primary color is #FF6B35 (verified against the actual brand-assets SVG
+ * pixel data, CLAUDE.md's own "Brand color" line, and matching
+ * apps/super-admin + apps/dashboard's auth screens) — NOT apps/pos's own
+ * --pos-primary (#F59E0B amber), which is that one app's own drifted,
+ * POS-specific accent, not the shared Dineiz brand color. An earlier pass
+ * of this file copied apps/pos's amber directly without cross-checking it
+ * against the actual brand assets — that was the wrong reference point.
+ */
+
+@theme {
+  --color-primary: var(--pos-primary, #ff6b35);
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-on-surface: #0f172a;
+  --color-text-secondary: #475569;
+  --color-outline: #e2e8f0;
+
+  --spacing-touch-min: 48px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+@layer base {
+  :root {
+    --pos-primary: #ff6b35;
+    --pos-primary-dim: rgba(255, 107, 53, 0.12);
+    --pos-primary-glow: 0 0 0 3px rgba(255, 107, 53, 0.25);
+
+    --pos-bg-base: #f8fafc;
+    --pos-bg-raised: #ffffff;
+    --pos-bg-card: #ffffff;
+    --pos-bg-elevated: #f1f5f9;
+    --pos-bg-hover: #e2e8f0;
+
+    --pos-text-primary: #0f172a;
+    --pos-text-secondary: #475569;
+    --pos-text-muted: #94a3b8;
+    --pos-price: #e5502a;
+
+    --pos-border: #e2e8f0;
+    --pos-border-strong: #cbd5e1;
+
+    --pos-green: #10b981;
+    --pos-red: #ef4444;
+    --pos-blue: #3b82f6;
+    --pos-yellow: #f59e0b;
+    --pos-purple: #8b5cf6;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  *:focus,
+  *:focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow: 0 0 0 2px var(--pos-primary, #ff6b35);
+  }
+
+  button:focus-visible {
+    box-shadow: 0 0 0 2px var(--pos-primary, #ff6b35) !important;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--pos-bg-base);
+    color: var(--pos-text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 3px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+
+  button:active {
+    opacity: 0.85;
+  }
+
+  input,
+  textarea,
+  select {
+    background-color: var(--pos-bg-elevated);
+    color: var(--pos-text-primary);
+    border: 1px solid var(--pos-border-strong);
+    border-radius: 10px;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--pos-primary);
+  }
+
+  ::placeholder {
+    color: var(--pos-text-muted) !important;
+  }
+}
+
+@layer utilities {
+  .material-symbols-outlined {
+    font-variation-settings:
+      'FILL' 1,
+      'wght' 400,
+      'GRAD' 0,
+      'opsz' 24 !important;
+    font-family: 'Material Symbols Outlined' !important;
+  }
+
+  .clash-display {
+    font-family: var(--font-display);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .role-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .role-card:active {
+    transform: scale(0.98);
+  }
+  .role-card.selected {
+    border-color: var(--pos-primary);
+  }
+
+  .numpad-key {
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .numpad-key:active {
+    transform: scale(0.95);
+  }
+
+  .pin-dot {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    25% {
+      transform: translateX(-8px);
+    }
+    75% {
+      transform: translateX(8px);
+    }
+  }
+  .shake {
+    animation: shake 0.2s ease-in-out 0s 2;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  .slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}

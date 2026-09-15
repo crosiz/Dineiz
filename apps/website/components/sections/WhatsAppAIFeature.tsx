@@ -7,7 +7,7 @@ const messages = [
   { from: "customer", text: "Assalamualaikum, 2 biryani aur 1 doodh pati chaiye" },
   { from: "bot", text: "Wa alaikum salam! Aapka order confirm kar raha hoon:\n• 2× Biryani Full — Rs. 800\n• 1× Doodh Pati — Rs. 60\n\nTotal: Rs. 860\n\nDeliver karein ya khud lene aayenge? 🍛" },
   { from: "customer", text: "Delivery please, Gulshan Block 6" },
-  { from: "bot", text: "Shukriya! Aapka order kitchen ko bhej diya. Estimated time: 35 minutes.\n\nPayment: Cash on delivery.\n\nOrder ID: #DNZ-4821" },
+  { from: "bot", text: "Shukriya! Team ne confirm kar ke aapka order kitchen ko bhej diya hai. Estimated time: 35 minutes.\n\nPayment: Cash on delivery.\n\nOrder ID: #DNZ-4821" },
 ];
 
 export function WhatsAppAIFeature() {
@@ -27,20 +27,20 @@ export function WhatsAppAIFeature() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-semibold mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              WhatsApp AI Ordering
+              WhatsApp Ordering
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mb-4">
-              Your AI waiter that<br />never sleeps
+              Orders in, straight from<br />WhatsApp
             </h2>
             <p className="text-base text-gray-500 leading-relaxed mb-8">
-              Dineiz AI reads WhatsApp messages from customers — in Roman Urdu or English — and handles the entire ordering flow automatically. Confirmation, payment, and kitchen routing without any staff involvement.
+              Dineiz AI reads WhatsApp messages from customers — in Roman Urdu or English — and drafts the order. Your staff confirms it before it's sent to the kitchen.
             </p>
             <ul className="space-y-3 mb-8">
               {[
-                "Works 24/7 — even when you're closed",
+                "Customers can message an order anytime",
                 "Understands Roman Urdu naturally",
-                "Routes order directly to kitchen display",
-                "Zero per-order cost",
+                "Confirmed orders go straight to kitchen display",
+                "No extra hardware needed",
               ].map((f) => (
                 <li key={f} className="flex items-center gap-2.5 text-sm text-gray-700">
                   <Check size={16} className="text-green-500 shrink-0" />
@@ -52,7 +52,7 @@ export function WhatsAppAIFeature() {
               href="/product/whatsapp"
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
-              Learn about WhatsApp AI
+              Learn about WhatsApp Ordering
             </a>
           </div>
 

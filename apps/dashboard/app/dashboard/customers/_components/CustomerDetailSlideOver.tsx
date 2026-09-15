@@ -9,7 +9,7 @@ import {
   X, Phone, Mail, Award, MessageSquare, FileText, Edit2,
   User, Tag, Receipt, PlusCircle, MinusCircle, Send, Sparkles
 } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonDetail } from '@/components/ui/skeleton';
 
 type LoyaltyTier = { id: string; name: string; minPoints: number; badgeColor: string };
 
@@ -64,8 +64,22 @@ export function CustomerDetailSlideOver({ customerId, onClose, onUpdate }: Custo
   };
 
   if (loading) return (
-    <div className="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl z-50 flex items-center justify-center border-l border-slate-200">
-      <PageLoader label="Loading profile..." />
+    <div
+      className="fixed inset-y-0 right-0 w-full md:w-[640px] bg-slate-50 shadow-2xl z-50 flex flex-col border-l border-slate-200 overflow-hidden"
+      role="status"
+      aria-busy="true"
+    >
+      <span className="sr-only">Loading profile</span>
+      <div className="bg-white px-6 pt-6 pb-5 border-b border-slate-200 shadow-xs flex items-center gap-4">
+        <Skeleton className="h-14 w-14 rounded-xl shrink-0" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-3.5 w-56" />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-6">
+        <SkeletonDetail sections={3} />
+      </div>
     </div>
   );
   

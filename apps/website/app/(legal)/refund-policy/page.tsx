@@ -24,7 +24,7 @@ export default function RefundPolicyPage() {
             { title: "Monthly Subscriptions", body: "Monthly subscriptions may be cancelled at any time. Upon cancellation, your access continues until the end of the current billing period. We do not provide prorated refunds for partial months." },
             { title: "Annual Subscriptions", body: "Annual subscriptions may be cancelled within 30 days of the start date for a full refund minus a processing fee of Rs. 500. After 30 days, no refunds are issued for annual plans, though you may cancel to prevent renewal." },
             { title: "Technical Issues", body: "If you experience a service outage or technical issue attributable to Dineiz that prevents you from using the platform for more than 24 consecutive hours, we will credit your account with an equivalent number of days." },
-            { title: "How to Request a Refund", body: "To request a refund, contact us at billing@dineiz.com or WhatsApp +92 300 1234567 with your account email and reason for the refund request. We process refund requests within 5–7 business days." },
+            { title: "How to Request a Refund", body: "To request a refund, contact us at billing@dineiz.com or WhatsApp +92 314 1986044 with your account email and reason for the refund request. We process refund requests within 5–7 business days." },
           ].map((s) => (
             <div key={s.title}>
               <h2 className="text-base font-bold text-gray-900 mb-2">{s.title}</h2>

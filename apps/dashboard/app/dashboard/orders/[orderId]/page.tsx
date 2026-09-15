@@ -2,7 +2,7 @@
 import { formatPKR } from '@/lib/formatters';
 import React, { useState, useEffect } from 'react';
 import { User, UtensilsCrossed, CreditCard, Printer, Receipt, Undo2, ChevronDown, FileText, Plus, ArrowLeft } from 'lucide-react';
-import { PageLoader } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonDetail } from '@/components/ui/skeleton';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import Link from 'next/link';
@@ -148,8 +148,27 @@ export default function OrderDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <PageLoader label="Loading order..." />
+      <div className="min-h-screen bg-slate-50 pb-20" role="status" aria-busy="true">
+        <span className="sr-only">Loading order</span>
+        <div className="bg-white border-b border-slate-200 px-8 py-6 flex flex-col gap-4">
+          <Skeleton className="h-3 w-44" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-7 w-28" />
+              <Skeleton className="h-6 w-20 rounded-lg" />
+              <Skeleton className="h-6 w-20 rounded-lg" />
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+          </div>
+        </div>
+        <div className="p-8 max-w-[1400px] mx-auto grid grid-cols-12 gap-8">
+          <div className="col-span-12 lg:col-span-7"><SkeletonDetail sections={3} /></div>
+          <div className="col-span-12 lg:col-span-5"><SkeletonDetail sections={2} /></div>
+        </div>
       </div>
     );
   }

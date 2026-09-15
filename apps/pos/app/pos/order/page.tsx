@@ -16,9 +16,10 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
-import { queueItemAdd } from '@/lib/offlineHelpers';
 import * as commands from '@/lib/core/commands';
-import { useViews } from '@/lib/core/views';
+import { useViews, seedServerOrder } from '@/lib/core/views';
+import { useBrandingStore } from '@/lib/branding-store';
+import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 
@@ -73,7 +74,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
               <span className="text-[13px] text-[#64748B] font-medium">{cartItem.selectedVariation.name}</span>
             )}
           </div>
-          <span className="font-mono text-[16px] font-bold text-[#0F172A]">PKR {cartItem.subtotal.toFixed(2)}</span>
+          <span className="font-mono text-[16px] font-bold text-[#0F172A]">{formatPKR(cartItem.subtotal)}</span>
         </div>
         <div className="flex justify-between items-center mt-2">
           <div className="flex flex-wrap gap-2">
@@ -84,12 +85,15 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
             ))}
           </div>
           <div className="flex items-center gap-2 shrink-0 ml-2">
-            <div className="flex items-center bg-[#F8FAFC] rounded-full border border-[#CBD5E1] h-9 px-1">
-              <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-7 h-7 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A]">
+            {/* h-11/w-11 (44px) — this pair is the single most-tapped control
+                in the order flow; it was 28px, well under the touch-target
+                minimum every other primary control in this file follows. */}
+            <div className="flex items-center bg-[#F8FAFC] rounded-full border border-[#CBD5E1] h-11 px-1">
+              <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
                 <span className="material-symbols-outlined text-sm">remove</span>
               </button>
-              <span className="font-mono text-sm px-3 font-bold text-[#0F172A]">{cartItem.quantity}</span>
-              <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-7 h-7 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A]">
+              <span className="font-mono text-sm px-2 font-bold text-[#0F172A]">{cartItem.quantity}</span>
+              <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
                 <span className="material-symbols-outlined text-sm">add</span>
               </button>
             </div>
@@ -107,26 +111,10 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
   );
 }
 
-// OrderItem.options is a free-form JSON snapshot (packages/db/prisma/schema.prisma)
-// deliberately taken at order time so a later menu price/name edit never
-// changes a historical order. It previously only stored the variation ID
-// (no name) and dropped addons entirely, so receipts/KOTs had nothing to
-// render for them. This is the single shape every order-item payload in this
-// file should use — matches what ClientTableMap.tsx / receipt/page.tsx / the
-// print templates already read from a fetched order.
-function buildItemOptions(item: { selectedVariation?: { id: string; name: string }; selectedAddOns?: { id: string; name: string; price: number }[] }) {
-  const hasVariation = !!item.selectedVariation;
-  const hasAddOns = !!item.selectedAddOns?.length;
-  if (!hasVariation && !hasAddOns) return undefined;
-  return {
-    variation: hasVariation ? { id: item.selectedVariation!.id, name: item.selectedVariation!.name } : undefined,
-    addOns: hasAddOns ? item.selectedAddOns!.map(a => ({ id: a.id, name: a.name, price: a.price })) : undefined,
-  };
-}
-
 function OrderEntryPageContent() {
   const router = useRouter();
   const session = useCartStore(s => s.session);
+  const branding = useBrandingStore(s => s.branding);
   const cart = useCartStore(s => s.cart);
   const addItem = useCartStore(s => s.addItem);
   const incrementItem = useCartStore(s => s.incrementItem);
@@ -397,10 +385,20 @@ function OrderEntryPageContent() {
           toast.error('Held order not found');
           return;
         }
-        useCartStore.setState({ cart: order.cart || [] });
+        // holdOrder() below also captures tableId/tableLabel/orderType — a
+        // held dine-in order used to come back as "no table selected" with
+        // no order type, forcing the cashier to redo everything except the
+        // items (and re-tripping the CHARGE-greyed-out guard, since
+        // canSubmitOrder requires orderType to be set).
+        useCartStore.setState({
+          cart: order.cart || [],
+          orderType: order.orderType || 'DINE_IN',
+          selectedTableId: order.tableId ?? null,
+          selectedTableLabel: order.tableLabel ?? null,
+        });
         useCartStore.getState().setSourceOrderId(order.id);
         setHeldOrderId(order.id);
-        
+
         // After loading, delete the held order record so it cannot be double-loaded
         getDB().heldOrders.delete(order.id).catch(console.error);
 
@@ -650,50 +648,50 @@ function OrderEntryPageContent() {
     const notes = orderNote;
 
     // ── Adding items to an order already sent to the kitchen ──────────────
-    // Kept synchronous (not optimistic) — the kitchen may already be
-    // cooking this order, so we don't assume the append succeeded until
-    // the server confirms it. What changes here vs. before: a failure
-    // while offline is now queued for retry instead of just failing.
+    // Event-sourced now: each extra item is an ITEM_ADDED event on the
+    // existing order, shipped by the outbox's ADD_ITEMS op
+    // (POST /api/orders/:serverId/items) with its own retry/dependency
+    // handling. This replaces a direct fetch against `paymentOrderId`, which
+    // 404'd whenever that id was still the order's local client id (the
+    // common case — Tickets/Tables link to the local view-store order).
+    // Works online, offline, and while the parent order is still syncing.
     if (isAppending) {
       setKitchenLoading(true);
-      const body = JSON.stringify({
-        items: cartItems.map(item => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotal: item.unitPrice * item.quantity,
-          options: buildItemOptions(item),
-          notes: item.notes ?? undefined,
-        }))
-      });
 
-      // Same reasoning as the new-order path: the kitchen needs the extra
-      // items the instant this is tapped, not after a round trip. Everything
-      // this KOT needs (the added items, which table/order it's for) is
-      // already known — print now instead of waiting on the POST.
+      // The order must be in the view store for the reducer + outbox to act
+      // on it. Every order Tickets/Tables can link to already is; only a
+      // pre-view-store historical order (loaded via the network fallback)
+      // needs seeding first.
+      let targetId = paymentOrderId!;
+      if (!useViews.getState().orders[targetId] && existingOrderData) {
+        targetId = seedServerOrder(existingOrderData) || targetId;
+      }
+
+      // The kitchen needs the extra items the instant this is tapped — print
+      // now, don't wait on the queue.
       printKOT(
         {
           orderNumber: existingOrderData?.orderNumber || paymentOrderNumber || `#${paymentOrderId?.slice(-6)}`,
           tokenNumber: existingOrderData?.tokenNumber,
           createdAt: new Date().toISOString(),
         },
-        orderTypeStr, sessionObj, cartItems, notes
+        orderTypeStr, sessionObj, cartItems, notes,
       );
 
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${paymentOrderId}/items`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body,
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await commands.appendItems(targetId, cartItems.map(item => ({
+          itemId: item.itemId,
+          itemName: item.name,
+          variationId: item.selectedVariation?.id ?? null,
+          variationName: item.selectedVariation?.name ?? null,
+          qty: item.quantity,
+          unitPrice: item.unitPrice,
+          note: item.notes ?? null,
+          addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+        })));
 
-        const order = await res.json();
         setOrderNote('');
-        toast.success(`Order #${order.orderNumber || order.id?.slice(-6) || 'sent'} updated!`);
+        toast.success('Items added — sending to kitchen');
 
         if (isHeld && rawOrderId) {
           try {
@@ -706,21 +704,8 @@ function OrderEntryPageContent() {
         setDiscount(null);
         router.push('/pos/home');
       } catch (err) {
-        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-        if (isOffline) {
-          try {
-            await queueItemAdd({ orderId: paymentOrderId!, body });
-            toast.success('No connection — items saved locally and will sync automatically.');
-            clearCart();
-            setDiscount(null);
-            router.push('/pos/home');
-          } catch (queueErr) {
-            console.error('Failed to queue item add', queueErr);
-            toast.error('Failed to save items offline. Please retry.');
-          }
-        } else {
-          toast.error('Failed to send order. Check connection.');
-        }
+        console.error('Failed to append items', err);
+        toast.error('Could not add the items — please retry.');
       } finally {
         setKitchenLoading(false);
       }
@@ -862,110 +847,97 @@ function OrderEntryPageContent() {
     }
 
     if (!paymentOrderId) {
+      // Local-first / event-sourced — same pattern sendToKitchen() uses below
+      // for a brand-new order (commands.createOrder + commands.addItem), just
+      // without commands.sendToKitchen() since charging directly deliberately
+      // skips the kitchen. This replaces a raw, awaited fetch() straight to
+      // POST /api/orders, which blocked the whole "Charge" tap on a network
+      // round trip (the reported slow charge) and never registered the order
+      // in useViews (the reported stale Home screen) — but the real damage
+      // was downstream: PaymentModal's collectPayment() right after used the
+      // server's raw id, which the view store had no record of under ANY key.
+      // The PAYMENT_COLLECTED reducer silently no-ops on an unknown aggregate
+      // (views.ts), and the outbox's deriveTaskChains then hits its "no task
+      // producible" invariant and marks that event CONFIRMED locally without
+      // ever shipping it — the cashier sees "Payment Successful" and the
+      // money is simply never recorded server-side. Client-owned identity
+      // from the moment of creation is what closes that gap.
       setChargeLoading(true);
       try {
-        const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
-        const shift = JSON.parse(localStorage.getItem('pos_shift') ?? '{}');
         const orderTypeStr = orderType || 'DINE_IN';
-        const tableId = selectedTableId;
+        const tableId = (selectedTableId && selectedTableId !== 'undefined') ? selectedTableId : null;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body: JSON.stringify({
-            type: orderTypeStr,
-            tableId: (tableId && tableId !== 'undefined') ? tableId : null,
-            branchId: sessionObj.branchId,
-            tenantId: sessionObj.tenantId,
-            cashierId: sessionObj.userId || sessionObj.cashierId,
-            shiftId: shift.shiftId ?? null,
-            items: cart.map(item => ({
-              itemId: item.itemId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              subtotal: item.unitPrice * item.quantity,
-              options: buildItemOptions(item),
-              notes: item.notes ?? undefined,
-            })),
-            totalAmount: subtotal,
-            taxAmount,
-            discountAmount,
-            netAmount: total,
-            notes: orderNote,
-          }),
+        const { orderId: localId, orderNumber } = await commands.createOrder({
+          type: orderTypeStr,
+          tableId,
+          tableLabel: selectedTableLabel || undefined,
+          notes: orderNote,
         });
-
-        if (res.ok) {
-          const order = await res.json();
-          setPaymentOrderId(order.id);
-          setPaymentOrderNumber(order.orderNumber);
-          setIsPaymentOpen(true);
-
-          const isHeld = searchParams.get('isHeld') === 'true';
-          const rawOrderId = searchParams.get('orderId');
-          if (isHeld && rawOrderId) {
-            try {
-              const db = getDB();
-              if (db.heldOrders) {
-                await db.heldOrders.delete(rawOrderId);
-              }
-            } catch (e) {
-              console.error('Failed to delete held order on charge', e);
-            }
-          }
-        } else {
-          toast.error('Could not create order. Check connection.');
+        for (const item of cart) {
+          await commands.addItem(localId, {
+            itemId: item.itemId,
+            itemName: item.name,
+            variationId: item.selectedVariation?.id ?? null,
+            variationName: item.selectedVariation?.name ?? null,
+            qty: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.notes ?? null,
+            addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+          });
         }
-      } catch {
-        toast.error('Could not create order. Check connection.');
+
+        setPaymentOrderId(localId);
+        setPaymentOrderNumber(orderNumber);
+        setIsPaymentOpen(true);
+
+        const isHeld = searchParams.get('isHeld') === 'true';
+        const rawOrderId = searchParams.get('orderId');
+        if (isHeld && rawOrderId) {
+          try {
+            const db = getDB();
+            if (db.heldOrders) {
+              await db.heldOrders.delete(rawOrderId);
+            }
+          } catch (e) {
+            console.error('Failed to delete held order on charge', e);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create order for charge', err);
+        toast.error('Could not open payment — please retry.');
       } finally {
         setChargeLoading(false);
       }
     } else if (cart.length > 0) {
-      // We have an existing order but there are un-sent items in the cart
+      // Existing order with un-sent items in the cart — fold them in as
+      // ITEM_ADDED events (same event-sourced path as sendToKitchen's append),
+      // then open payment. Local-first: the events write instantly and the
+      // outbox ships the ADD_ITEMS op; PaymentModal reads the merged line list
+      // from the view store.
       setChargeLoading(true);
       const isHeld = searchParams.get('isHeld') === 'true';
       const isActuallyEdit = !!paymentOrderId && !isHeld;
-      const isAppending = isActuallyEdit && existingOrderData;
-      const body = JSON.stringify({
-        items: cart.map(item => ({
-          itemId: item.itemId,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          subtotal: item.unitPrice * item.quantity,
-          options: buildItemOptions(item),
-          notes: item.notes ?? undefined,
-        })),
-      });
-
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders${isAppending ? `/${paymentOrderId}/items` : ''}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${getToken()}`,
-          },
-          body,
-        });
-
-        if (!res.ok) throw new Error('Could not append items');
+        if (isActuallyEdit && existingOrderData) {
+          let targetId = paymentOrderId!;
+          if (!useViews.getState().orders[targetId]) {
+            targetId = seedServerOrder(existingOrderData) || targetId;
+          }
+          await commands.appendItems(targetId, cart.map(item => ({
+            itemId: item.itemId,
+            itemName: item.name,
+            variationId: item.selectedVariation?.id ?? null,
+            variationName: item.selectedVariation?.name ?? null,
+            qty: item.quantity,
+            unitPrice: item.unitPrice,
+            note: item.notes ?? null,
+            addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
+          })));
+        }
         setIsPaymentOpen(true);
       } catch (err) {
-        const isOffline = !navigator.onLine || (err as Error).message === 'offline';
-        if (isOffline && isAppending) {
-          try {
-            await queueItemAdd({ orderId: paymentOrderId!, body });
-            toast.success('No connection — items saved locally and will sync automatically. Charge again once synced.');
-          } catch (queueErr) {
-            console.error('Failed to queue item add', queueErr);
-            toast.error('Failed to save items offline. Please retry.');
-          }
-        } else {
-          toast.error('Could not update order. Check connection.');
-        }
+        console.error('Failed to append items before charge', err);
+        toast.error('Could not add the items — please retry.');
       } finally {
         setChargeLoading(false);
       }
@@ -985,10 +957,38 @@ function OrderEntryPageContent() {
   const needsTable = orderType === 'DINE_IN' && !selectedTableId;
   const canSubmitOrder = !!orderType && !needsTable;
 
+  // Dine-in/Takeaway/Delivery — shared by both places it renders (see
+  // centerSlot below). At ~286px unwrapped, this doesn't fit POSTopBar's
+  // center slot on a phone or tablet portrait (the header's left+right
+  // slots already claim most of the width) — centerSlot only clips
+  // overflow, it doesn't scroll it, so this was rendering with "Takeaway"/
+  // "Delivery" silently cut off (phone) or tightly squeezed (~768px tablet)
+  // with no way to reach the rest. Hidden in the header below lg; rendered
+  // again, full-width and uncramped, inline in the page body.
+  const orderTypeButtons = (
+    <>
+      <button
+        onClick={() => {
+          setOrderType('DINE_IN');
+          // Nothing to lose yet — send straight to table selection, same
+          // as Home's "New Order" card. If items are already in the cart
+          // (order type changed mid-build), stay put and let the inline
+          // banner below prompt for a table instead of risking losing them.
+          if (!selectedTableId && cart.length === 0) {
+            router.push('/pos/tables');
+          }
+        }}
+        className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+      >Dine-in</button>
+      <button onClick={() => setOrderType('TAKEAWAY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Takeaway</button>
+      <button onClick={() => setOrderType('DELIVERY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Delivery</button>
+    </>
+  );
+
   useTopBar({
     pageTitle: paymentOrderId ? `Edit Order` : (selectedTableLabel ? `New Order — ${selectedTableLabel}` : 'New Order — No table selected'),
     breadcrumb: (
-      <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="flex items-center gap-1.5">
         <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderIdDisplay}</span>
         <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${selectedTableLabel ? 'bg-[#F1F5F9] border-[#E2E8F0] text-[#475569]' : 'bg-amber-50 border-amber-200 text-[#B45309]'}`}>{tableDisplay}</span>
         <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderTypeDisplay}</span>
@@ -998,22 +998,14 @@ function OrderEntryPageContent() {
     showBackButton: true,
     backPath: '/pos/tables',
     centerSlot: (
-      <div className="flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
-        <button
-          onClick={() => {
-            setOrderType('DINE_IN');
-            // Nothing to lose yet — send straight to table selection, same
-            // as Home's "New Order" card. If items are already in the cart
-            // (order type changed mid-build), stay put and let the inline
-            // banner below prompt for a table instead of risking losing them.
-            if (!selectedTableId && cart.length === 0) {
-              router.push('/pos/tables');
-            }
-          }}
-          className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
-        >Dine-in</button>
-        <button onClick={() => setOrderType('TAKEAWAY')} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Takeaway</button>
-        <button onClick={() => setOrderType('DELIVERY')} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Delivery</button>
+      // lg, not sm: even with POSTopBar's left-slot width cap, this 3-button
+      // group (~286px unwrapped) is still tight in the shared header at
+      // tablet-portrait widths (~768px) once the avatar cluster also has its
+      // share — the full-width inline copy below (lg:hidden) stays legible
+      // through phone AND tablet portrait; only larger/landscape screens get
+      // the compact header version.
+      <div className="hidden lg:flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
+        {orderTypeButtons}
       </div>
     ),
     rightActions: (
@@ -1071,12 +1063,20 @@ function OrderEntryPageContent() {
       >
         {/* LEFT - MENU BROWSER */}
         <section className="w-full lg:flex-1 flex flex-col bg-[#F8FAFC] relative overflow-hidden">
+          {/* Order type — the lg:hidden counterpart of centerSlot above,
+              here instead of squeezed into the shared header (see
+              orderTypeButtons' own comment for why). */}
+          <div className="lg:hidden shrink-0 px-3 pt-3">
+            <div className="flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
+              {orderTypeButtons}
+            </div>
+          </div>
           {/* Category Bar */}
           <div className="relative shrink-0">
             <div className="h-[52px] bg-white border-b border-[#E2E8F0] flex items-center px-4 gap-2 overflow-x-auto no-scrollbar relative z-10">
               <button
                 onClick={() => setActiveCategoryId(null)}
-                className={`px-4 h-9 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
+                className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
               >
                 All
               </button>
@@ -1084,7 +1084,7 @@ function OrderEntryPageContent() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategoryId(cat.id)}
-                  className={`px-4 h-9 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
+                  className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
                 >
                   {cat.name}
                 </button>
@@ -1096,40 +1096,46 @@ function OrderEntryPageContent() {
 
           {/* Search Bar & View Toggle */}
           <div className="p-3 border-b border-[#E2E8F0] bg-[#F8FAFC] flex gap-2 items-center">
-            <div className="flex-1 flex items-center gap-2 bg-white border border-[#CBD5E1] rounded-xl px-4 h-10 transition-colors focus-within:border-[var(--pos-primary,#F59E0B)] shadow-sm">
-              <span className="material-symbols-outlined text-[#94A3B8] text-[18px]">search</span>
+            {/* min-w-0 on both this wrapper and the <input> — flex items
+                default to min-width:auto (their content's natural size, and
+                a bare <input> has its own non-trivial intrinsic minimum),
+                which silently overrode flex-1's ability to shrink and pushed
+                this row ~80px past a 360px viewport, clipped by the section's
+                overflow-hidden with no visible sign anything was cut off. */}
+            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-[#CBD5E1] rounded-xl px-4 h-11 transition-colors focus-within:border-[var(--pos-primary,#F59E0B)] shadow-sm">
+              <span className="material-symbols-outlined text-[#94A3B8] text-[18px] shrink-0">search</span>
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search menu items..."
-                className="bg-transparent border-none outline-none text-[14px] text-[#0F172A] flex-1 placeholder:text-[#94A3B8]"
+                className="bg-transparent border-none outline-none text-[16px] text-[#0F172A] flex-1 min-w-0 placeholder:text-[#94A3B8]"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="flex items-center justify-center text-[#64748B] hover:text-[#0F172A] transition-colors">
+                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-[#64748B] hover:text-[#0F172A] transition-colors shrink-0">
                   <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
               )}
             </div>
 
             {/* View Toggle */}
-            <div className="flex items-center bg-[#F1F5F9] rounded-lg border border-[#CBD5E1] p-1 shrink-0 h-10 relative">
+            <div className="flex items-center bg-[#F1F5F9] rounded-lg border border-[#CBD5E1] p-1 shrink-0 h-11 relative">
               <button
                 onClick={() => handleViewChange('grid')}
-                className={`w-8 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Grid View"
               >
                 <span className="material-symbols-outlined text-[18px]">grid_view</span>
               </button>
               <button
                 onClick={() => handleViewChange('compact')}
-                className={`w-8 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'compact' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'compact' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Compact View"
               >
                 <span className="material-symbols-outlined text-[18px]">view_list</span>
               </button>
               <button
                 onClick={() => handleViewChange('large')}
-                className={`w-8 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'large' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'large' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Hero View"
               >
                 <span className="material-symbols-outlined text-[18px]">web_stories</span>
@@ -1232,7 +1238,7 @@ function OrderEntryPageContent() {
               </div>
               <span className="tracking-wide">View Order</span>
             </div>
-            <span className="text-lg tracking-tight">PKR {combinedTotal.toFixed(2)}</span>
+            <span className="text-lg tracking-tight">{formatPKR(combinedTotal)}</span>
           </button>
         </div>
 
@@ -1253,10 +1259,19 @@ function OrderEntryPageContent() {
           <div className="absolute inset-y-0 -left-2 -right-2 z-10 cursor-col-resize" />
         </div>
 
-        {/* RIGHT - ORDER CART */}
+        {/* RIGHT - ORDER CART. overflow-hidden is load-bearing on mobile: this
+            is `fixed`, so it escapes POSLayout's own overflow-hidden ancestor
+            entirely (fixed positioning clips only to the viewport) — without
+            its own overflow-hidden, a cart with enough items (or a keyboard-
+            shortened viewport) could push the shrink-0 footer's KITCHEN/
+            CHARGE buttons below the box's bottom edge and off the bottom of
+            the screen with no way to scroll to them, since flex-shrink:0
+            siblings don't yield space to the flex-1 item and nothing bounded
+            the total. The flex-1 item below also needs min-h-0 for the same
+            reason (see its comment). */}
         <section className={`
           fixed lg:relative inset-x-0 bottom-0 lg:inset-auto z-[110] lg:z-auto
-          w-full lg:w-[var(--cart-width)] h-[85vh] lg:h-auto shrink-0 flex flex-col bg-white 
+          w-full lg:w-[var(--cart-width)] h-[85dvh] lg:h-auto shrink-0 flex flex-col bg-white overflow-hidden
           border-t lg:border-t-0 border-[#E2E8F0]
           transition-transform duration-300 ease-in-out
           ${isCartDrawerOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
@@ -1333,8 +1348,11 @@ function OrderEntryPageContent() {
             </div>
           )}
 
-          {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
+          {/* Cart Items — min-h-0 overrides a flex item's default min-height:
+              auto (= its content size), which would otherwise refuse to
+              shrink below "every item unwrapped" and defeat both this
+              overflow-y-auto and the parent's new overflow-hidden bound. */}
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar bg-white">
             {existingItems.length > 0 && (
               <div className="border-b border-[#E2E8F0]">
                 <div className="bg-[#F1F5F9] px-6 py-2 border-b border-[#E2E8F0] flex justify-between items-center">
@@ -1349,7 +1367,7 @@ function OrderEntryPageContent() {
                         {i.variationName && <span className="text-[12px] text-[#94A3B8]">{i.variationName}</span>}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[14px] text-[#64748B]">PKR {(i.subtotal || (i.quantity * i.unitPrice)).toFixed(2)}</span>
+                        <span className="font-mono text-[14px] text-[#64748B]">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
                         <button
                           onClick={() => setVoidSheetState({ isOpen: true, item: i })}
                           className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
@@ -1414,18 +1432,18 @@ function OrderEntryPageContent() {
             <div className="space-y-2 text-sm text-[#64748B] font-medium">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-[#0F172A] font-semibold">PKR {combinedSubtotal.toFixed(2)}</span>
+                <span className="text-[#0F172A] font-semibold">{formatPKR(combinedSubtotal)}</span>
               </div>
               {combinedTaxAmount > 0 && (
                 <div className="flex justify-between">
                   <span>{taxLabel}</span>
-                  <span className="text-[#0F172A] font-semibold">PKR {combinedTaxAmount.toFixed(2)}</span>
+                  <span className="text-[#0F172A] font-semibold">{formatPKR(combinedTaxAmount)}</span>
                 </div>
               )}
               {discountAmount > 0 && (
                 <div className="flex justify-between text-emerald-600 font-semibold">
                   <span>Discount</span>
-                  <span>- PKR {discountAmount.toFixed(2)}</span>
+                  <span>- {formatPKR(discountAmount)}</span>
                 </div>
               )}
             </div>
@@ -1433,7 +1451,7 @@ function OrderEntryPageContent() {
             <div className="flex justify-between items-end pt-2 border-t border-[#E2E8F0]">
               <span className="text-[16px] font-bold uppercase tracking-wider text-[#0F172A]">Order Total</span>
               <div className="text-right">
-                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">PKR {combinedTotal.toFixed(2)}</p>
+                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
               </div>
             </div>
 
@@ -1550,7 +1568,7 @@ function OrderEntryPageContent() {
           item={voidSheetState.item}
           onClose={() => setVoidSheetState({ isOpen: false, item: null })}
           onSuccess={handleVoidSuccess}
-          voidRequiresManagerApproval={(session as any)?.tenantBranding?.voidRequiresManagerApproval ?? true}
+          voidRequiresManagerApproval={branding?.pos?.voidRequiresManagerApproval ?? true}
         />
       )}
 
