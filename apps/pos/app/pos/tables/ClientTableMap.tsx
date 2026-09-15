@@ -133,6 +133,7 @@ export default function ClientTableMap() {
   const [panY, setPanY] = useState<number>(0);
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Selected Table & Popups
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
@@ -147,10 +148,16 @@ export default function ClientTableMap() {
   const initialTouchDistanceRef = useRef<number | null>(null);
   const initialZoomRef = useRef<number>(1.0);
 
-  // Status Legend Component for POSTopBar
+  // Status Legend Component for POSTopBar. hidden below sm: at phone width
+  // POSTopBar's rightActions slot has only ~40-95px free once the always-
+  // visible avatar/sync cluster takes its share, and this pill wants ~360px
+  // unwrapped — rather than a barely-discoverable horizontal-scroll sliver,
+  // it's dropped in favor of the table colors on the canvas itself (which
+  // this legend is only a supplementary key for; tapping a table also shows
+  // its status by name).
   const legendElement = useMemo(
     () => (
-      <div className="flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
+      <div className="hidden sm:flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
         <div className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" />
           <span>Free</span>
@@ -443,6 +450,56 @@ export default function ClientTableMap() {
 
   const floorTables = tables.filter((t) => (t.floor || 1) === activeFloor);
 
+  // Fit-to-viewport: on first paint of a floor (and when the container is
+  // resized, or the table count on it changes) compute a zoom/pan that
+  // brings the whole floor plan into view. Previously this always started
+  // at zoomLevel 1.0 / pan (0,0) against the fixed 1200x700 design surface —
+  // fine on a desktop monitor, but on a phone-sized container that showed
+  // only the top-left corner, with most tables off-screen until the user
+  // manually zoomed out via the controls below. Deliberately depends on
+  // `floorTables.length`, not the array itself: table positions don't change
+  // live during service (only `status` does, which changes the array's
+  // identity every socket update) — refitting on every status flip would
+  // yank the view out from under a cashier mid-task.
+  useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (!container || floorTables.length === 0) return;
+
+    const fit = () => {
+      const { width: cw, height: ch } = container.getBoundingClientRect();
+      if (cw === 0 || ch === 0) return;
+
+      // Fixed margin rather than table.width/height: PremiumTable renders
+      // tables centered on (x, y) at sizes from ~88-180px depending on
+      // capacity/shape, and the render code below already offsets by a flat
+      // 20px, not by each table's own dimensions — a fixed margin covering
+      // the largest table plus its label/waiter-badge decoration is more
+      // robust here than trusting width/height to line up with x/y exactly.
+      const MARGIN = 110;
+      const xs = floorTables.map((t) => t.x);
+      const ys = floorTables.map((t) => t.y);
+      const minX = Math.min(...xs) - MARGIN;
+      const minY = Math.min(...ys) - MARGIN;
+      const maxX = Math.max(...xs) + MARGIN;
+      const maxY = Math.max(...ys) + MARGIN;
+      const boundsW = Math.max(1, maxX - minX);
+      const boundsH = Math.max(1, maxY - minY);
+
+      const fitZoom = Math.min(cw / boundsW, ch / boundsH, 1.5);
+      const zoom = Math.min(2.0, Math.max(0.5, fitZoom));
+
+      setZoomLevel(zoom);
+      setPanX((cw - boundsW * zoom) / 2 - minX * zoom);
+      setPanY((ch - boundsH * zoom) / 2 - minY * zoom);
+    };
+
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(container);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFloor, floorTables.length]);
+
   // Position popup card relative to table center
   const getPopupPosition = (table: TableData) => {
     const posX = table.x * zoomLevel + panX;
@@ -455,9 +512,15 @@ export default function ClientTableMap() {
   };
 
   return (
-    <div className="w-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
-      {/* Main Floor Canvas Container */}
+    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
+      {/* Main Floor Canvas Container. height:100% (not the old hardcoded
+          calc(100vh - 72px - 64px)) — this root now fills POSLayout's
+          already-correctly-sized flex-1 content slot via h-full above, so
+          this just needs to fill its parent rather than re-deriving the
+          shell heights itself (see the same fix + reasoning in
+          HomeDashboard.tsx). */}
       <div
+        ref={canvasContainerRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -466,7 +529,7 @@ export default function ClientTableMap() {
         onTouchEnd={handleTouchEnd}
         style={{
           width: '100%',
-          height: 'calc(100vh - 72px - 64px)',
+          height: '100%',
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: '#F8FAFC',
@@ -475,15 +538,16 @@ export default function ClientTableMap() {
         }}
         className="cursor-grab active:cursor-grabbing"
       >
-        {/* Floating Glassmorphism Floor Switcher */}
+        {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
+            3-4 floors instead of running off the edge of a narrow screen. */}
         {floors.length > 1 && (
-          <div className="absolute top-6 left-6 z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
-            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5" />
+          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-auto z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
+            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5 shrink-0" />
             {floors.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFloor(f)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all shrink-0 ${
                   activeFloor === f
                     ? 'bg-amber-500 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -600,7 +664,7 @@ export default function ClientTableMap() {
       {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-80 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-80 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
@@ -765,7 +829,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'RESERVED' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-purple-600">
@@ -796,7 +860,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'DIRTY' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-600">

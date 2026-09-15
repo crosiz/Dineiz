@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   ArrowLeft, ChevronRight, Lock, User, MonitorSmartphone,
-  RefreshCw, ExternalLink, Download,
+  RefreshCw, ExternalLink, Download, Usb, Bluetooth, Printer, Unplug,
 } from 'lucide-react';
 import { getPosSession } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
 import { useTerminalSettings } from '@/lib/terminal-settings';
+import { usePrinter } from '@/hooks/usePrinter';
 import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import {
   getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, discardStuckEvent,
@@ -84,6 +85,7 @@ export default function POSSettingsPage() {
 
   const { settings, loaded, load, set } = useTerminalSettings();
   useEffect(() => { void load(); }, [load]);
+  const printer = usePrinter();
 
   // Opens on Account by default; deep-linkable via ?section= (the top-bar
   // Settings item and the sync pill both point at specific sections).
@@ -155,10 +157,11 @@ export default function POSSettingsPage() {
           </p>
 
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-4 mb-1">Printing</p>
-          <Row label="Print mode" hint="PDF downloads a receipt; Printer sends ESC/POS to a connected device.">
+          <Row label="Print mode" hint="PDF downloads a receipt. Printer sends ESC/POS over USB or Bluetooth. System Dialog reaches a WiFi/LAN printer or an OS-paired Bluetooth one.">
             <select className={selectCls} value={settings.printMode} onChange={(e) => set('printMode', e.target.value as any)}>
               <option value="PDF">PDF</option>
-              <option value="PRINTER">Printer</option>
+              <option value="PRINTER">Printer (USB / Bluetooth)</option>
+              <option value="SYSTEM">System Dialog</option>
             </select>
           </Row>
           <Row label="Paper width">
@@ -167,6 +170,64 @@ export default function POSSettingsPage() {
               <option value="80mm">80 mm</option>
             </select>
           </Row>
+
+          {settings.printMode === 'PRINTER' && (
+            <>
+              <Row label="Connection" hint="USB needs a cable. Bluetooth only reaches Bluetooth Low Energy printers — try System Dialog if yours doesn't pair.">
+                <select
+                  className={selectCls}
+                  value={settings.printerTransport}
+                  onChange={(e) => set('printerTransport', e.target.value as any)}
+                >
+                  <option value="USB">USB</option>
+                  <option value="BLUETOOTH">Bluetooth</option>
+                </select>
+              </Row>
+              <Row
+                label="Printer"
+                hint={
+                  printer.status === 'ready' && printer.transport
+                    ? `Connected — ${printer.deviceName ?? (printer.transport === 'usb' ? 'USB printer' : 'Bluetooth printer')}`
+                    : printer.status === 'connecting'
+                      ? 'Connecting…'
+                      : settings.printerTransport === 'BLUETOOTH'
+                        ? (printer.isBluetoothSupported ? 'Not connected' : "This browser can't pair Bluetooth printers (Chrome/Edge only) — try USB or System Dialog.")
+                        : (printer.isUsbSupported ? 'Not connected' : "This browser can't pair USB printers (Chrome/Edge only) — try System Dialog.")
+                }
+              >
+                {printer.status === 'ready' ? (
+                  <button
+                    onClick={() => printer.disconnect()}
+                    className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-1.5"
+                  >
+                    <Unplug size={14} /> Forget
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => (settings.printerTransport === 'BLUETOOTH' ? printer.connectBluetooth() : printer.connectUSB())}
+                    disabled={
+                      printer.status === 'connecting' ||
+                      (settings.printerTransport === 'BLUETOOTH' ? !printer.isBluetoothSupported : !printer.isUsbSupported)
+                    }
+                    className="h-9 px-3 rounded-lg text-white text-[12px] font-bold disabled:opacity-40 flex items-center gap-1.5"
+                    style={{ backgroundColor: '#FF5722' }}
+                  >
+                    {settings.printerTransport === 'BLUETOOTH' ? <Bluetooth size={14} /> : <Usb size={14} />}
+                    {printer.status === 'connecting' ? 'Connecting…' : 'Connect'}
+                  </button>
+                )}
+              </Row>
+              {printer.error && (
+                <p className="text-[11px] text-rose-600 font-medium -mt-1 mb-2">{printer.error}</p>
+              )}
+            </>
+          )}
+          {settings.printMode === 'SYSTEM' && (
+            <p className="text-[11px] text-slate-400 leading-relaxed -mt-1 mb-2 flex items-start gap-1.5">
+              <Printer size={13} className="shrink-0 mt-0.5" />
+              Opens this tablet's print dialog for every receipt/KOT — pick whichever printer the OS already has set up (WiFi, Bluetooth, or a print-service app like Epson iPrint / Mopria).
+            </p>
+          )}
 
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-1">Device</p>
           <Row label="Terminal name" hint="Printed on the KOT header so the kitchen knows which till fired the ticket.">

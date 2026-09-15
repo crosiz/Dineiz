@@ -184,7 +184,7 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, currentUser
             the list in the middle scrolls. Without the cap + shrink-0/
             flex-1 split the list overflowed the card and the first row was
             clipped under the header. */}
-        <div className="relative z-10 w-full max-w-[460px] min-w-[320px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+        <div className="relative z-10 w-full max-w-[460px] max-h-[85dvh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
           <div className="p-6 pb-4 shrink-0">
             <div className="flex items-start gap-3">
               <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">

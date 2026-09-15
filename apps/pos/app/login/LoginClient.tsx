@@ -502,11 +502,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
   };
 
   return (
-    <main className="flex h-screen w-full bg-[#F8FAFC] text-[#0F172A] overflow-hidden font-body-md">
+    <main className="flex flex-col lg:flex-row h-dvh w-full bg-[#F8FAFC] text-[#0F172A] overflow-hidden font-body-md">
       {/* Link Terminal Modal */}
       {linkModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white border border-[#E2E8F0] rounded-2xl p-8 w-[380px] shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="w-full max-w-[380px] bg-white border border-[#E2E8F0] rounded-2xl p-8 shadow-2xl">
             <h3 className="font-clash font-bold text-xl text-[#0F172A] mb-2">Link Terminal</h3>
             <p className="text-[#64748B] text-sm mb-6">Enter the POS Code displayed in your Dashboard to link this terminal to a branch.</p>
             <input
@@ -516,7 +516,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleLinkTerminal()}
               placeholder="e.g. POS-A4BX"
-              className="w-full bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[var(--pos-primary,#F59E0B)] rounded-xl px-4 py-3 text-[#0F172A] text-[15px] font-mono tracking-widest placeholder:text-[#94A3B8] outline-none transition-colors mb-4"
+              className="w-full bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[var(--pos-primary,#F59E0B)] rounded-xl px-4 py-3 text-[#0F172A] text-[16px] font-mono tracking-widest placeholder:text-[#94A3B8] outline-none transition-colors mb-4"
             />
             <div className="flex gap-3">
               <button
@@ -534,8 +534,15 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </div>
       )}
 
-      {/* LEFT PANEL — Flush-Left Premium Branding & Info */}
-      <section className="relative w-1/2 bg-[#F8FAFC] flex flex-col justify-between p-16 border-r border-[#E2E8F0]">
+      {/* LEFT PANEL — Flush-Left Premium Branding & Info. Desktop-only
+          (lg+): below that, a hard w-1/2 (both panels) meant the login flow's
+          own w-1/2 column had to fit a PIN numpad that alone needs ~240px
+          into ~180-215px. The compact header right after this section
+          carries the one functional piece of this panel — branch name /
+          change-branch tap target, shift-active badge, break banner — down
+          to phone/tablet-portrait so nothing here is lost, just decorative
+          content (clock, tagline, dot-grid) that doesn't fit is dropped. */}
+      <section className="hidden lg:flex relative w-1/2 bg-[#F8FAFC] flex-col justify-between p-16 border-r border-[#E2E8F0]">
         <div className="absolute inset-0 amber-dot-grid pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, var(--pos-primary, #F59E0B) 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.05 }}></div>
 
         {/* Top: Flush Left Dineiz Logo (Light Variant) & Tagline */}
@@ -604,8 +611,48 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </div>
       </section>
 
+      {/* Compact branding strip — lg:hidden counterpart to the panel above.
+          Carries only what's functional (branch/change-branch, shift status,
+          break banner) so it stays useful on a phone/tablet without pushing
+          the actual login flow below the fold. */}
+      <div className="lg:hidden shrink-0 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-safe">
+        <div className="flex items-center justify-between pt-3">
+          <DineizLogo size="sm" variant="light" showBadge={false} />
+          {!isShiftLoading && (
+            hasActiveShift ? (
+              <div className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Shift Active</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">No Shift</span>
+              </div>
+            )
+          )}
+        </div>
+        <button
+          onClick={promptBranchChange}
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0F172A] py-2.5 -mx-1 px-1"
+          title="Tap to change branch"
+        >
+          {activeBranchName}
+          <span className="material-symbols-outlined text-[14px] text-[#64748B]">edit</span>
+        </button>
+        {isBreakMode && (
+          <div className="mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
+            <span className="text-lg">☕</span>
+            <div className="min-w-0">
+              <p className="text-amber-700 font-black text-[11px] uppercase tracking-widest">Terminal On Break</p>
+              <p className="text-amber-600 text-[11px] font-medium truncate">Away for <span className="font-bold">{breakElapsed}</span></p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* RIGHT PANEL — POS Light Login Flow */}
-      <section className="w-1/2 bg-white flex items-center justify-center p-12 relative overflow-hidden">
+      <section className="flex-1 min-h-0 w-full lg:w-1/2 bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 relative overflow-hidden">
 
         {/* Step 1: Role Selection */}
         <div className={`w-full max-w-[400px] space-y-8 transition-all duration-300 absolute ${!selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
@@ -614,7 +661,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             <p className="text-[#64748B]">Identify yourself to begin the shift</p>
           </header>
 
-          <div className="grid grid-cols-1 gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
             {availableRoles.length === 0 && (
               <div className="text-center text-[#64748B] py-8">No roles configured for this branch.</div>
             )}
@@ -651,7 +698,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             </div>
           </header>
 
-          <div className="grid grid-cols-1 gap-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
             {staffList.filter(s => s.role === selectedRole || (selectedRole === 'MANAGER' && s.role === 'BRANCH_MANAGER')).length === 0 && (
               <div className="text-center text-[#64748B] py-8">No staff found for this role.</div>
             )}

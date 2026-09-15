@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getPersistedPrinter, sendToPrinter } from './printer/webusb';
+import { getPersistedBluetoothPrinter, sendToBluetoothPrinter } from './printer/webbluetooth';
 import { buildReceipt, buildKOT, buildCancellationKOT, type PrintOrder } from './printer/templates';
 import { useBrandingStore } from './branding-store';
 import { useTerminalSettings, ensureTerminalSettings } from './terminal-settings';
@@ -31,6 +32,8 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
 
   if (terminal.printMode === 'PRINTER') {
     printMode = 'PRINTER';
+  } else if (terminal.printMode === 'SYSTEM') {
+    printMode = 'SYSTEM';
   } else if (terminal.printMode === 'PDF') {
     printMode = 'PDF';
   } else if (branding.downloadPdfReceipt) {
@@ -54,9 +57,33 @@ export async function printDocument(type: PrintDocumentType, data: PrintOrder & 
 
   // 2. Route to Mode
   if (printMode === 'PRINTER') {
-    await executeUsbPrint(type, data);
+    if (terminal.printerTransport === 'BLUETOOTH') {
+      await executeBluetoothPrint(type, data);
+    } else {
+      await executeUsbPrint(type, data);
+    }
+  } else if (printMode === 'SYSTEM') {
+    await executeSystemPrint(type, data);
   } else {
     await executePdfPrint(type, data);
+  }
+}
+
+// ─── Byte building — shared by both raw-printer transports ──────────────────
+
+function buildBytesFor(type: PrintDocumentType, data: PrintOrder): Uint8Array {
+  switch (type) {
+    case 'KOT':
+      return buildKOT(data);
+    case 'CANCELLATION_KOT':
+      return buildCancellationKOT(data, data.items[0], (data as any).cancellationReason || 'No reason');
+    case 'CUSTOMER_BILL':
+    case 'PAID_RECEIPT':
+    case 'SHIFT_REPORT': // Not fully mapped to ESC/POS yet, fallback to receipt
+    case 'TEST_PRINT':
+      return buildReceipt(data);
+    default:
+      return buildReceipt(data);
   }
 }
 
@@ -67,37 +94,82 @@ async function executeUsbPrint(type: PrintDocumentType, data: PrintOrder) {
   // (the picker dialog) requires a direct, synchronous user gesture — it can
   // never succeed when called from this auto-print path, which always runs
   // after an awaited order-creation request. Pairing happens explicitly via
-  // the Connect Printer action in Settings/Admin (see usePrinter.ts), which
-  // calls requestPrinter() directly from a click handler.
+  // the Connect action in Settings → This Terminal → Printing (usePrinter.ts),
+  // which calls requestPrinter() directly from a click handler.
   const device = await getPersistedPrinter();
   if (!device) {
-    throw new Error('No thermal printer paired. Connect one in Settings before printing.');
+    throw new Error('No USB printer paired. Connect one in Settings before printing.');
   }
-
-  let bytes: Uint8Array;
-  switch (type) {
-    case 'KOT':
-      bytes = buildKOT(data);
-      break;
-    case 'CANCELLATION_KOT':
-      bytes = buildCancellationKOT(data, data.items[0], (data as any).cancellationReason || 'No reason');
-      break;
-    case 'CUSTOMER_BILL':
-    case 'PAID_RECEIPT':
-    case 'SHIFT_REPORT': // Not fully mapped to ESC/POS yet, fallback to receipt
-    case 'TEST_PRINT':
-      bytes = buildReceipt(data);
-      break;
-    default:
-      bytes = buildReceipt(data);
-  }
-
-  await sendToPrinter(device, bytes);
+  await sendToPrinter(device, buildBytesFor(type, data));
 }
 
-// ─── PDF PRINTER EXECUTION ───────────────────────────────────────────────────
+// ─── Bluetooth / ESC/POS PRINTER EXECUTION ───────────────────────────────────
 
-async function executePdfPrint(type: PrintDocumentType, data: any) {
+async function executeBluetoothPrint(type: PrintDocumentType, data: PrintOrder) {
+  // Same "reconnect only, never re-pair" rule as executeUsbPrint — Web
+  // Bluetooth's requestDevice() has the identical direct-user-gesture
+  // requirement as WebUSB's.
+  const device = await getPersistedBluetoothPrinter();
+  if (!device) {
+    throw new Error('No Bluetooth printer paired. Connect one in Settings before printing.');
+  }
+  await sendToBluetoothPrinter(device, buildBytesFor(type, data));
+}
+
+// ─── SYSTEM PRINT DIALOG EXECUTION ───────────────────────────────────────────
+//
+// The honest way to reach a WiFi/LAN printer, or a Bluetooth printer already
+// paired at the OS level, from a browser tab: browsers can't open a raw TCP
+// socket (what a real "network" ESC/POS printer needs on port 9100) or
+// rediscover an OS-paired Bluetooth Classic/SPP device — but the tablet's own
+// OS print system (Android Mopria / a manufacturer's print-service plugin /
+// iOS AirPrint) already knows how to find and talk to exactly those, and
+// every browser can hand it a job via window.print(). Reuses the same jsPDF
+// generators as PDF mode (already sized correctly to the terminal's paper
+// width) — only the output step differs: a hidden iframe + print() instead
+// of forcing a download.
+
+async function executeSystemPrint(type: PrintDocumentType, data: any) {
+  const doc = await buildPdfDocument(type, data);
+  await printPdfViaSystemDialog(doc);
+}
+
+function printPdfViaSystemDialog(doc: jsPDF): Promise<void> {
+  return new Promise((resolve) => {
+    const blobUrl = doc.output('bloburl') as unknown as string;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+
+    const cleanup = () => {
+      URL.revokeObjectURL(blobUrl);
+      // A beat before removing the frame — tearing it down immediately can
+      // cancel an in-flight print job in some browsers.
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } finally {
+        resolve();
+        cleanup();
+      }
+    };
+    iframe.src = blobUrl;
+    document.body.appendChild(iframe);
+  });
+}
+
+// ─── PDF document building — shared by download (PDF mode) and the System
+//     Print Dialog (SYSTEM mode) ───────────────────────────────────────────
+
+async function buildPdfDocument(type: PrintDocumentType, data: any): Promise<jsPDF> {
   const branding = useBrandingStore.getState().branding;
   // Terminal's own paper width wins (Settings → Printer); branding is the
   // fallback (it also carries the tenant-wide A4 option, which the terminal
@@ -107,31 +179,32 @@ async function executePdfPrint(type: PrintDocumentType, data: any) {
   if (paper === '58mm') PAPER_WIDTH = 58;
   else if (paper === 'A4') PAPER_WIDTH = 210;
   else PAPER_WIDTH = 80;
-  
-  let doc: jsPDF;
 
   switch (type) {
     case 'KOT':
-      doc = await generateKOT(data);
-      break;
+      return await generateKOT(data);
     case 'CUSTOMER_BILL':
-      doc = await generateCustomerBill(data);
-      break;
+      return await generateCustomerBill(data);
     case 'PAID_RECEIPT':
-      doc = await generatePaidReceipt(data);
-      break;
+      return await generatePaidReceipt(data);
     case 'CANCELLATION_KOT':
-      doc = await generateCancellationKOT(data);
-      break;
+      return await generateCancellationKOT(data);
     case 'SHIFT_REPORT':
-    case 'TEST_PRINT':
+    case 'TEST_PRINT': {
       // Basic placeholder implementation for others
-      doc = new jsPDF({ format: [80, 200] });
+      const doc = new jsPDF({ format: [80, 200] });
       doc.text(`Doc Type: ${type}`, 10, 10);
-      break;
+      return doc;
+    }
     default:
       throw new Error(`Unknown print type: ${type}`);
   }
+}
+
+// ─── PDF PRINTER EXECUTION ───────────────────────────────────────────────────
+
+async function executePdfPrint(type: PrintDocumentType, data: any) {
+  const doc = await buildPdfDocument(type, data);
 
   // Determine filename
   const time = data.createdAt ? new Date(data.createdAt).toTimeString().substring(0,5) : '00:00';

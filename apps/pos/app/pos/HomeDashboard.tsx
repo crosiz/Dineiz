@@ -241,11 +241,17 @@ export default function HomeDashboard() {
 
   const needsAttentionCount = agingTickets.length + billRequestedTables.length + unsyncedCount;
 
+  // h-full, not a hardcoded calc(100vh - 72px - 64px): POSLayout's content
+  // slot is already exactly "viewport minus top bar minus bottom nav" via
+  // flex-1 in a flex column, so this only needs to fill that — a hardcoded
+  // calc against the shells' own current pixel heights silently goes stale
+  // the moment either one changes (as it did the moment BottomNav grew by a
+  // device's safe-area inset).
   return (
-    <div className="flex flex-col h-[calc(100vh-72px-64px)] w-full bg-[#F8FAFC] overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[#F8FAFC] overflow-hidden">
       {/* Search Header Strip */}
       <div className="bg-white border-b border-[#E2E8F0] px-8 py-4 shrink-0 shadow-xs flex items-center justify-between">
-        <div className="relative w-96">
+        <div className="relative w-full sm:w-96">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] text-xl">
             search
           </span>
@@ -254,7 +260,7 @@ export default function HomeDashboard() {
             placeholder="Search orders, tables, or tickets..."
             value={homeSearch}
             onChange={(e) => setHomeSearch(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] placeholder-[#94A3B8] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:bg-white transition-all"
+            className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] placeholder-[#94A3B8] text-[16px] font-medium focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:bg-white transition-all"
           />
           {homeSearch && (
             <button
@@ -267,10 +273,14 @@ export default function HomeDashboard() {
         </div>
       </div>
 
-      {/* Main Grid Content Area */}
-      <main className="flex-1 grid grid-cols-12 overflow-hidden">
+      {/* Main Grid Content Area — single column, whole-page scroll below lg
+          (each panel's own overflow-y-auto only makes sense once the grid
+          row's shrunk it to a fixed cross-axis size the way lg:grid-cols-12
+          does); side-by-side 7/5 split with two independently-scrolling
+          panels from lg up, as before. */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto lg:overflow-hidden no-scrollbar">
         {/* Left Column (60%) */}
-        <div className="col-span-7 p-8 overflow-y-auto no-scrollbar flex flex-col gap-8">
+        <div className="lg:col-span-7 p-4 sm:p-8 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
           {/* Hero Actions Grid (4 Cards 2x2 Layout) */}
           <section>
             <div className="grid grid-cols-2 gap-5">
@@ -491,7 +501,7 @@ export default function HomeDashboard() {
         </div>
 
         {/* Right Column (40%) */}
-        <div className="col-span-5 bg-[#F8FAFC] border-l border-[#E2E8F0] p-6 overflow-y-auto no-scrollbar flex flex-col gap-8">
+        <div className="lg:col-span-5 bg-[#F8FAFC] border-t lg:border-t-0 lg:border-l border-[#E2E8F0] p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
           {/* Shift Info Card */}
           <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
             <div className="flex justify-between items-start mb-6">
@@ -594,7 +604,7 @@ export default function HomeDashboard() {
                               Floor {fNum}
                             </h5>
                           )}
-                          <div className="grid grid-cols-7 gap-x-2 gap-y-4 justify-items-center w-full px-2 pt-1 pb-6">
+                          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-x-1 gap-y-2 justify-items-center w-full px-2 pt-1 pb-6">
                             {tablesByFloor[fNum].map((t: any) => (
                               <div
                                 key={t.id}
@@ -603,10 +613,10 @@ export default function HomeDashboard() {
                                     router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
                                   )
                                 }
-                                className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110"
+                                className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110 p-1.5"
                               >
                                 <div
-                                  className={`size-8 rounded-full ${
+                                  className={`size-10 rounded-full ${
                                     t.status !== 'FREE' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
                                   } ring-4 shadow-sm`}
                                 />
