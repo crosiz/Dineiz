@@ -1,30 +1,10 @@
 'use client';
-import { formatPKR, formatVariance, formatPercentage, formatAxisPKR } from '@/lib/formatters';
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, Loader2, Copy, MoreVertical, Utensils } from 'lucide-react';
+import { Pencil, Trash2, Loader2, Copy, MoreVertical, Check } from 'lucide-react';
+import { formatPKR } from '@/lib/formatters';
 import { useToggleAvailability, useDeleteItem, useDuplicateItem } from './hooks/useMenuQueries';
 import { useDashboardContext } from '@/contexts/dashboard-context';
-
-const categoryColors = [
-  'bg-blue-50 text-blue-600',
-  'bg-emerald-50 text-emerald-600',
-  'bg-purple-50 text-purple-600',
-  'bg-amber-50 text-amber-600',
-  'bg-pink-50 text-pink-600',
-  'bg-indigo-50 text-indigo-600',
-  'bg-rose-50 text-rose-600',
-  'bg-cyan-50 text-cyan-600',
-];
-
-function getCategoryColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % categoryColors.length;
-  return categoryColors[index];
-}
 
 interface MenuItemCardProps {
   item: any;
@@ -33,9 +13,31 @@ interface MenuItemCardProps {
   isAdmin?: boolean;
   onMutate?: () => void;
   isReadOnly?: boolean;
+  checked?: boolean;
+  selectionActive?: boolean;
+  onToggleCheck?: (e: React.MouseEvent) => void;
 }
 
-export function MenuItemCard({ item, isSelected, onClick, isAdmin = true, onMutate, isReadOnly }: MenuItemCardProps) {
+function metaLine(item: any): string {
+  const parts: string[] = [];
+  const v = item.variations?.length ?? 0;
+  const a = item.addOns?.length ?? 0;
+  if (v) parts.push(`${v} size${v !== 1 ? 's' : ''}`);
+  if (a) parts.push(`${a} add-on${a !== 1 ? 's' : ''}`);
+  return parts.join(' · ');
+}
+
+export function MenuItemCard({
+  item,
+  isSelected,
+  onClick,
+  isAdmin = true,
+  onMutate,
+  isReadOnly,
+  checked = false,
+  selectionActive = false,
+  onToggleCheck,
+}: MenuItemCardProps) {
   const { selectedBranchId } = useDashboardContext();
   const toggleAvailability = useToggleAvailability();
   const deleteItem = useDeleteItem();
@@ -47,13 +49,14 @@ export function MenuItemCard({ item, isSelected, onClick, isAdmin = true, onMuta
     if (isReadOnly) return;
     toggleAvailability.mutate(
       { id: item.id, isAvailable: !item.isAvailable, branchId: selectedBranchId },
-      { onSuccess: () => onMutate?.() }
+      { onSuccess: () => onMutate?.() },
     );
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('Delete this item?')) {
+    setMenuOpen(false);
+    if (window.confirm(`Delete "${item.name}"?`)) {
       deleteItem.mutate(item.id, { onSuccess: () => onMutate?.() });
     }
   };
@@ -64,138 +67,65 @@ export function MenuItemCard({ item, isSelected, onClick, isAdmin = true, onMuta
     duplicate.mutate(item.id, { onSuccess: () => onMutate?.() });
   };
 
+  const meta = metaLine(item);
+  const hasOverride = item.branchOverridePrice != null;
+
   return (
     <div
-      className={`bg-white rounded-xl overflow-hidden transition-all relative flex flex-col h-[320px] ${
-        isReadOnly ? 'cursor-default' : 'cursor-pointer hover:shadow-md'
+      className={`group relative bg-white rounded-xl border transition-colors flex flex-col ${
+        isReadOnly ? 'cursor-default' : 'cursor-pointer'
       } ${
         isSelected
-          ? 'ring-2 ring-[#ff5722] shadow-md'
-          : 'border border-slate-200 hover:border-slate-300 shadow-sm'
+          ? 'border-[#ff5722] ring-1 ring-[#ff5722]'
+          : checked
+            ? 'border-[#ff5722]/60'
+            : 'border-slate-200 hover:border-slate-300'
       }`}
       onClick={isReadOnly ? undefined : onClick}
     >
-      {/* Image */}
-      <div className="relative h-[140px] bg-slate-50 shrink-0 border-b border-slate-100">
-        {item.image ? (
-          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Utensils size={24} className="text-slate-300" />
-          </div>
-        )}
+      {/* Selection checkbox */}
+      {isAdmin && !isReadOnly && onToggleCheck && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleCheck(e); }}
+          className={`absolute top-2.5 left-2.5 z-10 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+            checked
+              ? 'bg-[#ff5722] border-[#ff5722] text-white'
+              : `bg-white border-slate-300 text-transparent ${selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`
+          }`}
+          aria-label={checked ? 'Deselect item' : 'Select item'}
+        >
+          <Check size={13} strokeWidth={3} />
+        </button>
+      )}
 
-        {/* Availability badge overlay */}
-        <div className="absolute top-2 left-2">
-          <button
-            onClick={handleToggle}
-            disabled={toggleAvailability.isPending || isReadOnly}
-            className={`text-[9px] font-black rounded-full px-2 py-0.5 flex items-center gap-1 shadow-sm ${
-              toggleAvailability.isPending || isReadOnly
-                ? 'bg-slate-400 text-white opacity-75'
-                : item.isAvailable
-                ? 'bg-green-500 text-white'
-                : 'bg-red-500 text-white'
-            } ${isReadOnly ? 'cursor-not-allowed' : ''}`}
-            title={isReadOnly ? 'Cannot toggle availability in "All Branches" view' : item.isAvailable ? 'Click to mark unavailable' : 'Click to mark available'}
-          >
-            {toggleAvailability.isPending ? (
-              <Loader2 size={9} className="animate-spin" />
-            ) : (
-              <span className="w-1.5 h-1.5 rounded-full bg-white/80" />
-            )}
-            {toggleAvailability.isPending
-              ? 'UPDATING'
-              : item.isAvailable
-              ? 'AVAILABLE'
-              : 'UNAVAILABLE'}
-          </button>
+      {item.image && (
+        <div className="h-28 w-full overflow-hidden rounded-t-xl bg-slate-50 border-b border-slate-100">
+          <img src={item.image} alt="" className="w-full h-full object-cover" />
         </div>
+      )}
 
-        {/* 3-dot menu (admin only) */}
-        {isAdmin && !isReadOnly && (
-          <div
-            className="absolute top-2 right-2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen(!menuOpen);
-              }}
-              className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
-            >
-              <MoreVertical size={12} className="text-slate-600" />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-7 z-20 bg-white rounded-lg shadow-lg border border-slate-100 py-1 w-32 text-xs">
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setMenuOpen(false);
-                      onClick();
-                    }}
-                  >
-                    <Pencil size={11} /> Edit
-                  </button>
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
-                    onClick={handleDuplicate}
-                  >
-                    {duplicate.isPending
-                      ? <Loader2 size={11} className="animate-spin" />
-                      : <Copy size={11} />
-                    }
-                    Duplicate
-                  </button>
-                  <div className="h-px bg-slate-100 my-0.5" />
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-red-600 hover:bg-red-50"
-                    onClick={handleDelete}
-                  >
-                    {deleteItem.isPending
-                      ? <Loader2 size={11} className="animate-spin" />
-                      : <Trash2 size={11} />
-                    }
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Card Body */}
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <h3 className="font-semibold text-[15px] text-slate-900 leading-tight line-clamp-1 flex-1" title={item.name}>
+      <div className="p-3.5 flex flex-col gap-1.5 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-sm font-semibold text-slate-900 leading-snug line-clamp-1" title={item.name}>
             {item.name}
           </h3>
-          <span className="font-bold text-[#ff5722] text-sm shrink-0">
+          <span className="text-sm font-semibold text-slate-900 shrink-0 tabular-nums" title={hasOverride ? 'Branch price' : undefined}>
             {formatPKR(Number(item.basePrice))}
+            {hasOverride && <span className="ml-1 text-[10px] font-medium text-[#ff5722] align-top">branch</span>}
           </span>
         </div>
 
-        {/* Category pill */}
-        {item.category?.name && (
-          <div className="mb-2">
-            <span className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getCategoryColor(item.category.name)}`}>
-              {item.category.name}
-            </span>
-          </div>
-        )}
-
-        {/* Description */}
-        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed flex-1">
-          {item.description || 'No description.'}
+        <p className="text-xs text-slate-500 line-clamp-1">
+          {item.category?.name || 'Uncategorised'}
+          {meta && <span className="text-slate-400"> · {meta}</span>}
         </p>
 
-        {/* Footer: toggle switch + variations count */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 shrink-0">
+        {item.description && (
+          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{item.description}</p>
+        )}
+
+        <div className="mt-auto pt-2.5 flex items-center justify-between border-t border-slate-100">
           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
@@ -203,7 +133,8 @@ export function MenuItemCard({ item, isSelected, onClick, isAdmin = true, onMuta
               onClick={handleToggle}
               className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
                 item.isAvailable ? 'bg-green-500' : 'bg-slate-200'
-              } ${(toggleAvailability.isPending || isReadOnly) ? 'opacity-60 cursor-not-allowed' : ''}`}
+              } ${toggleAvailability.isPending || isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+              aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
             >
               <span
                 className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
@@ -211,15 +142,49 @@ export function MenuItemCard({ item, isSelected, onClick, isAdmin = true, onMuta
                 }`}
               />
             </button>
-            <span className="text-[10px] text-slate-400">
-              {item.isAvailable ? 'On' : 'Off'}
+            <span className="text-xs text-slate-500">
+              {toggleAvailability.isPending ? 'Saving…' : item.isAvailable ? 'Available' : 'Unavailable'}
             </span>
           </div>
 
-          {(item.variations?.length ?? 0) > 0 && (
-            <span className="text-[10px] text-slate-400 font-medium">
-              {item.variations.length} variation{item.variations.length !== 1 ? 's' : ''}
-            </span>
+          {isAdmin && !isReadOnly && (
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+                className="p-1 -mr-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Item actions"
+              >
+                <MoreVertical size={15} />
+              </button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-7 z-20 bg-white rounded-lg shadow-lg border border-slate-200 py-1 w-36 text-sm">
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onClick(); }}
+                    >
+                      <Pencil size={13} /> Edit
+                    </button>
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                      onClick={handleDuplicate}
+                    >
+                      {duplicate.isPending ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+                      Duplicate
+                    </button>
+                    <div className="h-px bg-slate-100 my-0.5" />
+                    <button
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-red-600 hover:bg-red-50"
+                      onClick={handleDelete}
+                    >
+                      {deleteItem.isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      Delete
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

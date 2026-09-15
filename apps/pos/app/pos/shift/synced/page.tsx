@@ -78,7 +78,13 @@ export default function ShiftSyncedPage() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--pos-bg-base)] p-4">
-      <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.2)] border border-slate-200 p-7">
+      {/* max-h + overflow-y-auto — unlike shift/open (rebuilt as a bounded
+          flex column with a pinned footer), this card had no height bound at
+          all: icon + title + description + progress bar + per-category
+          breakdown + optional poisoned-events warning + two buttons is real
+          content (~500-600px) that could clip on a short/landscape viewport
+          with no way to reach Retry/Sign out. */}
+      <div className="w-full max-w-[420px] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.2)] border border-slate-200 p-7">
         {done ? (
           <>
             <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">

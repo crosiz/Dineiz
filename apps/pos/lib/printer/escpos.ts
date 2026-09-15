@@ -49,7 +49,15 @@ const encoder = new TextEncoder();
 
 export class EscPosBuilder {
   private chunks: Uint8Array[] = [];
-  readonly COLS = 48; // 80mm printer at normal size
+  // 48 cols at 80mm, 32 at 58mm (both at normal font size) — was hardcoded to
+  // 48 regardless of the terminal's configured paper width, so a receipt
+  // printed at 58mm used 80mm column spacing and misformatted (price columns
+  // pushed off the edge of the narrower roll).
+  readonly COLS: number;
+
+  constructor(cols: number = 48) {
+    this.COLS = cols;
+  }
 
   private push(...cmds: number[][]): this {
     this.chunks.push(new Uint8Array(cmds.flat()));

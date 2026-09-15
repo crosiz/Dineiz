@@ -178,15 +178,20 @@ export async function getItemsForTenant(
     },
   });
 
-  // If branchId is specified, map availability status and override price
+  // If branchId is specified, map availability status and override price.
+  // `basePrice` stays the *effective* price (what the card/list shows);
+  // `globalBasePrice` / `branchOverridePrice` let the editor tell them apart.
   if (params.branchId && params.branchId !== 'all') {
     return items.map((item) => {
       const branchItem = item.branchMenuItems[0];
+      const hasOverride = branchItem?.overridePrice !== null && branchItem?.overridePrice !== undefined;
       return {
         ...item,
         isAvailable: branchItem ? branchItem.isAvailable : true,
         isInStock: branchItem ? branchItem.isInStock : true,
-        basePrice: branchItem?.overridePrice !== null && branchItem?.overridePrice !== undefined ? branchItem.overridePrice : item.basePrice,
+        basePrice: hasOverride ? branchItem!.overridePrice : item.basePrice,
+        globalBasePrice: item.basePrice,
+        branchOverridePrice: hasOverride ? branchItem!.overridePrice : null,
       };
     });
   }
@@ -194,18 +199,41 @@ export async function getItemsForTenant(
   return items.map(item => ({
     ...item,
     isInStock: true, // Default to in stock in all-branch view
+    globalBasePrice: item.basePrice,
+    branchOverridePrice: null,
   }));
 }
 
-export async function getItemById(tenantId: string, id: string) {
-  return prisma.item.findFirst({
+export async function getItemById(tenantId: string, id: string, branchId?: string) {
+  const scoped = branchId && branchId !== 'all' ? branchId : undefined;
+  const item = await prisma.item.findFirst({
     where: { id, tenantId },
     include: {
       category: { select: { id: true, name: true } },
       variations: { orderBy: { createdAt: 'asc' } },
       addOns: { orderBy: { createdAt: 'asc' } },
+      ...(scoped ? { branchMenuItems: { where: { branchId: scoped } } } : {}),
     },
   });
+  if (!item) return item;
+
+  if (scoped) {
+    const branchItem = (item as any).branchMenuItems?.[0];
+    const { branchMenuItems, ...rest } = item as any;
+    return {
+      ...rest,
+      globalBasePrice: item.basePrice,
+      branchOverridePrice: branchItem?.overridePrice ?? null,
+      isAvailable: branchItem ? branchItem.isAvailable : true,
+      isInStock: branchItem ? branchItem.isInStock : true,
+      basePrice:
+        branchItem?.overridePrice !== null && branchItem?.overridePrice !== undefined
+          ? branchItem.overridePrice
+          : item.basePrice,
+    };
+  }
+
+  return { ...item, globalBasePrice: item.basePrice, branchOverridePrice: null };
 }
 
 export async function createItem(tenantId: string, body: any) {
@@ -334,6 +362,62 @@ export async function bulkToggleItemAvailability(tenantId: string, itemIds: stri
   return results;
 }
 
+/**
+ * Per-branch config for a single item: availability + price override for ONE branch,
+ * without touching the global item. `overridePrice: null` clears the override
+ * (the branch falls back to the item's base price).
+ */
+export async function updateItemBranchConfig(
+  tenantId: string,
+  itemId: string,
+  data: { branchId?: string; isAvailable?: boolean; overridePrice?: number | null }
+) {
+  const branchId = data.branchId;
+  if (!branchId || branchId === 'all') {
+    throw Object.assign(new Error('Select a specific branch to set branch pricing'), { statusCode: 400 });
+  }
+  const item = await prisma.item.findFirst({ where: { id: itemId, tenantId } });
+  if (!item) throw Object.assign(new Error('Item not found'), { statusCode: 404 });
+
+  const update: Record<string, unknown> = {};
+  if (data.isAvailable !== undefined) update.isAvailable = data.isAvailable;
+  if (data.overridePrice !== undefined) update.overridePrice = data.overridePrice; // null clears
+
+  const branchItem = await prisma.branchMenuItem.upsert({
+    where: { branchId_itemId: { branchId, itemId } },
+    update,
+    create: {
+      branchId,
+      itemId,
+      isAvailable: data.isAvailable ?? true,
+      isInStock: true,
+      overridePrice: data.overridePrice ?? null,
+    },
+  });
+
+  if (data.overridePrice !== undefined) {
+    emitMenuPriceChanged(tenantId, branchId, {
+      itemId,
+      price: data.overridePrice ?? item.basePrice,
+    });
+  }
+  invalidatePattern(`menu:${tenantId}:*`).catch(() => {});
+
+  const full = await prisma.item.findFirst({
+    where: { id: itemId, tenantId },
+    include: { category: { select: { id: true, name: true } }, variations: true, addOns: true },
+  });
+  const hasOverride = branchItem.overridePrice !== null && branchItem.overridePrice !== undefined;
+  return {
+    ...full,
+    isAvailable: branchItem.isAvailable,
+    isInStock: branchItem.isInStock,
+    globalBasePrice: full!.basePrice,
+    branchOverridePrice: hasOverride ? branchItem.overridePrice : null,
+    basePrice: hasOverride ? branchItem.overridePrice : full!.basePrice,
+  };
+}
+
 // ─── Image ───────────────────────────────────────────────────────────────────
 
 export async function uploadItemImage(tenantId: string, id: string, buffer: Buffer) {
@@ -440,81 +524,229 @@ export async function generateAIDescription(itemName: string, categoryName?: str
 
 // ─── Bulk Upload ─────────────────────────────────────────────────────────────
 
-export async function bulkUploadMenu(tenantId: string, csvBuffer: Buffer) {
-  const csvString = csvBuffer.toString('utf-8');
-  const parsed = Papa.parse(csvString, { header: true, skipEmptyLines: true, dynamicTyping: true });
+/** `Name:price;Name:price` -> [{ name, price }]. Throws on a malformed token. */
+function parsePriceOptions(raw: string | undefined, label: string): Array<{ name: string; price: number }> {
+  const s = (raw ?? '').trim();
+  if (!s) return [];
+  return s
+    .split(';')
+    .map((tok) => tok.trim())
+    .filter(Boolean)
+    .map((tok) => {
+      const idx = tok.lastIndexOf(':');
+      if (idx === -1) throw new Error(`${label} "${tok}" must be written as Name:price`);
+      const name = tok.slice(0, idx).trim();
+      const price = Number(tok.slice(idx + 1).trim());
+      if (!name) throw new Error(`${label} "${tok}" is missing a name`);
+      if (!Number.isFinite(price) || price < 0) throw new Error(`${label} "${tok}" has an invalid price`);
+      return { name, price };
+    });
+}
 
-  if (parsed.errors?.length > 0) {
-    throw Object.assign(new Error('CSV parsing failed'), { details: parsed.errors });
+function parseCsvBool(raw: unknown, fallback = true): boolean {
+  const v = String(raw ?? '').trim().toLowerCase();
+  if (v === '') return fallback;
+  return !['false', 'no', 'n', '0', 'off'].includes(v);
+}
+
+interface BulkUploadOptions {
+  branchId?: string;
+  mode?: 'insert' | 'upsert';
+}
+
+/**
+ * Flat-CSV menu importer. One row per item; `variations` / `add_ons` / `tags`
+ * are encoded lists in a single cell. Each item is written in its own
+ * transaction so one bad row never rolls back the whole file.
+ */
+export async function bulkUploadMenu(tenantId: string, csvBuffer: Buffer, opts: BulkUploadOptions = {}) {
+  const branchId = opts.branchId && opts.branchId !== 'all' ? opts.branchId : undefined;
+  const mode: 'insert' | 'upsert' = opts.mode === 'upsert' ? 'upsert' : 'insert';
+
+  // strip a leading UTF-8 BOM (Excel adds one when it saves CSV)
+  const csvString = csvBuffer.toString('utf-8').replace(/^\uFEFF/, '');
+  const parsed = Papa.parse<Record<string, string>>(csvString, {
+    header: true,
+    skipEmptyLines: 'greedy',
+    transformHeader: (h) => h.trim().toLowerCase(),
+  });
+
+  if (parsed.errors?.length) {
+    throw Object.assign(new Error('Could not read the CSV file'), {
+      details: parsed.errors.map((e) => ({ row: (e.row ?? 0) + 2, message: e.message })),
+    });
   }
 
-  const rows = parsed.data as Array<any>;
-  const rowErrors: Array<{ row: number; message: string }> = [];
-  const validRows: any[] = [];
+  const rows = (parsed.data ?? []) as Record<string, string>[];
+  if (rows.length === 0) {
+    throw Object.assign(new Error('The file has a header but no item rows'), { errors: [] });
+  }
 
-  rows.forEach((row, index) => {
-    const rowNum = index + 2;
-    const errs: string[] = [];
-    if (!row.category_name) errs.push('category_name is required');
-    if (!row.item_name) errs.push('item_name is required');
-    if (row.base_price === undefined || isNaN(Number(row.base_price))) {
-      errs.push('base_price must be a valid number');
+  const errors: Array<{ row: number; message: string }> = [];
+  const valid: Array<{
+    rowNum: number;
+    category: string;
+    categoryDescription: string | null;
+    itemName: string;
+    itemDescription: string | null;
+    basePrice: number;
+    unitType: string;
+    isAvailable: boolean;
+    tags: string[];
+    variations: Array<{ name: string; price: number }>;
+    addOns: Array<{ name: string; price: number }>;
+  }> = [];
+
+  rows.forEach((row, i) => {
+    const rowNum = i + 2; // header is line 1
+    const problems: string[] = [];
+
+    const category = (row['category'] ?? '').trim();
+    const itemName = (row['item_name'] ?? '').trim();
+    const basePriceRaw = (row['base_price'] ?? '').trim();
+    const basePrice = Number(basePriceRaw);
+
+    if (!category) problems.push('category is required');
+    if (!itemName) problems.push('item_name is required');
+    if (!basePriceRaw || !Number.isFinite(basePrice) || basePrice < 0) {
+      problems.push('base_price must be a number of 0 or more');
     }
-    if (errs.length > 0) {
-      rowErrors.push({ row: rowNum, message: errs.join('; ') });
-    } else {
-      validRows.push({
-        categoryName: String(row.category_name).trim(),
-        itemName: String(row.item_name).trim(),
-        basePrice: Number(row.base_price),
-        unitType: row.unit_type ? String(row.unit_type).trim() : 'Per Item',
-        description: row.description ? String(row.description).trim() : null,
-        isAvailable: row.is_available === undefined ? true : row.is_available !== false && row.is_available !== 'false' && row.is_available !== 0,
-      });
+
+    let variations: Array<{ name: string; price: number }> = [];
+    let addOns: Array<{ name: string; price: number }> = [];
+    try { variations = parsePriceOptions(row['variations'], 'variation'); }
+    catch (e: any) { problems.push(e.message); }
+    try { addOns = parsePriceOptions(row['add_ons'], 'add-on'); }
+    catch (e: any) { problems.push(e.message); }
+
+    if (problems.length) {
+      errors.push({ row: rowNum, message: problems.join('; ') });
+      return;
     }
+
+    valid.push({
+      rowNum,
+      category,
+      categoryDescription: (row['category_description'] ?? '').trim() || null,
+      itemName,
+      itemDescription: (row['item_description'] ?? '').trim() || null,
+      basePrice,
+      unitType: (row['unit_type'] ?? '').trim() || 'Per Item',
+      isAvailable: parseCsvBool(row['is_available'], true),
+      tags: (row['tags'] ?? '').split(';').map((t) => t.trim()).filter(Boolean),
+      variations,
+      addOns,
+    });
   });
 
-  let createdItems = 0;
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
 
-  await prisma.$transaction(async (tx) => {
-    const categoriesSet = new Set<string>();
-    validRows.forEach((r) => categoriesSet.add(r.categoryName));
-    const categoryMap = new Map<string, string>();
-    let sortBase = await tx.category.count({ where: { tenantId } });
+  // Resolve (or create) every distinct category once, case-insensitively.
+  const categoryIdByKey = new Map<string, string>();
+  let sortBase = await prisma.category.count({ where: { tenantId } });
+  for (const v of valid) {
+    const key = v.category.toLowerCase();
+    if (categoryIdByKey.has(key)) continue;
+    let cat = await prisma.category.findFirst({
+      where: { tenantId, name: { equals: v.category, mode: 'insensitive' } },
+    });
+    if (!cat) {
+      cat = await prisma.category.create({
+        data: { tenantId, name: v.category, description: v.categoryDescription ?? undefined, sortOrder: sortBase++ },
+      });
+    }
+    categoryIdByKey.set(key, cat.id);
+    if (branchId) {
+      await prisma.branchMenuCategory.upsert({
+        where: { branchId_categoryId: { branchId, categoryId: cat.id } },
+        update: {},
+        create: { branchId, categoryId: cat.id, isAvailable: true },
+      });
+    }
+  }
 
-    for (const catName of categoriesSet) {
-      let category = await tx.category.findFirst({ where: { tenantId, name: catName } });
-      if (!category) {
-        category = await tx.category.create({
-          data: { tenantId, name: catName, sortOrder: sortBase++ },
-        });
+  for (const v of valid) {
+    const categoryId = categoryIdByKey.get(v.category.toLowerCase())!;
+    try {
+      const existing = await prisma.item.findFirst({
+        where: { tenantId, categoryId, name: { equals: v.itemName, mode: 'insensitive' } },
+      });
+
+      if (existing && mode === 'insert') {
+        skipped++;
+        continue;
       }
-      categoryMap.set(catName, category.id);
-    }
 
-    for (const row of validRows) {
-      const catId = categoryMap.get(row.categoryName)!;
-      const itemCount = await tx.item.count({ where: { tenantId, categoryId: catId } });
-      await tx.item.create({
-        data: {
-          tenantId,
-          categoryId: catId,
-          name: row.itemName,
-          description: row.description,
-          basePrice: row.basePrice,
-          isAvailable: row.isAvailable,
-          sortOrder: itemCount,
-        },
+      if (existing && mode === 'upsert') {
+        await prisma.$transaction(async (tx) => {
+          await tx.variation.deleteMany({ where: { itemId: existing.id } });
+          await tx.addOn.deleteMany({ where: { itemId: existing.id } });
+          await tx.item.update({
+            where: { id: existing.id },
+            data: {
+              description: v.itemDescription,
+              basePrice: v.basePrice,
+              unitType: v.unitType,
+              isAvailable: v.isAvailable,
+              tags: v.tags,
+              variations: { create: v.variations },
+              addOns: { create: v.addOns },
+            },
+          });
+          if (branchId) {
+            await tx.branchMenuItem.upsert({
+              where: { branchId_itemId: { branchId, itemId: existing.id } },
+              update: { isAvailable: v.isAvailable },
+              create: { branchId, itemId: existing.id, isAvailable: v.isAvailable, isInStock: true },
+            });
+          }
+        });
+        updated++;
+        continue;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        const itemCount = await tx.item.count({ where: { tenantId, categoryId } });
+        const item = await tx.item.create({
+          data: {
+            tenantId,
+            categoryId,
+            name: v.itemName,
+            description: v.itemDescription,
+            basePrice: v.basePrice,
+            unitType: v.unitType,
+            isAvailable: v.isAvailable,
+            tags: v.tags,
+            sortOrder: itemCount,
+            variations: { create: v.variations },
+            addOns: { create: v.addOns },
+          },
+        });
+        if (branchId) {
+          await tx.branchMenuItem.create({
+            data: { branchId, itemId: item.id, isAvailable: v.isAvailable, isInStock: true },
+          });
+        }
       });
-      createdItems++;
+      created++;
+    } catch (e: any) {
+      errors.push({ row: v.rowNum, message: e?.message || 'Failed to save this row' });
     }
-  });
+  }
 
-  return {
-    created: createdItems,
-    failed: rowErrors.length,
-    errors: rowErrors,
-  };
+  if (created || updated) {
+    invalidatePattern(`menu:${tenantId}:*`).catch(() => {});
+    const io = getIO();
+    if (io) {
+      const payload = { tenantId, timestamp: new Date().toISOString() };
+      if (branchId) io.of('/pos').to(`branch:${branchId}`).emit('menu:published', payload);
+      io.of('/pos').to(`tenant:${tenantId}`).emit('menu:published', payload);
+    }
+  }
+
+  return { created, updated, skipped, failed: errors.length, errors };
 }
 
 // ─── Publish ─────────────────────────────────────────────────────────────────

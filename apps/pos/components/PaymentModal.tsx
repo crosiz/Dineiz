@@ -527,7 +527,7 @@ export default function PaymentModal({
       <div className="absolute inset-0 z-0" onClick={onClose}></div>
 
       {/* MAIN CHECKOUT OVERLAY */}
-      <div className="relative h-[95vh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-[#0F172A] overflow-hidden border-t border-[#E2E8F0]">
+      <div className="relative h-[95dvh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-[#0F172A] overflow-hidden border-t border-[#E2E8F0]">
 
         {/* Drag Handle & Header */}
         <div className="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0 relative z-10 bg-[#F8FAFC] border-b border-[#E2E8F0]">
@@ -545,10 +545,16 @@ export default function PaymentModal({
           </div>
         </div>
 
-        {/* Content Body */}
-        <div className="flex flex-1 overflow-hidden relative z-10 bg-white">
+        {/* Content Body — flex-col on mobile (order summary above payment
+            methods, one shared scroll) / flex-row from md up (the two panels
+            side by side, each scrolling internally). This used to be a
+            permanent row: below md the left panel's w-full basis already
+            filled the row while the right panel — payment methods, the cash
+            numpad, everything needed to actually take the money — was squeezed
+            to ~0 width and clipped by this container's overflow-hidden. */}
+        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden relative z-10 bg-white">
           {/* Left Panel: Order Summary & Totals */}
-          <div className="w-full md:w-[400px] flex flex-col px-6 py-6 overflow-y-auto custom-scrollbar border-r border-[#E2E8F0] bg-[#F8FAFC]">
+          <div className="w-full md:w-[400px] flex flex-col px-6 py-6 md:overflow-y-auto custom-scrollbar border-r border-[#E2E8F0] bg-[#F8FAFC]">
             
             {/* Loyalty Block */}
             {loyaltyProfile && loyaltySettings && loyaltySettings.isActive && (
@@ -678,8 +684,8 @@ export default function PaymentModal({
           </div>
 
           {/* Right Panel: Payment Methods & Numpad */}
-          <div className="flex-1 bg-white flex flex-col p-6 overflow-y-auto custom-scrollbar">
-            <div className="grid grid-cols-5 gap-3 mb-8">
+          <div className="flex-1 bg-white flex flex-col p-6 md:overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
               {[
                 { method: 'CASH' as PaymentMethod, icon: 'payments', label: 'Cash' },
                 { method: 'CARD' as PaymentMethod, icon: 'credit_card', label: 'Card' },

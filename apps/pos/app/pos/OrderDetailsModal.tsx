@@ -304,7 +304,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92vh] flex flex-col">
+      <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92dvh] flex flex-col">
         {!order ? (
           <div className="flex items-center justify-center h-64">
             <span className="material-symbols-outlined animate-spin text-[#94A3B8] text-3xl">progress_activity</span>
@@ -482,7 +482,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       {assignOpen && (
         <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setAssignOpen(false)} />
-          <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70vh] overflow-y-auto">
+          <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70dvh] overflow-y-auto">
             <h3 className="font-bold text-[16px] text-[#0F172A] mb-4">Assign Waiter</h3>
             <div className="space-y-1.5">
               <button onClick={() => handleAssign(null)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#F1F5F9] text-[#64748B] font-medium text-[14px]">

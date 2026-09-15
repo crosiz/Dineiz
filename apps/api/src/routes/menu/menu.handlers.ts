@@ -14,6 +14,7 @@ import {
   deleteItem,
   toggleItemAvailability,
   bulkToggleItemAvailability,
+  updateItemBranchConfig,
   toggleCategoryAvailability,
   getVariationsForItem,
   createVariation,
@@ -78,7 +79,8 @@ export async function handleGetItems(request: FastifyRequest, reply: FastifyRepl
 
 export async function handleGetItem(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as any;
-  const item = await getItemById(request.user!.tenantId!, id);
+  const { branchId } = request.query as any;
+  const item = await getItemById(request.user!.tenantId!, id, branchId);
   if (!item) return reply.status(404).send({ error: 'Item not found' });
   return item;
 }
@@ -117,6 +119,21 @@ export async function handleBulkToggleAvailability(request: FastifyRequest, repl
     return reply.status(400).send({ error: 'itemIds is required' });
   }
   return bulkToggleItemAvailability(user.tenantId!, itemIds, isAvailable, branchId || user.branchId || undefined);
+}
+
+export async function handleUpdateItemBranchConfig(request: FastifyRequest, reply: FastifyReply) {
+  const { id } = request.params as any;
+  const { branchId, isAvailable, overridePrice } = request.body as any;
+  const user = request.user!;
+  try {
+    return await updateItemBranchConfig(user.tenantId!, id, {
+      branchId: branchId || user.branchId || undefined,
+      isAvailable,
+      overridePrice,
+    });
+  } catch (err: any) {
+    return reply.status(err.statusCode ?? 400).send({ error: err.message || 'Failed to update branch pricing' });
+  }
 }
 
 // ─── Image ───────────────────────────────────────────────────────────────────
@@ -210,14 +227,25 @@ export async function handleBulkUpload(request: FastifyRequest, reply: FastifyRe
   const data = await request.file();
   if (!data) return reply.status(400).send({ error: 'No CSV file uploaded' });
   const buffer = await data.toBuffer();
+
+  // Non-file multipart fields ride alongside the upload. The client sends
+  // `branchId` and `mode` before the file part so they're parsed by now.
+  const field = (name: string): string | undefined => {
+    const f: any = (data.fields as any)?.[name];
+    const v = Array.isArray(f) ? f[0]?.value : f?.value;
+    return typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined;
+  };
+  const branchId = field('branchId') ?? request.user?.branchId ?? undefined;
+  const mode = field('mode') === 'upsert' ? 'upsert' : 'insert';
+
   try {
-    const result = await bulkUploadMenu(request.user!.tenantId!, buffer);
+    const result = await bulkUploadMenu(request.user!.tenantId!, buffer, { branchId, mode });
     return reply.status(201).send(result);
   } catch (err: any) {
     if (err.details) return reply.status(400).send({ error: err.message, details: err.details });
     if (err.errors) return reply.status(400).send({ error: err.message, errors: err.errors });
     request.log.error(err);
-    return reply.status(500).send({ error: 'Database transaction failed', details: err.message });
+    return reply.status(500).send({ error: 'Import failed', details: err.message });
   }
 }
 

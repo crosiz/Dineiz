@@ -349,7 +349,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-slide-up">
+      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92dvh] animate-slide-up">
 
         {syncPhase !== 'none' ? (
           // ── Sync step (spec Part 6) ──────────────────────────────────────
@@ -743,7 +743,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                                 setCounts(c => ({ ...c, [d]: v }));
                               }}
                               placeholder="0"
-                              className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-center text-slate-900 outline-none focus:border-[#FF5722] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-[16px] font-bold text-center text-slate-900 outline-none focus:border-[#FF5722] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <span className="flex-1 text-right text-xs font-bold text-slate-600 tabular-nums">
                               {(counts[d] || 0) > 0 ? pkr(d * counts[d]) : '—'}

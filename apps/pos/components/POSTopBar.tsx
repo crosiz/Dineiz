@@ -325,10 +325,29 @@ export function POSTopBar() {
 
   return (
     <>
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-6 py-3 shrink-0 h-[72px] sticky top-0 z-40 shadow-sm">
+      {/* Outer wrapper carries the safe-area gutter as EXTRA space above the
+          header (box-sizing:border-box means padding-top on the h-[72px] row
+          itself would eat into its content height instead) — needed since
+          layout.tsx declares statusBarStyle "black-translucent", which draws
+          content under the iOS status bar/notch in standalone PWA mode. The
+          header's own 72px height is left untouched: ClientTableMap.tsx hard-
+          codes `calc(100vh - 72px - 64px)` against this exact value. */}
+      <div className="shrink-0 sticky top-0 z-[var(--z-nav)] bg-white pt-safe">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
 
-        {/* Left Slot: Logo & Titles */}
-        <div className="flex items-center gap-3.5 text-[#0F172A] min-w-[280px]">
+        {/* Left Slot: Logo & Titles. max-w caps this slot's own footprint —
+            a page's pageTitle/breadcrumb can be arbitrarily wide (order/
+            page.tsx's breadcrumb is 4 separate badges) and flexbox never
+            actually shrinks a sibling whose flex-basis is content-derived
+            (this slot's `flex: 0 1 auto`) as long as the OTHER siblings are
+            flex-1 (basis 0%, they just grow into whatever's left) — removing
+            shrink-0 alone did nothing, the shrink algorithm was never even
+            triggered. On a 768px tablet, order/page.tsx's breadcrumb alone
+            pushed this slot to 550px, leaving ~100px split between the
+            order-type selector and the avatar cluster. A real max-width is
+            what forces the title/breadcrumb block below to actually need
+            its own truncate/scroll. */}
+        <div className="flex items-center gap-2 sm:gap-3.5 text-[#0F172A] min-w-0 max-w-[45%] sm:max-w-[40%]">
           {config.showBackButton && config.backPath && (
             <button
               onClick={() => {
@@ -340,10 +359,10 @@ export function POSTopBar() {
                   router.push(config.backPath!);
                 }
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm"
+              className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm shrink-0"
             >
               <ArrowLeft size={15} />
-              Back
+              <span className="hidden sm:inline">Back</span>
             </button>
           )}
 
@@ -354,39 +373,58 @@ export function POSTopBar() {
           />
 
           {(config.pageTitle || config.breadcrumb) && (
-            <div className="flex items-center gap-3 pl-2 border-l border-[#E2E8F0]">
-              <div>
-                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A]">{config.pageTitle}</h2>}
-                {config.breadcrumb && <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold">{config.breadcrumb}</div>}
+            <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-[#E2E8F0] min-w-0 shrink">
+              <div className="min-w-0 shrink">
+                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A] truncate">{config.pageTitle}</h2>}
+                {config.breadcrumb && <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
               </div>
             </div>
           )}
         </div>
 
-        {/* Center Slot: Dynamic Tools */}
-        <div className="flex-1 flex justify-center px-4">
-          {config.centerSlot}
-        </div>
+        {/* Center Slot: Dynamic Tools — min-w-0/overflow-hidden so page-
+            injected content (a legend, a filter row) clips inside its own
+            slot instead of forcing the header wider than the viewport.
+            Rendered (and only then given flex-1) solely when a page actually
+            sets one: an unconditional flex-1 wrapper here was claiming an
+            equal share of header width against the right slot even while
+            empty, halving how much room pages without a centerSlot (most of
+            them) actually had for rightActions + the avatar cluster. */}
+        {config.centerSlot && (
+          <div className="flex-1 flex justify-center px-1 sm:px-4 min-w-0 overflow-hidden">
+            {config.centerSlot}
+          </div>
+        )}
 
-        {/* Right Slot: Actions + Permanent Info */}
-        <div className="flex items-center justify-end gap-4 min-w-[300px]">
-          {/* Dynamic Actions */}
-          {config.rightActions}
+        {/* Right Slot: Actions + Permanent Info — no min-width floor. The
+            "permanent" cluster (offline badge / sync dot / clock / avatar —
+            the only way to reach Sign Out, Settings, Close Shift) is
+            shrink-0 so it is NEVER the part that gives way; a page's
+            variable-width rightActions gets its own scrollable slot instead
+            of being able to push that cluster off-screen. */}
+        <div className="flex items-center justify-end gap-2 sm:gap-4 min-w-0 flex-1">
+          {config.rightActions && (
+            <div className="flex items-center gap-2 min-w-0 overflow-x-auto no-scrollbar">
+              {config.rightActions}
+            </div>
+          )}
 
-          {/* Separator if rightActions exist */}
-          {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-2"></div>}
+          {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>}
 
           {/* Permanent Info — deliberately minimal: only surface the
               exception (offline), not the default (online); the clock is
               plain text, not a bordered widget; fullscreen and identity
               details live one tap away in the avatar menu instead of
               sitting in the bar permanently. */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {!isOnline && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 pulse-red"></span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Offline</span>
               </div>
+            )}
+            {!isOnline && (
+              <span className="sm:hidden w-2 h-2 rounded-full bg-rose-500 pulse-red shrink-0" title="Offline" />
             )}
 
             {isMounted && <SyncHealthDot />}
@@ -396,7 +434,7 @@ export function POSTopBar() {
             <div className="relative" ref={dropdownRef}>
               <button
                 data-testid="avatar-menu"
-                className="w-8.5 h-8.5 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-xs"
+                className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-[13px] text-white shrink-0 hover:opacity-90 active:scale-95 transition-all shadow-xs"
                 style={{ backgroundColor: avatarColor }}
                 title={avatarTitle}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -404,10 +442,10 @@ export function POSTopBar() {
               >
                 {avatarInitial}
               </button>
-              
+
               {/* Profile Dropdown Popover */}
               {isDropdownOpen && (
-                <div className="absolute top-11 right-0 w-64 bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
+                <div className="absolute top-11 right-0 w-64 max-w-[calc(100vw-24px)] bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
                   {/* User Info Header */}
                   <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80">
                     <div className="flex items-center justify-between gap-2">
@@ -512,6 +550,7 @@ export function POSTopBar() {
           </div>
         </div>
       </header>
+      </div>
 
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (

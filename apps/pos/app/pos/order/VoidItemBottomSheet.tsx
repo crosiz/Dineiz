@@ -174,8 +174,12 @@ export function VoidItemBottomSheet({
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
         {/* Modal/Sheet */}
-        <div className="relative w-full max-w-[500px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
-          <div className="p-6 overflow-y-auto">
+        <div className="relative w-full max-w-[500px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[90dvh] flex flex-col">
+          {/* flex-1 min-h-0 overflow-y-auto here, not on the whole card body
+              — the Cancel/Remove buttons used to live inside this same
+              scroll region and could scroll out of view on a short
+              viewport instead of staying reachable as a pinned footer. */}
+          <div className="p-6 overflow-y-auto flex-1 min-h-0">
             <h2 className="text-[20px] font-bold text-[#0F172A] mb-1">Remove Sent Item</h2>
             <p className="text-[14px] text-[#64748B] mb-6">
               This item has already been sent to the kitchen. Why are you removing it?
@@ -246,8 +250,12 @@ export function VoidItemBottomSheet({
                 />
               )}
             </div>
+          </div>
 
-            <div className="flex gap-3 mt-8">
+          {/* Pinned footer — outside the scroll region above so these
+              buttons are always reachable, not just whenever the content
+              happens to fit. */}
+          <div className="flex gap-3 p-6 pt-4 shrink-0 border-t border-[#E2E8F0]">
               <button
                 onClick={onClose}
                 disabled={isSubmitting}
@@ -283,7 +291,6 @@ export function VoidItemBottomSheet({
                   {isSubmitting ? 'Processing...' : 'Remove Item'}
                 </button>
               )}
-            </div>
           </div>
         </div>
       </div>

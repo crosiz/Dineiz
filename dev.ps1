@@ -7,8 +7,8 @@ Write-Host "[*] Killing all node processes..." -ForegroundColor Cyan
 Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Seconds 1
 
-# Verify ports are free
-$blocked = netstat -ano | Select-String ":(8081|3000|3001)\s" | Select-String "LISTENING"
+# Verify ports are free (dashboard: 3000, pos: 3001, qr-menu: 3002, super-admin: 3003, website: 3006, api: 4000, metro/expo: 8081)
+$blocked = netstat -ano | Select-String ":(8081|3000|3001|3002|3003|3006|4000)\s" | Select-String "LISTENING"
 if ($blocked) {
     Write-Host "[!] Some ports still occupied, force-killing..." -ForegroundColor Yellow
     $blocked | ForEach-Object {

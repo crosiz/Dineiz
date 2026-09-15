@@ -115,7 +115,7 @@ export function CashDrawerModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in ">
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92vh] animate-slide-up">
+      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92dvh] animate-slide-up">
 
         <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -213,7 +213,7 @@ export function CashDrawerModal({
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="Or type your own reason…"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:border-[#FF5722] transition-colors placeholder:text-slate-400"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[16px] outline-none focus:border-[#FF5722] transition-colors placeholder:text-slate-400"
             />
           </div>
 

@@ -6,6 +6,7 @@ export interface CreateItemDto {
   name: string;
   description?: string;
   basePrice: number;
+  unitType?: string;
   isAvailable?: boolean;
   variations?: Array<{ name: string; price: number }>;
   addOns?: Array<{ name: string; price: number }>;
@@ -18,6 +19,7 @@ export interface UpdateItemDto {
   name?: string;
   description?: string;
   basePrice?: number;
+  unitType?: string;
   isAvailable?: boolean;
   variations?: Array<{ name: string; price: number }>;
   addOns?: Array<{ name: string; price: number }>;
@@ -31,7 +33,7 @@ export const menuApi = {
   getCategories: (tenantId: string, branchId?: string | null) => {
     const query = new URLSearchParams({ tenantId });
     if (branchId) query.append('branchId', branchId);
-    return apiFetch(`/api/v1/menu/categories?${query.toString()}`);
+    return apiFetch<any[]>(`/api/v1/menu/categories?${query.toString()}`);
   },
 
   createCategory: (data: { tenantId: string; name: string; description?: string; branchId?: string | null }) =>
@@ -76,11 +78,13 @@ export const menuApi = {
     if (params.search) query.append('search', params.search);
     if (params.isAvailable !== undefined) query.append('isAvailable', String(params.isAvailable));
     if (params.branchId) query.append('branchId', params.branchId);
-    return apiFetch(`/api/v1/menu/items?${query.toString()}`);
+    return apiFetch<any[]>(`/api/v1/menu/items?${query.toString()}`);
   },
 
-  getItem: (itemId: string) =>
-    apiFetch(`/api/v1/menu/items/${itemId}`),
+  getItem: (itemId: string, branchId?: string | null) => {
+    const q = branchId ? `?branchId=${encodeURIComponent(branchId)}` : '';
+    return apiFetch(`/api/v1/menu/items/${itemId}${q}`);
+  },
 
   createItem: (data: CreateItemDto) =>
     apiFetch(`/api/v1/menu/items`, {
@@ -107,8 +111,10 @@ export const menuApi = {
         categoryId: item.categoryId,
         name: `${item.name} (Copy)`,
         description: item.description,
-        basePrice: item.basePrice,
+        basePrice: item.globalBasePrice ?? item.basePrice,
+        unitType: item.unitType,
         isAvailable: item.isAvailable,
+        tags: item.tags ?? [],
         variations: item.variations?.map((v: any) => ({ name: v.name, price: v.price })),
         addOns: item.addOns?.map((a: any) => ({ name: a.name, price: a.price })),
       }),
@@ -119,6 +125,23 @@ export const menuApi = {
     apiFetch(`/api/v1/menu/items/${itemId}/availability`, {
       method: 'PATCH',
       body: JSON.stringify({ isAvailable, branchId }),
+    }),
+
+  // Per-branch availability + price override for a single item.
+  // `overridePrice: null` clears the override (branch falls back to base price).
+  setItemBranchConfig: (
+    itemId: string,
+    data: { branchId: string; isAvailable?: boolean; overridePrice?: number | null },
+  ) =>
+    apiFetch(`/api/v1/menu/items/${itemId}/branch-config`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  bulkToggleAvailability: (itemIds: string[], isAvailable: boolean, branchId?: string | null) =>
+    apiFetch(`/api/menu/items/bulk-availability`, {
+      method: 'PUT',
+      body: JSON.stringify({ itemIds, isAvailable, branchId }),
     }),
 
   uploadImage: (itemId: string, file: File) => {
@@ -211,17 +234,32 @@ export const menuApi = {
 
   // ─── Bulk Upload ─────────────────────────────────────────────────────────────
 
-  bulkUpload: (file: File) => {
+  bulkUpload: (file: File, opts: { branchId?: string | null; mode?: 'insert' | 'upsert' } = {}) => {
     const form = new FormData();
+    // Fields must precede the file so the API parses them before request.file().
+    if (opts.branchId) form.append('branchId', opts.branchId);
+    form.append('mode', opts.mode ?? 'insert');
     form.append('file', file);
     return fetch(`${API_URL}/api/v1/menu/bulk-upload`, {
       method: 'POST',
       body: form,
       credentials: 'include',
     }).then(async (r) => {
-      const json = await r.json();
-      if (!r.ok) throw new Error(json.error || 'Upload failed');
-      return json as { created: number; failed: number; errors: Array<{ row: number; message: string }> };
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err: any = new Error(json.error || 'Import failed');
+        err.rowErrors = json.errors || json.details;
+        throw err;
+      }
+      return json as BulkUploadResult;
     });
   },
 };
+
+export interface BulkUploadResult {
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: Array<{ row: number; message: string }>;
+}

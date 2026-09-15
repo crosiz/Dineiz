@@ -54,7 +54,10 @@ export function initSocketIO(httpServer: HttpServer): SocketIOServer {
   const useRedisAdapter = process.env.DISABLE_QUEUE_WORKERS !== 'true';
   let adapter: ReturnType<typeof createAdapter> | undefined;
   if (useRedisAdapter) {
-    const pubClient = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    const pubClient = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+      maxRetriesPerRequest: null,
+      keepAlive: 10000,
+    });
     const subClient = pubClient.duplicate();
 
     pubClient.on('error', (e) => console.error('[Socket.IO Redis pub]', e.message));

@@ -8,6 +8,15 @@
 import { EscPosBuilder } from './escpos';
 import { useBrandingStore } from '../branding-store';
 import { formatPKR } from '../utils';
+import { useTerminalSettings } from '../terminal-settings';
+
+// Callers (print.service.ts) always await ensureTerminalSettings() before
+// building bytes, so this is safe to read synchronously here rather than
+// threading a `cols` param through every builder/helper call site.
+function newBuilder(): EscPosBuilder {
+  const width = useTerminalSettings.getState().settings.paperWidth;
+  return new EscPosBuilder(width === '58mm' ? 32 : 48);
+}
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
@@ -99,7 +108,7 @@ function orderTypeLabel(type: PrintOrder['type']): string {
  *   [CUT]
  */
 export function buildReceipt(order: PrintOrder): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
   p.init();
 
   const branding = useBrandingStore.getState().branding;
@@ -302,7 +311,7 @@ export function buildReceipt(order: PrintOrder): Uint8Array {
  *   [CUT]
  */
 export function buildKOT(order: PrintOrder): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
 
   p.init();
 
@@ -353,7 +362,7 @@ export function buildKOT(order: PrintOrder): Uint8Array {
  * Builds a Cancellation KOT ticket byte array (ESC/POS).
  */
 export function buildCancellationKOT(order: PrintOrder, cancelledItem: PrintItem, reason: string): Uint8Array {
-  const p = new EscPosBuilder();
+  const p = newBuilder();
 
   p.init();
 

@@ -1,0 +1,6 @@
+category,category_description,item_name,item_description,base_price,unit_type,is_available,tags,variations,add_ons
+Burgers,"Flame-grilled burgers on a brioche bun",Zinger Burger,"Crispy fried chicken fillet with lettuce and mayo",650,Per Item,true,Bestseller;Spicy,Single:0;Double:250,Extra Cheese:80;Extra Patty:200
+BBQ Platters,"Charcoal BBQ, served with naan and house chutney",Chicken Tikka Boti,"Boneless chicken thigh marinated overnight in yoghurt and spices",1800,Per KG,true,Bestseller,Half KG:950;One KG:0,Extra Naan:60;Raita:120
+Beverages,,Fresh Lime Soda,"Chilled fresh lime with soda and mint",180,Per Item,true,,Regular:0;Large:90,
+Desserts,"House-made Pakistani sweets",Kheer,"Slow-cooked rice pudding topped with pistachios",220,Per Item,true,Vegetarian,,
+Sides,,Masala Fries,,300,,,,,

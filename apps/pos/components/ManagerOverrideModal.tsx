@@ -68,11 +68,19 @@ export function ManagerOverrideModal({
     <div className="fixed inset-0 z-[400] grid place-items-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} />
       
-      <div 
-        className="relative z-10 w-full max-w-[420px] min-w-[320px] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
+      {/* max-h + flex-col with a shrink-0 header/footer and an overflow-y-auto
+          middle — this had none of that: icon + title + description + PIN
+          dots + a 3x4 numpad (each key 60px tall) + reason field is
+          realistically 700px+ of content that clipped top or bottom on any
+          short/landscape viewport, or with the keyboard open (the reason
+          field needs it). No min-w either — matching w-full/max-w-[420px]
+          alone (see AdminPinModal's identical fix) rather than min-w-[320px]
+          fighting max-w on anything under ~350px wide. */}
+      <div
+        className="relative z-10 w-full max-w-[420px] max-h-[calc(100dvh-32px)] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
         style={{ animation: 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
       >
-        <div className="p-8 pb-6 flex flex-col items-center text-center">
+        <div className="p-8 pb-6 flex flex-col items-center text-center shrink-0">
           <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-5 shadow-md shadow-slate-900/20">
             <span className="material-symbols-outlined text-white text-[32px]">admin_panel_settings</span>
           </div>
@@ -80,7 +88,7 @@ export function ManagerOverrideModal({
           <p className="text-[15px] text-slate-500 font-medium px-4">{description}</p>
         </div>
 
-        <div className="px-8 pb-4">
+        <div className="px-8 pb-4 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-6 p-4 bg-rose-50 rounded-[16px] border border-rose-100 flex items-start gap-3">
               <span className="material-symbols-outlined text-rose-500 text-[20px] shrink-0">error</span>
@@ -137,12 +145,12 @@ export function ManagerOverrideModal({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder={reasonPlaceholder}
-              className="w-full px-5 h-[56px] bg-slate-50 border border-slate-200 rounded-[16px] text-[15px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
+              className="w-full px-5 h-[56px] bg-slate-50 border border-slate-200 rounded-[16px] text-[16px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
             />
           </div>
         </div>
 
-        <div className="p-6 pt-4 mt-2 flex flex-col gap-3">
+        <div className="p-6 pt-4 mt-2 flex flex-col gap-3 shrink-0">
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || pin.length !== 4 || !reason.trim()}

@@ -146,6 +146,31 @@ export function useToggleAvailability() {
   });
 }
 
+export function useSetItemBranchConfig() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, ...data }: { itemId: string; branchId: string; isAvailable?: boolean; overridePrice?: number | null }) =>
+      menuApi.setItemBranchConfig(itemId, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['menu', 'items'] });
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to update branch pricing'),
+  });
+}
+
+export function useBulkItemAvailability() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemIds, isAvailable, branchId }: { itemIds: string[]; isAvailable: boolean; branchId?: string | null }) =>
+      menuApi.bulkToggleAvailability(itemIds, isAvailable, branchId),
+    onSuccess: (_d, { itemIds, isAvailable }) => {
+      qc.invalidateQueries({ queryKey: ['menu', 'items'] });
+      toast.success(`${itemIds.length} item${itemIds.length !== 1 ? 's' : ''} marked ${isAvailable ? 'available' : 'unavailable'}`);
+    },
+    onError: (e: any) => toast.error(e.message || 'Failed to update items'),
+  });
+}
+
 export function useDuplicateItem() {
   const qc = useQueryClient();
   return useMutation({
