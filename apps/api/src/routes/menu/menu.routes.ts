@@ -15,6 +15,7 @@ import {
   handleDeleteItem,
   handleToggleAvailability,
   handleBulkToggleAvailability,
+  handleUpdateItemBranchConfig,
   handleToggleCategoryAvailability,
   handleCreateVariation,
   handleUpdateVariation,
@@ -112,6 +113,11 @@ export const menuRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.put('/api/v1/menu/items/:id/availability', {
     preHandler: requireRole(ALL_STAFF),
   }, handleToggleAvailability);
+
+  // Per-branch config for one item (availability + price override for a single branch)
+  fastify.patch('/api/v1/menu/items/:id/branch-config', {
+    preHandler: requireRole(ALL_STAFF),
+  }, handleUpdateItemBranchConfig);
 
   // Bulk availability — POS Stock screen's "Mark Items Unavailable" action
   fastify.put('/api/menu/items/bulk-availability', {
