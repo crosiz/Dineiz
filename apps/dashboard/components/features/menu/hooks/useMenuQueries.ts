@@ -163,11 +163,26 @@ export function useBulkItemAvailability() {
   return useMutation({
     mutationFn: ({ itemIds, isAvailable, branchId }: { itemIds: string[]; isAvailable: boolean; branchId?: string | null }) =>
       menuApi.bulkToggleAvailability(itemIds, isAvailable, branchId),
+    onMutate: async ({ itemIds, isAvailable }) => {
+      await qc.cancelQueries({ queryKey: ['menu', 'items'] });
+      const ids = new Set(itemIds);
+      const snapshots: [any, any][] = [];
+      qc.getQueriesData({ queryKey: ['menu', 'items'] }).forEach(([key, data]: any) => {
+        snapshots.push([key, data]);
+        qc.setQueryData(key, (old: any) =>
+          Array.isArray(old) ? old.map((i: any) => (ids.has(i.id) ? { ...i, isAvailable } : i)) : old,
+        );
+      });
+      return { snapshots };
+    },
+    onError: (_e, _v, ctx: any) => {
+      ctx?.snapshots?.forEach(([key, data]: any) => qc.setQueryData(key, data));
+      toast.error('Failed to update items');
+    },
     onSuccess: (_d, { itemIds, isAvailable }) => {
       qc.invalidateQueries({ queryKey: ['menu', 'items'] });
       toast.success(`${itemIds.length} item${itemIds.length !== 1 ? 's' : ''} marked ${isAvailable ? 'available' : 'unavailable'}`);
     },
-    onError: (e: any) => toast.error(e.message || 'Failed to update items'),
   });
 }
 

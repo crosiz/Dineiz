@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Pencil, Trash2, Loader2, Copy, MoreVertical, Check } from 'lucide-react';
+import { Pencil, Trash2, Loader2, Copy, MoreVertical, Check, MapPin } from 'lucide-react';
 import { formatPKR } from '@/lib/formatters';
 import { useToggleAvailability, useDeleteItem, useDuplicateItem } from './hooks/useMenuQueries';
 import { useDashboardContext } from '@/contexts/dashboard-context';
@@ -83,109 +83,111 @@ export function MenuItemCard({
       }`}
       onClick={isReadOnly ? undefined : onClick}
     >
-      {/* Selection checkbox */}
-      {isAdmin && !isReadOnly && onToggleCheck && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onToggleCheck(e); }}
-          className={`absolute top-2.5 left-2.5 z-10 w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
-            checked
-              ? 'bg-[#ff5722] border-[#ff5722] text-white'
-              : `bg-white border-slate-300 text-transparent ${selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`
-          }`}
-          aria-label={checked ? 'Deselect item' : 'Select item'}
-        >
-          <Check size={13} strokeWidth={3} />
-        </button>
-      )}
-
       {item.image && (
-        <div className="h-28 w-full overflow-hidden rounded-t-xl bg-slate-50 border-b border-slate-100">
+        <div className="relative h-28 w-full overflow-hidden rounded-t-xl bg-slate-50 border-b border-slate-100">
           <img src={item.image} alt="" className="w-full h-full object-cover" />
         </div>
       )}
 
-      <div className="p-3.5 flex flex-col gap-1.5 flex-1">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-900 leading-snug line-clamp-1" title={item.name}>
-            {item.name}
-          </h3>
-          <span className="text-sm font-semibold text-slate-900 shrink-0 tabular-nums" title={hasOverride ? 'Branch price' : undefined}>
-            {formatPKR(Number(item.basePrice))}
-            {hasOverride && <span className="ml-1 text-[10px] font-medium text-[#ff5722] align-top">branch</span>}
-          </span>
-        </div>
-
-        <p className="text-xs text-slate-500 line-clamp-1">
-          {item.category?.name || 'Uncategorised'}
-          {meta && <span className="text-slate-400"> · {meta}</span>}
-        </p>
-
-        {item.description && (
-          <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{item.description}</p>
+      <div className="p-3.5 flex items-start gap-2.5 flex-1">
+        {/* Selection checkbox — its own column, so it can never sit on top of the title */}
+        {isAdmin && !isReadOnly && onToggleCheck && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggleCheck(e); }}
+            className={`mt-0.5 w-[18px] h-[18px] shrink-0 rounded-md border flex items-center justify-center transition-all ${
+              checked
+                ? 'bg-[#ff5722] border-[#ff5722] text-white'
+                : `bg-white border-slate-300 text-transparent ${selectionActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`
+            }`}
+            aria-label={checked ? 'Deselect item' : 'Select item'}
+          >
+            <Check size={12} strokeWidth={3} />
+          </button>
         )}
 
-        <div className="mt-auto pt-2.5 flex items-center justify-between border-t border-slate-100">
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              disabled={toggleAvailability.isPending || isReadOnly}
-              onClick={handleToggle}
-              className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
-                item.isAvailable ? 'bg-green-500' : 'bg-slate-200'
-              } ${toggleAvailability.isPending || isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-              aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
-                  item.isAvailable ? 'translate-x-4' : 'translate-x-0'
-                }`}
-              />
-            </button>
-            <span className="text-xs text-slate-500">
-              {toggleAvailability.isPending ? 'Saving…' : item.isAvailable ? 'Available' : 'Unavailable'}
+        <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-sm font-semibold text-slate-900 leading-snug line-clamp-1 min-w-0" title={item.name}>
+              {item.name}
+            </h3>
+            <span className="flex items-center gap-1 text-sm font-semibold text-slate-900 shrink-0 tabular-nums">
+              {hasOverride && <MapPin size={11} className="text-[#ff5722]" aria-label="Branch price" />}
+              {formatPKR(Number(item.basePrice))}
             </span>
           </div>
 
-          {isAdmin && !isReadOnly && (
-            <div className="relative" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
-                className="p-1 -mr-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                aria-label="Item actions"
-              >
-                <MoreVertical size={15} />
-              </button>
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-7 z-20 bg-white rounded-lg shadow-lg border border-slate-200 py-1 w-36 text-sm">
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
-                      onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onClick(); }}
-                    >
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
-                      onClick={handleDuplicate}
-                    >
-                      {duplicate.isPending ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
-                      Duplicate
-                    </button>
-                    <div className="h-px bg-slate-100 my-0.5" />
-                    <button
-                      className="flex items-center gap-2 w-full px-3 py-1.5 text-red-600 hover:bg-red-50"
-                      onClick={handleDelete}
-                    >
-                      {deleteItem.isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                      Delete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+          <p className="text-xs text-slate-500 line-clamp-1">
+            {item.category?.name || 'Uncategorised'}
+            {meta && <span className="text-slate-400"> · {meta}</span>}
+          </p>
+
+          {item.description && (
+            <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{item.description}</p>
           )}
+
+          <div className="mt-auto pt-2.5 flex items-center justify-between border-t border-slate-100">
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                disabled={toggleAvailability.isPending || isReadOnly}
+                onClick={handleToggle}
+                className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+                  item.isAvailable ? 'bg-green-500' : 'bg-slate-200'
+                } ${toggleAvailability.isPending || isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                aria-label={item.isAvailable ? 'Mark unavailable' : 'Mark available'}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
+                    item.isAvailable ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-slate-500">
+                {toggleAvailability.isPending ? 'Saving…' : item.isAvailable ? 'Available' : 'Unavailable'}
+              </span>
+            </div>
+
+            {isAdmin && !isReadOnly && (
+              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+                  className="p-1 -mr-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                  aria-label="Item actions"
+                >
+                  <MoreVertical size={15} />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <div className="absolute right-0 top-7 z-20 bg-white rounded-lg shadow-lg border border-slate-200 py-1 w-36 text-sm">
+                      <button
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                        onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onClick(); }}
+                      >
+                        <Pencil size={13} /> Edit
+                      </button>
+                      <button
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-slate-700 hover:bg-slate-50"
+                        onClick={handleDuplicate}
+                      >
+                        {duplicate.isPending ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+                        Duplicate
+                      </button>
+                      <div className="h-px bg-slate-100 my-0.5" />
+                      <button
+                        className="flex items-center gap-2 w-full px-3 py-1.5 text-red-600 hover:bg-red-50"
+                        onClick={handleDelete}
+                      >
+                        {deleteItem.isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                        Delete
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
