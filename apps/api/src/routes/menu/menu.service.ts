@@ -353,11 +353,20 @@ export async function toggleItemAvailability(
   });
 }
 
-/** Bulk version of toggleItemAvailability — used by the POS Stock screen's "Mark Items Unavailable" action. */
+/**
+ * Bulk version of toggleItemAvailability — used by the POS Stock screen's "Mark
+ * Items Unavailable" action and the dashboard's bulk item selector. Runs with
+ * bounded concurrency rather than one-at-a-time (visibly slow for >5 items) or
+ * fully parallel (would blow past the pooled connection limit on the shared
+ * dev DB).
+ */
 export async function bulkToggleItemAvailability(tenantId: string, itemIds: string[], isAvailable: boolean, branchId?: string) {
-  const results = [];
-  for (const id of itemIds) {
-    results.push(await toggleItemAvailability(tenantId, id, isAvailable, branchId));
+  const CONCURRENCY = 5;
+  const results: Awaited<ReturnType<typeof toggleItemAvailability>>[] = [];
+  for (let i = 0; i < itemIds.length; i += CONCURRENCY) {
+    const batch = itemIds.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(batch.map((id) => toggleItemAvailability(tenantId, id, isAvailable, branchId)));
+    results.push(...batchResults);
   }
   return results;
 }
@@ -680,6 +689,12 @@ export async function bulkUploadMenu(tenantId: string, csvBuffer: Buffer, opts: 
       }
 
       if (existing && mode === 'upsert') {
+        // Multi-statement (wipe + recreate variations/add-ons) genuinely
+        // benefits from atomicity, so this one stays a transaction — just
+        // with a longer timeout than Prisma's 5s default. Under real network
+        // latency to a remote dev DB, five sequential statements comfortably
+        // blow past 5s and the whole row fails with "transaction closed",
+        // even though every individual query was fine.
         await prisma.$transaction(async (tx) => {
           await tx.variation.deleteMany({ where: { itemId: existing.id } });
           await tx.addOn.deleteMany({ where: { itemId: existing.id } });
@@ -702,34 +717,37 @@ export async function bulkUploadMenu(tenantId: string, csvBuffer: Buffer, opts: 
               create: { branchId, itemId: existing.id, isAvailable: v.isAvailable, isInStock: true },
             });
           }
-        });
+        }, { timeout: 15_000 });
         updated++;
         continue;
       }
 
-      await prisma.$transaction(async (tx) => {
-        const itemCount = await tx.item.count({ where: { tenantId, categoryId } });
-        const item = await tx.item.create({
-          data: {
-            tenantId,
-            categoryId,
-            name: v.itemName,
-            description: v.itemDescription,
-            basePrice: v.basePrice,
-            unitType: v.unitType,
-            isAvailable: v.isAvailable,
-            tags: v.tags,
-            sortOrder: itemCount,
-            variations: { create: v.variations },
-            addOns: { create: v.addOns },
-          },
-        });
-        if (branchId) {
-          await tx.branchMenuItem.create({
-            data: { branchId, itemId: item.id, isAvailable: v.isAvailable, isInStock: true },
-          });
-        }
+      // A brand-new item's variations/add-ons are created as part of the
+      // same `item.create` call (Prisma nests them into one query), so this
+      // needs no explicit $transaction wrapper — avoids holding an
+      // interactive-transaction connection (and its 5s timeout) across what
+      // is really just one write plus an optional second one.
+      const itemCount = await prisma.item.count({ where: { tenantId, categoryId } });
+      const item = await prisma.item.create({
+        data: {
+          tenantId,
+          categoryId,
+          name: v.itemName,
+          description: v.itemDescription,
+          basePrice: v.basePrice,
+          unitType: v.unitType,
+          isAvailable: v.isAvailable,
+          tags: v.tags,
+          sortOrder: itemCount,
+          variations: { create: v.variations },
+          addOns: { create: v.addOns },
+        },
       });
+      if (branchId) {
+        await prisma.branchMenuItem.create({
+          data: { branchId, itemId: item.id, isAvailable: v.isAvailable, isInStock: true },
+        });
+      }
       created++;
     } catch (e: any) {
       errors.push({ row: v.rowNum, message: e?.message || 'Failed to save this row' });

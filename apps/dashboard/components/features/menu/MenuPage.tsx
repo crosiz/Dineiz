@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Eye, Plus, Upload, MapPin, Download, GitBranch } from 'lucide-react';
+import { Eye, Plus, MapPin, Download, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCategories, useMenuItems } from './hooks/useMenuQueries';
 import { useUser } from '@/contexts/user-context';
@@ -104,11 +104,11 @@ export function MenuPage() {
             {isAdmin && (
               <button
                 onClick={() => setActiveTab('BULK')}
-                className={`px-3 h-8 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+                className={`px-3 h-8 text-sm font-medium rounded-md transition-colors ${
                   activeTab === 'BULK' ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Upload size={13} /> Bulk import
+                Bulk import
               </button>
             )}
           </div>
@@ -193,7 +193,6 @@ export function MenuPage() {
             isLoading={isItemsLoading}
             isError={isItemsError}
             onRetry={refetchItems}
-            panelOpen={panelOpen}
             isReadOnly={isReadOnly}
             categoryName={selectedCategory?.name ?? null}
             categoryDescription={selectedCategory?.description ?? null}

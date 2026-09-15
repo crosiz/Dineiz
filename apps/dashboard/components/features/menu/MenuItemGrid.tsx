@@ -29,7 +29,6 @@ interface MenuItemGridProps {
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
-  panelOpen?: boolean;
   isReadOnly?: boolean;
   categoryName?: string | null;
   categoryDescription?: string | null;
@@ -210,7 +209,6 @@ export function MenuItemGrid({
   isLoading,
   isError,
   onRetry,
-  panelOpen,
   isReadOnly,
   categoryName,
   categoryDescription,
@@ -220,9 +218,12 @@ export function MenuItemGrid({
   const deleteItem = useDeleteItem();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const cols = panelOpen
-    ? 'grid-cols-1 lg:grid-cols-2'
-    : 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3';
+  // A fixed column count breaks down the moment the editor panel opens or the
+  // sidebar takes more room — cards get squeezed and item names truncate
+  // mid-word ("Chicken Karahi" -> "Chicken..."). auto-fill with a real
+  // minimum card width adapts to whatever space is actually available and
+  // never goes narrower than a name + price can comfortably fit.
+  const cols = 'grid-cols-[repeat(auto-fill,minmax(260px,1fr))]';
 
   const itemIds = useMemo(() => items.map((i) => i.id), [items]);
   // Drop ids that are no longer in the list (filter / category change).
@@ -243,20 +244,33 @@ export function MenuItemGrid({
   const clearSelection = () => setSelectedIds(new Set());
   const selectAllVisible = () => setSelectedIds(new Set(itemIds));
 
+  const selectedItems = useMemo(
+    () => items.filter((i) => activeSelection.has(i.id)),
+    [items, activeSelection],
+  );
+  // Only offer an action that would actually change something — marking an
+  // already-unavailable selection "unavailable" again is a no-op, and
+  // showing it anyway is exactly the kind of dead button that makes bulk
+  // actions confusing.
+  const canMarkAvailable = selectedItems.some((i) => !i.isAvailable);
+  const canMarkUnavailable = selectedItems.some((i) => i.isAvailable);
+
+  const [pendingAction, setPendingAction] = useState<'available' | 'unavailable' | 'delete' | null>(null);
+
   const runBulkAvailability = (isAvailable: boolean) => {
+    setPendingAction(isAvailable ? 'available' : 'unavailable');
     bulkAvailability.mutate(
       { itemIds: Array.from(activeSelection), isAvailable, branchId: selectedBranchId },
-      { onSuccess: () => { onMutate?.(); clearSelection(); } },
+      { onSettled: () => setPendingAction(null), onSuccess: () => { onMutate?.(); clearSelection(); } },
     );
   };
 
   const runBulkDelete = async () => {
     const ids = Array.from(activeSelection);
     if (!window.confirm(`Delete ${ids.length} item${ids.length !== 1 ? 's' : ''}? This cannot be undone.`)) return;
-    for (const id of ids) {
-      // eslint-disable-next-line no-await-in-loop
-      await deleteItem.mutateAsync(id).catch(() => {});
-    }
+    setPendingAction('delete');
+    await Promise.allSettled(ids.map((id) => deleteItem.mutateAsync(id)));
+    setPendingAction(null);
     onMutate?.();
     clearSelection();
   };
@@ -311,32 +325,46 @@ export function MenuItemGrid({
 
       {/* Category context / bulk action bar */}
       {selectionActive ? (
-        <div className="px-5 py-2 bg-orange-50 border-b border-orange-100 shrink-0 flex items-center gap-3 text-sm">
-          <span className="font-medium text-slate-700">{activeSelection.size} selected</span>
-          <button onClick={selectAllVisible} className="text-[#ff5722] hover:underline">Select all {items.length}</button>
+        <div className="px-5 py-2 bg-slate-50 border-b border-slate-200 shrink-0 flex items-center gap-3 text-sm">
+          <button onClick={clearSelection} className="p-1 -ml-1 text-slate-400 hover:text-slate-600" aria-label="Clear selection">
+            <X size={16} />
+          </button>
+          <span className="font-medium text-slate-700">
+            <span className="text-[#ff5722] tabular-nums">{activeSelection.size}</span> selected
+          </span>
+          {activeSelection.size < items.length && (
+            <button onClick={selectAllVisible} className="text-slate-500 hover:text-slate-700 underline underline-offset-2">
+              Select all {items.length}
+            </button>
+          )}
           <div className="flex-1" />
-          <button
-            onClick={() => runBulkAvailability(true)}
-            disabled={bulkAvailability.isPending}
-            className="px-3 h-8 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            Mark available
-          </button>
-          <button
-            onClick={() => runBulkAvailability(false)}
-            disabled={bulkAvailability.isPending}
-            className="px-3 h-8 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            Mark unavailable
-          </button>
+          {canMarkAvailable && (
+            <button
+              onClick={() => runBulkAvailability(true)}
+              disabled={pendingAction !== null}
+              className="px-3 h-8 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              {pendingAction === 'available' && <Loader2 size={13} className="animate-spin" />}
+              Mark available
+            </button>
+          )}
+          {canMarkUnavailable && (
+            <button
+              onClick={() => runBulkAvailability(false)}
+              disabled={pendingAction !== null}
+              className="px-3 h-8 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              {pendingAction === 'unavailable' && <Loader2 size={13} className="animate-spin" />}
+              Mark unavailable
+            </button>
+          )}
           <button
             onClick={runBulkDelete}
-            className="px-3 h-8 rounded-lg border border-red-200 bg-white font-medium text-red-600 hover:bg-red-50"
+            disabled={pendingAction !== null}
+            className="px-3 h-8 rounded-lg border border-red-200 bg-white font-medium text-red-600 hover:bg-red-50 disabled:opacity-60 flex items-center gap-1.5"
           >
+            {pendingAction === 'delete' && <Loader2 size={13} className="animate-spin" />}
             Delete
-          </button>
-          <button onClick={clearSelection} className="p-1.5 text-slate-400 hover:text-slate-600" aria-label="Clear selection">
-            <X size={16} />
           </button>
         </div>
       ) : (
