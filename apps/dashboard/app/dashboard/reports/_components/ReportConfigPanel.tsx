@@ -156,6 +156,7 @@ export function ReportConfigPanel({ type }: { type: ReportType }) {
     try {
       const dates = calculateDates();
       const parameters = { startDate: dates.startDate, endDate: dates.endDate };
+      const branchId = branch !== 'ALL' ? branch : undefined;
 
       if (format === 'PDF') {
         // Real rendered preview — an actual PDF, shown inline. No cloud storage.
@@ -163,13 +164,13 @@ export function ReportConfigPanel({ type }: { type: ReportType }) {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reportType: type, parameters }),
+          body: JSON.stringify({ reportType: type, parameters, branchId }),
         });
         if (!res.ok) throw new Error('Failed to render preview');
         const blob = await res.blob();
         setPreviewPdfUrl(URL.createObjectURL(blob));
       } else {
-        const res = await apiPost('/api/reports/preview', { reportType: type, parameters }) as any;
+        const res = await apiPost('/api/reports/preview', { reportType: type, parameters, branchId }) as any;
         setPreviewData(res.data);
       }
     } catch (err: any) {
@@ -191,6 +192,7 @@ export function ReportConfigPanel({ type }: { type: ReportType }) {
           reportName: getTitle(),
           format,
           parameters: { startDate: dates.startDate, endDate: dates.endDate },
+          branchId: branch !== 'ALL' ? branch : undefined,
         }),
       });
       if (!res.ok) {

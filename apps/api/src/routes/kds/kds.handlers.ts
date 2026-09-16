@@ -21,12 +21,14 @@ export async function handleGetKdsDashboard(req: FastifyRequest, reply: FastifyR
 
 export async function handleGetHistory(req: FastifyRequest, reply: FastifyReply) {
   const q = req.query as any;
-  return getKdsHistory(req.user!.tenantId!, q.branchId, q.limit ?? 30);
+  const branchId = (req as any).scopedBranchId || q.branchId;
+  return getKdsHistory(req.user!.tenantId!, branchId, q.limit ?? 30);
 }
 
 export async function handleGetStats(req: FastifyRequest, reply: FastifyReply) {
   const q = req.query as any;
-  return getKdsStats(req.user!.tenantId!, q.branchId, q.shiftId);
+  const branchId = (req as any).scopedBranchId || q.branchId;
+  return getKdsStats(req.user!.tenantId!, branchId, q.shiftId);
 }
 
 export async function handleMarkItemReady(req: FastifyRequest, reply: FastifyReply) {

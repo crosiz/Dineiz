@@ -22,7 +22,7 @@ export const forecastRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { tenantId } = request.user as any;
-      const { branchId } = request.query;
+      const branchId = (request as any).scopedBranchId || request.query.branchId;
       const res = await generateRevenueForecast(tenantId, branchId);
       if (res?.error) return reply.status(400).send(res);
       return res;
@@ -37,7 +37,7 @@ export const forecastRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { tenantId } = request.user as any;
-      const { branchId } = request.query;
+      const branchId = (request as any).scopedBranchId || request.query.branchId;
       const res = await generateBusyPeriods(tenantId, branchId);
       if (res?.error) return reply.status(400).send(res);
       return res;
@@ -52,7 +52,7 @@ export const forecastRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { tenantId } = request.user as any;
-      const { branchId } = request.query;
+      const branchId = (request as any).scopedBranchId || request.query.branchId;
       const res = await generateItemsForecast(tenantId, branchId);
       if (res?.error) return reply.status(400).send(res);
       return res;
@@ -67,7 +67,7 @@ export const forecastRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { tenantId } = request.user as any;
-      const { branchId } = request.query;
+      const branchId = (request as any).scopedBranchId || request.query.branchId;
       const res = await generateInventoryForecast(tenantId, branchId);
       if (res?.error) return reply.status(400).send(res);
       return res;

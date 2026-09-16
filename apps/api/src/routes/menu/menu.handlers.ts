@@ -35,7 +35,7 @@ import {
 
 export async function handleGetCategories(request: FastifyRequest, reply: FastifyReply) {
   const { branchId } = request.query as any;
-  return getCategoriesForTenant(request.user!.tenantId!, branchId);
+  return getCategoriesForTenant(request.user!.tenantId!, (request as any).scopedBranchId || branchId);
 }
 
 export async function handleCreateCategory(request: FastifyRequest, reply: FastifyReply) {
@@ -74,13 +74,14 @@ export async function handleGetItems(request: FastifyRequest, reply: FastifyRepl
   if (isAvailable !== undefined) avail = isAvailable === 'true' || isAvailable === true;
   if (availability === 'available') avail = true;
   if (availability === 'unavailable') avail = false;
-  return getItemsForTenant(request.user!.tenantId!, { categoryId, search, isAvailable: avail, branchId });
+  const scopedBranchId = (request as any).scopedBranchId || branchId;
+  return getItemsForTenant(request.user!.tenantId!, { categoryId, search, isAvailable: avail, branchId: scopedBranchId });
 }
 
 export async function handleGetItem(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as any;
   const { branchId } = request.query as any;
-  const item = await getItemById(request.user!.tenantId!, id, branchId);
+  const item = await getItemById(request.user!.tenantId!, id, (request as any).scopedBranchId || branchId);
   if (!item) return reply.status(404).send({ error: 'Item not found' });
   return item;
 }
@@ -118,8 +119,12 @@ export async function handleToggleAvailability(request: FastifyRequest, reply: F
   const { id } = request.params as any;
   const { isAvailable, branchId } = request.body as any;
   const user = request.user!;
-  // BRANCH_MANAGER can only toggle — validated in route (requireRole includes BRANCH_MANAGER)
-  return toggleItemAvailability(user.tenantId!, id, isAvailable, branchId || user.branchId || undefined);
+  // BRANCH_MANAGER can only toggle for their own branch — this must win over
+  // whatever branchId the client sends, the same convention every other
+  // branch-scoped write in this codebase follows (a manager who edited the
+  // request body could otherwise flip availability on a branch they don't run).
+  const scopedBranchId = (request as any).scopedBranchId || branchId || user.branchId || undefined;
+  return toggleItemAvailability(user.tenantId!, id, isAvailable, scopedBranchId);
 }
 
 export async function handleBulkToggleAvailability(request: FastifyRequest, reply: FastifyReply) {
@@ -128,7 +133,8 @@ export async function handleBulkToggleAvailability(request: FastifyRequest, repl
   if (!Array.isArray(itemIds) || itemIds.length === 0) {
     return reply.status(400).send({ error: 'itemIds is required' });
   }
-  return bulkToggleItemAvailability(user.tenantId!, itemIds, isAvailable, branchId || user.branchId || undefined);
+  const scopedBranchId = (request as any).scopedBranchId || branchId || user.branchId || undefined;
+  return bulkToggleItemAvailability(user.tenantId!, itemIds, isAvailable, scopedBranchId);
 }
 
 export async function handleUpdateItemBranchConfig(request: FastifyRequest, reply: FastifyReply) {
@@ -137,7 +143,7 @@ export async function handleUpdateItemBranchConfig(request: FastifyRequest, repl
   const user = request.user!;
   try {
     return await updateItemBranchConfig(user.tenantId!, id, {
-      branchId: branchId || user.branchId || undefined,
+      branchId: (request as any).scopedBranchId || branchId || user.branchId || undefined,
       isAvailable,
       overridePrice,
     });

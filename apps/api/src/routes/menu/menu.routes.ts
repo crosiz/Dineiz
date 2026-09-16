@@ -39,7 +39,7 @@ export const menuRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
   fastify.get('/api/menu', { preHandler: requireTenant }, async (req) => {
     const tenantId = req.user!.tenantId!;
-    const branchId = (req.query as any).branchId || req.user?.branchId || undefined;
+    const branchId = (req as any).scopedBranchId || (req.query as any).branchId || req.user?.branchId || undefined;
     // Short TTL — not meant to introduce visible staleness, just to absorb
     // bursts (every POS terminal syncing its IndexedDB menu cache on mount/
     // reconnect). Publishing invalidates it immediately below; direct item/

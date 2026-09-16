@@ -31,7 +31,8 @@ export async function handleValidateDeals(req: FastifyRequest, reply: FastifyRep
 // -----------------------------------------------------------------------------
 
 export async function handleListUnifiedDeals(req: FastifyRequest<{ Querystring: { branchId?: string, status?: string, type?: string } }>, reply: FastifyReply) {
-  return listUnifiedDeals(req.user!.tenantId!, req.query);
+  const branchId = (req as any).scopedBranchId || req.query.branchId;
+  return listUnifiedDeals(req.user!.tenantId!, { ...req.query, branchId });
 }
 
 export async function handleGetUnifiedDeal(req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) {

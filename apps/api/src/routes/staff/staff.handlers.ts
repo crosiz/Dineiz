@@ -11,7 +11,8 @@ export class StaffHandlers {
     if (!tenantId) return reply.status(401).send({ error: 'Unauthorized' });
 
     const parsed = z.object({ branchId: z.string().optional() }).safeParse(req.query);
-    const branchId = parsed.success ? parsed.data.branchId : undefined;
+    const queryBranchId = parsed.success ? parsed.data.branchId : undefined;
+    const branchId = (req as any).scopedBranchId || queryBranchId;
 
     try {
       const summary = await StaffService.getSummary(tenantId, branchId);
@@ -32,7 +33,8 @@ export class StaffHandlers {
     }
 
     try {
-      const data = await StaffService.getStaffList(tenantId, parsed.data);
+      const branchId = (req as any).scopedBranchId || parsed.data.branchId;
+      const data = await StaffService.getStaffList(tenantId, { ...parsed.data, branchId });
       return reply.send(data);
     } catch (error: any) {
       req.log.error(error);

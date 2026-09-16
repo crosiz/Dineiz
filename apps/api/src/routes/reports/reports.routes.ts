@@ -42,16 +42,18 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
           reportType: z.string(),
           reportName: z.string().optional(),
           format: z.enum(['PDF', 'EXCEL', 'CSV']),
-          parameters: z.any()
+          parameters: z.any(),
+          branchId: z.string().optional()
         })
       }
     },
     async (request, reply) => {
-      const { tenantId, branchId } = request.user as any;
-      const { reportType, reportName, format, parameters } = request.body as any;
+      const { tenantId } = request.user as any;
+      const { reportType, reportName, format, parameters, branchId } = request.body as any;
       const actualName = (reportName || reportType).replace(/[^a-zA-Z0-9-_ ]/g, '').trim() || reportType;
+      const scopedBranchId = (request as any).scopedBranchId || branchId;
 
-      const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
+      const rawData = await generateReportData(tenantId, scopedBranchId, reportType, parameters);
 
       if (format === 'CSV') {
         const buffer = Buffer.from(generateCSV(rawData), 'utf-8');
@@ -76,14 +78,16 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: {
         body: z.object({
           reportType: z.string(),
-          parameters: z.any()
+          parameters: z.any(),
+          branchId: z.string().optional()
         })
       }
     },
     async (request, reply) => {
-      const { tenantId, branchId } = request.user as any;
-      const { reportType, parameters } = request.body as any;
-      const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
+      const { tenantId } = request.user as any;
+      const { reportType, parameters, branchId } = request.body as any;
+      const scopedBranchId = (request as any).scopedBranchId || branchId;
+      const rawData = await generateReportData(tenantId, scopedBranchId, reportType, parameters);
       return { data: rawData };
     }
   );
@@ -98,15 +102,17 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: {
         body: z.object({
           reportType: z.string(),
-          parameters: z.any()
+          parameters: z.any(),
+          branchId: z.string().optional()
         })
       }
     },
     async (request, reply) => {
-      const { tenantId, branchId } = request.user as any;
-      const { reportType, parameters } = request.body as any;
+      const { tenantId } = request.user as any;
+      const { reportType, parameters, branchId } = request.body as any;
+      const scopedBranchId = (request as any).scopedBranchId || branchId;
 
-      const rawData = await generateReportData(tenantId, branchId, reportType, parameters);
+      const rawData = await generateReportData(tenantId, scopedBranchId, reportType, parameters);
       const branding = await getTenantBranding(tenantId);
       if (!branding) return reply.status(404).send({ message: 'Tenant not found' });
       const buffer = await generatePDF(rawData, branding);
@@ -260,7 +266,8 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
   });
 
   app.get('/daily', { preHandler: requireTenant }, async (request, reply) => {
-    const { branchId, date } = request.query as { branchId: string, date: string };
+    const { date } = request.query as { branchId: string, date: string };
+    const branchId = (request as any).scopedBranchId || (request.query as any).branchId;
     const tenantId = request.user!.tenantId!;
     const start = new Date(date); start.setHours(0,0,0,0);
     const end = new Date(date); end.setHours(23,59,59,999);
@@ -273,7 +280,8 @@ export const reportsRoutes: FastifyPluginAsyncZod = async (app) => {
   });
 
   app.get('/revenue', { preHandler: requireTenant }, async (request, reply) => {
-    const { branchId, from, to } = request.query as { branchId: string, from: string, to: string };
+    const { from, to } = request.query as { branchId: string, from: string, to: string };
+    const branchId = (request as any).scopedBranchId || (request.query as any).branchId;
     const tenantId = request.user!.tenantId!;
     const start = new Date(from);
     const end = new Date(to);

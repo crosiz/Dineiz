@@ -20,7 +20,8 @@ export const anomalyRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request, reply) => {
       const { tenantId } = request.user as any;
-      const { branchId, status, severity } = request.query;
+      const { status, severity } = request.query;
+      const branchId = (request as any).scopedBranchId || request.query.branchId;
 
       const anomalies = await prisma.anomalyEvent.findMany({
         where: {
