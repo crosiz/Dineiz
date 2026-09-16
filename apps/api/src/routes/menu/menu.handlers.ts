@@ -100,8 +100,18 @@ export async function handleUpdateItem(request: FastifyRequest, reply: FastifyRe
 
 export async function handleDeleteItem(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as any;
-  await deleteItem(request.user!.tenantId!, id);
-  return { success: true };
+  try {
+    await deleteItem(request.user!.tenantId!, id);
+    return { success: true };
+  } catch (err: any) {
+    if (err.isConflict) {
+      // apiFetch (dashboard) reads body.error as the human-readable message — every
+      // other handler in this codebase follows that convention, so a separate
+      // 'CONFLICT' code here would silently swallow the real reason on the client.
+      return reply.status(409).send({ error: err.message });
+    }
+    throw err;
+  }
 }
 
 export async function handleToggleAvailability(request: FastifyRequest, reply: FastifyReply) {

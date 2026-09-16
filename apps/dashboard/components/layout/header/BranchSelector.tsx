@@ -26,6 +26,22 @@ export function BranchSelector() {
 
   if (!isTenantAdmin) return null;
 
+  // A tenant with exactly one branch has nothing to actually choose between —
+  // "All Branches" and that one branch are data-identical everywhere branch
+  // scoping is correctly wired. Showing both as separate dropdown options reads
+  // as broken/confusing, so show it the same static way a branch manager sees
+  // their own (single) branch instead of a fake choice.
+  if (branches && branches.length === 1) {
+    return (
+      <div className="relative flex items-center bg-white border border-gray-200 rounded-lg px-8 h-9 text-[13px] text-gray-700 select-none min-w-[160px]">
+        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+          <BranchIcon className="w-4 h-4 text-gray-400" />
+        </span>
+        <span className="font-medium">{branches[0].name}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <select

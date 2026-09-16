@@ -5,6 +5,7 @@ export interface CustomerQuery {
   limit?: number;
   search?: string;
   segment?: string;
+  branchId?: string;
   sortBy?: 'totalSpend' | 'lastVisitAt' | 'totalOrders' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }

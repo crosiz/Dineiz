@@ -19,6 +19,7 @@ export const CustomerQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   search: z.string().optional(),
   segment: z.string().optional(),
+  branchId: z.string().optional(),
   sortBy: z.enum(['totalSpend', 'lastVisitAt', 'totalOrders', 'createdAt']).default('totalSpend'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 }).passthrough();

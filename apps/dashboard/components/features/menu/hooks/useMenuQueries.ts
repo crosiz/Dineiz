@@ -116,7 +116,7 @@ export function useDeleteItem() {
       qc.invalidateQueries({ queryKey: ['menu', 'categories'] });
       toast.success('Item deleted');
     },
-    onError: () => toast.error('Failed to delete item'),
+    onError: (e: any) => toast.error(e.message || 'Failed to delete item'),
   });
 }
 

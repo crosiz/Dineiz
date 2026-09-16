@@ -11,12 +11,20 @@ export class CustomersService {
     return cleaned;
   }
   static async listCustomers(tenantId: string, query: any) {
-    const { page, limit, search, segment, sortBy, sortOrder } = query;
+    const { page, limit, search, segment, sortBy, sortOrder, branchId } = query;
     const skip = (page - 1) * limit;
+
+    // Customer is tenant-wide by design (no branchId column — a customer can visit
+    // any branch in the tenant), so "this branch's customers" means "customers who
+    // have at least one order at this branch," not a hard ownership filter. A
+    // customer with zero orders anywhere (e.g. manually added, never yet visited)
+    // intentionally only shows up in the unfiltered tenant-wide view.
+    const branchScope: Prisma.CustomerWhereInput = branchId ? { orders: { some: { branchId } } } : {};
 
     const where: Prisma.CustomerWhereInput = {
       tenantId,
       deletedAt: null,
+      ...branchScope,
     };
 
     if (search) {
@@ -42,17 +50,19 @@ export class CustomersService {
       prisma.customer.count({ where }),
     ]);
 
-    // Compute active/new/avg LTV stats
+    // Compute active/new/avg LTV stats — same branch scope as the list itself, so
+    // the summary cards agree with what's actually showing in the table below them.
+    const statsWhere: Prisma.CustomerWhereInput = { tenantId, deletedAt: null, ...branchScope };
     const [totalCustomers, activeCustomers, newCustomers, aggStats] = await Promise.all([
-      prisma.customer.count({ where: { tenantId, deletedAt: null } }),
+      prisma.customer.count({ where: statsWhere }),
       prisma.customer.count({
-        where: { tenantId, deletedAt: null, lastVisitAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        where: { ...statsWhere, lastVisitAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
       }),
       prisma.customer.count({
-        where: { tenantId, deletedAt: null, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        where: { ...statsWhere, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
       }),
       prisma.customer.aggregate({
-        where: { tenantId, deletedAt: null },
+        where: statsWhere,
         _avg: { totalSpend: true },
       }),
     ]);

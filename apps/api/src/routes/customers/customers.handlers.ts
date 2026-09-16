@@ -6,7 +6,11 @@ export async function listCustomersHandler(
   reply: FastifyReply
 ) {
   const tenantId = (req as any).user.tenantId;
-  const result = await CustomersService.listCustomers(tenantId, (req as any).query);
+  // Same convention every other branch-scoped resource follows: a BRANCH_MANAGER's
+  // own branch always wins over whatever the client sent, a TENANT_ADMIN/SUPER_ADMIN
+  // can pass any branchId (or none, for tenant-wide).
+  const branchId = (req as any).scopedBranchId || (req as any).query.branchId;
+  const result = await CustomersService.listCustomers(tenantId, { ...(req as any).query, branchId });
   return reply.send(result);
 }
 

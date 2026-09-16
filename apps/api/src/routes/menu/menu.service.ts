@@ -306,6 +306,17 @@ export async function updateItem(tenantId: string, id: string, body: any) {
 }
 
 export async function deleteItem(tenantId: string, id: string) {
+  // An item referenced by past orders can't be hard-deleted — OrderItem.itemId is a
+  // RESTRICT foreign key (order history must keep pointing at a real item row). Mark
+  // it unavailable instead, the same non-destructive path the UI already offers.
+  const orderItemCount = await prisma.orderItem.count({ where: { itemId: id } });
+  if (orderItemCount > 0) {
+    throw {
+      isConflict: true,
+      message: 'Cannot delete an item that has order history. Mark it unavailable instead to remove it from the menu.'
+    };
+  }
+
   return prisma.item.delete({ where: { id, tenantId } });
 }
 

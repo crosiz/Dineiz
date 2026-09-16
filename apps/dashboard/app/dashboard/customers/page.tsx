@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { getCustomers, createCustomer } from '@/lib/api/customers';
 import { AdminOnly } from '@/components/admin-only';
+import { useDashboardContext } from '@/contexts/dashboard-context';
 import { toast } from 'sonner';
 import { CustomerDetailSlideOver } from './_components/CustomerDetailSlideOver';
 import { CreateCustomerSlideOver } from './_components/CreateCustomerSlideOver';
@@ -17,6 +18,7 @@ import { formatPKR } from '@/lib/formatters';
 export default function CRMCustomersPage() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const { selectedBranchId } = useDashboardContext();
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
   const [segment, setSegment] = useState('ALL');
@@ -39,13 +41,14 @@ export default function CRMCustomersPage() {
     isLoading: loading,
     isError,
   } = useQuery<any>({
-    queryKey: ['customers', 'list', currentPage, pageSize, searchDebounced, segment],
+    queryKey: ['customers', 'list', currentPage, pageSize, searchDebounced, segment, selectedBranchId],
     queryFn: () =>
       getCustomers({
         page: currentPage,
         limit: pageSize,
         ...(searchDebounced && { search: searchDebounced }),
         ...(segment !== 'ALL' && { segment }),
+        ...(selectedBranchId && { branchId: selectedBranchId }),
       }),
     placeholderData: keepPreviousData,
   });
@@ -68,7 +71,7 @@ export default function CRMCustomersPage() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const res = await getCustomers({ page: 1, limit: 10000, ...(segment !== 'ALL' && { segment }) });
+      const res = await getCustomers({ page: 1, limit: 10000, ...(segment !== 'ALL' && { segment }), ...(selectedBranchId && { branchId: selectedBranchId }) });
       const rows: any[] = (res as any)?.data || [];
       const header = ['Name', 'Phone', 'Email', 'Segment', 'Total Orders', 'Total Spend', 'Loyalty Points', 'Last Visit'];
       const csvEscape = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;

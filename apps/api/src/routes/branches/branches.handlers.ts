@@ -109,10 +109,10 @@ export async function handleDeleteBranch(request: FastifyRequest, reply: Fastify
     return reply.send({ success: true });
   } catch (err: any) {
     if (err.isConflict) {
-      return reply.status(409).send({
-        error: 'CONFLICT',
-        message: err.message
-      });
+      // apiFetch (dashboard) reads body.error as the human-readable message — a
+      // separate 'CONFLICT' code here was silently swallowing the real reason
+      // (BranchCard's alert(err.message) showed the literal word "CONFLICT").
+      return reply.status(409).send({ error: err.message });
     }
     throw err;
   }

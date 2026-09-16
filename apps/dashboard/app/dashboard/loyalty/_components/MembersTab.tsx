@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { getCustomers } from '@/lib/api/customers';
+import { useDashboardContext } from '@/contexts/dashboard-context';
 import { Pagination } from '@/components/ui/Pagination';
 import { Sparkles } from 'lucide-react';
 import { SkeletonTableRows } from '@/components/ui/skeleton';
 import { formatPKR } from '@/lib/formatters';
 
 export function MembersTab() {
+  const { selectedBranchId } = useDashboardContext();
   const [loading, setLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const [data, setData] = useState<any>(null);
@@ -21,7 +23,13 @@ export function MembersTab() {
       // CustomerQuerySchema's sortBy enum has no `loyaltyPoints` field — sort by
       // lifetime spend instead (highest-spend customers correlate closely with
       // highest-points members, and it's a real, supported sort key).
-      const res = await getCustomers({ page: currentPage, limit: pageSize, sortBy: 'totalSpend', sortOrder: 'desc' });
+      const res = await getCustomers({
+        page: currentPage,
+        limit: pageSize,
+        sortBy: 'totalSpend',
+        sortOrder: 'desc',
+        ...(selectedBranchId && { branchId: selectedBranchId }),
+      });
       setData(res);
     } catch (e) {
       console.error(e);
@@ -33,7 +41,7 @@ export function MembersTab() {
 
   useEffect(() => {
     fetchMembers();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, selectedBranchId]);
 
   const customers = data?.data || [];
   const pagination = data?.meta || { total: 0, page: 1, limit: 25, totalPages: 1 };
