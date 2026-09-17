@@ -9,6 +9,7 @@ import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 import { formatPKR } from '@/lib/utils';
 import { API_URL } from '@/lib/api';
+import { resolveTaxConfig, isCardMethod, roundMoney } from '@/lib/pricing';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -111,22 +112,21 @@ export default function PaymentModal({
   // ── Dual Tax Reactive Logic ──
   const branding = useBrandingStore(s => s.branding);
 
-  const getTaxRate = (paymentMethod: string): number => {
-    switch (paymentMethod) {
-      case 'CASH': return branding.cashTaxRate ?? 5;
-      case 'CARD':
-      case 'JAZZCASH':
-      case 'EASYPAISA': return branding.cardTaxRate ?? 17;
-      default: return branding.cashTaxRate ?? 5;
-    }
-  };
-
-  const getTaxLabel = (paymentMethod: string): string => {
-    switch (paymentMethod) {
-      case 'CASH': return branding.cashTaxLabel ?? 'GST (Cash)';
-      default: return branding.cardTaxLabel ?? 'GST (Card/Digital)';
-    }
-  };
+  // Configuration comes from lib/pricing.ts's resolver, not from a local
+  // reading of `branding` — this file had its own copy of the rate/label
+  // lookup with its own defaults, and it read only the top level of the
+  // branding blob, so a rate delivered under `branding.pos.*` silently became
+  // the hardcoded 5%/17%. It also ignored `taxRoundingMethod` entirely, while
+  // the server (order.service.ts's applyRounding) honours it — so a tenant on
+  // FLOOR/CEIL had the client and server disagree by a rupee on every bill.
+  //
+  // Rates are kept as PERCENTS in this component (it displays "(5%)" and
+  // divides by 100 in several places); the resolver returns decimals.
+  const taxCfg = useMemo(() => resolveTaxConfig(branding), [branding]);
+  const getTaxRate = (paymentMethod: string): number =>
+    (isCardMethod(paymentMethod) ? taxCfg.cardTaxRate : taxCfg.cashTaxRate) * 100;
+  const getTaxLabel = (paymentMethod: string): string =>
+    isCardMethod(paymentMethod) ? taxCfg.cardTaxLabel : taxCfg.cashTaxLabel;
 
   const [activeMethod, setActiveMethod] = useState<PaymentMethod>('CASH');
   const [amountEntered, setAmountEntered] = useState<string>('');
@@ -172,7 +172,7 @@ export default function PaymentModal({
 
   // Recalculate everything reactively
   const isCash = activeMethod === 'CASH';
-  const taxEnabled = isCash ? branding.cashTaxEnabled !== false : branding.cardTaxEnabled !== false;
+  const taxEnabled = isCardMethod(activeMethod) ? taxCfg.cardTaxEnabled : taxCfg.cashTaxEnabled;
   const taxRate = taxEnabled ? getTaxRate(activeMethod) : 0;
 
   // What we can bill from the visible lines:
@@ -216,9 +216,12 @@ export default function PaymentModal({
   }
 
   const taxableSubtotal = Math.max(0, subtotal - discountAmount - loyaltyDiscount);
+  // roundMoney, not Math.round — the server applies the tenant's configured
+  // taxRoundingMethod (order.service.ts's applyRounding) and this side ignored
+  // it, so FLOOR/CEIL tenants saw the client and server differ by a rupee.
   const taxAmount = itemsTrustworthy
-    ? Math.round(taxableSubtotal * (taxRate / 100))
-    : Math.max(0, fallbackTax - Math.round((discountAmount + loyaltyDiscount) * (taxRate / 100)));
+    ? roundMoney(taxableSubtotal * (taxRate / 100), taxCfg.taxRoundingMethod)
+    : Math.max(0, fallbackTax - roundMoney((discountAmount + loyaltyDiscount) * (taxRate / 100), taxCfg.taxRoundingMethod));
   const taxLabel = taxEnabled ? `${getTaxLabel(activeMethod)} (${taxRate}%)` : 'Tax Disabled';
 
   // When we're billing from the known gross `orderTotal` (items not trustworthy),

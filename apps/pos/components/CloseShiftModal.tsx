@@ -12,6 +12,7 @@ import {
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
+import { formatPKR } from '@/lib/utils';
 import {
   Clock, X, CheckCircle2, Printer, Download, AlertCircle, Timer, Receipt,
   Banknote, Coffee, TrendingUp, TrendingDown, FileEdit, CheckCheck, Loader2, Check,
@@ -38,7 +39,6 @@ interface CloseShiftModalProps {
 /** PKR notes and coins, largest first — the order a cashier counts them in. */
 const DENOMINATIONS = [5000, 1000, 500, 100, 50, 20, 10, 5];
 
-const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 
 export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const router = useRouter();
@@ -480,18 +480,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 my-5 text-left">
               <div className="flex justify-between text-xs py-1">
                 <span className="text-slate-500 font-medium">Expected in drawer</span>
-                <span className="font-bold text-slate-900 tabular-nums">{pkr(expectedCash)}</span>
+                <span className="font-bold text-slate-900 tabular-nums">{formatPKR(expectedCash)}</span>
               </div>
               <div className="flex justify-between text-xs py-1">
                 <span className="text-slate-500 font-medium">You counted</span>
-                <span className="font-bold text-slate-900 tabular-nums">{pkr(counted)}</span>
+                <span className="font-bold text-slate-900 tabular-nums">{formatPKR(counted)}</span>
               </div>
               <div className="flex justify-between text-xs pt-2 mt-1 border-t border-slate-200">
                 <span className="font-bold text-slate-900">Variance</span>
                 <span className={`font-bold tabular-nums ${
                   variance === null ? 'text-slate-400' : Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
                 }`}>
-                  {variance === null ? 'Not counted' : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${pkr(Math.abs(variance))}`}
+                  {variance === null ? 'Not counted' : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${formatPKR(Math.abs(variance))}`}
                 </span>
               </div>
             </div>
@@ -614,7 +614,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     {[
                       { Icon: Timer, label: 'Duration', value: formatDuration(summary.openedAt) },
                       { Icon: Receipt, label: 'Orders Paid', value: String(summary.totalOrders) },
-                      { Icon: Banknote, label: 'Net Sales', value: pkr(summary.totalSales) },
+                      { Icon: Banknote, label: 'Net Sales', value: formatPKR(summary.totalSales) },
                       { Icon: Coffee, label: 'Breaks', value: `${summary.breakCount ?? 0} · ${summary.totalBreakMinutes ?? 0}m` },
                     ].map(({ Icon, label, value }) => (
                       <div key={label} className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
@@ -636,7 +636,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                         <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-[12px] text-amber-900 leading-relaxed">
                           <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
-                          {' '}({pkr(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
+                          {' '}({formatPKR(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
                           settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} below before closing.
                         </p>
                       </div>
@@ -651,7 +651,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                                 </span>
                               </div>
                               <div className="flex items-center gap-2.5 shrink-0">
-                                <span className="font-bold text-slate-900 font-mono">{pkr(o.netAmount)}</span>
+                                <span className="font-bold text-slate-900 font-mono">{formatPKR(o.netAmount)}</span>
                                 <button
                                   onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
                                   className="text-[11px] font-semibold text-[#FF5722] hover:underline"
@@ -677,14 +677,14 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                   <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
                     <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-2.5">Expected in Drawer</p>
                     <div className="space-y-1 text-xs text-orange-900/80 font-medium">
-                      <div className="flex justify-between"><span>Opening float</span><span className="tabular-nums">{pkr(summary.openingFloat)}</span></div>
-                      <div className="flex justify-between"><span>Cash sales</span><span className="tabular-nums">{pkr(summary.totalCash)}</span></div>
-                      {summary.cashIn > 0 && <div className="flex justify-between"><span>Cash in</span><span className="tabular-nums">+{pkr(summary.cashIn)}</span></div>}
-                      {summary.cashOut > 0 && <div className="flex justify-between"><span>Cash out</span><span className="tabular-nums">−{pkr(summary.cashOut)}</span></div>}
+                      <div className="flex justify-between"><span>Opening float</span><span className="tabular-nums">{formatPKR(summary.openingFloat)}</span></div>
+                      <div className="flex justify-between"><span>Cash sales</span><span className="tabular-nums">{formatPKR(summary.totalCash)}</span></div>
+                      {summary.cashIn > 0 && <div className="flex justify-between"><span>Cash in</span><span className="tabular-nums">+{formatPKR(summary.cashIn)}</span></div>}
+                      {summary.cashOut > 0 && <div className="flex justify-between"><span>Cash out</span><span className="tabular-nums">−{formatPKR(summary.cashOut)}</span></div>}
                     </div>
                     <div className="flex justify-between items-baseline pt-2.5 mt-2.5 border-t border-orange-300/60">
                       <span className="text-xs font-bold text-orange-900">Total</span>
-                      <span className="text-lg font-bold text-orange-900 tabular-nums">{pkr(expectedCash)}</span>
+                      <span className="text-lg font-bold text-orange-900 tabular-nums">{formatPKR(expectedCash)}</span>
                     </div>
                   </div>
 
@@ -746,13 +746,13 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                               className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-[16px] font-bold text-center text-slate-900 outline-none focus:border-[#FF5722] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <span className="flex-1 text-right text-xs font-bold text-slate-600 tabular-nums">
-                              {(counts[d] || 0) > 0 ? pkr(d * counts[d]) : '—'}
+                              {(counts[d] || 0) > 0 ? formatPKR(d * counts[d]) : '—'}
                             </span>
                           </div>
                         ))}
                         <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-t border-slate-200">
                           <span className="text-[10px] font-bold text-slate-900 uppercase tracking-wider">Counted</span>
-                          <span className="text-base font-bold text-slate-900 tabular-nums">{pkr(denominationTotal)}</span>
+                          <span className="text-base font-bold text-slate-900 tabular-nums">{formatPKR(denominationTotal)}</span>
                         </div>
                       </div>
                     )}
@@ -772,8 +772,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                             {Math.round(variance) === 0
                               ? 'Drawer balances'
                               : variance > 0
-                                ? `Over by ${pkr(Math.abs(variance))}`
-                                : `Short by ${pkr(Math.abs(variance))}`}
+                                ? `Over by ${formatPKR(Math.abs(variance))}`
+                                : `Short by ${formatPKR(Math.abs(variance))}`}
                           </span>
                         </div>
                       )}

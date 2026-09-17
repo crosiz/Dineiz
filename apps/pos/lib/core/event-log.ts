@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { nanoid } from 'nanoid';
+import { getBrandingConfig } from '@/lib/branding-store';
 
 export type EventType =
   // Order lifecycle
@@ -195,10 +196,10 @@ type OrderNumberFormat = 'SHORT' | 'STANDARD' | 'DETAILED';
 
 function readOrderNumberFormat(): { format: OrderNumberFormat; shortCode: string } {
   try {
-    const b = JSON.parse(localStorage.getItem('pos_branding') ?? '{}');
-    const raw = String(b.orderNumberFormat ?? b.pos?.orderNumberFormat ?? 'STANDARD').toUpperCase();
+    const b = getBrandingConfig();
+    const raw = String(b.orderNumberFormat ?? 'STANDARD').toUpperCase();
     const format = (['SHORT', 'STANDARD', 'DETAILED'].includes(raw) ? raw : 'STANDARD') as OrderNumberFormat;
-    const shortCode = String(b.tenantShortCode ?? b.pos?.tenantShortCode ?? '')
+    const shortCode = String(b.tenantShortCode ?? '')
       .toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
     return { format, shortCode };
   } catch {

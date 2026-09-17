@@ -7,6 +7,8 @@ import {
   type TableStatusOverride,
 } from '@dineiz/schemas';
 import { API_URL } from '@/lib/api';
+import { computeTotals, resolveTaxConfig } from '@/lib/pricing';
+import { useBrandingStore } from '@/lib/branding-store';
 
 export interface OrderViewItem {
   lineId: string;
@@ -176,13 +178,11 @@ export const useViews = create<ViewStore>((set) => ({
 // ─── THE REDUCER: pure function, event → new state ──────────────────────────
 
 function readCleaningMinutes(): number {
-  try {
-    const b = JSON.parse(localStorage.getItem('pos_branding') ?? '{}');
-    const m = Number(b.tableCleaningMinutes ?? b.pos?.tableCleaningMinutes);
-    return Number.isFinite(m) && m >= 0 ? m : 5;
-  } catch {
-    return 5;
-  }
+  // Reactive store, not a hand-rolled localStorage parse — the branding store
+  // is the single source and it stays in sync with live admin pushes.
+  const b = useBrandingStore.getState().branding as any;
+  const m = Number(b?.tableCleaningMinutes ?? b?.pos?.tableCleaningMinutes);
+  return Number.isFinite(m) && m >= 0 ? m : 5;
 }
 
 function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
@@ -629,16 +629,43 @@ export function startTableReconcile(intervalMs = 60_000): () => void {
   return () => clearInterval(h);
 }
 
+/**
+ * Re-derive an order's money from its live lines.
+ *
+ * This is the figure that actually reaches the database — `createOrderBody`
+ * ships this `taxAmount`/`netAmount`, and `collectPaymentBody` bills this
+ * `netAmount`. It used to do its own arithmetic: always the cash rate, the
+ * enabled flags ignored entirely, `pos_branding` re-parsed out of localStorage
+ * on every single item add and only at the top level (so a rate delivered under
+ * `branding.pos.*` silently fell back to a hardcoded 5%). The cart could show
+ * one total and the server receive another, and a tenant with tax switched off
+ * was charged anyway.
+ *
+ * Now the same `computeTotals` the cart uses, off the same reactive branding
+ * store the rest of the app reads ([[architecture/settings-persistence]]'s
+ * rule — no component parses `pos_branding` by hand).
+ *
+ * `paymentMethod` is only known once a payment is collected; before that an
+ * order is priced at the cash rate, which is what the kitchen ticket and the
+ * pre-payment bill both assume.
+ */
 function recalc(orders: Record<string, OrderView>, orderId: string) {
   const o = orders[orderId];
   if (!o) return;
   const active = o.items.filter((i) => !i.voided);
   const subtotal = active.reduce((s, i) => s + i.qty * i.unitPrice, 0);
-  let branding: any = {};
-  try { branding = JSON.parse(localStorage.getItem('pos_branding') ?? '{}'); } catch {}
-  const rate = branding.cashTaxRate ?? 5;
-  const taxAmount = Math.round((subtotal - o.discountAmount) * (rate / 100));
-  orders[orderId] = { ...o, subtotal, taxAmount, netAmount: subtotal - o.discountAmount + taxAmount };
+  const totals = computeTotals({
+    subtotal,
+    discount: o.discountAmount,
+    method: o.paymentMethod ?? 'CASH',
+    config: resolveTaxConfig(useBrandingStore.getState().branding),
+  });
+  orders[orderId] = {
+    ...o,
+    subtotal: totals.subtotal,
+    taxAmount: totals.taxAmount,
+    netAmount: totals.total,
+  };
 }
 
 // ─── REBUILD: replay all events on cold start ───────────────────────────────

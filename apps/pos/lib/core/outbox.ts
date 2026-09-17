@@ -7,6 +7,7 @@ import { getToken, getPosSession } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL, isApiConfigured, API_NOT_CONFIGURED } from '@/lib/api';
 import { getTerminalId } from './event-log';
+import { getBrandingConfig } from '@/lib/branding-store';
 
 // ─── The outbox: ships local events to the server (spec Part 5) ────────────
 //
@@ -40,8 +41,7 @@ const CRITICAL_RETRY_MS = [500, 1000, 2000];  // spec: 3 fast retries for CRITIC
 // the terminal in pos_branding. Read live (cheap) with sane fallbacks.
 function syncCfg(): { requestTimeoutMs: number; maxLifetimeMs: number; maxBatchSize: number } {
   try {
-    const b = JSON.parse(localStorage.getItem('pos_branding') ?? '{}');
-    const p = { ...(b.pos ?? {}), ...b };
+    const p = getBrandingConfig();
     const timeout = Number(p.syncRequestTimeoutMs);
     const lifeHrs = Number(p.syncMaxEventLifetimeHours);
     const batch = Number(p.syncBatchSize);
@@ -534,13 +534,16 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
     }
     case 'UPDATE_STATUS':
       if (!order) return null;
-      return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, body: { status: task.status } };
+      // Keyed like the others: a status change runs applyOrderStatusSideEffects
+      // server-side (stock deduction on IN_KITCHEN, among others), so a re-sent
+      // op is not harmlessly repeatable.
+      return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `status:${opId}`, body: { status: task.status } };
     case 'COLLECT_PAYMENT':
       if (!order) return null;
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `pay:${opId}`, body: collectPaymentBody(order) };
     case 'REQUEST_BILL':
       if (!order) return null;
-      return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, body: { billRequestedAt: task.billRequestedAt ?? null } };
+      return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `bill:${opId}`, body: { billRequestedAt: task.billRequestedAt ?? null } };
     case 'UPDATE_TABLE_STATUS':
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: task.aggregateId, body: { status: task.status } };
     case 'CLEAN_TABLE':
@@ -589,10 +592,18 @@ async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
     if (!res.ok) throw classifyHttpError(res.status);
     return true;
   }
-  const body = task.kind === 'COLLECT_PAYMENT' ? collectPaymentBody(order)
-    : task.kind === 'REQUEST_BILL' ? { billRequestedAt: task.billRequestedAt ?? null }
-    : { status: task.status };
-  const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify(body) });
+  // The batch path has always sent an idempotency key for these; the REST
+  // fallback sent none, so the one path most likely to be retried (the batch
+  // endpoint is unavailable — i.e. something is already wrong) was the one with
+  // no protection against a payment being applied twice.
+  const opId = task.eventIds.join(',');
+  const { body, idempotencyKey } =
+    task.kind === 'COLLECT_PAYMENT' ? { body: collectPaymentBody(order), idempotencyKey: `pay:${opId}` }
+    : task.kind === 'REQUEST_BILL' ? { body: { billRequestedAt: task.billRequestedAt ?? null }, idempotencyKey: `bill:${opId}` }
+    : { body: { status: task.status }, idempotencyKey: `status:${opId}` };
+  const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}`, {
+    method: 'PUT', headers: authHeaders(idempotencyKey), body: JSON.stringify(body),
+  });
   if (!res.ok) throw classifyHttpError(res.status);
   return true;
 }

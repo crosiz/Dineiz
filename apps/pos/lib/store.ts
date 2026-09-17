@@ -5,6 +5,7 @@ import { getDB } from './db';
 import { TAX_RATE as DEFAULT_TAX_RATE } from './constants';
 import { getPosSession } from './pos-session';
 import { API_URL } from '@/lib/api';
+import { computeTotals, resolveTaxConfig, type Totals } from './pricing';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,6 +122,9 @@ interface CartStore {
   subtotal: () => number;
   discountAmount: () => number;
   taxAmount: (paymentMethod?: string) => number;
+  serviceChargeAmount: (paymentMethod?: string) => number;
+  /** Full breakdown for the live cart — the source every figure above reads. */
+  totalsFor: (paymentMethod?: string) => Totals;
   cashTaxAmount: () => number;
   cardTaxAmount: () => number;
   cashTotal: () => number;
@@ -130,6 +134,8 @@ interface CartStore {
 
   // Combined totals (existing + new)
   combinedSubtotal: () => number;
+  combinedTotalsFor: (paymentMethod?: string) => Totals;
+  combinedServiceCharge: (paymentMethod?: string) => number;
   combinedTaxAmount: (paymentMethod?: string) => number;
   combinedTotal: (paymentMethod?: string) => number;
   combinedDiscountAmount: () => number;
@@ -490,41 +496,27 @@ export const useCartStore = create<CartStore>()(
           return Math.min(d.value, sub); // never discount more than subtotal
         },
 
-        // Helpers for dual-tax
-        cashTaxAmount: () => {
-          if (get().session.cashTaxEnabled === false) return 0;
-          const taxable = get().subtotal() - get().discountAmount();
-          const rate = get().session.cashTaxRate ?? 0.05;
-          return Math.round(taxable * rate);
-        },
-        cardTaxAmount: () => {
-          if (get().session.cardTaxEnabled === false) return 0;
-          const taxable = get().subtotal() - get().discountAmount();
-          const rate = get().session.cardTaxRate ?? 0.17;
-          return Math.round(taxable * rate);
-        },
-        cashTotal: () => {
-          const taxable = get().subtotal() - get().discountAmount();
-          return taxable + get().cashTaxAmount();
-        },
-        cardTotal: () => {
-          const taxable = get().subtotal() - get().discountAmount();
-          return taxable + get().cardTaxAmount();
-        },
+        // Every figure below comes from lib/pricing.ts's computeTotals, so the
+        // cart, the event store, the outbox body and the receipt cannot
+        // disagree about what an order costs — which they used to, three
+        // different ways. See that file's header.
+        cashTaxAmount: () => get().totalsFor('CASH').taxAmount,
+        cardTaxAmount: () => get().totalsFor('CARD').taxAmount,
+        cashTotal: () => get().totalsFor('CASH').total,
+        cardTotal: () => get().totalsFor('CARD').total,
 
-        taxAmount: (paymentMethod?: string) => {
-          const method = paymentMethod ?? get().activePaymentMethod ?? 'CASH';
-          const CARD_METHODS = ['CARD', 'JAZZCASH', 'EASYPAISA', 'BANK_TRANSFER', 'ONLINE'];
-          const isCard = CARD_METHODS.includes(method.toUpperCase());
-          return isCard ? get().cardTaxAmount() : get().cashTaxAmount();
-        },
-        total: (paymentMethod?: string) => {
-          const method = paymentMethod ?? get().activePaymentMethod ?? 'CASH';
-          const sub = get().subtotal();
-          const disc = get().discountAmount();
-          const tax = get().taxAmount(method);
-          return sub - disc + tax;
-        },
+        serviceChargeAmount: (paymentMethod?: string) => get().totalsFor(paymentMethod).serviceCharge,
+        taxAmount: (paymentMethod?: string) => get().totalsFor(paymentMethod).taxAmount,
+        total: (paymentMethod?: string) => get().totalsFor(paymentMethod).total,
+
+        /** Full breakdown for the live cart under a given payment method. */
+        totalsFor: (paymentMethod?: string) =>
+          computeTotals({
+            subtotal: get().subtotal(),
+            discount: get().discountAmount(),
+            method: paymentMethod ?? get().activePaymentMethod ?? 'CASH',
+            config: resolveTaxConfig(get().session),
+          }),
         totalItems: () => get().cart.reduce((acc, c) => acc + c.quantity, 0),
 
         combinedItems: () => {
@@ -553,27 +545,26 @@ export const useCartStore = create<CartStore>()(
           const s = get();
           return (Number(s.existingOrderData?.discountAmount) || 0) + s.discountAmount();
         },
-        combinedTaxAmount: (paymentMethod?: string) => {
+        /**
+         * Breakdown for an existing order plus whatever is being added to it.
+         *
+         * The old `combinedTaxAmount` inlined its own rate lookup and — unlike
+         * its sibling `taxAmount` — never checked `cashTaxEnabled`/
+         * `cardTaxEnabled`, so a tenant with tax switched off was still charged
+         * on every add-items checkout.
+         */
+        combinedTotalsFor: (paymentMethod?: string) => {
           const s = get();
-          const method = paymentMethod ?? s.activePaymentMethod ?? 'CASH';
-          const CARD_METHODS = ['CARD', 'JAZZCASH', 'EASYPAISA', 'BANK_TRANSFER', 'ONLINE'];
-          const isCard = CARD_METHODS.includes(method.toUpperCase());
-          const rate = isCard ? (s.session.cardTaxRate ?? 0.17) : (s.session.cashTaxRate ?? 0.05);
-          
-          const combinedSub = s.combinedSubtotal();
-          // existingOrderData discount is already factored in, but if there's a new discount we might apply it.
-          // Actually, if we just recalculate tax on the whole (existing subtotal + new subtotal - existing discount - new discount):
-          const totalDisc = s.combinedDiscountAmount();
-          const taxable = combinedSub - totalDisc;
-          return Math.round(taxable * rate);
+          return computeTotals({
+            subtotal: s.combinedSubtotal(),
+            discount: s.combinedDiscountAmount(),
+            method: paymentMethod ?? s.activePaymentMethod ?? 'CASH',
+            config: resolveTaxConfig(s.session),
+          });
         },
-        combinedTotal: (paymentMethod?: string) => {
-          const s = get();
-          const combinedSub = s.combinedSubtotal();
-          const totalDisc = s.combinedDiscountAmount();
-          const tax = s.combinedTaxAmount(paymentMethod);
-          return combinedSub - totalDisc + tax;
-        },
+        combinedServiceCharge: (paymentMethod?: string) => get().combinedTotalsFor(paymentMethod).serviceCharge,
+        combinedTaxAmount: (paymentMethod?: string) => get().combinedTotalsFor(paymentMethod).taxAmount,
+        combinedTotal: (paymentMethod?: string) => get().combinedTotalsFor(paymentMethod).total,
 
         // Active payment method state
         activePaymentMethod: 'CASH',

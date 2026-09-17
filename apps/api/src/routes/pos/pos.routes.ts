@@ -509,13 +509,28 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
           case 'COLLECT_PAYMENT':
           case 'REQUEST_BILL': {
             if (!target) { results.push({ opId: op.opId, ok: false, status: 409, permanent: false, error: 'no target order yet' }); break; }
-            const prior = await prisma.order.findUnique({ where: { id: target, tenantId }, select: { status: true } });
-            const order = await updateOrder(tenantId, target, op.body);
-            await applyOrderStatusSideEffects(tenantId, order, prior?.status ?? null, {
-              payments: op.body?.payments,
-              redeemedPointsAmount: op.body?.redeemedPointsAmount,
-            });
-            results.push({ opId: op.opId, ok: true, status: 200, body: { id: order.id, status: order.status } });
+            // These were the only ops NOT wrapped in withIdempotency, even
+            // though the client has always sent `idempotencyKey: pay:<opId>`
+            // for COLLECT_PAYMENT. That mattered: the outbox's stall detector
+            // can restart the engine while a request is still in flight and
+            // re-send the same op, and applyOrderStatusSideEffects is not
+            // idempotent on its own — a replay writes a second Payment row,
+            // accrues loyalty points twice and deducts stock twice. Real money,
+            // silently doubled.
+            const { statusCode, body } = await withIdempotency(
+              tenantId, `PUT /api/orders/:id#${op.kind}`, op.idempotencyKey,
+              async () => {
+                const prior = await prisma.order.findUnique({ where: { id: target, tenantId }, select: { status: true } });
+                const order = await updateOrder(tenantId, target, op.body);
+                await applyOrderStatusSideEffects(tenantId, order, prior?.status ?? null, {
+                  payments: op.body?.payments,
+                  redeemedPointsAmount: op.body?.redeemedPointsAmount,
+                });
+                return { statusCode: 200, body: { id: order.id, status: order.status } };
+              },
+            );
+            results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body });
+            if (statusCode >= 300) failedAggregates.add(op.aggregateId);
             break;
           }
 

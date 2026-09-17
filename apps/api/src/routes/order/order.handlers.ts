@@ -143,21 +143,39 @@ export async function handleUpdateOrder(request: FastifyRequest, reply: FastifyR
   const tenantId = request.user!.tenantId!;
   const { id } = request.params as any;
 
-  // Sync Point 4: capture the pre-update status so a transition into CANCELLED
-  // can tell whether the order ever reached the kitchen (restore stock) or not (log wastage instead).
-  const priorOrder = await prisma.order.findUnique({ where: { id, tenantId }, select: { status: true } });
+  // Same reasoning as handleCreateOrder / handleAppendOrderItems, and for the
+  // same reason it matters more here: applyOrderStatusSideEffects is NOT
+  // idempotent — a replay writes a second Payment row, accrues loyalty points
+  // again and deducts stock again. The POS outbox retries this endpoint (it is
+  // the REST fallback for COLLECT_PAYMENT / UPDATE_STATUS / REQUEST_BILL) and
+  // its stall detector can re-send an op that is still in flight, so a
+  // timed-out-but-actually-succeeded payment was doubling real money.
+  const idempotencyKey = request.headers['x-idempotency-key'] as string | undefined;
 
-  const order = await updateOrder(tenantId, id, request.body);
+  const { statusCode, body } = await withIdempotency(
+    tenantId,
+    'PUT /api/orders/:id',
+    idempotencyKey,
+    async () => {
+      // Sync Point 4: capture the pre-update status so a transition into CANCELLED
+      // can tell whether the order ever reached the kitchen (restore stock) or not (log wastage instead).
+      const priorOrder = await prisma.order.findUnique({ where: { id, tenantId }, select: { status: true } });
 
-  // Table status (free/occupied), inventory reversal on cancel, cache
-  // invalidation, and the COMPLETED/CANCELLED event bundle — shared with
-  // the KDS and mobile status-update paths (order.service.ts) so all three
-  // behave identically instead of each reimplementing a subset of this.
-  await applyOrderStatusSideEffects(tenantId, order, priorOrder?.status ?? null, {
-    payments: (request.body as any).payments,
-    redeemedPointsAmount: (request.body as any).redeemedPointsAmount,
-  });
-  return order;
+      const order = await updateOrder(tenantId, id, request.body);
+
+      // Table status (free/occupied), inventory reversal on cancel, cache
+      // invalidation, and the COMPLETED/CANCELLED event bundle — shared with
+      // the KDS and mobile status-update paths (order.service.ts) so all three
+      // behave identically instead of each reimplementing a subset of this.
+      await applyOrderStatusSideEffects(tenantId, order, priorOrder?.status ?? null, {
+        payments: (request.body as any).payments,
+        redeemedPointsAmount: (request.body as any).redeemedPointsAmount,
+      });
+      return { statusCode: 200, body: order };
+    },
+  );
+
+  return reply.status(statusCode).send(body);
 }
 
 export async function handleAppendOrderItems(request: FastifyRequest, reply: FastifyReply) {

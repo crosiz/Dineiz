@@ -16,6 +16,7 @@ import { SocketProvider, useSocket } from '@/contexts/SocketContext';
 import { POSTopBar } from '@/components/POSTopBar';
 import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
+import { resolveTaxConfig } from '@/lib/pricing';
 import { QuickStockAlertModal, StockAlertPayload } from '@/components/QuickStockAlertModal';
 import { OrphanResolutionModal, OrphanOrder } from '@/components/shift/OrphanResolutionModal';
 import { ManagerOverlayBar } from '@/components/ManagerOverlayBar';
@@ -49,22 +50,27 @@ function applyBranding() {
     root.style.setProperty('--pos-primary-dim', branding.primaryColor + '1F');
   }
 
-  if (branding.cashTaxRate !== undefined || branding.cardTaxRate !== undefined) {
-    useCartStore.getState().setSession({
-      cashTaxEnabled: branding.cashTaxEnabled ?? false,
-      cashTaxRate: (branding.cashTaxRate ?? 5) / 100,
-      cashTaxLabel: branding.cashTaxLabel ?? 'GST (Cash)',
-      cashTaxNote: branding.cashTaxNote ?? null,
-      cardTaxEnabled: branding.cardTaxEnabled ?? false,
-      cardTaxRate: (branding.cardTaxRate ?? 17) / 100,
-      cardTaxLabel: branding.cardTaxLabel ?? 'GST (Card/Digital)',
-      cardTaxNote: branding.cardTaxNote ?? null,
-      showDualTaxOnReceipt: branding.showDualTaxOnReceipt ?? true,
-      taxRoundingMethod: branding.taxRoundingMethod ?? 'ROUND',
-      serviceChargeEnabled: branding.serviceChargeEnabled ?? false,
-      serviceChargeRate: branding.serviceChargeRate ?? 10,
-    });
-  }
+  // One resolver (lib/pricing.ts) rather than a hand-rolled copy per call site:
+  // it merges `branding.pos.*` over the top level, normalises percent-vs-decimal
+  // rates, and defaults consistently. This block and handleBrandingUpdated below
+  // used to do it twice, slightly differently — the socket copy silently dropped
+  // cashTaxNote/cardTaxNote and the service-charge fields, so a live push from
+  // the admin panel could leave the terminal in a state a page reload wouldn't.
+  const tax = resolveTaxConfig(branding);
+  useCartStore.getState().setSession({
+    cashTaxEnabled: tax.cashTaxEnabled,
+    cashTaxRate: tax.cashTaxRate,
+    cashTaxLabel: tax.cashTaxLabel,
+    cashTaxNote: tax.cashTaxNote,
+    cardTaxEnabled: tax.cardTaxEnabled,
+    cardTaxRate: tax.cardTaxRate,
+    cardTaxLabel: tax.cardTaxLabel,
+    cardTaxNote: tax.cardTaxNote,
+    showDualTaxOnReceipt: tax.showDualTaxOnReceipt,
+    taxRoundingMethod: tax.taxRoundingMethod,
+    serviceChargeEnabled: tax.serviceChargeEnabled,
+    serviceChargeRate: tax.serviceChargeRate,
+  });
 
   if (branding.currency) {
     useCartStore.getState().setSession({ currency: branding.currency });
@@ -394,25 +400,13 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       const updated = { ...existing, ...data };
       setBranding(updated);
       localStorage.setItem('pos_branding', JSON.stringify(updated));
-      
-      if (data.primaryColor) {
-        document.documentElement.style.setProperty('--pos-primary', data.primaryColor);
-        document.documentElement.style.setProperty('--pos-primary-dim', data.primaryColor + '1F');
-      }
-
-      if (data.cashTaxRate !== undefined || data.cardTaxRate !== undefined) {
-        useCartStore.getState().setSession({
-          cashTaxEnabled: data.cashTaxEnabled ?? false,
-          cashTaxRate: (data.cashTaxRate ?? 5) / 100,
-          cashTaxLabel: data.cashTaxLabel ?? 'GST (Cash)',
-          cardTaxEnabled: data.cardTaxEnabled ?? false,
-          cardTaxRate: (data.cardTaxRate ?? 17) / 100,
-          cardTaxLabel: data.cardTaxLabel ?? 'GST (Card/Digital)',
-          showDualTaxOnReceipt: data.showDualTaxOnReceipt ?? true,
-          taxRoundingMethod: data.taxRoundingMethod ?? 'ROUND',
-        });
-      }
-
+      // A live push is a PARTIAL diff, so derive from the merged result, not
+      // from `data` — and go through applyBranding so a push and a reload
+      // produce identical state. The previous inline copy read `data.*` with
+      // its own defaults, meaning a push that didn't happen to include, say,
+      // cashTaxEnabled reset it to false on this terminal until the next
+      // reload.
+      applyBranding();
       toast.info('Settings synced from Admin Panel');
     };
 

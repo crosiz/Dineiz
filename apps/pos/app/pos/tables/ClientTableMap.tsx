@@ -15,6 +15,7 @@ import { useTopBar } from '@/hooks/useTopBar';
 import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views';
 import { setTableStatus, markTableCleaned } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
+import { formatPKR } from '@/lib/utils';
 import {
   ZoomIn,
   ZoomOut,
@@ -713,7 +714,7 @@ export default function ClientTableMap() {
                 <div className="flex justify-between items-center text-slate-500 font-medium pb-1.5 border-b border-slate-200">
                   <span>Order #{popupOrder.orderNumber || popupOrder.id?.slice(-4)}</span>
                   <span className="text-amber-600 font-extrabold">
-                    Rs. {(popupOrder.total || popupOrder.totalAmount || 0).toLocaleString()}
+                    {formatPKR(popupOrder.total || popupOrder.totalAmount || 0)}
                   </span>
                 </div>
                 <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
@@ -723,7 +724,7 @@ export default function ClientTableMap() {
                         {item.quantity}x {item.name || item.item?.name || item.menuItem?.name || 'Item'}
                       </span>
                       <span className="text-slate-500 font-medium">
-                        Rs. {((item.subtotal || (item.unitPrice * item.quantity)) || 0).toLocaleString()}
+                        {formatPKR((item.subtotal || (item.unitPrice * item.quantity)) || 0)}
                       </span>
                     </div>
                   ))}
