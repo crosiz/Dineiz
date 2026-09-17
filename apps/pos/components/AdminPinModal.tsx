@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPosSession, getToken } from '@/lib/pos-session'
 import { API_URL } from '@/lib/api';
+import { Delete, Lock } from 'lucide-react';
 
 interface AdminPinModalProps {
   onClose: () => void
@@ -94,7 +95,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
         {/* Lock icon */}
         <div className="text-center mb-2">
           <div className="w-13 h-13 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 border border-[var(--pos-primary,#F59E0B)]/30 flex items-center justify-center mx-auto mb-3">
-            <span className="material-symbols-outlined text-[var(--pos-primary,#F59E0B)] text-[26px]">lock</span>
+            <Lock className="text-[var(--pos-primary,#F59E0B)] w-[26px] h-[26px]" />
           </div>
           <h2 className="text-[#0F172A] text-[18px] font-bold clash-display">Manager Access</h2>
           <p className="text-[#64748B] text-[13px] mt-1.5">Enter your 4-digit manager PIN</p>
@@ -133,7 +134,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
                 onClick={() => handleKey(isDel ? 'DEL' : key)}
                 className="h-[58px] rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[#0F172A] font-bold text-[20px] flex items-center justify-center hover:bg-[#E2E8F0] active:scale-95 transition-all"
               >
-                {isDel ? <span className="material-symbols-outlined text-[#64748B] text-[20px]">backspace</span> : key}
+                {isDel ? <Delete className="text-[#64748B] w-[20px] h-[20px]" /> : key}
               </button>
             )
           })}

@@ -6,6 +6,7 @@ import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
+import { CheckSquare, Circle, CircleDot, Square, X } from 'lucide-react';
 
 // ─── Variation Picker Bottom Sheet ──────────────────────────────
 export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClose: () => void }) {
@@ -95,9 +96,9 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                       <span className="text-[16px] font-semibold text-[#0F172A]">{v.name}</span>
                       {v.price > 0 && <span className="text-[12px] font-bold text-[var(--pos-primary,#F59E0B)]">+ PKR {v.price}</span>}
                     </div>
-                    <span className={`material-symbols-outlined ${selectedVarId === v.id ? 'text-[var(--pos-primary,#F59E0B)]' : 'text-[#CBD5E1]'}`} style={selectedVarId === v.id ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                      {selectedVarId === v.id ? 'radio_button_checked' : 'radio_button_unchecked'}
-                    </span>
+                    {selectedVarId === v.id
+                      ? <CircleDot className="w-6 h-6 text-[var(--pos-primary,#F59E0B)]" />
+                      : <Circle className="w-6 h-6 text-[#CBD5E1]" />}
                   </label>
                 ))}
               </div>
@@ -131,9 +132,9 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                         <span className="text-[16px] font-semibold text-[#0F172A]">{a.name}</span>
                         {a.price > 0 && <span className="text-[12px] font-bold text-[var(--pos-primary,#F59E0B)]">+ PKR {a.price}</span>}
                       </div>
-                      <span className={`material-symbols-outlined ${selectedAddOnIds.has(a.id) ? 'text-[var(--pos-primary,#F59E0B)]' : 'text-[#CBD5E1]'}`} style={selectedAddOnIds.has(a.id) ? { fontVariationSettings: "'FILL' 1" } : {}}>
-                        {selectedAddOnIds.has(a.id) ? 'check_box' : 'check_box_outline_blank'}
-                      </span>
+                      {selectedAddOnIds.has(a.id)
+                        ? <CheckSquare className="w-6 h-6 text-[var(--pos-primary,#F59E0B)]" />
+                        : <Square className="w-6 h-6 text-[#CBD5E1]" />}
                     </label>
                   ))}
                 </div>
@@ -233,7 +234,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-[#0F172A]">Apply Discount</h2>
           <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors">
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <X className="w-[20px] h-[20px]" />
           </button>
         </div>
 

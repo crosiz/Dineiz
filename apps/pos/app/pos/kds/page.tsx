@@ -7,7 +7,18 @@ import { useSocket } from '@/contexts/SocketContext';
 import { getPosSession, clearPosSession, getToken } from '@/lib/pos-session';
 import { useTerminalSettings } from '@/lib/terminal-settings';
 import { toast } from 'sonner';
-import { Check, Settings, RefreshCw, LogOut, X } from 'lucide-react';
+import {
+  Check,
+  CheckCircle2,
+  Clock as ClockIcon,
+  Loader2,
+  LogOut,
+  Printer,
+  RefreshCw,
+  Settings,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react';
 import { DineizLogo } from '@/components/ui/DineizLogo';
 import { API_URL } from '@/lib/api';
 
@@ -547,7 +558,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
           {order.takeawayToken && <span className="text-[14px] font-medium opacity-80">#{order.takeawayToken}</span>}
         </div>
         <div className="flex items-center gap-1.5 bg-black/20 px-2.5 py-1 rounded-full text-[14px] font-bold shadow-sm">
-          <span className="material-symbols-outlined text-[16px]">schedule</span>
+          <ClockIcon className="w-[16px] h-[16px]" />
           <span>{timeStr}</span>
         </div>
       </div>
@@ -558,7 +569,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
             {order.type.replace('-', ' ')}
           </span>
           <div className="flex items-center gap-1.5 text-[#eab308] text-[12px] font-bold">
-            <span className="material-symbols-outlined text-[16px]">restaurant_menu</span>
+            <UtensilsCrossed className="w-[16px] h-[16px]" />
             <span>Cooking</span>
           </div>
         </div>
@@ -606,14 +617,14 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
           disabled={isReprinting}
           className="flex-[0.8] h-11 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
         >
-          <span className="material-symbols-outlined text-[16px]">{isReprinting ? 'hourglass_top' : 'print'}</span>
+          {isReprinting ? <Loader2 className="animate-spin w-[16px] h-[16px]" /> : <Printer className="w-[16px] h-[16px]" />}
           KOT
         </button>
         <button
           onClick={handleMarkReady}
           className="flex-[1.2] h-11 rounded-md bg-[#10b981] hover:bg-[#059669] text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
         >
-          <span className="material-symbols-outlined text-[16px]">check_circle</span>
+          <CheckCircle2 className="w-[16px] h-[16px]" />
           Bump
         </button>
       </div>

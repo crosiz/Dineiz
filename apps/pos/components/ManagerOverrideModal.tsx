@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AlertCircle, Delete, Loader2, ShieldCheck } from 'lucide-react';
 
 interface ManagerOverrideModalProps {
   isOpen: boolean;
@@ -82,7 +83,7 @@ export function ManagerOverrideModal({
       >
         <div className="p-8 pb-6 flex flex-col items-center text-center shrink-0">
           <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-5 shadow-md shadow-slate-900/20">
-            <span className="material-symbols-outlined text-white text-[32px]">admin_panel_settings</span>
+            <ShieldCheck className="text-white w-[32px] h-[32px]" />
           </div>
           <h2 className="text-[26px] font-bold text-slate-900 tracking-tight leading-tight mb-2">{title}</h2>
           <p className="text-[15px] text-slate-500 font-medium px-4">{description}</p>
@@ -91,7 +92,7 @@ export function ManagerOverrideModal({
         <div className="px-8 pb-4 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-6 p-4 bg-rose-50 rounded-[16px] border border-rose-100 flex items-start gap-3">
-              <span className="material-symbols-outlined text-rose-500 text-[20px] shrink-0">error</span>
+              <AlertCircle className="text-rose-500 shrink-0 w-[20px] h-[20px]" />
               <p className="text-rose-700 text-[14px] font-medium leading-snug">{error}</p>
             </div>
           )}
@@ -134,7 +135,7 @@ export function ManagerOverrideModal({
               onClick={handleBackspace}
               className="h-[60px] rounded-[16px] bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 active:scale-95 transition-all"
             >
-              <span className="material-symbols-outlined text-[28px]">backspace</span>
+              <Delete className="w-[28px] h-[28px]" />
             </button>
           </div>
 
@@ -156,7 +157,7 @@ export function ManagerOverrideModal({
             disabled={isSubmitting || pin.length !== 4 || !reason.trim()}
             className="w-full h-[56px] rounded-[16px] bg-slate-900 text-white font-bold text-[16px] hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-slate-900 active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex items-center justify-center disabled:active:scale-100"
           >
-            {isSubmitting ? <span className="material-symbols-outlined animate-spin text-[24px]">progress_activity</span> : confirmLabel}
+            {isSubmitting ? <Loader2 className="animate-spin w-[24px] h-[24px]" /> : confirmLabel}
           </button>
           <button
             onClick={onClose}

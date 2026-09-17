@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { DineizLogo } from '@/components/ui/DineizLogo';
 import { getPosBreak, clearPosBreak } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
+import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, type LucideIcon } from 'lucide-react';
 
 const PIN_LENGTH = 4;
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace', '0', 'confirm'];
@@ -52,14 +53,14 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       let label = roleId.replace(/_/g, ' ');
       label = label.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
-      let icon = 'account_circle';
-      if (roleId === 'BRANCH_MANAGER' || roleId === 'MANAGER') icon = 'manage_accounts';
-      else if (roleId === 'HEAD_CASHIER' || roleId === 'CASHIER') icon = 'payments';
-      else if (roleId === 'KITCHEN_STAFF') icon = 'outdoor_grill';
-      else if (roleId === 'RIDER' || roleId === 'DELIVERY') icon = 'delivery_dining';
-      else if (roleId === 'WAITER') icon = 'restaurant';
+      let Icon: LucideIcon = CircleUser;
+      if (roleId === 'BRANCH_MANAGER' || roleId === 'MANAGER') Icon = UserCog;
+      else if (roleId === 'HEAD_CASHIER' || roleId === 'CASHIER') Icon = Banknote;
+      else if (roleId === 'KITCHEN_STAFF') Icon = ChefHat;
+      else if (roleId === 'RIDER' || roleId === 'DELIVERY') Icon = Bike;
+      else if (roleId === 'WAITER') Icon = Utensils;
 
-      return { id: roleId, label, icon };
+      return { id: roleId, label, Icon };
     });
   }, [staffList]);
 
@@ -584,7 +585,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               <h2 className="text-[20px] font-semibold text-[#0F172A] mb-2 flex flex-col cursor-pointer hover:text-slate-600 transition-colors" onClick={promptBranchChange} title="Click to change branch">
                 <span className="flex items-center gap-2">
                   {activeBranchName}
-                  <span className="material-symbols-outlined text-[16px] text-[#64748B]">edit</span>
+                  <Pencil className="text-[#64748B] w-[16px] h-[16px]" />
                 </span>
                 <span className="text-[12px] text-[#64748B] font-semibold tracking-wide uppercase mt-1">Terminal Linked</span>
               </h2>
@@ -638,7 +639,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           title="Tap to change branch"
         >
           {activeBranchName}
-          <span className="material-symbols-outlined text-[14px] text-[#64748B]">edit</span>
+          <Pencil className="text-[#64748B] w-[14px] h-[14px]" />
         </button>
         {isBreakMode && (
           <div className="mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
@@ -673,10 +674,10 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                 onClick={() => setSelectedRole(role.id)}
               >
                 <div className="flex items-center gap-4">
-                  <span className="material-symbols-outlined text-[#64748B] group-hover:text-[var(--pos-primary,#F59E0B)] transition-colors">{role.icon}</span>
+                  <role.Icon className="w-5 h-5 text-[#64748B] group-hover:text-[var(--pos-primary,#F59E0B)] transition-colors" />
                   <span className="font-bold text-[#0F172A]">{role.label}</span>
                 </div>
-                <span className="material-symbols-outlined text-[#64748B] chevron transition-transform group-hover:translate-x-1">chevron_right</span>
+                <ChevronRight className="text-[#64748B] chevron transition-transform group-hover:translate-x-1 w-[20px] h-[20px]" />
               </button>
             ))}
           </div>
@@ -689,7 +690,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               className="flex items-center gap-2 mx-auto text-[#64748B] hover:text-[var(--pos-primary,#F59E0B)] transition-colors group"
               onClick={() => setSelectedRole(null)}
             >
-              <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+              <ArrowLeft className="group-hover:-translate-x-1 transition-transform w-[16px] h-[16px]" />
               <span className="text-[12px] font-bold uppercase tracking-wider">Change Role</span>
             </button>
             <div>
@@ -719,7 +720,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   <span className="font-bold text-[#0F172A] group-hover:text-[#0F172A] transition-colors">{staff.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[#64748B] transition-transform group-hover:translate-x-1 group-hover:text-[var(--pos-primary,#F59E0B)]">chevron_right</span>
+                  <ChevronRight className="text-[#64748B] transition-transform group-hover:translate-x-1 group-hover:text-[var(--pos-primary,#F59E0B)] w-[20px] h-[20px]" />
                 </div>
               </button>
             ))}
@@ -740,7 +741,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   }}
                   disabled={lockoutTimer > 0 || pinStatus === 'loading'}
                 >
-                  <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                  <ArrowLeft className="group-hover:-translate-x-1 transition-transform w-[16px] h-[16px]" />
                   <span className="text-[12px] font-bold uppercase tracking-wider">Change User</span>
                 </button>
                 <div className="pt-2">
@@ -801,7 +802,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                         disabled={lockoutTimer > 0}
                         className="flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#F8FAFC] rounded-xl border border-[#CBD5E1] hover:bg-[#E2E8F0] active:scale-95 transition-all disabled:opacity-50 shadow-sm"
                       >
-                        <span className="material-symbols-outlined text-[#475569]">backspace</span>
+                        <Delete className="text-[#475569] w-[20px] h-[20px]" />
                       </button>
                     );
                   }
@@ -819,9 +820,9 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                         style={isReady && lockoutTimer === 0 ? { backgroundColor: 'var(--pos-primary, #F59E0B)', borderColor: 'var(--pos-primary, #F59E0B)', color: '#FFFFFF' } : {}}
                       >
                         {pinStatus === 'loading' ? (
-                          <span className="material-symbols-outlined animate-spin text-white">progress_activity</span>
+                          <Loader2 className="animate-spin text-white w-[20px] h-[20px]" />
                         ) : (
-                          <span className="material-symbols-outlined text-white">login</span>
+                          <LogIn className="text-white w-[20px] h-[20px]" />
                         )}
                       </button>
                     );
@@ -844,8 +845,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
         {/* Decorative Icons */}
         <div className="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none text-[#64748B]">
-          <span className="material-symbols-outlined text-4xl">wifi</span>
-          <span className="material-symbols-outlined text-4xl">battery_charging_full</span>
+          <Wifi className="w-[36px] h-[36px]" />
+          <BatteryCharging className="w-[36px] h-[36px]" />
         </div>
 
         {/* Custom scrollbar CSS */}

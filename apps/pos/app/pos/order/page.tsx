@@ -55,7 +55,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
           onClick={() => removeItem(cartItem.itemId, cartItem.selectedVariation?.id)}
           className="w-full h-full text-white font-bold flex flex-col items-center justify-center hover:bg-rose-700 transition-colors"
         >
-          <span className="material-symbols-outlined mb-1">delete</span>
+          <Trash2 className="mb-1 w-[20px] h-[20px]" />
           <span className="text-[10px] uppercase tracking-wider">Delete</span>
         </button>
       </div>
@@ -90,11 +90,11 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
                 minimum every other primary control in this file follows. */}
             <div className="flex items-center bg-[#F8FAFC] rounded-full border border-[#CBD5E1] h-11 px-1">
               <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
-                <span className="material-symbols-outlined text-sm">remove</span>
+                <Minus className="w-[14px] h-[14px]" />
               </button>
               <span className="font-mono text-sm px-2 font-bold text-[#0F172A]">{cartItem.quantity}</span>
               <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
-                <span className="material-symbols-outlined text-sm">add</span>
+                <Plus className="w-[14px] h-[14px]" />
               </button>
             </div>
             {/* Desktop delete button */}
@@ -102,7 +102,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
               onClick={() => removeItem(cartItem.itemId, cartItem.selectedVariation?.id)}
               className="w-9 h-9 hidden lg:flex items-center justify-center hover:bg-rose-50 rounded-full text-rose-600 border border-transparent hover:border-rose-200 transition-all"
             >
-              <span className="material-symbols-outlined text-sm">delete</span>
+              <Trash2 className="w-[14px] h-[14px]" />
             </button>
           </div>
         </div>
@@ -1013,7 +1013,7 @@ function OrderEntryPageContent() {
         disabled={cart.length === 0}
         className="flex items-center justify-center px-4 h-10 rounded-lg bg-[#F1F5F9] hover:bg-[#E2E8F0] transition-colors border border-[#CBD5E1] text-[#0F172A] font-bold text-[13px] tracking-wide disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
       >
-        <span className="material-symbols-outlined mr-2 text-[18px]">pause</span>
+        <Pause className="mr-2 w-[18px] h-[18px]" />
         HOLD
       </button>
     )
@@ -1102,7 +1102,7 @@ function OrderEntryPageContent() {
                 this row ~80px past a 360px viewport, clipped by the section's
                 overflow-hidden with no visible sign anything was cut off. */}
             <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-[#CBD5E1] rounded-xl px-4 h-11 transition-colors focus-within:border-[var(--pos-primary,#F59E0B)] shadow-sm">
-              <span className="material-symbols-outlined text-[#94A3B8] text-[18px] shrink-0">search</span>
+              <Search className="text-[#94A3B8] shrink-0 w-[18px] h-[18px]" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -1111,7 +1111,7 @@ function OrderEntryPageContent() {
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-[#64748B] hover:text-[#0F172A] transition-colors shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  <X className="w-[18px] h-[18px]" />
                 </button>
               )}
             </div>
@@ -1123,21 +1123,21 @@ function OrderEntryPageContent() {
                 className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Grid View"
               >
-                <span className="material-symbols-outlined text-[18px]">grid_view</span>
+                <LayoutGrid className="w-[18px] h-[18px]" />
               </button>
               <button
                 onClick={() => handleViewChange('compact')}
                 className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'compact' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Compact View"
               >
-                <span className="material-symbols-outlined text-[18px]">view_list</span>
+                <Rows3 className="w-[18px] h-[18px]" />
               </button>
               <button
                 onClick={() => handleViewChange('large')}
                 className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'large' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
                 title="Hero View"
               >
-                <span className="material-symbols-outlined text-[18px]">web_stories</span>
+                <GalleryVerticalEnd className="w-[18px] h-[18px]" />
               </button>
             </div>
           </div>
@@ -1311,7 +1311,7 @@ function OrderEntryPageContent() {
                   <span className="text-[13px] font-bold text-[#0F172A] truncate">{customerName || 'Customer'}</span>
                 </button>
                 <button onClick={() => setCustomer(null)} className="text-[#94A3B8] hover:text-[#DC2626] transition-colors shrink-0" title="Remove customer">
-                  <span className="material-symbols-outlined text-[16px]">close</span>
+                  <X className="w-[16px] h-[16px]" />
                 </button>
               </div>
             ) : (
@@ -1319,7 +1319,7 @@ function OrderEntryPageContent() {
                 onClick={() => setCustomerPickerOpen(true)}
                 className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-white text-[12px] font-bold transition-all"
               >
-                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <UserPlus className="w-[16px] h-[16px]" />
                 Attach Customer
               </button>
             )}
@@ -1328,14 +1328,14 @@ function OrderEntryPageContent() {
           {/* Order-context warning — blocks Kitchen/Charge until resolved */}
           {!orderType && (
             <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 shrink-0">
-              <span className="material-symbols-outlined text-amber-600 text-[20px]">info</span>
+              <Info className="text-amber-600 w-[20px] h-[20px]" />
               <p className="text-[13px] font-semibold text-[#92400E]">Select Dine-in, Takeaway, or Delivery above to continue.</p>
             </div>
           )}
           {needsTable && (
             <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2.5 shrink-0">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-amber-600 text-[20px]">table_restaurant</span>
+                <Armchair className="text-amber-600 w-[20px] h-[20px]" />
                 <p className="text-[13px] font-semibold text-[#92400E]">This dine-in order needs a table.</p>
               </div>
               <button
@@ -1371,7 +1371,7 @@ function OrderEntryPageContent() {
                           onClick={() => setVoidSheetState({ isOpen: true, item: i })}
                           className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-sm">delete</span>
+                          <Trash2 className="w-[14px] h-[14px]" />
                         </button>
                       </div>
                     </div>
@@ -1388,7 +1388,7 @@ function OrderEntryPageContent() {
 
             {cart.length === 0 && existingItems.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-[#94A3B8]">
-                <span className="material-symbols-outlined text-5xl mb-4 text-[#CBD5E1]">shopping_cart_checkout</span>
+                <ShoppingCart className="mb-4 text-[#CBD5E1] w-[48px] h-[48px]" />
                 <p className="font-bold text-lg text-[#0F172A]">Your cart is empty</p>
                 <p className="text-sm mt-1 max-w-[240px] text-[#64748B]">Select items from the menu to start building the order for Table {selectedTableId}.</p>
               </div>
@@ -1414,7 +1414,7 @@ function OrderEntryPageContent() {
                   onClick={() => { setShowKitchenNote(false); setOrderNote(''); }}
                   className="text-[#64748B] hover:text-[#0F172A] transition-colors"
                 >
-                  <span className="material-symbols-outlined text-sm">close</span>
+                  <X className="w-[14px] h-[14px]" />
                 </button>
               </div>
               <textarea
@@ -1458,19 +1458,19 @@ function OrderEntryPageContent() {
             <div className="space-y-2 pt-4">
               <div className="grid grid-cols-4 gap-2">
                 <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={() => setDiscountModalOpen(true)}>
-                  <span className="material-symbols-outlined text-sm">percent</span> Discount
+                  <Percent className="w-[14px] h-[14px]" /> Discount
                 </button>
                 <button className={`h-11 border rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 transition-colors shadow-sm ${showKitchenNote || orderNote ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-white text-[#0F172A] hover:bg-[#F1F5F9]'}`} onClick={() => setShowKitchenNote(!showKitchenNote)}>
-                  <span className="material-symbols-outlined text-sm">edit_note</span> Note
+                  <NotebookPen className="w-[14px] h-[14px]" /> Note
                 </button>
                 <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={() => {
                   if (cart.length === 0) return;
                   setConfirmClearOpen(true);
                 }}>
-                  <span className="material-symbols-outlined text-sm">delete</span> Clear
+                  <Trash2 className="w-[14px] h-[14px]" /> Clear
                 </button>
                 <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={holdOrder}>
-                  <span className="material-symbols-outlined text-sm">pause_circle</span> Hold
+                  <PauseCircle className="w-[14px] h-[14px]" /> Hold
                 </button>
               </div>
 
@@ -1487,9 +1487,9 @@ function OrderEntryPageContent() {
                     }`}
                 >
                   {kitchenLoading ? (
-                    <><span className="material-symbols-outlined animate-spin text-lg">progress_activity</span> SENDING...</>
+                    <><Loader2 className="animate-spin w-[18px] h-[18px]" /> SENDING...</>
                   ) : (
-                    <><span className="material-symbols-outlined text-lg">print</span> {paymentOrderId ? 'RE-SEND' : 'KITCHEN'}</>
+                    <><Printer className="w-[18px] h-[18px]" /> {paymentOrderId ? 'RE-SEND' : 'KITCHEN'}</>
                   )}
                 </button>
                 <button
@@ -1513,8 +1513,8 @@ function OrderEntryPageContent() {
                   }}
                 >
                   {chargeLoading
-                    ? <><span className="material-symbols-outlined animate-spin text-lg">progress_activity</span> CREATING...</>
-                    : <><span className="material-symbols-outlined text-lg">payments</span> CHARGE</>
+                    ? <><Loader2 className="animate-spin w-[18px] h-[18px]" /> CREATING...</>
+                    : <><Banknote className="w-[18px] h-[18px]" /> CHARGE</>
                   }
                 </button>
               </div>
@@ -1582,6 +1582,7 @@ function OrderEntryPageContent() {
 
 import { Suspense } from 'react';
 import { API_URL } from '@/lib/api';
+import { Armchair, Banknote, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X } from 'lucide-react';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);
@@ -1589,14 +1590,14 @@ export default function OrderEntryPage() {
 
   if (!isMounted) return (
     <div className="flex-1 flex items-center justify-center bg-[var(--pos-bg-base)] text-white h-full">
-      <span className="material-symbols-outlined animate-spin text-4xl text-[var(--pos-primary)]">progress_activity</span>
+      <Loader2 className="animate-spin text-[var(--pos-primary)] w-[36px] h-[36px]" />
     </div>
   );
 
   return (
     <Suspense fallback={
       <div className="flex-1 flex items-center justify-center bg-[var(--pos-bg-base)] text-white h-full">
-        <span className="material-symbols-outlined animate-spin text-4xl text-[var(--pos-primary)]">progress_activity</span>
+        <Loader2 className="animate-spin text-[var(--pos-primary)] w-[36px] h-[36px]" />
       </div>
     }>
       <OrderEntryPageContent />

@@ -18,6 +18,7 @@ import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { API_URL } from '@/lib/api';
+import { Armchair, ChevronDown, CircleUser, Clock, Columns3, LayoutGrid, ListFilter, Loader2, MessageSquare, Plus, Printer, QrCode, Rows3, Search, User, X, Zap } from 'lucide-react';
 
 interface Props {
   onViewChange?: (view: 'home' | 'menu' | 'tickets') => void;
@@ -161,13 +162,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     rightActions: (
       <div className="flex items-center gap-3">
         <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-[var(--pos-primary)] border-[var(--pos-primary)] text-white' : 'bg-white border-[#CBD5E1] text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`} title="Advanced Filter & History">
-          <span className="material-symbols-outlined transition-colors" style={{ fontSize: '22px' }}>filter_list</span>
+          <ListFilter className="w-[22px] h-[22px] transition-colors" />
         </button>
         <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-[#F8FAFC] transition-all border border-[#CBD5E1] text-[#475569] hover:text-[#0F172A] shadow-sm" title="Shift Summary">
-          <span className="material-symbols-outlined transition-colors" style={{ fontSize: '22px' }}>schedule</span>
+          <Clock className="w-[22px] h-[22px] transition-colors" />
         </button>
         <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-[#0F172A] border-[#0F172A] text-white' : 'bg-white border-[#CBD5E1] text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`} title="My Orders">
-          <span className="material-symbols-outlined transition-colors" style={{ fontSize: '22px' }}>account_circle</span>
+          <CircleUser className="w-[22px] h-[22px] transition-colors" />
         </button>
       </div>
     )
@@ -524,7 +525,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             {order.assignedWaiterName && (
               <div className="shrink-0 hidden sm:block">
                 <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-bold">
-                  <span className="material-symbols-outlined text-[12px]">person</span>
+                  <User className="w-[12px] h-[12px]" />
                   {order.assignedWaiterName}
                 </div>
               </div>
@@ -546,7 +547,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   title="Reprint Receipt"
                   className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   Reprint
                 </button>
               ) : (
@@ -579,7 +580,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   title="Print Bill"
                   className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[18px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                  {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
                   <span className="hidden md:inline">Bill</span>
                 </button>
               )}
@@ -592,7 +593,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   title="Message Customer"
                   className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors flex items-center gap-1.5"
                 >
-                  <span className="material-symbols-outlined text-[18px]">chat</span>
+                  <MessageSquare className="w-[18px] h-[18px]" />
                   <span className="hidden md:inline">Message</span>
                 </a>
               )}
@@ -615,19 +616,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
               {order.assignedWaiterName && (
                 <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <span className="material-symbols-outlined text-[10px]">person</span>
+                  <User className="w-[10px] h-[10px]" />
                   {order.assignedWaiterName.split(' ')[0]}
                 </div>
               )}
               {isQR && (
                 <div className="flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <span className="material-symbols-outlined text-[10px]">qr_code_2</span>
+                  <QrCode className="w-[10px] h-[10px]" />
                   QR
                 </div>
               )}
               {isWhatsApp && (
                 <div className="flex items-center gap-1 bg-[#25D366]/10 text-[#128C7E] border border-[#25D366]/30 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <span className="material-symbols-outlined text-[10px]">chat</span>
+                  <MessageSquare className="w-[10px] h-[10px]" />
                   WhatsApp
                 </div>
               )}
@@ -686,7 +687,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                     title="Print Bill"
                     className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50"
                   >
-                    <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                    {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   </button>
                 )}
                 {isWhatsApp && order.customerPhone && (
@@ -698,7 +699,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                     title="Message Customer"
                     className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[14px]">chat</span>
+                    <MessageSquare className="w-[14px] h-[14px]" />
                   </a>
                 )}
                 <button
@@ -720,7 +721,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 title="Reprint Receipt"
                 className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
               </button>
             </div>
           )}
@@ -744,7 +745,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   title="Reprint Receipt"
                   className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[14px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   Reprint
                 </button>
               ) : (
@@ -759,7 +760,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <span className="text-xs font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded-md uppercase tracking-wider">{typeLabel}</span>
             {order.assignedWaiterName && (
               <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                <span className="material-symbols-outlined text-[12px]">person</span>
+                <User className="w-[12px] h-[12px]" />
                 {order.assignedWaiterName}
               </div>
             )}
@@ -814,7 +815,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 title="Print Bill"
                 className="w-14 py-3.5 flex justify-center items-center text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors border-r border-[#E2E8F0] disabled:opacity-50"
               >
-                <span className="material-symbols-outlined text-[18px]">{printingId === order.id ? 'hourglass_top' : 'print'}</span>
+                {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
               </button>
             )}
             {isWhatsApp && order.customerPhone && (
@@ -826,7 +827,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 title="Message Customer"
                 className="w-14 py-3.5 flex justify-center items-center text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors border-r border-[#E2E8F0]"
               >
-                <span className="material-symbols-outlined text-[18px]">chat</span>
+                <MessageSquare className="w-[18px] h-[18px]" />
               </a>
             )}
             <button
@@ -894,7 +895,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">chat</span>
+              <MessageSquare className="w-[14px] h-[14px]" />
               WhatsApp
               <span className={`px-1.5 rounded-full text-[10px] ${sourceFilter === 'WHATSAPP' ? 'bg-white/20' : 'bg-[#F1F5F9]'}`}>{counts.WHATSAPP}</span>
             </button>
@@ -912,9 +913,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 onChange={(e) => setHistorySearch(e.target.value)}
                 className="bg-white border border-[#CBD5E1] focus:border-[var(--pos-primary,#F59E0B)] rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-[#0F172A] placeholder:text-[#94A3B8] outline-none shadow-sm"
               />
-              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] text-[16px]">
-                search
-              </span>
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] w-[16px] h-[16px]" />
             </div>
           )}
 
@@ -929,15 +928,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               <option value="newest">Newest First</option>
               <option value="table">By Table</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] pointer-events-none text-[18px]">
-              expand_more
-            </span>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] pointer-events-none w-[18px] h-[18px]" />
           </div>
           
           <div className="hidden sm:flex items-center bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
-            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Grid View"><span className="material-symbols-outlined text-[16px]">grid_view</span></button>
-            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="List View"><span className="material-symbols-outlined text-[16px]">view_list</span></button>
-            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Kanban View"><span className="material-symbols-outlined text-[16px]">view_week</span></button>
+            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
           </div>
         </div>
       </div>
@@ -1068,7 +1065,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           onClick={() => router.push('/pos/tables')}
           className="fixed right-6 bottom-24 w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all z-50"
         >
-          <span className="material-symbols-outlined text-[32px]">add</span>
+          <Plus className="w-[32px] h-[32px]" />
         </button>
       )}
 
@@ -1086,7 +1083,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   Reset
                 </button>
                 <button onClick={() => setFilterModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors bg-slate-50 hover:bg-slate-100 rounded-full p-1">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
+                  <X className="w-[20px] h-[20px]" />
                 </button>
               </div>
             </div>
@@ -1159,7 +1156,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <div className="space-y-3">
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Search History</h3>
                   <div className="relative">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-[20px] h-[20px]" />
                     <input 
                       type="text" 
                       placeholder="e.g. Table T-5 or #1024"
@@ -1187,9 +1184,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                         onClick={() => setTempSortOrder(option)}
                         className={`py-3 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${tempSortOrder === option ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                       >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {option === 'oldest' ? 'schedule' : option === 'newest' ? 'bolt' : 'table_restaurant'}
-                        </span>
+                        {option === 'oldest' ? 'schedule' : option === 'newest' ? <Zap className="w-[18px] h-[18px]" /> : <Armchair className="w-[18px] h-[18px]" />}
                         <span className="text-xs font-bold capitalize">{option === 'table' ? 'By Table' : option}</span>
                       </button>
                     ))}

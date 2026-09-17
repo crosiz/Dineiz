@@ -10,6 +10,7 @@ import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 import { formatPKR } from '@/lib/utils';
 import { API_URL } from '@/lib/api';
 import { resolveTaxConfig, isCardMethod, roundMoney } from '@/lib/pricing';
+import { Banknote, Check, CheckCircle2, CreditCard, Delete, Loader2, Lock, MessageSquare, Printer, QrCode, Split, X } from 'lucide-react';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -480,7 +481,7 @@ export default function PaymentModal({
     return (
       <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col items-center z-[60] animate-in fade-in duration-300 overflow-y-auto py-8 px-4">
         <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-[#10B981] rounded-full flex items-center justify-center mb-4 shrink-0 animate-in zoom-in-95 duration-500">
-          <span className="material-symbols-outlined text-[#10B981] text-[40px] font-bold">check</span>
+          <Check className="text-[#10B981] font-bold w-[40px] h-[40px]" />
         </div>
         <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Payment Successful</h2>
         <p className="text-[#64748B] mb-6">{finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0 ? `Give ${finalPaymentInfo.change.toFixed(0)} change` : 'Order completed'}</p>
@@ -494,7 +495,7 @@ export default function PaymentModal({
               disabled={isPrinting}
               className="flex-1 h-[52px] rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold flex items-center justify-center gap-2 hover:bg-[#F1F5F9] transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined">{isPrinting ? 'hourglass_top' : 'print'}</span>
+              {isPrinting ? <Loader2 className="animate-spin w-[20px] h-[20px]" /> : <Printer className="w-[20px] h-[20px]" />}
               {isPrinting ? 'Printing…' : 'Print Receipt'}
             </button>
             {customerPhone && (
@@ -504,7 +505,7 @@ export default function PaymentModal({
                 rel="noopener noreferrer"
                 className="flex-1 h-[52px] rounded-xl bg-[#0F7A55] text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 transition-all"
               >
-                <span className="material-symbols-outlined">chat</span>
+                <MessageSquare className="w-[20px] h-[20px]" />
                 Message Customer
               </a>
             )}
@@ -543,7 +544,7 @@ export default function PaymentModal({
               </p>
             </div>
             <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-all" onClick={onClose}>
-              <span className="material-symbols-outlined">close</span>
+              <X className="w-[20px] h-[20px]" />
             </button>
           </div>
         </div>
@@ -690,12 +691,12 @@ export default function PaymentModal({
           <div className="flex-1 bg-white flex flex-col p-6 md:overflow-y-auto custom-scrollbar">
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
               {[
-                { method: 'CASH' as PaymentMethod, icon: 'payments', label: 'Cash' },
-                { method: 'CARD' as PaymentMethod, icon: 'credit_card', label: 'Card' },
-                { method: 'JAZZCASH' as PaymentMethod, icon: 'qr_code_2', label: 'JazzCash' },
-                { method: 'EASYPAISA' as PaymentMethod, icon: 'qr_code_2', label: 'EasyPaisa' },
-                { method: 'SPLIT' as PaymentMethod, icon: 'call_split', label: 'Split' },
-              ].map(({ method, icon, label }) => {
+                { method: 'CASH' as PaymentMethod, Icon: Banknote, label: 'Cash' },
+                { method: 'CARD' as PaymentMethod, Icon: CreditCard, label: 'Card' },
+                { method: 'JAZZCASH' as PaymentMethod, Icon: QrCode, label: 'JazzCash' },
+                { method: 'EASYPAISA' as PaymentMethod, Icon: QrCode, label: 'EasyPaisa' },
+                { method: 'SPLIT' as PaymentMethod, Icon: Split, label: 'Split' },
+              ].map(({ method, Icon, label }) => {
                 const isUnconfigured = UNCONFIGURED_METHODS.includes(method);
                 return (
                   <button
@@ -705,9 +706,9 @@ export default function PaymentModal({
                     className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-[#F8FAFC] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-[#F1F5F9] text-[#0F172A]'} ${isUnconfigured ? 'opacity-60' : ''}`}
                   >
                     {isUnconfigured && (
-                      <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[13px] text-[#94A3B8]">lock</span>
+                      <Lock className="absolute top-1.5 right-1.5 w-[13px] h-[13px] text-[#94A3B8]" />
                     )}
-                    <span className="material-symbols-outlined text-2xl group-hover:scale-110 transition-transform">{icon}</span>
+                    <Icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                     <span className="font-bold text-xs">{label}</span>
                   </button>
                 );
@@ -750,7 +751,7 @@ export default function PaymentModal({
                     if (key === 'backspace') {
                       return (
                         <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-[#CBD5E1] rounded-2xl shadow-sm flex items-center justify-center active:scale-95 transition-transform duration-100 text-[#0F172A] hover:bg-[#F1F5F9]">
-                          <span className="material-symbols-outlined">backspace</span>
+                          <Delete className="w-[20px] h-[20px]" />
                         </button>
                       );
                     }
@@ -768,7 +769,7 @@ export default function PaymentModal({
             {(activeMethod === 'CARD') && (
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="w-32 h-32 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center mb-6 shadow-sm">
-                  <span className="material-symbols-outlined text-6xl text-[#D97706]">credit_card</span>
+                  <CreditCard className="text-[#D97706] w-[60px] h-[60px]" />
                 </div>
                 <h3 className="text-2xl font-bold font-clash text-[#0F172A]">Card Payment</h3>
                 <p className="text-[#64748B] font-medium mt-2">Amount Due: {formatPKR(totalWithTip)}</p>
@@ -781,7 +782,7 @@ export default function PaymentModal({
             {(activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && (
               <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
                 <div className="w-32 h-32 rounded-full border-2 border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center mb-6">
-                  <span className="material-symbols-outlined text-6xl text-[#94A3B8]">lock</span>
+                  <Lock className="text-[#94A3B8] w-[60px] h-[60px]" />
                 </div>
                 <h3 className="text-2xl font-bold font-clash text-[#0F172A]">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} Isn't Connected</h3>
                 <p className="text-[#64748B] font-medium mt-2 max-w-sm">
@@ -842,9 +843,9 @@ export default function PaymentModal({
                 }`}
             >
               {isProcessing ? (
-                <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                <Loader2 className="animate-spin w-[20px] h-[20px]" />
               ) : (
-                <span className="material-symbols-outlined">check_circle</span>
+                <CheckCircle2 className="w-[20px] h-[20px]" />
               )}
               {isProcessing ? 'Processing...' : 'Confirm Payment'}
             </button>
@@ -852,7 +853,7 @@ export default function PaymentModal({
               onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
               className="w-[60px] h-[60px] flex items-center justify-center rounded-2xl border border-[#CBD5E1] bg-white transition-all text-[#0F172A] hover:bg-[#F1F5F9] shadow-sm"
             >
-              <span className="material-symbols-outlined">print</span>
+              <Printer className="w-[20px] h-[20px]" />
             </button>
           </div>
         </div>

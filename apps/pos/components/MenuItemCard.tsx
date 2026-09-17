@@ -1,3 +1,5 @@
+
+import { Ban, RotateCcw } from 'lucide-react';
 const THEMES: Record<string, { gradient: string; emoji: string }> = {
   'kabab':      { gradient: 'linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%)', emoji: '🍢' },
   'bbq':        { gradient: 'linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%)', emoji: '🍖' },
@@ -90,9 +92,7 @@ export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggle
       title={unavailable ? 'Mark available' : 'Mark sold out (86)'}
       className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${isTogglingAvailable ? 'opacity-50 pointer-events-none' : 'cursor-pointer'} ${unavailable ? 'bg-[#0F172A] border-[#0F172A] text-white hover:brightness-125' : 'bg-white border-[#E2E8F0] text-[#94A3B8] hover:text-[#DC2626] hover:border-[#F5C6C2]'}`}
     >
-      <span className="material-symbols-outlined text-[13px]">
-        {isTogglingAvailable ? 'hourglass_top' : unavailable ? 'restart_alt' : 'block'}
-      </span>
+      {isTogglingAvailable ? 'hourglass_top' : unavailable ? <RotateCcw className="w-[13px] h-[13px]" /> : <Ban className="w-[13px] h-[13px]" />}
     </div>
   ) : null;
 

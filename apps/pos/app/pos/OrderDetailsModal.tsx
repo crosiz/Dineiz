@@ -16,6 +16,7 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
+import { Loader2, PlusCircle, ReceiptText, Trash2, UserPlus, X, XCircle } from 'lucide-react';
 
 
 const STEPS = ['PENDING', 'IN_KITCHEN', 'READY', 'COMPLETED'] as const;
@@ -307,7 +308,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92dvh] flex flex-col">
         {!order ? (
           <div className="flex items-center justify-center h-64">
-            <span className="material-symbols-outlined animate-spin text-[#94A3B8] text-3xl">progress_activity</span>
+            <Loader2 className="animate-spin text-[#94A3B8] w-[30px] h-[30px]" />
           </div>
         ) : (
           <>
@@ -326,7 +327,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                 </p>
               </div>
               <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] text-[#64748B]">
-                <span className="material-symbols-outlined">close</span>
+                <X className="w-[20px] h-[20px]" />
               </button>
             </div>
 
@@ -347,7 +348,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             ) : (
               <div className="px-5 pt-4 shrink-0">
                 <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[13px] font-bold flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px]">cancel</span> Order Cancelled
+                  <XCircle className="w-[16px] h-[16px]" /> Order Cancelled
                 </div>
               </div>
             )}
@@ -382,7 +383,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                         className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
                         title="Remove item"
                       >
-                        <span className="material-symbols-outlined text-[18px]">delete_outline</span>
+                        <Trash2 className="w-[18px] h-[18px]" />
                       </button>
                     )}
                   </div>
@@ -404,14 +405,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                 <div className={`grid ${viewMode ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                   {!viewMode && (
                     <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                      <span className="material-symbols-outlined text-[18px]">add_circle</span> Add Item
+                      <PlusCircle className="w-[18px] h-[18px]" /> Add Item
                     </button>
                   )}
                   <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">person_add</span> Waiter
+                    <UserPlus className="w-[18px] h-[18px]" /> Waiter
                   </button>
                   <button onClick={handleReprintKOT} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
-                    <span className="material-symbols-outlined text-[18px]">receipt_long</span> KOT
+                    <ReceiptText className="w-[18px] h-[18px]" /> KOT
                   </button>
                 </div>
               )}

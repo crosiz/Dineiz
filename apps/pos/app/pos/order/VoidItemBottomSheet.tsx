@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import { API_URL } from '@/lib/api';
+import { Minus, Plus } from 'lucide-react';
 
 interface VoidItemBottomSheetProps {
   isOpen: boolean;
@@ -199,7 +200,7 @@ export function VoidItemBottomSheet({
                   disabled={quantityToVoid <= 1}
                   className="w-10 h-10 rounded-xl border border-[#CBD5E1] flex items-center justify-center text-[#0F172A] disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined">remove</span>
+                  <Minus className="w-[20px] h-[20px]" />
                 </button>
                 <span className="font-bold text-xl w-8 text-center">{quantityToVoid}</span>
                 <button
@@ -207,7 +208,7 @@ export function VoidItemBottomSheet({
                   disabled={quantityToVoid >= item.quantity}
                   className="w-10 h-10 rounded-xl border border-[#CBD5E1] flex items-center justify-center text-[#0F172A] disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined">add</span>
+                  <Plus className="w-[20px] h-[20px]" />
                 </button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { CheckCircle2, Clock, Flame, Hourglass, ReceiptText, type LucideIcon } from 'lucide-react';
 
 // Shared with TicketsDashboard so an order looks the same wherever it's
 // shown — previously Home rendered a stripped-down chip with none of this
@@ -41,7 +42,7 @@ export const TicketTimer = ({ createdAt }: { createdAt: string }) => {
 
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide shrink-0 ${colorClass} ${pulse ? 'animate-pulse' : ''}`}>
-      <span className="material-symbols-outlined text-[14px]">schedule</span>
+      <Clock className="w-[14px] h-[14px]" />
       {timeStr}
     </div>
   );
@@ -50,32 +51,34 @@ export const TicketTimer = ({ createdAt }: { createdAt: string }) => {
 export const StatusBadge = ({ status }: { status: string }) => {
   let color = 'bg-gray-500/10 text-gray-500 border-gray-500/20';
   let label = status;
-  let icon = '';
+  // The icon is a component, not a font ligature name — see the icon note in
+  // app/globals.css for why Material Symbols is gone.
+  let Icon: LucideIcon | null = null;
 
   switch (status) {
     case 'PENDING':
       color = 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      icon = 'pending_actions';
+      Icon = Hourglass;
       break;
     case 'IN_KITCHEN':
       color = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
-      icon = 'local_fire_department';
+      Icon = Flame;
       label = 'IN KITCHEN';
       break;
     case 'READY':
       color = 'bg-green-500/10 text-green-500 border-green-500/20';
-      icon = 'check_circle';
+      Icon = CheckCircle2;
       break;
     case 'BILL_REQUESTED':
       color = 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      icon = 'receipt_long';
+      Icon = ReceiptText;
       label = 'BILL REQUESTED';
       break;
   }
 
   return (
     <div className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-bold tracking-wider shrink-0 ${color}`}>
-      {icon && <span className="material-symbols-outlined text-[12px]">{icon}</span>}
+      {Icon && <Icon className="w-[12px] h-[12px]" />}
       {label}
     </div>
   );

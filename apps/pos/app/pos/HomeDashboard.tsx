@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { isViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
+import { AlertCircle, Armchair, ArrowRight, Banknote, CheckCircle2, Clock, CloudOff, Pause, ReceiptText, Search, ShoppingBag, Utensils, X } from 'lucide-react';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
@@ -252,9 +253,7 @@ export default function HomeDashboard() {
       {/* Search Header Strip */}
       <div className="bg-white border-b border-[#E2E8F0] px-8 py-4 shrink-0 shadow-xs flex items-center justify-between">
         <div className="relative w-full sm:w-96">
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] text-xl">
-            search
-          </span>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] w-[20px] h-[20px]" />
           <input
             type="text"
             placeholder="Search orders, tables, or tickets..."
@@ -267,7 +266,7 @@ export default function HomeDashboard() {
               onClick={() => setHomeSearch('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A]"
             >
-              <span className="material-symbols-outlined text-sm">close</span>
+              <X className="w-[14px] h-[14px]" />
             </button>
           )}
         </div>
@@ -288,28 +287,28 @@ export default function HomeDashboard() {
                 {
                   label: 'New Order',
                   sublabel: 'Table service & floor plan',
-                  icon: 'restaurant',
+                  Icon: Utensils,
                   usePrimary: true,
                   onClick: () => guardOrderEntry(() => router.push('/pos/tables')),
                 },
                 {
                   label: 'Takeaway Order',
                   sublabel: 'Quick pick-up & counter order',
-                  icon: 'shopping_bag',
+                  Icon: ShoppingBag,
                   usePrimary: false,
                   onClick: () => guardOrderEntry(() => router.push('/pos/order?type=takeaway')),
                 },
                 {
                   label: 'Active Orders',
                   sublabel: 'View kitchen & live orders',
-                  icon: 'receipt_long',
+                  Icon: ReceiptText,
                   usePrimary: false,
                   onClick: () => router.push('/pos/tickets'),
                 },
                 {
                   label: 'Held Orders',
                   sublabel: heldOrdersCount > 0 ? `${heldOrdersCount} held order${heldOrdersCount > 1 ? 's' : ''}` : 'No held orders',
-                  icon: 'pause',
+                  Icon: Pause,
                   usePrimary: false,
                   onClick: () => router.push('/pos/tickets?filter=held'),
                 },
@@ -330,7 +329,7 @@ export default function HomeDashboard() {
                         : 'bg-amber-50 border border-amber-200 text-[#D97706]'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-3xl">{action.icon}</span>
+                    <action.Icon className="w-7 h-7" />
                   </div>
                   <div>
                     <div className={`clash-display text-2xl font-bold ${action.usePrimary ? 'text-white' : 'text-[#0F172A]'}`}>
@@ -353,7 +352,7 @@ export default function HomeDashboard() {
                 onClick={() => router.push('/pos/tickets')}
                 className="text-[#D97706] font-bold text-sm flex items-center gap-1 hover:underline"
               >
-                View All <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                View All <ArrowRight className="w-[14px] h-[14px]" />
               </button>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
@@ -425,7 +424,7 @@ export default function HomeDashboard() {
             <h3 className="clash-display text-2xl mb-1 text-[#0F172A]">Needs Attention</h3>
             {needsAttentionCount === 0 ? (
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700">
-                <span className="material-symbols-outlined">check_circle</span>
+                <CheckCircle2 className="w-[20px] h-[20px]" />
                 <p className="font-bold">All clear — nothing waiting on you.</p>
               </div>
             ) : (
@@ -439,7 +438,7 @@ export default function HomeDashboard() {
                       className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-amber-300 transition-colors"
                     >
                       <div className="flex items-center gap-4">
-                        <span className="material-symbols-outlined text-amber-600">schedule</span>
+                        <Clock className="text-amber-600 w-[20px] h-[20px]" />
                         <div>
                           <p className="font-bold text-[#0F172A]">Order #{order.tokenNumber || order.orderNumber} has been waiting {minutes}m</p>
                           <p className="text-xs text-[#64748B]">{order.tableLabel ? `Table ${order.tableLabel}` : order.type} · still {order.status === 'PENDING' ? 'not sent to kitchen' : 'in the kitchen'}</p>
@@ -457,7 +456,7 @@ export default function HomeDashboard() {
                     className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-rose-300 transition-colors"
                   >
                     <div className="flex items-center gap-4">
-                      <span className="material-symbols-outlined text-rose-600">payments</span>
+                      <Banknote className="text-rose-600 w-[20px] h-[20px]" />
                       <div>
                         <p className="font-bold text-[#0F172A]">Table {t.label} is waiting for the bill</p>
                         <p className="text-xs text-[#64748B]">Customer requested payment</p>
@@ -472,9 +471,9 @@ export default function HomeDashboard() {
                     stuckCount > 0 ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
                   }`}>
                     <div className="flex items-center gap-4">
-                      <span className={`material-symbols-outlined ${stuckCount > 0 ? 'text-rose-600' : 'text-sky-600'}`}>
-                        {stuckCount > 0 ? 'error' : 'cloud_off'}
-                      </span>
+                      {stuckCount > 0
+                        ? <AlertCircle className="w-5 h-5 text-rose-600" />
+                        : <CloudOff className="w-5 h-5 text-sky-600" />}
                       <div>
                         <p className="font-bold text-[#0F172A]">
                           {stuckCount > 0
@@ -531,7 +530,7 @@ export default function HomeDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2 text-[#D97706]">
-              <span className="material-symbols-outlined">schedule</span>
+              <Clock className="w-[20px] h-[20px]" />
               <span className="clash-display text-xl font-bold tracking-wide">Elapsed: {shiftElapsed}</span>
             </div>
           </section>
@@ -593,7 +592,7 @@ export default function HomeDashboard() {
                   >
                     {floorNumbers.length === 0 ? (
                       <div className="w-full flex flex-col items-center justify-center text-[#64748B] gap-2 my-auto">
-                        <span className="material-symbols-outlined text-3xl">table_restaurant</span>
+                        <Armchair className="w-[30px] h-[30px]" />
                         <span className="text-sm font-medium">No floor plan data loaded</span>
                       </div>
                     ) : (

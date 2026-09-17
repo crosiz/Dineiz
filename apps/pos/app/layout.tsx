@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import QueryProvider from './providers/QueryProvider';
 import { ClientAppProvider } from '@/components/ClientAppProvider';
@@ -17,6 +18,27 @@ export const metadata: Metadata = {
   },
 };
 
+// One typeface, served from our own origin.
+//
+// The <head> used to carry two render-blocking stylesheet links — Google Fonts
+// (Inter, Space Grotesk, Space Mono, Plus Jakarta Sans, JetBrains Mono) and
+// api.fontshare.com (Clash Display): six families, ~16 files, two third-party
+// origins, every one of them blocking first paint. On a POS tablet with no
+// connectivity — the exact condition this app is built for — the browser waits
+// for those requests to time out before it will paint anything.
+//
+// next/font downloads Inter at BUILD time and serves it from this app's own
+// origin with `display: swap`, so there is no third-party request at runtime,
+// nothing to block on, and it works offline. The display and mono utilities in
+// globals.css now map onto Inter and the system mono stack respectively, which
+// is also simply better typography than five mixed families.
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-inter',
+  display: 'swap',
+});
+
 export const viewport: Viewport = {
   themeColor: '#0f172a',
   width: 'device-width',
@@ -30,22 +52,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    // No `className="dark"`: the POS is a light-themed app and always has
+    // been. That class was a leftover that made every `dark:` utility in the
+    // tree apply on top of a white surface.
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@700;800&family=JetBrains+Mono&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://api.fontshare.com/v2/css?f[]=clash-display@600,700&display=swap"
-          rel="stylesheet"
-        />
-        {/* Material symbols are imported in globals.css */}
       </head>
-      <body suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <QueryProvider>
           <SocketProvider>
             <ClientAppProvider>
