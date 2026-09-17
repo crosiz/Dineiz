@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { AssignWaiterSheet } from './AssignWaiterSheet';
-import { PremiumTable } from '@/components/PremiumTable';
+import { PremiumTable, getTableDimensions, CHAIR_PAD } from '@/components/PremiumTable';
 import PaymentModal from '@/components/PaymentModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useSocket } from '@/contexts/SocketContext';
@@ -34,6 +34,11 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { useScreenSize } from '@/lib/use-screen-size';
+
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 2.5;
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
 
 interface TableData {
@@ -126,15 +131,52 @@ export default function ClientTableMap() {
     const extracted = Array.from(new Set(tables.map((t) => t.floor || 1))).sort((a, b) => a - b);
     return extracted.length > 0 ? extracted : [1];
   }, [tables]);
-  const [activeFloor, setActiveFloor] = useState<number>(1);
+  // Defaults to the FIRST floor that exists, not a hardcoded 1 — a branch whose
+  // floors are numbered 2 and 3 opened onto an empty canvas.
+  const [activeFloor, setActiveFloor] = useState<number>(floors[0] ?? 1);
+  useEffect(() => {
+    if (!floors.includes(activeFloor)) setActiveFloor(floors[0] ?? 1);
+  }, [floors, activeFloor]);
 
-  // Canvas Zoom & Pan State
-  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
-  const [panX, setPanX] = useState<number>(0);
-  const [panY, setPanY] = useState<number>(0);
+  const { isMobile: isNarrow } = useScreenSize();
+
+  // ── Canvas zoom & pan ───────────────────────────────────────────────────
+  //
+  // `view` maps floor-plan coordinates to screen pixels as `screen = p·zoom + pan`,
+  // and the transform below is written `translate(...) scale(...)` to match —
+  // CSS applies a transform list right-to-left, so scale runs first and the
+  // translate is in *screen* pixels, which is what every consumer here assumes.
+  //
+  // It used to be `scale(z) translate(panX, panY)`: translate ran FIRST, so the
+  // on-screen offset was actually pan×zoom, while the fit code computed pan in
+  // screen pixels and getPopupPosition read it back as p·zoom + pan. Three
+  // mutually inconsistent coordinate systems. At any zoom ≠ 1 the floor landed
+  // in the wrong place — on a phone (54% zoom) half the tables sat off the right
+  // edge with empty space above and below — and popups detached from their tables.
+  const [view, setView] = useState<{ zoom: number; x: number; y: number }>({ zoom: 1, x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState<boolean>(false);
-  const startPanRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const canvasContainerRef = useRef<HTMLDivElement>(null);
+  // Live gesture state lives in a ref, not React state: a pointermove fires at
+  // display rate, and setState per move re-rendered every table on the floor on
+  // every frame of a drag.
+  const gestureRef = useRef<{
+    pointers: Map<number, { x: number; y: number }>;
+    start: { x: number; y: number; view: { zoom: number; x: number; y: number }; dist: number } | null;
+  }>({ pointers: new Map(), start: null });
+  const rafRef = useRef<number | null>(null);
+  const pendingViewRef = useRef<{ zoom: number; x: number; y: number } | null>(null);
+
+  /** Coalesce gesture updates to one commit per animation frame. */
+  const scheduleView = useCallback((next: { zoom: number; x: number; y: number }) => {
+    pendingViewRef.current = next;
+    if (rafRef.current !== null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      if (pendingViewRef.current) setView(pendingViewRef.current);
+    });
+  }, []);
+
+  useEffect(() => () => { if (rafRef.current !== null) cancelAnimationFrame(rafRef.current); }, []);
 
   // Selected Table & Popups
   const [selectedTable, setSelectedTable] = useState<TableData | null>(null);
@@ -145,9 +187,6 @@ export default function ClientTableMap() {
   const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false);
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
 
-  // Touch gesture tracking
-  const initialTouchDistanceRef = useRef<number | null>(null);
-  const initialZoomRef = useRef<number>(1.0);
 
   // Status Legend Component for POSTopBar. hidden below sm: at phone width
   // POSTopBar's rightActions slot has only ~40-95px free once the always-
@@ -390,110 +429,215 @@ export default function ClientTableMap() {
     }
   };
 
-  // Canvas Pan & Zoom controls
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(2.0, z + 0.15));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.5, z - 0.15));
-  const handleResetZoom = () => {
-    setZoomLevel(1.0);
-    setPanX(0);
-    setPanY(0);
-  };
+  // ── Zoom controls ───────────────────────────────────────────────────────
+  // Zooming keeps the CENTRE of the viewport fixed. Scaling around the origin
+  // (what `setZoomLevel(z => z + 0.15)` alone did) slides the floor out from
+  // under whatever the user was looking at, which reads as the map jumping.
+  const zoomAround = useCallback((factor: number, anchor?: { x: number; y: number }) => {
+    const el = canvasContainerRef.current;
+    setView((v) => {
+      const zoom = clamp(v.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+      if (zoom === v.zoom) return v;
+      const rect = el?.getBoundingClientRect();
+      const ax = anchor?.x ?? (rect ? rect.width / 2 : 0);
+      const ay = anchor?.y ?? (rect ? rect.height / 2 : 0);
+      // Keep the floor-plan point currently under the anchor under it still.
+      const ratio = zoom / v.zoom;
+      return { zoom, x: ax - (ax - v.x) * ratio, y: ay - (ay - v.y) * ratio };
+    });
+  }, []);
 
-  // Mouse pan event handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+  const handleZoomIn = () => zoomAround(1.2);
+  const handleZoomOut = () => zoomAround(1 / 1.2);
+
+  // ── Gestures ────────────────────────────────────────────────────────────
+  //
+  // One pointer-event path for mouse, pen and touch instead of a mouse set and
+  // a touch set that drifted apart. The old mouse handler only started a pan
+  // when `e.target === e.currentTarget`, but the 1200×700 transform wrapper
+  // covers the whole container — so dragging anywhere over the floor did
+  // nothing, and only the thin strip outside the wrapper panned. And there was
+  // no `touch-action`, so on a phone the browser's own scroll/zoom fought every
+  // gesture the handlers were trying to interpret.
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Let a tap on a table be a tap on a table.
+    if ((e.target as HTMLElement).closest('[data-testid="table-node"]')) return;
+
+    const g = gestureRef.current;
+    (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (g.pointers.size === 1) {
       setIsPanning(true);
-      startPanRef.current = { x: e.clientX - panX, y: e.clientY - panY };
+      g.start = { x: e.clientX, y: e.clientY, view, dist: 0 };
+    } else if (g.pointers.size === 2) {
+      const [a, b] = Array.from(g.pointers.values());
+      g.start = {
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+        view,
+        dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+      };
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning) return;
-    setPanX(e.clientX - startPanRef.current.x);
-    setPanY(e.clientY - startPanRef.current.y);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const g = gestureRef.current;
+    if (!g.pointers.has(e.pointerId) || !g.start) return;
+    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (g.pointers.size === 1) {
+      scheduleView({
+        zoom: g.start.view.zoom,
+        x: g.start.view.x + (e.clientX - g.start.x),
+        y: g.start.view.y + (e.clientY - g.start.y),
+      });
+      return;
+    }
+
+    // Two fingers: pinch to zoom about the midpoint, and pan with it.
+    const [a, b] = Array.from(g.pointers.values());
+    const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    const ax = mid.x - (rect?.left ?? 0);
+    const ay = mid.y - (rect?.top ?? 0);
+    const zoom = clamp(g.start.view.zoom * (dist / g.start.dist), MIN_ZOOM, MAX_ZOOM);
+    const ratio = zoom / g.start.view.zoom;
+    const startAx = g.start.x - (rect?.left ?? 0);
+    const startAy = g.start.y - (rect?.top ?? 0);
+    scheduleView({
+      zoom,
+      x: ax - (startAx - g.start.view.x) * ratio,
+      y: ay - (startAy - g.start.view.y) * ratio,
+    });
   };
 
-  const handleMouseUp = () => setIsPanning(false);
-
-  // Touch gesture handlers for mobile / tablet
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsPanning(true);
-      startPanRef.current = { x: e.touches[0].clientX - panX, y: e.touches[0].clientY - panY };
-    } else if (e.touches.length === 2) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      initialTouchDistanceRef.current = dist;
-      initialZoomRef.current = zoomLevel;
+  const endPointer = (e: React.PointerEvent) => {
+    const g = gestureRef.current;
+    g.pointers.delete(e.pointerId);
+    if (g.pointers.size === 0) {
+      g.start = null;
+      setIsPanning(false);
+      settleView();
+    } else {
+      // Lifting one of two fingers: re-anchor so the remaining one doesn't jump.
+      const [a] = Array.from(g.pointers.values());
+      g.start = { x: a.x, y: a.y, view, dist: 0 };
     }
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && isPanning) {
-      setPanX(e.touches[0].clientX - startPanRef.current.x);
-      setPanY(e.touches[0].clientY - startPanRef.current.y);
-    } else if (e.touches.length === 2 && initialTouchDistanceRef.current) {
-      const dist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const scale = dist / initialTouchDistanceRef.current;
-      setZoomLevel(Math.min(2.0, Math.max(0.5, initialZoomRef.current * scale)));
+  // Trackpad / wheel zoom, anchored under the cursor.
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && Math.abs(e.deltaY) < 2) return;
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    zoomAround(e.deltaY > 0 ? 1 / 1.08 : 1.08, {
+      x: e.clientX - (rect?.left ?? 0),
+      y: e.clientY - (rect?.top ?? 0),
+    });
+  };
+
+  const floorTables = useMemo(
+    () => tables.filter((t) => (t.floor || 1) === activeFloor),
+    [tables, activeFloor],
+  );
+
+  /** Exact extent of a floor in floor-plan coordinates, chairs included. */
+  const floorBounds = useMemo(() => {
+    if (floorTables.length === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const t of floorTables) {
+      const { width, height } = getTableDimensions(t.shape, t.capacity);
+      minX = Math.min(minX, t.x - CHAIR_PAD);
+      minY = Math.min(minY, t.y - CHAIR_PAD);
+      maxX = Math.max(maxX, t.x + width + CHAIR_PAD);
+      maxY = Math.max(maxY, t.y + height + CHAIR_PAD);
     }
-  };
+    return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+  }, [floorTables]);
 
-  const handleTouchEnd = () => {
-    setIsPanning(false);
-    initialTouchDistanceRef.current = null;
-  };
+  /**
+   * Keep at least a corner of the floor on screen.
+   *
+   * Without this a cashier can flick the plan into the void and be left staring
+   * at an empty dot grid with no way back except the reset button — which they
+   * have no reason to associate with "my tables vanished".
+   */
+  const settleView = useCallback(() => {
+    const el = canvasContainerRef.current;
+    if (!el || !floorBounds) return;
+    const r = el.getBoundingClientRect();
+    setView((v) => {
+      const KEEP = 80; // px of content that must stay visible on each axis
+      const left = floorBounds.minX * v.zoom + v.x;
+      const top = floorBounds.minY * v.zoom + v.y;
+      const w = floorBounds.width * v.zoom;
+      const h = floorBounds.height * v.zoom;
+      const x = v.x + clamp(0, KEEP - (left + w), r.width - KEEP - left);
+      const y = v.y + clamp(0, KEEP - (top + h), r.height - KEEP - top);
+      return x === v.x && y === v.y ? v : { ...v, x, y };
+    });
+  }, [floorBounds]);
 
-  const floorTables = tables.filter((t) => (t.floor || 1) === activeFloor);
 
-  // Fit-to-viewport: on first paint of a floor (and when the container is
-  // resized, or the table count on it changes) compute a zoom/pan that
-  // brings the whole floor plan into view. Previously this always started
-  // at zoomLevel 1.0 / pan (0,0) against the fixed 1200x700 design surface —
-  // fine on a desktop monitor, but on a phone-sized container that showed
-  // only the top-left corner, with most tables off-screen until the user
-  // manually zoomed out via the controls below. Deliberately depends on
-  // `floorTables.length`, not the array itself: table positions don't change
-  // live during service (only `status` does, which changes the array's
-  // identity every socket update) — refitting on every status flip would
-  // yank the view out from under a cashier mid-task.
+  /**
+   * Zoom/pan that centres the whole floor in the viewport with a comfortable
+   * gutter.
+   *
+   * The old version derived bounds from the raw (x, y) points plus a flat
+   * 110px margin — but (x, y) is a table's top-left, not its centre, and a
+   * table is 88–180px wide — so the bounds were wrong in both directions, and
+   * it then wrote the pan in screen pixels into a transform that consumed it in
+   * scaled units. Combined, that put a phone's 54%-zoom floor half off the
+   * right edge with dead space above and below.
+   */
+  const computeFit = useCallback((cw: number, ch: number) => {
+    if (!floorBounds || cw === 0 || ch === 0) return null;
+    const gutter = cw < 640 ? 16 : 40;
+    const zoom = clamp(
+      Math.min((cw - gutter * 2) / floorBounds.width, (ch - gutter * 2) / floorBounds.height),
+      MIN_ZOOM,
+      1.4,
+    );
+    const scaledH = floorBounds.height * zoom;
+    // Centre horizontally always. Vertically: centre on a tablet or desktop,
+    // where the spare room reads as breathing space around the plan — but
+    // top-align on a phone, where a wide layout fitted to a tall portrait
+    // screen leaves so much slack that centring strands the tables in the
+    // middle with dead space above AND below. Collecting it all at the bottom
+    // (where the zoom controls live) reads as a floor plan instead of a
+    // mistake.
+    const y = cw < 640
+      ? gutter - floorBounds.minY * zoom
+      : (ch - scaledH) / 2 - floorBounds.minY * zoom;
+
+    return {
+      zoom,
+      x: (cw - floorBounds.width * zoom) / 2 - floorBounds.minX * zoom,
+      y,
+    };
+  }, [floorBounds]);
+
+  const handleResetZoom = useCallback(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const next = computeFit(r.width, r.height);
+    if (next) setView(next);
+  }, [computeFit]);
+
+  // Fit on first paint of a floor, and on resize/rotation. Keyed on the table
+  // COUNT, not the array: `status` changes the array's identity on every socket
+  // push, and refitting then would yank the view out from under a cashier
+  // mid-task. Table positions don't move during service.
   useEffect(() => {
     const container = canvasContainerRef.current;
     if (!container || floorTables.length === 0) return;
-
     const fit = () => {
-      const { width: cw, height: ch } = container.getBoundingClientRect();
-      if (cw === 0 || ch === 0) return;
-
-      // Fixed margin rather than table.width/height: PremiumTable renders
-      // tables centered on (x, y) at sizes from ~88-180px depending on
-      // capacity/shape, and the render code below already offsets by a flat
-      // 20px, not by each table's own dimensions — a fixed margin covering
-      // the largest table plus its label/waiter-badge decoration is more
-      // robust here than trusting width/height to line up with x/y exactly.
-      const MARGIN = 110;
-      const xs = floorTables.map((t) => t.x);
-      const ys = floorTables.map((t) => t.y);
-      const minX = Math.min(...xs) - MARGIN;
-      const minY = Math.min(...ys) - MARGIN;
-      const maxX = Math.max(...xs) + MARGIN;
-      const maxY = Math.max(...ys) + MARGIN;
-      const boundsW = Math.max(1, maxX - minX);
-      const boundsH = Math.max(1, maxY - minY);
-
-      const fitZoom = Math.min(cw / boundsW, ch / boundsH, 1.5);
-      const zoom = Math.min(2.0, Math.max(0.5, fitZoom));
-
-      setZoomLevel(zoom);
-      setPanX((cw - boundsW * zoom) / 2 - minX * zoom);
-      setPanY((ch - boundsH * zoom) / 2 - minY * zoom);
+      const r = container.getBoundingClientRect();
+      const next = computeFit(r.width, r.height);
+      if (next) setView(next);
     };
-
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(container);
@@ -501,16 +645,39 @@ export default function ClientTableMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFloor, floorTables.length]);
 
-  // Position popup card relative to table center
-  const getPopupPosition = (table: TableData) => {
-    const posX = table.x * zoomLevel + panX;
-    const posY = table.y * zoomLevel + panY;
+  /**
+   * Where a table's detail card goes.
+   *
+   * On a phone it's a bottom sheet — anchoring a 320px card to a table on a
+   * 375px screen leaves it covering the table it describes and half the floor,
+   * and the old version clamped against `window.innerWidth/innerHeight` with
+   * hardcoded 340/380px card sizes, which is neither this container's size nor
+   * the card's. On a larger screen it sits beside the table, clamped to the
+   * canvas's own rect.
+   */
+  const getPopupPosition = (table: TableData): React.CSSProperties => {
+    if (isNarrow) return {};
+    const rect = canvasContainerRef.current?.getBoundingClientRect();
+    if (!rect) return {};
+    const { width } = getTableDimensions(table.shape, table.capacity);
+    const screenX = rect.left + table.x * view.zoom + view.x;
+    const screenY = rect.top + table.y * view.zoom + view.y;
 
-    const popupLeft = Math.min(Math.max(16, posX + 110), window.innerWidth - 340);
-    const popupTop = Math.min(Math.max(16, posY - 20), window.innerHeight - 380);
-
-    return { left: `${popupLeft}px`, top: `${popupTop}px` };
+    const CARD_W = 320;
+    const CARD_H = 380;
+    // Prefer the right of the table; flip to the left when that would overflow.
+    const wantLeft = screenX + (width + CHAIR_PAD) * view.zoom + 12;
+    const left = wantLeft + CARD_W > rect.right - 16
+      ? Math.max(rect.left + 16, screenX - CARD_W - 12)
+      : wantLeft;
+    const top = clamp(screenY - 24, rect.top + 16, Math.max(rect.top + 16, rect.bottom - CARD_H - 16));
+    return { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
   };
+
+  /** Shared shell for the three table-detail cards (occupied / reserved / dirty). */
+  const popupShellCls = isNarrow
+    ? 'fixed inset-x-0 bottom-0 z-[var(--z-modal)] w-full max-h-[80dvh] overflow-y-auto bg-surface border-t border-line rounded-t-2xl shadow-2xl p-5 pb-safe space-y-4 text-ink animate-in slide-in-from-bottom duration-200'
+    : 'fixed z-[var(--z-modal)] w-80 max-h-[calc(100dvh-32px)] overflow-y-auto bg-surface border border-line rounded-2xl shadow-2xl p-5 space-y-4 text-ink animate-in fade-in zoom-in-95 duration-150';
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
@@ -522,22 +689,26 @@ export default function ClientTableMap() {
           HomeDashboard.tsx). */}
       <div
         ref={canvasContainerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+        onWheel={handleWheel}
         style={{
           width: '100%',
           height: '100%',
           position: 'relative',
           overflow: 'hidden',
-          backgroundColor: '#F8FAFC',
-          backgroundImage: 'radial-gradient(#cbd5e1 1.2px, transparent 1.2px)',
-          backgroundSize: '20px 20px',
+          backgroundColor: 'var(--pos-bg-base)',
+          backgroundImage: 'radial-gradient(var(--pos-border-strong) 1.2px, transparent 1.2px)',
+          backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px`,
+          backgroundPosition: `${view.x}px ${view.y}px`,
+          // Without this the browser's own pan/zoom fights every gesture the
+          // handlers are trying to interpret — the single biggest reason the
+          // floor plan felt broken on a phone.
+          touchAction: 'none',
         }}
-        className="cursor-grab active:cursor-grabbing"
+        className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
         {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
             3-4 floors instead of running off the edge of a narrow screen. */}
@@ -560,15 +731,20 @@ export default function ClientTableMap() {
           </div>
         )}
 
-        {/* Transform Scale & Pan Wrapper */}
+        {/* Transform wrapper. `translate() scale()`, in that order — see the
+            `view` comment at the top of this component for why the order is
+            load-bearing. `inset: 0` rather than a hardcoded 1200×700 design
+            surface: the surface only ever needed to be a positioning context
+            for absolutely-placed tables, and a fixed size meant a floor plan
+            laid out beyond it was simply unreachable. */}
         <div
           style={{
-            transform: `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`,
+            transform: `translate(${view.x}px, ${view.y}px) scale(${view.zoom})`,
             transformOrigin: '0 0',
-            transition: isPanning ? 'none' : 'transform 0.1s ease-out',
-            width: '1200px',
-            height: '700px',
+            transition: isPanning ? 'none' : 'transform 120ms ease-out',
             position: 'absolute',
+            inset: 0,
+            willChange: 'transform',
           }}
         >
           {floorTables.map((table) => (
@@ -578,8 +754,8 @@ export default function ClientTableMap() {
               data-table-status={(table.status || 'FREE').toLowerCase()}
               style={{
                 position: 'absolute',
-                left: `${table.x - 20}px`,
-                top: `${table.y - 20}px`,
+                left: `${table.x - CHAIR_PAD}px`,
+                top: `${table.y - CHAIR_PAD}px`,
               }}
             >
               <PremiumTable
@@ -626,7 +802,7 @@ export default function ClientTableMap() {
             <ZoomOut className="w-4 h-4" />
           </button>
           <span className="text-xs font-bold text-slate-700 w-12 text-center">
-            {Math.round(zoomLevel * 100)}%
+            {Math.round(view.zoom * 100)}%
           </span>
           <button
             type="button"
@@ -665,7 +841,7 @@ export default function ClientTableMap() {
       {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-80 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className={popupShellCls}
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
@@ -830,7 +1006,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'RESERVED' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className={popupShellCls}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-purple-600">
@@ -861,7 +1037,7 @@ export default function ClientTableMap() {
       {selectedTable && selectedTable.status === 'DIRTY' && (
         <div
           style={getPopupPosition(selectedTable)}
-          className="fixed z-50 w-72 max-w-[calc(100vw-32px)] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-150"
+          className={popupShellCls}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-amber-600">

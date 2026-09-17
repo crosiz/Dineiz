@@ -88,7 +88,21 @@ function normalizeStatus(status?: string): string {
   return 'FREE';
 }
 
-function getTableDimensions(shape?: string, capacity: number = 4) {
+/**
+ * A table's drawn size, and the padding its chair decoration needs around it.
+ *
+ * Exported because the floor plan has to know the real extent of what it's
+ * laying out in order to fit a floor to the viewport. It used to guess with a
+ * flat 110px margin around the raw (x, y) points, which is neither the table's
+ * size nor its chair overhang — so a floor either overflowed the canvas or sat
+ * in a sea of empty space depending on which tables it happened to contain.
+ *
+ * (x, y) is the table's TOP-LEFT. The wrapper this component renders is
+ * `CHAIR_PAD` larger on every side, and the caller offsets by that much.
+ */
+export const CHAIR_PAD = 20;
+
+export function getTableDimensions(shape?: string, capacity: number = 4) {
   const normShape = (shape || '').toLowerCase();
 
   if (normShape === 'round' || normShape === 'table_round') {
