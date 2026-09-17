@@ -285,16 +285,52 @@ function OrderEntryPageContent() {
   }, [isResizing, cartWidthPercent]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('pos_view_mode') as ViewMode | null;
-    if (saved) setViewMode(saved);
+    // 'pos_menu_layout', NOT 'pos_view_mode'. That key belongs to lib/view-mode.ts
+    // (signed-in-without-shift), and the two features were sharing it: opening a
+    // shift calls removeItem('pos_view_mode'), silently wiping the cashier's menu
+    // layout, and choosing 'Continue Without Shift' wrote '1' into it, which then
+    // loaded back here as a layout name that doesn't exist.
+    const saved = localStorage.getItem('pos_menu_layout') as ViewMode | null;
+    if (saved === 'grid' || saved === 'list') setViewMode(saved);
   }, []);
 
   const handleViewChange = (mode: ViewMode) => {
     setViewMode(mode);
-    localStorage.setItem('pos_view_mode', mode);
+    localStorage.setItem('pos_menu_layout', mode);
   };
 
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+
+  // What the checkout is billing, captured at the moment it OPENS.
+  //
+  // The modal used to be gated on `isPaymentOpen && paymentOrderId` and read
+  // `paymentOrderId` live. PaymentModal calls clearCart() the instant a payment
+  // succeeds — which sets paymentOrderId to null — so the gate went false and
+  // the modal UNMOUNTED in the middle of its own success: the receipt screen
+  // never rendered, "Done" could never be tapped, and so onSuccess (clear the
+  // order, go Home) never ran. The cashier was left looking at the order they
+  // had just charged, marked SENT, beside a "select an order type" warning,
+  // with no way to print or send the receipt. Freezing these at open time keeps
+  // the modal alive through its success state.
+  const [checkout, setCheckout] = useState<{
+    orderId: string; orderNumber?: string; items: any[]; summary: string;
+  } | null>(null);
+
+  /** Open the checkout against a specific order id, snapshotting what it bills. */
+  const openCheckout = (orderId: string, orderNumber?: string | null) => {
+    const s = useCartStore.getState();
+    const items = [...s.existingItems, ...s.cart];
+    setCheckout({
+      orderId,
+      orderNumber: orderNumber ?? paymentOrderNumber ?? undefined,
+      items,
+      summary: [
+        ...s.existingItems.map((c: any) => `${c.quantity}x ${c.itemName || c.item?.name}`),
+        ...s.cart.map((c: any) => `${c.quantity}x ${c.name}`),
+      ].join(' · '),
+    });
+    setIsPaymentOpen(true);
+  };
 
   const [confirmNewOrderOpen, setConfirmNewOrderOpen] = useState(false);
   // Fix #5: clear-cart confirmation via ConfirmModal instead of confirm()
@@ -353,22 +389,26 @@ function OrderEntryPageContent() {
     const idToLoad = heldOrderIdParam || existingOrderId;
 
     if (!idToLoad) {
-      // RULE 1: FRESH ORDER — unless a draft was saved for exactly this
-      // situation (a break interruption, or a reload/crash mid-order):
-      // offer to restore it instead of silently discarding in-progress
-      // work. Cart items live only in memory until ORDER_SENT_TO_KITCHEN,
-      // so this is the only durability a not-yet-sent order has.
-      loadCartDraft().then((draft) => {
-        if (draft?.cart?.length) {
-          setDraftPrompt(draft);
-        } else {
-          useCartStore.getState().clearCart();
-          applyFreshOrderParams();
-        }
-      }).catch(() => {
-        useCartStore.getState().clearCart();
-        applyFreshOrderParams();
-      });
+      // RULE 1: FRESH ORDER — clear SYNCHRONOUSLY, first, always.
+      //
+      // This used to clear only inside loadCartDraft()'s `.then()`. An
+      // IndexedDB read is not instant, so until it resolved the screen was
+      // rendered AND interactive with the previous order still in the store —
+      // its paymentOrderId, its existingItems, the lot. Tapping a menu item in
+      // that window appended it to the order that had just been paid for. The
+      // architecture's own rule is "new order (no orderId param) → ALWAYS
+      // clearCart() on mount", and the async placement quietly broke it.
+      useCartStore.getState().clearCart();
+      applyFreshOrderParams();
+
+      // Then offer to restore a draft saved for exactly this situation (a
+      // break interruption, or a reload/crash mid-order). Cart items live only
+      // in memory until ORDER_SENT_TO_KITCHEN, so this is the only durability
+      // a not-yet-sent order has — but it's an offer, made on top of a clean
+      // slate, not a reason to delay clearing one.
+      loadCartDraft()
+        .then((draft) => { if (draft?.cart?.length) setDraftPrompt(draft); })
+        .catch(() => {});
       return;
     }
 
@@ -403,7 +443,7 @@ function OrderEntryPageContent() {
 
         if (searchParams.get('checkout') === 'true') {
           setPaymentOrderId(order.id);
-          setIsPaymentOpen(true);
+          openCheckout(order.id, order.orderNumber);
         }
       }).catch(() => toast.error('Failed to load local held order'));
     } else {
@@ -444,7 +484,7 @@ function OrderEntryPageContent() {
           useCartStore.getState().setCustomer({ id: tracked.customerId, name: tracked.customerName || 'Customer' });
         }
         if (searchParams.get('checkout') === 'true') {
-          setIsPaymentOpen(true);
+          openCheckout(tracked.id, tracked.orderNumber);
         }
         return;
       }
@@ -474,7 +514,7 @@ function OrderEntryPageContent() {
             useCartStore.getState().setCustomer({ id: order.customerId, name: 'Customer' });
           }
           if (searchParams.get('checkout') === 'true') {
-            setIsPaymentOpen(true);
+            openCheckout(order.id, order.orderNumber);
           }
         })
         .catch(() => toast.error('Failed to load order for editing'));
@@ -507,11 +547,13 @@ function OrderEntryPageContent() {
     return items;
   }, [menuItems, activeCategoryId, debouncedSearch]);
 
-  const gridColsClass = viewMode === 'compact' ? 'grid-cols-1' :
-    viewMode === 'detailed' ? 'grid-cols-1 xl:grid-cols-2 gap-4' :
-      viewMode === 'large' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3' :
-        viewMode === 'minimal' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-2' :
-          'grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4';
+  // Two layouts. There were five, three of them reachable from a toggle above
+  // the grid — a decision a cashier has to make mid-service that changes nothing
+  // about the job. Grid for browsing by sight, list for a long menu you know by
+  // name.
+  const gridColsClass = viewMode === 'list'
+    ? 'grid-cols-1 gap-2'
+    : 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5';
 
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
@@ -548,8 +590,23 @@ function OrderEntryPageContent() {
   // "Take a Break" (POSTopBar.tsx) and an accidental reload hand the
   // in-progress order back on the restore prompt above, instead of losing it.
   useEffect(() => {
-    if (paymentOrderId || heldOrderId || draftPrompt) return;
     const handler = setTimeout(() => {
+      // An order that has left the builder — charged, sent to the kitchen, or
+      // held — must DROP its draft, not just stop updating it.
+      //
+      // This guard used to sit at the top of the effect and skip it entirely,
+      // which meant the clear branch below never ran once paymentOrderId was
+      // set. handleCharge() sets it the moment CHARGE is tapped, so every
+      // completed order left its items sitting in the single draft slot
+      // forever — and the next brand-new order found them and offered to
+      // "restore" the order that had just been paid for. That is exactly the
+      // long-standing "previous order's items carry over to a new order"
+      // report.
+      if (paymentOrderId || heldOrderId) {
+        clearCartDraft().catch(console.error);
+        return;
+      }
+      if (draftPrompt) return; // a restore offer is on screen; don't race it
       if (cart.length > 0) {
         saveCartDraft({
           cart, orderType, selectedTableId, selectedTableLabel,
@@ -887,7 +944,7 @@ function OrderEntryPageContent() {
 
         setPaymentOrderId(localId);
         setPaymentOrderNumber(orderNumber);
-        setIsPaymentOpen(true);
+        openCheckout(localId, orderNumber);
 
         const isHeld = searchParams.get('isHeld') === 'true';
         const rawOrderId = searchParams.get('orderId');
@@ -933,7 +990,7 @@ function OrderEntryPageContent() {
             addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
           })));
         }
-        setIsPaymentOpen(true);
+        openCheckout(paymentOrderId!, paymentOrderNumber);
       } catch (err) {
         console.error('Failed to append items before charge', err);
         toast.error('Could not add the items — please retry.');
@@ -941,7 +998,7 @@ function OrderEntryPageContent() {
         setChargeLoading(false);
       }
     } else {
-      setIsPaymentOpen(true);
+      openCheckout(paymentOrderId!, paymentOrderNumber);
     }
   };
 
@@ -985,13 +1042,31 @@ function OrderEntryPageContent() {
   );
 
   useTopBar({
-    pageTitle: paymentOrderId ? `Edit Order` : (selectedTableLabel ? `New Order — ${selectedTableLabel}` : 'New Order — No table selected'),
+    // The header used to state the same three facts up to three times each: the
+    // title said "New Order — No table selected", then a NEW ORDER pill, a
+    // NO TABLE SELECTED pill, a TAKEAWAY pill and a GUESTS pill sat under it,
+    // and the order-type segmented control beside it said the type a third
+    // time. Each thing is said once now, in the place that can act on it: the
+    // type in its own control, the table as a pill (only when it's a dine-in
+    // concern), the party size only when it isn't the default of one.
+    pageTitle: paymentOrderId ? 'Edit Order' : 'New Order',
     breadcrumb: (
       <div className="flex items-center gap-1.5">
-        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderIdDisplay}</span>
-        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${selectedTableLabel ? 'bg-[#F1F5F9] border-[#E2E8F0] text-[#475569]' : 'bg-amber-50 border-amber-200 text-[#B45309]'}`}>{tableDisplay}</span>
-        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{orderTypeDisplay}</span>
-        <span className="px-2 py-0.5 rounded-md bg-[#F1F5F9] border border-[#E2E8F0] text-[10px] font-bold text-[#475569] uppercase tracking-wider">{guestCount} {parseInt(guestCount) === 1 ? 'guest' : 'guests'}</span>
+        {paymentOrderId && (
+          <span className="px-2 py-0.5 rounded-md bg-sunken border border-line text-[10px] font-bold text-ink-2 uppercase tracking-wider tabular-nums">
+            {orderIdDisplay}
+          </span>
+        )}
+        {orderType === 'DINE_IN' && (
+          <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${selectedTableLabel ? 'bg-sunken border-line text-ink-2' : 'bg-warn/10 border-warn/30 text-warn'}`}>
+            {tableDisplay}
+          </span>
+        )}
+        {orderType === 'DINE_IN' && parseInt(guestCount) > 1 && (
+          <span className="px-2 py-0.5 rounded-md bg-sunken border border-line text-[10px] font-bold text-ink-2 uppercase tracking-wider">
+            {guestCount} guests
+          </span>
+        )}
       </div>
     ),
     showBackButton: true,
@@ -1116,30 +1191,16 @@ function OrderEntryPageContent() {
               )}
             </div>
 
-            {/* View Toggle */}
-            <div className="flex items-center bg-[#F1F5F9] rounded-lg border border-[#CBD5E1] p-1 shrink-0 h-11 relative">
-              <button
-                onClick={() => handleViewChange('grid')}
-                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
-                title="Grid View"
-              >
-                <LayoutGrid className="w-[18px] h-[18px]" />
-              </button>
-              <button
-                onClick={() => handleViewChange('compact')}
-                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'compact' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
-                title="Compact View"
-              >
-                <Rows3 className="w-[18px] h-[18px]" />
-              </button>
-              <button
-                onClick={() => handleViewChange('large')}
-                className={`w-11 h-full rounded flex items-center justify-center transition-colors ${viewMode === 'large' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
-                title="Hero View"
-              >
-                <GalleryVerticalEnd className="w-[18px] h-[18px]" />
-              </button>
-            </div>
+            {/* One toggle, two states — not a three-way segmented control for
+                five layouts that all showed the same four facts. */}
+            <button
+              onClick={() => handleViewChange(viewMode === 'grid' ? 'list' : 'grid')}
+              title={viewMode === 'grid' ? 'Switch to list' : 'Switch to grid'}
+              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+              className="shrink-0 grid place-items-center w-11 h-11 rounded-xl border border-line-strong bg-surface text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
+            >
+              {viewMode === 'grid' ? <Rows3 className="w-[18px] h-[18px]" /> : <LayoutGrid className="w-[18px] h-[18px]" />}
+            </button>
           </div>
 
           {/* Menu Grid — "All" groups items under a category divider per
@@ -1176,7 +1237,7 @@ function OrderEntryPageContent() {
                         {catItems.map(item => (
                           <MenuItemCard
                             key={item.id}
-                            item={{ ...item, categoryName: cat.name }}
+                            item={item}
                             cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                             onTap={handleItemTap}
                             viewMode={viewMode}
@@ -1197,10 +1258,7 @@ function OrderEntryPageContent() {
                 {filteredItems.map(item => (
                   <MenuItemCard
                     key={item.id}
-                    item={{
-                      ...item,
-                      categoryName: categories.find(c => c.id === item.categoryId)?.name
-                    }}
+                    item={item}
                     cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                     onTap={handleItemTap}
                     viewMode={viewMode}
@@ -1390,7 +1448,15 @@ function OrderEntryPageContent() {
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-[#94A3B8]">
                 <ShoppingCart className="mb-4 text-[#CBD5E1] w-[48px] h-[48px]" />
                 <p className="font-bold text-lg text-[#0F172A]">Your cart is empty</p>
-                <p className="text-sm mt-1 max-w-[240px] text-[#64748B]">Select items from the menu to start building the order for Table {selectedTableId}.</p>
+                {/* `selectedTableId` — a raw UUID — used to be interpolated
+                    straight into this sentence, so a dine-in order read "for
+                    Table cmsuv8x…" and a takeaway one read "for Table ." with a
+                    dangling full stop. Use the label, and only when there is one. */}
+                <p className="text-sm mt-1 max-w-[240px] text-[#64748B]">
+                  {selectedTableLabel
+                    ? `Pick items from the menu to start Table ${selectedTableLabel}'s order.`
+                    : 'Pick items from the menu to start this order.'}
+                </p>
               </div>
             ) : (
               cart.map((cartItem, idx) => (
@@ -1527,10 +1593,10 @@ function OrderEntryPageContent() {
       {selectedItem && <VariationPicker item={selectedItem} onClose={() => setSelectedItem(null)} />}
       {discountModalOpen && <DiscountModal onClose={() => setDiscountModalOpen(false)} />}
 
-      {isPaymentOpen && paymentOrderId && (
+      {isPaymentOpen && checkout && (
         <PaymentModal
-          orderId={paymentOrderId}
-          orderNumber={paymentOrderNumber || undefined}
+          orderId={checkout.orderId}
+          orderNumber={checkout.orderNumber}
           orderTotal={searchParams.get('totalAmount') ? Number(searchParams.get('totalAmount')) : combinedTotal}
           // PaymentModal computes its own totals from `items` (falling back
           // to the cart store's `cart` when omitted) — for a "Collect
@@ -1538,8 +1604,8 @@ function OrderEntryPageContent() {
           // empty (everything's in `existingItems`), which used to render
           // Subtotal/GST/Total Due as a flat PKR 0.00 regardless of the
           // real order total.
-          items={[...existingItems, ...cart]}
-          orderItems={[...existingItems.map(c => `${c.quantity}x ${c.itemName || c.item?.name}`), ...cart.map(c => `${c.quantity}x ${c.name}`)].join(' · ')}
+          items={checkout.items}
+          orderItems={checkout.summary}
           tableLabel={searchParams.get('tableLabel') ?? undefined}
           tableId={searchParams.get('tableId') ?? undefined}
           customerId={existingOrderData?.customerId || useCartStore.getState().customerId || undefined}
@@ -1556,6 +1622,9 @@ function OrderEntryPageContent() {
             clearCart();
             setDiscount(null);
             setPaymentOrderId(null);
+            // Belt and braces alongside the draft effect above: a paid order
+            // must never be restorable.
+            clearCartDraft().catch(console.error);
             router.push('/pos/home');
           }}
         />

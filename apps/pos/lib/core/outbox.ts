@@ -36,6 +36,8 @@ const DEFAULT_MAX_LIFETIME_MS = EVENT_MAX_LIFETIME_MS; // 24h from event-log.ts
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 32000];
 const DEGRADED_RETRY_MS = 60000;
 const CRITICAL_RETRY_MS = [500, 1000, 2000];  // spec: 3 fast retries for CRITICAL
+// A payment waits longer than everything else — see runCriticalTask.
+const CRITICAL_REQUEST_TIMEOUT_MS = 20000;
 
 // Part 13 — the sync engine's tunables live in console settings and reach
 // the terminal in pos_branding. Read live (cheap) with sane fallbacks.
@@ -115,6 +117,10 @@ let lastProgressAt = Date.now();
 // One console error per session for a missing API address, not one per drain.
 let configWarned = false;
 
+// Set for the duration of a CRITICAL task so its requests get the longer budget
+// without threading a timeout through buildOp/shipOps/runTaskViaRest.
+let criticalTimeoutOverrideMs: number | null = null;
+
 // ─── HTTP helpers ────────────────────────────────────────────────────────
 
 function authHeaders(idempotencyKey?: string): Record<string, string> {
@@ -127,9 +133,10 @@ function authHeaders(idempotencyKey?: string): Record<string, string> {
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: number): Promise<Response> {
-  timeoutMs = timeoutMs ?? syncCfg().requestTimeoutMs;
+  timeoutMs = timeoutMs ?? criticalTimeoutOverrideMs ?? syncCfg().requestTimeoutMs;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timedOut = false;
+  const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   try {
     const res = await fetch(url, { ...init, signal: controller.signal });
     // Any answer other than "no such endpoint" proves we're talking to the
@@ -137,6 +144,16 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: numb
     // load-bearing. 401/409/422 all count: only a real API produces them.
     if (res.status !== 404) markApiReachable();
     return res;
+  } catch (err: any) {
+    // Our own timeout surfaced as the browser's raw "signal is aborted without
+    // reason", which then became an event's lastError and was shown to a
+    // cashier verbatim in Settings → Sync & Data. Name it for what it is, and
+    // classify it as retryable (it always was, but only by accident of falling
+    // through to the generic non-permanent branch).
+    if (timedOut || err?.name === 'AbortError') {
+      throw new TaskError(`The server did not respond within ${Math.round(timeoutMs / 1000)}s`, false);
+    }
+    throw err;
   } finally {
     clearTimeout(timer);
   }
@@ -803,10 +820,27 @@ function noteFailure(te: TaskError): void {
 // CRITICAL tasks ship one per request, immediately, with a short retry
 // schedule of their own — a payment must not wait behind anything.
 async function runCriticalTask(task: OutboxTask): Promise<void> {
+  try {
+    await runCriticalTaskInner(task);
+  } finally {
+    criticalTimeoutOverrideMs = null;
+  }
+}
+
+async function runCriticalTaskInner(task: OutboxTask): Promise<void> {
   for (let attempt = 0; ; attempt++) {
     if (circuitOpen) return;
     await markInflight(task.eventIds);
     try {
+      // A payment gets a longer budget than the shared 8s. Completing an order
+      // runs the whole side-effect bundle server-side (stock, loyalty, deals,
+      // webhooks) on top of whatever the database is doing, and a Neon cold
+      // start alone can eat most of 8s — so the request that matters most was
+      // the one most likely to be cut off and retried. Retrying is safe (it's
+      // idempotency-keyed), but each timeout still costs the cashier a red sync
+      // indicator and a "still trying to sync" toast for a payment that was
+      // about to succeed.
+      criticalTimeoutOverrideMs = Math.max(syncCfg().requestTimeoutMs, CRITICAL_REQUEST_TIMEOUT_MS);
       if (batchEndpointAvailable) {
         const op = await buildOp(task);
         if (op === undefined) return; // leave queued — see buildOp's comment
