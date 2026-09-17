@@ -6,14 +6,13 @@ import { useCartStore } from '@/lib/store'
 import { getToken } from '@/lib/pos-session'
 import { toast } from 'sonner'
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView'
+import { API_URL } from '@/lib/api';
 
 // The API is a separate origin (NEXT_PUBLIC_API_URL, :4000) from the POS
 // Next server (:3001), and there are no rewrites — these two fetches used
 // relative '/api/...' paths, so they 404'd against Next and the order never
 // loaded: the receipt rendered with no items and PKR 0 totals, and the
 // auto-return countdown (gated on `order`) never even started.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
-
 function ReceiptPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()

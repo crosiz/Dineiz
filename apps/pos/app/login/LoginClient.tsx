@@ -6,8 +6,8 @@ import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { DineizLogo } from '@/components/ui/DineizLogo';
 import { getPosBreak, clearPosBreak } from '@/lib/pos-session';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 const PIN_LENGTH = 4;
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace', '0', 'confirm'];
 

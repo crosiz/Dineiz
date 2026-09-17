@@ -17,6 +17,7 @@ import {
   Banknote, Coffee, TrendingUp, TrendingDown, FileEdit, CheckCheck, Loader2, Check,
   RefreshCw, CloudOff,
 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
 interface UnpaidOrderRow {
   id: string;
@@ -33,7 +34,6 @@ interface CloseShiftModalProps {
   onClose: () => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /** PKR notes and coins, largest first — the order a cashier counts them in. */
 const DENOMINATIONS = [5000, 1000, 500, 100, 50, 20, 10, 5];

@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { getToken, getPosShift, resolveActiveShiftId } from '@/lib/pos-session';
 import { Wallet, X, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
 

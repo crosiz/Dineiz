@@ -8,8 +8,8 @@ import { toast } from 'sonner';
 import { ChevronLeft, FileText, Download, Clock, CheckCircle2 } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { downloadShiftReport } from '@/lib/shift-report';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export default function ShiftReportSelectorPage() {
   const router = useRouter();

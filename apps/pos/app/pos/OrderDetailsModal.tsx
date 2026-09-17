@@ -15,8 +15,8 @@ import { useViews } from '@/lib/core/views';
 import { useBrandingStore } from '@/lib/branding-store';
 import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const STEPS = ['PENDING', 'IN_KITCHEN', 'READY', 'COMPLETED'] as const;
 

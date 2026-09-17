@@ -16,13 +16,13 @@ import { getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { isViewMode } from '@/lib/view-mode';
+import { API_URL } from '@/lib/api';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
 // (kds/page.tsx's default rushThreshold).
 const AGING_TICKET_MINUTES = 20;
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export default function HomeDashboard() {
   const router = useRouter();

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Link as LinkIcon } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
+import { API_URL } from '@/lib/api';
 
 interface Waiter {
   id: string;
@@ -44,7 +45,6 @@ export function AssignWaiterSheet({
     setLoading(true);
     try {
       const token = getToken();
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
       // Real per-waiter table load — the floor plan already carries
       // assignedWaiterId per table (same field ClientTableMap.tsx reads),
@@ -101,7 +101,6 @@ export function AssignWaiterSheet({
     setAssigningId(waiter.id);
     try {
       const token = getToken();
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
       const res = await fetch(`${API_URL}/api/orders/${orderId}/assign`, {
         method: 'PUT',
         headers: {

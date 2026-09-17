@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getPosSession, getToken } from '@/lib/pos-session'
+import { API_URL } from '@/lib/api';
 
 interface AdminPinModalProps {
   onClose: () => void
@@ -31,7 +32,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
 
   const validatePin = async (enteredPin: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/pos/auth/validate-manager-pin`, {
+      const res = await fetch(`${API_URL}/api/pos/auth/validate-manager-pin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

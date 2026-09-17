@@ -9,8 +9,8 @@ import { useTerminalSettings } from '@/lib/terminal-settings';
 import { toast } from 'sonner';
 import { Check, Settings, RefreshCw, LogOut, X } from 'lucide-react';
 import { DineizLogo } from '@/components/ui/DineizLogo';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 interface OrderItem {
   id: string;

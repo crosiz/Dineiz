@@ -8,6 +8,7 @@ import { getToken } from '@/lib/pos-session';
 import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
 import { formatPKR } from '@/lib/utils';
+import { API_URL } from '@/lib/api';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -243,7 +244,6 @@ export default function PaymentModal({
   const [finalPaymentInfo, setFinalPaymentInfo] = useState<{ method: string; tendered: number; change: number } | null>(null);
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
   const cashNum = parseFloat(amountEntered) || 0;
   const changeDue = Math.max(0, cashNum - totalWithTip);

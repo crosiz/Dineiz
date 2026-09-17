@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getDB } from '@/lib/db';
 import { getToken } from '@/lib/pos-session';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export interface ShiftStats {
   ordersServed: number;

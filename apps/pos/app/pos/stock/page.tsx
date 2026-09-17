@@ -19,8 +19,8 @@ import {
   X,
 } from 'lucide-react';
 import { ManagerOverrideModal } from '@/components/ManagerOverrideModal';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 type StockStatus = 'OUT' | 'LOW' | 'OK';
 type StockUnit = 'PCS' | 'GRAM' | 'KILOGRAM' | 'ML' | 'LITER';

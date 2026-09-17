@@ -169,7 +169,7 @@ function OrderEntryPageContent() {
         const serverId = useViews.getState().orders[paymentOrderId]?.serverId;
         if (!serverId) return;
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${serverId}`, {
+          const res = await fetch(`${API_URL}/api/orders/${serverId}`, {
             headers: { 'Authorization': `Bearer ${getToken()}` }
           });
           if (res.ok) {
@@ -227,7 +227,6 @@ function OrderEntryPageContent() {
   const handleToggleAvailability = async (item: CachedMenuItem, nextAvailable: boolean) => {
     setTogglingItemId(item.id);
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
       const res = await fetch(`${API_URL}/api/v1/menu/items/${item.id}/availability`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
@@ -452,7 +451,7 @@ function OrderEntryPageContent() {
 
       // Not tracked locally (e.g. a very old order from before this
       // terminal's view store existed) — fall back to the network.
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${idToLoad}`, {
+      fetch(`${API_URL}/api/orders/${idToLoad}`, {
         headers: { 'Authorization': `Bearer ${getToken()}` }
       })
         .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
@@ -801,7 +800,7 @@ function OrderEntryPageContent() {
       
       // Online sync if possible
       if (navigator.onLine && session.token) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/held`, {
+        fetch(`${API_URL}/api/orders/held`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1582,6 +1581,7 @@ function OrderEntryPageContent() {
 }
 
 import { Suspense } from 'react';
+import { API_URL } from '@/lib/api';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);

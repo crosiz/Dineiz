@@ -5,6 +5,7 @@ import { getPosSession, getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
+import { API_URL } from '@/lib/api';
 
 interface VoidItemBottomSheetProps {
   isOpen: boolean;
@@ -72,7 +73,7 @@ export function VoidItemBottomSheet({
     
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/pos/void-requests`, {
+      const res = await fetch(`${API_URL}/api/pos/void-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +110,7 @@ export function VoidItemBottomSheet({
     const finalReason = reason === 'Other' ? otherReason : reason;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/${item.orderId}/items/${item.id}`, {
+      const res = await fetch(`${API_URL}/api/orders/${item.orderId}/items/${item.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

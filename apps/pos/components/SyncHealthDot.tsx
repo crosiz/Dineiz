@@ -12,6 +12,16 @@ type Health = 'ok' | 'syncing' | 'stuck';
 
 function classify(s: UnsyncedSummary | null): { health: Health; label: string; detail: string } {
   if (!s) return { health: 'ok', label: 'Sync', detail: 'Checking…' };
+  // A terminal with no API address can never sync anything. That used to be
+  // invisible: the queue simply never moved. Say it plainly, in the one place
+  // an operator already looks when something isn't saving.
+  if (s.apiUnconfigured) {
+    return {
+      health: 'stuck',
+      label: 'Not connected',
+      detail: 'This terminal has no server address set up — nothing is saving. Ask your manager to re-link it.',
+    };
+  }
   if (s.poisoned > 0 || s.abandoned > 0) {
     const n = s.poisoned + s.abandoned;
     return { health: 'stuck', label: `${n} to review`, detail: `${n} change${n === 1 ? '' : 's'} the server rejected — needs a manager` };

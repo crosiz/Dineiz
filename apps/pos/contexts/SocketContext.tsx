@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '@/lib/api';
 
 interface SocketContextType {
   socket: Socket | null; // Defaults to POS namespace for backward compatibility
@@ -28,7 +29,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [isKdsConnected, setIsKdsConnected] = useState(false);
 
   useEffect(() => {
-    const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     const token = typeof window !== 'undefined' ? localStorage.getItem('pos_token') : null;
 
     // Connect to /pos namespace

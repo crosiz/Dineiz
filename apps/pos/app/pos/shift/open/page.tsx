@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 import { getToken, getPosSession, clearPosSession, setPosShift } from '@/lib/pos-session';
 import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const DENOMS = [5000, 1000, 500, 100, 50, 20, 10];
 const QUICK = [2000, 5000, 10000];
 const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;

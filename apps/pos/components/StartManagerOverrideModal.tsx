@@ -6,8 +6,8 @@ import { Unlock } from 'lucide-react';
 import { getPosSession, getToken } from '@/lib/pos-session';
 import { getPosShift } from '@/lib/pos-session';
 import { useManagerOverlay } from '@/lib/manager-overlay';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Spec Part 10 — start a manager overlay. Manager PIN + a reason + an
 // optional "one action only" mode. The cashier's session is untouched.

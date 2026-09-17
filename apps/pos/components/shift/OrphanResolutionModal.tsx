@@ -5,8 +5,8 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPKR } from '@/lib/utils';
 import { ManagerOverrideModal } from '../ManagerOverrideModal';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export interface OrphanOrder {
   id: string;

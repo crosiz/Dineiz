@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Search, UserPlus, Star } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
+import { API_URL } from '@/lib/api';
 
 export interface PickedCustomer {
   id: string;
@@ -18,7 +19,6 @@ interface CustomerPickerSheetProps {
   onSelect: (customer: PickedCustomer) => void;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPickerSheetProps) {
   const [search, setSearch] = useState('');

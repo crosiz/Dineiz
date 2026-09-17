@@ -23,8 +23,8 @@ import {
   User,
   Printer
 } from 'lucide-react';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export default function AdminPage() {
   const router = useRouter();

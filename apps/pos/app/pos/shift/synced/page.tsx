@@ -10,8 +10,8 @@ import {
   type UnsyncedSummary, type SyncCategoryProgress,
 } from '@/lib/core/outbox';
 import { shiftSyncCompleted } from '@/lib/core/commands';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * Spec Part 6 — the terminal keeps shipping a shift that was closed with a

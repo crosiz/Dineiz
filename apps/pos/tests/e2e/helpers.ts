@@ -14,7 +14,7 @@ import { execSync } from 'child_process';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 export const BASE_URL = 'http://localhost:3001';
-export const API_URL = 'http://localhost:3001';
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 /**
  * Resets the orders, shifts, carts, and table statuses in the database.

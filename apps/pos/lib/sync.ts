@@ -8,6 +8,7 @@ import {
   markItemAddFailed,
 } from './offlineHelpers';
 import { reconcileServerId } from './core/views';
+import { API_URL } from '@/lib/api';
 
 export async function syncOfflineOrders() {
   const db = getDB();
@@ -22,7 +23,6 @@ export async function syncOfflineOrders() {
     try {
       await db.offlineOrders.update(order.localId, { syncStatus: 'syncing' });
       
-      const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
       const response = await fetch(`${API_URL}/api/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,7 +59,6 @@ export async function syncOfflineOrders() {
   }
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 export async function syncOfflinePayments() {
   const pending = await getPendingPayments();

@@ -2,8 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMenuFromCache, syncMenuToCache } from '../lib/offlineHelpers';
 import { getToken } from '../lib/pos-session';
 import type { CachedMenuItem } from '../lib/db';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 // ─── API Fetcher ─────────────────────────────────────────────────────────────
 

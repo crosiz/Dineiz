@@ -23,6 +23,7 @@ import { useManagerOverlay } from '@/lib/manager-overlay';
 import { useTerminalSettings } from '@/lib/terminal-settings';
 import { ViewModeBanner } from '@/components/ViewModeBanner';
 import { allowsViewMode } from '@/lib/view-mode';
+import { API_URL } from '@/lib/api';
 
 // Spec Part 2 — a cashier's / waiter's live board is scoped to their own
 // open shift; a branch manager / admin sees the whole branch. The server
@@ -93,7 +94,7 @@ function pullServerState() {
 // a full replace is correct here, unlike handleBrandingUpdated's merge.
 async function syncBrandingFromServer(setBranding: (b: Record<string, any>) => void) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/branding`, {
+    const res = await fetch(`${API_URL}/api/pos/branding`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
     if (!res.ok) return;
@@ -317,7 +318,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/orphans?branchId=${s.branchId}`,
+          `${API_URL}/api/pos/orphans?branchId=${s.branchId}`,
           { headers: { Authorization: `Bearer ${getToken()}` } },
         );
         if (!res.ok || cancelled) return;
@@ -363,7 +364,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     const s = getPosSession();
     if (!s?.branchId) return;
     fetch(
-      `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'}/api/pos/orphans?branchId=${s.branchId}`,
+      `${API_URL}/api/pos/orphans?branchId=${s.branchId}`,
       { headers: { Authorization: `Bearer ${getToken()}` } },
     )
       .then((r) => (r.ok ? r.json() : []))

@@ -1,6 +1,6 @@
 import { getToken } from '@/lib/pos-session';
+import { API_URL } from '@/lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 /**
  * Fetches a shift report and hands the file to the browser.

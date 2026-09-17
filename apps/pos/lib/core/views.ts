@@ -6,6 +6,7 @@ import {
   type DerivedTableStatus,
   type TableStatusOverride,
 } from '@dineiz/schemas';
+import { API_URL } from '@/lib/api';
 
 export interface OrderViewItem {
   lineId: string;
@@ -800,7 +801,6 @@ export function seedServerOrder(raw: any): string {
 export async function seedTablesFromServer(branchId: string): Promise<void> {
   try {
     const { getToken } = await import('@/lib/pos-session');
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
     const res = await fetch(`${API_URL}/api/floor-plan/${branchId}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
     });
@@ -958,7 +958,6 @@ export async function refreshOrders(
 ): Promise<void> {
   try {
     const { getToken } = await import('@/lib/pos-session');
-    const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
     const qs = new URLSearchParams({ branchId });
     if (opts?.shiftId) qs.set('shiftId', opts.shiftId);
     const res = await fetch(`${API_URL}/api/orders/live?${qs.toString()}`, {

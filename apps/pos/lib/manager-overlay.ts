@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getPosSession, getToken, getPosShift } from './pos-session';
+import { API_URL } from '@/lib/api';
 
 // ─── Manager overlay (spec Part 10) ──────────────────────────────────────
 //
@@ -17,7 +18,6 @@ import { getPosSession, getToken, getPosShift } from './pos-session';
 // a single action in one-shot mode, if the tab is backgrounded for 60s, or
 // if the manager navigates toward taking a payment.
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 const LS_KEY = 'pos_manager_overlay';
 const BACKGROUND_GRACE_MS = 60_000;
 

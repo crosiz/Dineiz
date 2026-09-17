@@ -21,6 +21,7 @@ import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startBreak } from '@/lib/core/commands';
 import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
+import { API_URL } from '@/lib/api';
 
 export function POSTopBar() {
   const config = useContext(TopBarStateContext);
@@ -81,7 +82,7 @@ export function POSTopBar() {
     if (!session.branchId || !session.shiftId) return;
     try {
       const token = localStorage.getItem('pos_token');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+      const res = await fetch(`${API_URL}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
@@ -118,7 +119,7 @@ export function POSTopBar() {
       // Every other POS call falls back to :3001; this one said :8080, so on a
       // dev machine without NEXT_PUBLIC_API_URL set the close-shift guard
       // silently failed its check.
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+      const res = await fetch(`${API_URL}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -242,7 +243,7 @@ export function POSTopBar() {
       const db = getDB();
       if (db.heldOrders) await db.heldOrders.put(heldOrder);
       if (navigator.onLine && getToken()) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/orders/held`, {
+        fetch(`${API_URL}/api/orders/held`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
           body: JSON.stringify(heldOrder),
@@ -766,7 +767,6 @@ export function POSTopBar() {
                   // targeted a shift that was no longer OPEN. Both are wrapped
                   // in a bare try/catch below, so neither ever surfaced.
                   const sessionObj = getPosSession();
-                  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
                   const shiftId = await resolveActiveShiftId(API_URL);
 
                   if (!shiftId) {

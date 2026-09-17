@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDB } from './db';
 import { TAX_RATE as DEFAULT_TAX_RATE } from './constants';
 import { getPosSession } from './pos-session';
+import { API_URL } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,7 +143,6 @@ interface CartStore {
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 /** Generates a unique cart key per item+variation combo */
 const cartKey = (itemId: string, variationId?: string) =>

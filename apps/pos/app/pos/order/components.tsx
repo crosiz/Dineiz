@@ -5,6 +5,7 @@ import type { CachedMenuItem } from '@/lib/db';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
+import { API_URL } from '@/lib/api';
 
 // ─── Variation Picker Bottom Sheet ──────────────────────────────
 export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClose: () => void }) {
@@ -200,7 +201,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
         setVerifying(true);
         setPinError('');
         try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/pos/auth/validate-manager-pin`, {
+          const res = await fetch(`${API_URL}/api/pos/auth/validate-manager-pin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
             body: JSON.stringify({ pin, branchId: session?.branchId }),

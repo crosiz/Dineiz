@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { API_URL } from '@/lib/api';
 
 interface Props {
   onViewChange?: (view: 'home' | 'menu' | 'tickets') => void;
@@ -54,7 +55,6 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const [waiters, setWaiters] = useState<any[]>([]);
   useEffect(() => {
     if (!session?.branchId) return;
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     fetch(`${API_URL}/api/pos/waiters?branchId=${session.branchId}`, {
       headers: { Authorization: `Bearer ${getToken()}` }
     })
@@ -195,7 +195,6 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
   // History is a genuinely different concern from live operational state —
   // paginated search over orders that are, by definition, no longer live —

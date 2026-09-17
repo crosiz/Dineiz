@@ -5,6 +5,8 @@ import {
 import { useViews, reconcileServerId, emergencyPrune } from './views';
 import { getToken, getPosSession } from '@/lib/pos-session';
 import { toast } from 'sonner';
+import { API_URL, isApiConfigured, API_NOT_CONFIGURED } from '@/lib/api';
+import { getTerminalId } from './event-log';
 
 // ─── The outbox: ships local events to the server (spec Part 5) ────────────
 //
@@ -27,7 +29,6 @@ import { toast } from 'sonner';
 // endpoint runs each op through the same domain services the individual REST
 // endpoints use, so there is one code path for the business logic.
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 8000;      // spec: hard 8s AbortController
 const DEFAULT_MAX_LIFETIME_MS = EVENT_MAX_LIFETIME_MS; // 24h from event-log.ts
@@ -111,6 +112,9 @@ const rttSamples: number[] = [];     // recent batch round-trip times (ms)
 let lastNonTerminalCount = -1;
 let lastProgressAt = Date.now();
 
+// One console error per session for a missing API address, not one per drain.
+let configWarned = false;
+
 // ─── HTTP helpers ────────────────────────────────────────────────────────
 
 function authHeaders(idempotencyKey?: string): Record<string, string> {
@@ -127,7 +131,12 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: numb
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    // Any answer other than "no such endpoint" proves we're talking to the
+    // real API — see classifyHttpError's note on why that distinction is
+    // load-bearing. 401/409/422 all count: only a real API produces them.
+    if (res.status !== 404) markApiReachable();
+    return res;
   } finally {
     clearTimeout(timer);
   }
@@ -150,12 +159,40 @@ class TaskError extends Error {
 
 const AUTH_EXPIRED_ERROR = 'AUTH_EXPIRED';
 
+// Has this terminal ever had a 2xx out of the API? Until it has, a 404 is far
+// more likely to mean "we are pointed at the wrong host" than "the server
+// looked and this order isn't there" — and the difference matters enormously,
+// because a permanent classification POISONS the event and then
+// cascadePoisonAggregate kills the whole order. A misconfigured
+// NEXT_PUBLIC_API_URL used to send every request to the POS's own Next server,
+// which 404s everything, which silently destroyed every order punched on that
+// terminal. Set by markApiReachable() on any successful response.
+let apiReachable = false;
+
+function markApiReachable(): void {
+  apiReachable = true;
+}
+
 function classifyHttpError(status: number): TaskError {
   if (status === 401) return new TaskError(AUTH_EXPIRED_ERROR, false, { authExpired: true });
   if (status === 403 || status === 408 || status === 429 || status >= 500) return new TaskError(`HTTP ${status}`, false);
-  // 4xx the request reached the server and it said no. 409 is race-prone
-  // (e.g. a duplicate that resolves itself) so it gets one grace retry;
-  // 400/404/422 poison on the first failure (spec Part 12).
+  if (status === 404) {
+    // Never poisoned a 404 before the API has proved it exists: that's a
+    // deployment/config problem, not a business rejection, and it self-heals.
+    if (!apiReachable) {
+      return new TaskError(
+        'HTTP 404 — the API did not recognise this endpoint. Check this terminal’s API address before anything is discarded.',
+        false,
+      );
+    }
+    // Once we know the API is real, a 404 on a specific resource is usually
+    // genuine — but give it grace retries anyway: an order created seconds ago
+    // can 404 against a lagging read path before its create has settled.
+    return new TaskError('HTTP 404', true, { graceRetries: 2 });
+  }
+  // Other 4xx: the request reached the server and it said no. 409 is
+  // race-prone (a duplicate that resolves itself) so it gets one grace retry;
+  // 400/422 poison on the first failure (spec Part 12).
   return new TaskError(`HTTP ${status}`, true, { graceRetries: status === 409 ? 1 : 0 });
 }
 
@@ -209,14 +246,21 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
   const chains = new Map<string, OutboxTask[]>();
   const orders = useViews.getState().orders;
 
+  // State writes this derivation implies. They used to be fired without
+  // `await` from inside the loop, so the chain could be handed back before
+  // IndexedDB had recorded that those events were SUPERSEDED/CONFIRMED — and
+  // the next cycle could re-derive them. Collected here and flushed (awaited)
+  // once, at the end.
+  const toSupersede: string[] = [];
+  const toConfirm: string[] = [];
+
   // Collapse a run of same-type events into a single task keyed on the
   // LATEST; the earlier ones are genuinely obsolete → mark them SUPERSEDED
   // (terminal) so they never ship on their own or count toward retries.
   const collapse = (events: PosEvent[]): PosEvent | null => {
     if (events.length === 0) return null;
     const latest = events[events.length - 1];
-    const superseded = events.slice(0, -1).map((e) => e.id);
-    if (superseded.length) markSuperseded(superseded);
+    toSupersede.push(...events.slice(0, -1).map((e) => e.id));
     return latest;
   };
 
@@ -238,13 +282,13 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
       // TABLE_MERGED / TABLE_SPLIT have no server endpoint yet — local-only.
       const handledTable = new Set([...statusEvents, ...cleanEvents].map((e) => e.id));
       const leftoverTable = events.filter((e) => !handledTable.has(e.id));
-      if (leftoverTable.length) markConfirmed(leftoverTable.map((e) => e.id));
+      if (leftoverTable.length) toConfirm.push(...leftoverTable.map((e) => e.id));
     } else if (aggType === 'SHIFT') {
       // Shift-lifecycle events ship synchronously from their own call sites
       // (POST /api/shifts/:id/open|close, and the pending-sync finalisation in
       // markShiftPendingSync/finalisePendingSyncShiftIfDrained). Recorded here
       // only for the local audit trail — nothing to queue.
-      markConfirmed(events.map((e) => e.id));
+      toConfirm.push(...events.map((e) => e.id));
       continue;
     } else {
       // ORDER
@@ -332,7 +376,7 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         // Event types with a command but no server task yet — local-only.
         const handled = new Set([...itemEvents, ...statusEvents, ...paymentEvents, ...billEvents].map((e) => e.id));
         const leftover = events.filter((e) => !handled.has(e.id));
-        if (leftover.length) markConfirmed(leftover.map((e) => e.id));
+        if (leftover.length) toConfirm.push(...leftover.map((e) => e.id));
       }
     }
 
@@ -351,9 +395,14 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         `[outbox] ${events.length} pending event(s) for ${aggType} ${aggregateId} produced no task — confirming as local-only`,
         events.map((e) => e.type),
       );
-      markConfirmed(events.map((e) => e.id));
+      toConfirm.push(...events.map((e) => e.id));
     }
   }
+
+  // Flush the derivation's own state writes before handing back the chains,
+  // so the next cycle can never re-derive an event this one already retired.
+  if (toSupersede.length) await markSuperseded(toSupersede);
+  if (toConfirm.length) await markConfirmed(toConfirm);
 
   return chains;
 }
@@ -677,8 +726,12 @@ async function cascadePoisonAggregate(aggregateId: string, reason: string): Prom
 }
 
 function reflectOrderSyncState(eventIds: string[], state: 'SYNCED' | 'PENDING' | 'DEGRADED' | 'POISONED'): void {
-  const orders = useViews.getState().orders;
   edb.events.bulkGet(eventIds).then((events) => {
+    // Read the store AFTER the await, not before it. The previous version
+    // captured `orders` up front and then spread those stale rows back over
+    // the store once the bulkGet resolved — quietly reverting any change an
+    // event applied to those same orders while this was in flight.
+    const orders = useViews.getState().orders;
     const patch: Record<string, any> = {};
     for (const e of events) {
       if (!e || e.aggregateType !== 'ORDER') continue;
@@ -686,7 +739,7 @@ function reflectOrderSyncState(eventIds: string[], state: 'SYNCED' | 'PENDING' |
       if (o && o.syncState !== 'SYNCED') patch[e.aggregateId] = { ...o, syncState: state };
     }
     if (Object.keys(patch).length) {
-      useViews.getState()._setSnapshot({ orders: { ...useViews.getState().orders, ...patch } });
+      useViews.getState()._setSnapshot({ orders: { ...orders, ...patch } });
     }
   }).catch(() => {});
 }
@@ -778,7 +831,11 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
     res = await fetchWithTimeout(`${API_URL}/api/pos/events/batch`, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ terminalId: getPosSession()?.userId, ops }),
+      // The TERMINAL's id, not the signed-in user's — `getPosSession().userId`
+      // was being sent here, so every batch was attributed to a person rather
+      // than to the tablet that produced it, and server-side per-terminal
+      // diagnostics were meaningless.
+      body: JSON.stringify({ terminalId: await getTerminalId(), ops }),
     });
   } catch (err) {
     // network/timeout — every task in the batch degrades and retries
@@ -838,6 +895,16 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
 
 async function drain(): Promise<void> {
   if (draining || circuitOpen) return;
+  // No API address configured: there is nowhere correct to send these. Leaving
+  // them QUEUED (and letting the sync indicator show "stuck") is the only safe
+  // behaviour — shipping at a guessed address is what poisoned real orders.
+  if (!isApiConfigured()) {
+    if (!configWarned) {
+      configWarned = true;
+      console.error(`[outbox] ${API_NOT_CONFIGURED}`);
+    }
+    return;
+  }
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   draining = true;
   try {
@@ -1137,6 +1204,8 @@ export interface UnsyncedSummary {
   circuitOpen: boolean;
   stalled: boolean;
   avgRttMs: number | null;
+  /** No API address on this terminal — nothing can sync until one is set. */
+  apiUnconfigured: boolean;
 }
 
 export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
@@ -1162,6 +1231,7 @@ export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
     circuitOpen,
     stalled: pending.length > 0 && Date.now() - lastProgressAt > STALL_RESTART_AFTER_MS,
     avgRttMs: avg,
+    apiUnconfigured: !isApiConfigured(),
   };
 }
 
