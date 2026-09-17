@@ -12,7 +12,8 @@ import { useViews } from '@/lib/core/views';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
-import { getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
+import { kickOutbox } from '@/lib/core/outbox';
+import { useSyncSummary, refreshSyncSummary } from '@/hooks/useSyncSummary';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { isViewMode } from '@/lib/view-mode';
@@ -23,6 +24,8 @@ import { AlertCircle, Armchair, ArrowRight, Banknote, CheckCircle2, Clock, Cloud
 // surfacing on Home — matches the "rush" framing already used for KDS
 // (kds/page.tsx's default rushThreshold).
 const AGING_TICKET_MINUTES = 20;
+
+const ACTIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'];
 
 
 export default function HomeDashboard() {
@@ -60,17 +63,32 @@ export default function HomeDashboard() {
   // fetching — populated by lib/core/views.ts's refreshOrders (bootstrap +
   // socket-driven, see POSLayout.tsx) merged with anything this terminal
   // created locally this session. No loading state, no per-screen fetch.
-  const ACTIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'];
-  const activeOrders = useViews((s) =>
-    Object.values(s.orders)
-      .filter((o) => ACTIVE_STATUSES.includes(o.status))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  // Select the RAW map and derive with useMemo.
+  //
+  // These selectors used to build the array inside the selector itself —
+  // `useViews(s => Object.values(s.orders).filter(...).sort(...))`. Zustand
+  // compares with Object.is, so a fresh array every evaluation means this
+  // component re-rendered on EVERY store notification and re-ran an O(n log n)
+  // derivation each time. Notifications are not rare: every appended event,
+  // every reflectOrderSyncState (several per shipped event), the 60s table
+  // reconcile, and every socket-driven refreshOrders. The raw map's identity
+  // only changes when the data actually changes, so useMemo now does the work
+  // once per real change instead of once per notification.
+  const ordersMap = useViews((s) => s.orders);
+  const tablesMap = useViews((s) => s.tables);
+
+  const activeOrders = useMemo(
+    () =>
+      Object.values(ordersMap)
+        .filter((o) => ACTIVE_STATUSES.includes(o.status))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [ordersMap],
   );
   // Phase 2: table view is the same shared store ClientTableMap now reads
   // from too (see lib/core/views.ts's seedTablesFromServer, kept fresh by
   // POSLayout.tsx's table:status_changed listener) — a table freed on the
   // Tables screen shows up here with no fetch, not just on the next poll.
-  const tables = useViews((s) => Object.values(s.tables));
+  const tables = useMemo(() => Object.values(tablesMap), [tablesMap]);
 
   // Shift & Cashier info
   const [activeShift, setActiveShift] = useState<any>(null);
@@ -91,23 +109,36 @@ export default function HomeDashboard() {
   // what "the numbers aren't updating" was really about. The server figure
   // above is used as a ceiling so another terminal's activity still shows.
   const activeShiftId = activeShift?.shiftId || activeShift?.id || null;
-  const localPerf = useViews((s) => {
+  // A selector returning an object LITERAL is the worst case of all: a brand new
+  // object every evaluation, so Object.is never matched and this re-rendered on
+  // every single store notification, forever. Derived from the raw map instead.
+  const localPerf = useMemo(() => {
     if (!activeShiftId) return { count: 0, value: 0 };
-    const done = Object.values(s.orders).filter(
+    const done = Object.values(ordersMap).filter(
       (o) => o.status === 'COMPLETED' && o.shiftId === activeShiftId,
     );
     const value = done.reduce((sum, o) => sum + Number(o.netAmount ?? o.subtotal ?? 0), 0);
     return { count: done.length, value };
-  });
-  const perf = (() => {
-    const ordersServed = Math.max(localPerf.count, Math.round(stats.ordersServed || 0));
-    const totalValue = Math.max(localPerf.value, Number(stats.totalValue || 0));
+  }, [ordersMap, activeShiftId]);
+
+  // The local figure leads (it ticks up the instant a payment is collected on
+  // this terminal, before the outbox has shipped it) and the server figure is a
+  // ceiling so another terminal's activity still shows. Take the count and the
+  // value from the SAME side, though — maxing each independently could pair
+  // this terminal's order count with the branch's revenue and report an average
+  // that matches neither.
+  const perf = useMemo(() => {
+    const serverServed = Math.round(stats.ordersServed || 0);
+    const serverValue = Number(stats.totalValue || 0);
+    const useServer = serverValue > localPerf.value || serverServed > localPerf.count;
+    const ordersServed = useServer ? serverServed : localPerf.count;
+    const totalValue = useServer ? serverValue : localPerf.value;
     return {
       ordersServed,
       totalValue,
       averagePerOrder: ordersServed ? totalValue / ordersServed : 0,
     };
-  })();
+  }, [stats.ordersServed, stats.totalValue, localPerf.count, localPerf.value]);
 
   // Spec Part 11 — in View Mode (signed in, no shift) order-entry CTAs stop
   // navigating and explain themselves with an inline "Open a shift" prompt.
@@ -218,14 +249,9 @@ export default function HomeDashboard() {
   // regardless of the real backlog. Poll the actual outbox summary instead —
   // the same source SyncHealthDot in the top bar already uses, so the two
   // indicators can't disagree.
-  const [syncSummary, setSyncSummary] = useState<UnsyncedSummary | null>(null);
-  useEffect(() => {
-    let alive = true;
-    const tick = () => getUnsyncedSummary().then((s) => { if (alive) setSyncSummary(s); }).catch(() => {});
-    tick();
-    const h = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(h); };
-  }, []);
+  // The same shared subscription the top bar's indicator reads, rather than a
+  // second identical 4s IndexedDB poll running alongside it.
+  const syncSummary = useSyncSummary();
   const unsyncedCount = syncSummary?.count ?? 0;
   const stuckCount = (syncSummary?.poisoned ?? 0) + (syncSummary?.abandoned ?? 0);
 
@@ -234,6 +260,7 @@ export default function HomeDashboard() {
     setIsRetryingSync(true);
     kickOutbox('immediate');
     toast.success('Sync attempted for pending offline data');
+    refreshSyncSummary();
     // Give the drain a moment to actually move something before the summary
     // re-polls on its own 4s cadence — otherwise the button's own state
     // clears before there's anything new to see.

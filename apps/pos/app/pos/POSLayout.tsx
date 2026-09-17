@@ -308,14 +308,21 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   // left under a now-closed shift at this branch. If so, block with the
   // resolution modal until every one is adopted or cancelled. Re-runs on
   // navigation so it also catches the first hop out of the shift-open flow.
+  // Keyed on whether this is a working screen, NOT on `pathname` — an effect
+  // keyed on the path re-ran on every single tab switch, so moving between
+  // Home/Menu/Tickets/Tables fired a fresh GET /api/pos/orphans each time. An
+  // orphan is created by a shift closing elsewhere, not by a cashier changing
+  // screens; checking on entry to the working area (and on the explicit
+  // recheck after resolving one) is the whole requirement.
+  const onWorkingScreen =
+    pathname.startsWith('/pos') &&
+    !pathname.startsWith('/pos/shift') &&
+    !pathname.startsWith('/pos/kds') &&
+    !pathname.startsWith('/pos/login');
+
   useEffect(() => {
     const shift = getPosShift();
     const s = getPosSession();
-    const onWorkingScreen =
-      pathname.startsWith('/pos') &&
-      !pathname.startsWith('/pos/shift') &&
-      !pathname.startsWith('/pos/kds') &&
-      !pathname.startsWith('/pos/login');
     if (!shift?.shiftId || !s?.branchId || !onWorkingScreen) {
       setOrphans([]);
       return;
@@ -335,7 +342,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
       }
     })();
     return () => { cancelled = true; };
-  }, [pathname]);
+  }, [onWorkingScreen]);
 
   // Spec Part 10 — a manager overlay cannot take a payment or build an order.
   // Walking onto the order/checkout or receipt screen ends it, and the

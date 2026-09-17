@@ -219,7 +219,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   // driven, see POSLayout.tsx) merged with anything this terminal created
   // locally. No fetch, no loading state, no per-screen polling.
   const LIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED', 'COMPLETED', 'CANCELLED'];
-  const liveOrdersRaw = useViews((s) => Object.values(s.orders).filter((o) => LIVE_STATUSES.includes(o.status)));
+  // Select the raw map, derive with useMemo — building the array inside the
+  // selector made this re-render on every store notification (see the same note
+  // in HomeDashboard).
+  const ordersMap = useViews((s) => s.orders);
+  const liveOrdersRaw = useMemo(
+    () => Object.values(ordersMap).filter((o) => LIVE_STATUSES.includes(o.status)),
+    [ordersMap],
+  );
   const liveOrders = useMemo(() => {
     const sorted = [...liveOrdersRaw];
     if (sortOrder === 'oldest') sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());

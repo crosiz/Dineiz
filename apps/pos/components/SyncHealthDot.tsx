@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUnsyncedSummary, type UnsyncedSummary } from '@/lib/core/outbox';
+import { type UnsyncedSummary } from '@/lib/core/outbox';
+import { useSyncSummary } from '@/hooks/useSyncSummary';
 
 // Always-visible read on whether this terminal's events are reaching the
 // server. Green = nothing queued. Amber = N in flight, still moving. Red =
@@ -37,15 +37,9 @@ function classify(s: UnsyncedSummary | null): { health: Health; label: string; d
 
 export function SyncHealthDot() {
   const router = useRouter();
-  const [summary, setSummary] = useState<UnsyncedSummary | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const tick = () => getUnsyncedSummary().then((s) => { if (alive) setSummary(s); }).catch(() => {});
-    tick();
-    const h = setInterval(tick, 4000);
-    return () => { alive = false; clearInterval(h); };
-  }, []);
+  // Shared with Home's own indicator — they used to run two identical 4s
+  // IndexedDB polls side by side and could disagree while out of phase.
+  const summary = useSyncSummary();
 
   const { health, label, detail } = classify(summary);
 
