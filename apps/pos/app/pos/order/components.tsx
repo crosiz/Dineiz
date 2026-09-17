@@ -42,32 +42,32 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
 
       {/* Bottom Sheet Container */}
       <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end h-screen pointer-events-none">
-        <div className="w-full h-fit max-h-[90vh] bg-white rounded-t-[24px] flex flex-col shadow-[0_-8px_40px_rgba(15,23,42,0.18)] border border-[#E2E8F0] border-b-0 max-w-[900px] mx-auto pointer-events-auto animate-in slide-in-from-bottom duration-300">
+        <div className="w-full h-fit max-h-[90vh] bg-white rounded-t-[24px] flex flex-col shadow-[0_-8px_40px_rgba(15,23,42,0.18)] border border-line border-b-0 max-w-[900px] mx-auto pointer-events-auto animate-in slide-in-from-bottom duration-300">
 
           {/* Handle */}
           <div className="w-full flex justify-center py-3 shrink-0 cursor-pointer" onClick={onClose}>
-            <div className="w-12 h-1.5 bg-[#E2E8F0] rounded-full"></div>
+            <div className="w-12 h-1.5 bg-hover rounded-full"></div>
           </div>
 
           {/* Header */}
-          <header className="px-8 pb-6 flex items-center justify-between border-b border-[#E2E8F0] shrink-0">
+          <header className="px-8 pb-6 flex items-center justify-between border-b border-line shrink-0">
             <div className="flex items-center gap-4">
-              <div className="w-[56px] h-[56px] rounded-xl overflow-hidden border border-[#E2E8F0] bg-[#F8FAFC] shrink-0">
+              <div className="w-[56px] h-[56px] rounded-xl overflow-hidden border border-line bg-canvas shrink-0">
                 <img className="w-full h-full object-cover" src={item.image || "https://placehold.co/400x300/F1F5F9/64748B?text=No+Image"} alt={item.name} />
               </div>
               <div>
-                <h1 className="text-[22px] font-bold leading-tight text-[#0F172A]">{item.name}</h1>
+                <h1 className="text-[22px] font-bold leading-tight text-ink">{item.name}</h1>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">{item.categoryName || 'Mains'}</span>
-                  <span className="w-1 h-1 bg-[#CBD5E1] rounded-full"></span>
-                  <span className="text-[12px] font-bold text-[var(--pos-primary,#F59E0B)]">PKR {item.basePrice}</span>
+                  <span className="text-[11px] font-bold text-ink-3 uppercase tracking-wider">{item.categoryName || 'Mains'}</span>
+                  <span className="w-1 h-1 bg-hover rounded-full"></span>
+                  <span className="text-[12px] font-bold text-brand">PKR {item.basePrice}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-[#FFF8EC] px-4 py-2 rounded-xl border border-[var(--pos-primary,#F59E0B)]/30 flex items-center gap-3 shrink-0">
-              <span className="text-[11px] font-bold text-[#B4770B] uppercase tracking-wider">Total</span>
-              <span className="text-[20px] font-black text-[#7A4A00] tabular-nums">PKR {currentTotal}</span>
+            <div className="bg-brand-soft px-4 py-2 rounded-xl border border-brand/30 flex items-center gap-3 shrink-0">
+              <span className="text-[11px] font-bold text-brand-strong uppercase tracking-wider">Total</span>
+              <span className="text-[20px] font-black text-brand-strong tabular-nums">PKR {currentTotal}</span>
             </div>
           </header>
 
@@ -76,14 +76,14 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
             {/* 1. Choose Size (Single Select) */}
             <section>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">Choose Size</h3>
-                <span className="bg-[var(--pos-primary,#F59E0B)]/10 text-[var(--pos-primary,#F59E0B)] text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Required</span>
+                <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Choose Size</h3>
+                <span className="bg-brand/10 text-brand text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Required</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {item.variations.map((v) => (
                   <label
                     key={v.id}
-                    className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedVarId === v.id ? 'border-2 border-[var(--pos-primary,#F59E0B)] bg-[#FFF8EC]' : 'border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC]'}`}
+                    className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedVarId === v.id ? 'border-2 border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
                   >
                     <input
                       type="radio"
@@ -93,12 +93,12 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                       className="hidden"
                     />
                     <div className="flex flex-col">
-                      <span className="text-[16px] font-semibold text-[#0F172A]">{v.name}</span>
-                      {v.price > 0 && <span className="text-[12px] font-bold text-[var(--pos-primary,#F59E0B)]">+ PKR {v.price}</span>}
+                      <span className="text-[16px] font-semibold text-ink">{v.name}</span>
+                      {v.price > 0 && <span className="text-[12px] font-bold text-brand">+ PKR {v.price}</span>}
                     </div>
                     {selectedVarId === v.id
-                      ? <CircleDot className="w-6 h-6 text-[var(--pos-primary,#F59E0B)]" />
-                      : <Circle className="w-6 h-6 text-[#CBD5E1]" />}
+                      ? <CircleDot className="w-6 h-6 text-brand" />
+                      : <Circle className="w-6 h-6 text-ink-4" />}
                   </label>
                 ))}
               </div>
@@ -108,14 +108,14 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
             {item.addOns && item.addOns.length > 0 && (
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">Add Extras</h3>
-                  <span className="bg-[#F1F5F9] text-[#64748B] text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Optional</span>
+                  <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Add Extras</h3>
+                  <span className="bg-sunken text-ink-3 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Optional</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {item.addOns.map((a) => (
                     <label
                       key={a.id}
-                      className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedAddOnIds.has(a.id) ? 'border-2 border-[var(--pos-primary,#F59E0B)] bg-[#FFF8EC]' : 'border border-[#E2E8F0] bg-white hover:bg-[#F8FAFC]'}`}
+                      className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedAddOnIds.has(a.id) ? 'border-2 border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
                     >
                       <input
                         type="checkbox"
@@ -129,12 +129,12 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                         className="hidden"
                       />
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-semibold text-[#0F172A]">{a.name}</span>
-                        {a.price > 0 && <span className="text-[12px] font-bold text-[var(--pos-primary,#F59E0B)]">+ PKR {a.price}</span>}
+                        <span className="text-[16px] font-semibold text-ink">{a.name}</span>
+                        {a.price > 0 && <span className="text-[12px] font-bold text-brand">+ PKR {a.price}</span>}
                       </div>
                       {selectedAddOnIds.has(a.id)
-                        ? <CheckSquare className="w-6 h-6 text-[var(--pos-primary,#F59E0B)]" />
-                        : <Square className="w-6 h-6 text-[#CBD5E1]" />}
+                        ? <CheckSquare className="w-6 h-6 text-brand" />
+                        : <Square className="w-6 h-6 text-ink-4" />}
                     </label>
                   ))}
                 </div>
@@ -143,12 +143,12 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
           </main>
 
           {/* Bottom Action Bar */}
-          <footer className="border-t border-[#E2E8F0] bg-white px-8 py-4 flex items-center justify-between shrink-0 gap-4">
-            <button className="px-6 py-4 rounded-xl border border-[#E2E8F0] text-[#475569] font-bold text-[15px] hover:bg-[#F1F5F9] transition-colors" onClick={onClose}>
+          <footer className="border-t border-line bg-white px-8 py-4 flex items-center justify-between shrink-0 gap-4">
+            <button className="px-6 py-4 rounded-xl border border-line text-ink-2 font-bold text-[15px] hover:bg-sunken transition-colors" onClick={onClose}>
               Cancel
             </button>
             <button
-              className="flex-1 px-8 py-4 bg-[var(--pos-primary,#F59E0B)] text-white rounded-xl font-bold text-[17px] hover:brightness-105 active:scale-[0.99] transition-all shadow-lg shadow-[var(--pos-primary,#F59E0B)]/25"
+              className="flex-1 px-8 py-4 bg-brand text-white rounded-xl font-bold text-[17px] hover:brightness-105 active:scale-[0.99] transition-all shadow-lg shadow-brand/25"
               onClick={handleAdd}
             >
               Add to Order &middot; PKR {currentTotal}
@@ -230,26 +230,26 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-[24px] border border-[#E2E8F0] p-7 shadow-[0_30px_80px_rgba(15,23,42,0.25)] animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white w-full max-w-md rounded-[24px] border border-line p-7 shadow-[0_30px_80px_rgba(15,23,42,0.25)] animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-xl font-bold text-[#0F172A]">Apply Discount</h2>
-          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-[#94A3B8] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors">
+          <h2 className="text-xl font-bold text-ink">Apply Discount</h2>
+          <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-ink-4 hover:bg-sunken hover:text-ink transition-colors">
             <X className="w-[20px] h-[20px]" />
           </button>
         </div>
 
-        <div className="flex gap-2 mb-6 p-1 bg-[#F1F5F9] rounded-xl border border-[#E2E8F0]">
+        <div className="flex gap-2 mb-6 p-1 bg-sunken rounded-xl border border-line">
           <button
             type="button"
             onClick={() => setType('percent')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'percent' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'percent' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}
           >
             Percentage (%)
           </button>
           <button
             type="button"
             onClick={() => setType('fixed')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'fixed' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${type === 'fixed' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}
           >
             Fixed Amount
           </button>
@@ -257,13 +257,13 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
 
         <div className="space-y-4">
           <div>
-            <label className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5 block">Discount Value</label>
+            <label className="text-[11px] font-bold text-ink-3 uppercase tracking-wider mb-1.5 block">Discount Value</label>
             <input
               type="number"
               value={value}
               onChange={(e) => { setValue(e.target.value); setPinError(''); }}
               placeholder={type === 'percent' ? 'e.g., 10' : 'e.g., 500'}
-              className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-[#0F172A] font-semibold placeholder:text-[#94A3B8] focus:border-[var(--pos-primary,#F59E0B)] focus:bg-white outline-none transition-colors"
+              className="w-full bg-canvas border border-line rounded-xl p-3 text-ink font-semibold placeholder:text-ink-4 focus:border-brand focus:bg-white outline-none transition-colors"
             />
           </div>
 
@@ -271,7 +271,7 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
             <div className="animate-in slide-in-from-top-1 duration-200">
               {!isManager ? (
                 <>
-                  <label className="text-[11px] font-bold text-[#C4362E] uppercase tracking-wider mb-1.5 block">Manager PIN required — discount over {maxDiscountPercent}%</label>
+                  <label className="text-[11px] font-bold text-danger uppercase tracking-wider mb-1.5 block">Manager PIN required — discount over {maxDiscountPercent}%</label>
                   <input
                     type="password"
                     inputMode="numeric"
@@ -279,33 +279,33 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
                     value={pin}
                     onChange={(e) => { setPin(e.target.value.replace(/\D/g, '')); setPinError(''); }}
                     placeholder="Enter 4-digit PIN"
-                    className="w-full bg-[#FDECEC] border border-[#F5C6C2] rounded-xl p-3 text-[#0F172A] font-semibold tracking-widest placeholder:text-[#C99] focus:border-[#C4362E] outline-none transition-colors"
+                    className="w-full bg-danger/10 border border-danger rounded-xl p-3 text-ink font-semibold tracking-widest placeholder:text-[#C99] focus:border-danger outline-none transition-colors"
                   />
                 </>
               ) : (
                 <>
-                  <label className="text-[11px] font-bold text-[#B4770B] uppercase tracking-wider mb-1.5 block">Reason required — discount over {maxDiscountPercent}%</label>
+                  <label className="text-[11px] font-bold text-brand-strong uppercase tracking-wider mb-1.5 block">Reason required — discount over {maxDiscountPercent}%</label>
                   <input
                     type="text"
                     value={reason}
                     onChange={(e) => { setReason(e.target.value); setPinError(''); }}
                     placeholder="e.g. Customer complaint, VIP"
-                    className="w-full bg-[#FFF8EC] border border-[var(--pos-primary,#F59E0B)]/30 rounded-xl p-3 text-[#0F172A] font-semibold placeholder:text-[#B99] focus:border-[var(--pos-primary,#F59E0B)] outline-none transition-colors"
+                    className="w-full bg-brand-soft border border-brand/30 rounded-xl p-3 text-ink font-semibold placeholder:text-[#B99] focus:border-brand outline-none transition-colors"
                   />
                 </>
               )}
-              {pinError && <p className="text-[12px] font-semibold text-[#C4362E] mt-1.5">{pinError}</p>}
+              {pinError && <p className="text-[12px] font-semibold text-danger mt-1.5">{pinError}</p>}
             </div>
           )}
         </div>
 
         <div className="flex gap-3 mt-7">
-          <button type="button" onClick={onClose} className="flex-1 p-3 rounded-xl border border-[#E2E8F0] text-[#475569] font-bold hover:bg-[#F1F5F9] transition-colors">Cancel</button>
+          <button type="button" onClick={onClose} className="flex-1 p-3 rounded-xl border border-line text-ink-2 font-bold hover:bg-sunken transition-colors">Cancel</button>
           <button
             type="button"
             onClick={handleApply}
             disabled={verifying || !value}
-            className="flex-1 p-3 rounded-xl bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 active:scale-[0.98] disabled:opacity-50 text-white font-bold transition-all shadow-lg shadow-[var(--pos-primary,#F59E0B)]/25"
+            className="flex-1 p-3 rounded-xl bg-brand hover:brightness-105 active:scale-[0.98] disabled:opacity-50 text-white font-bold transition-all shadow-lg shadow-brand/25"
           >
             {verifying ? 'Verifying…' : 'Apply Discount'}
           </button>

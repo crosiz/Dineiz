@@ -260,38 +260,38 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="h-full bg-[#F8FAFC] text-[#0F172A] pb-24 font-body-md select-none overflow-y-auto">
+    <div className="h-full bg-canvas text-ink pb-24 font-body-md select-none overflow-y-auto">
       <main className="max-w-3xl mx-auto p-4 lg:p-6 space-y-6">
         
         {/* Section 1: Today at a Glance */}
         <section>
           <div className="flex justify-between items-end mb-3">
-            <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider">Today at a Glance</h2>
+            <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider">Today at a Glance</h2>
             <button
               onClick={refreshAdmin}
-              className={`p-1.5 rounded-full text-[#64748B] hover:bg-[#E2E8F0] transition-colors ${isRefreshing ? 'animate-spin text-[var(--pos-primary)]' : ''}`}
+              className={`p-1.5 rounded-full text-ink-3 hover:bg-hover transition-colors ${isRefreshing ? 'animate-spin text-brand' : ''}`}
             >
               <RefreshCw size={18} />
             </button>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] p-5 grid grid-cols-2 gap-y-6 gap-x-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-line p-5 grid grid-cols-2 gap-y-6 gap-x-4">
             <div>
-              <p className="text-[12px] text-[#64748B] font-semibold mb-1">Today's Revenue</p>
-              <p className="text-[24px] font-bold text-[var(--pos-primary)]">PKR {stats.revenue.toLocaleString()}</p>
+              <p className="text-[12px] text-ink-3 font-semibold mb-1">Today's Revenue</p>
+              <p className="text-[24px] font-bold text-brand">PKR {stats.revenue.toLocaleString()}</p>
             </div>
             <div>
-              <p className="text-[12px] text-[#64748B] font-semibold mb-1">Total Orders</p>
+              <p className="text-[12px] text-ink-3 font-semibold mb-1">Total Orders</p>
               <p className="text-[24px] font-bold">{stats.orders}</p>
             </div>
             <div>
-              <p className="text-[12px] text-[#64748B] font-semibold mb-1">Active Cashiers</p>
+              <p className="text-[12px] text-ink-3 font-semibold mb-1">Active Cashiers</p>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <p className="text-[20px] font-bold">{activeShifts.length}</p>
               </div>
             </div>
             <div>
-              <p className="text-[12px] text-[#64748B] font-semibold mb-1">Open Tables</p>
+              <p className="text-[12px] text-ink-3 font-semibold mb-1">Open Tables</p>
               <p className="text-[20px] font-bold">{openTables}</p>
             </div>
           </div>
@@ -300,14 +300,14 @@ export default function AdminPage() {
         {/* Section 2: Active Shifts */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider">Active Shifts</h2>
-            <span className="bg-[#E2E8F0] text-[#475569] text-[11px] font-bold px-2 py-0.5 rounded-full">{activeShifts.length}</span>
+            <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider">Active Shifts</h2>
+            <span className="bg-hover text-ink-2 text-[11px] font-bold px-2 py-0.5 rounded-full">{activeShifts.length}</span>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
+          <div className="bg-white rounded-2xl shadow-sm border border-line overflow-hidden divide-y divide-line">
             {shiftsLoading ? (
-              <div className="p-6 text-center text-[#94A3B8] text-[13px] font-medium">Loading active shifts...</div>
+              <div className="p-6 text-center text-ink-4 text-[13px] font-medium">Loading active shifts...</div>
             ) : activeShifts.length === 0 ? (
-              <div className="p-6 text-center text-[#94A3B8] text-[13px] font-medium">No cashiers are currently clocked in.</div>
+              <div className="p-6 text-center text-ink-4 text-[13px] font-medium">No cashiers are currently clocked in.</div>
             ) : (
               activeShifts.map(shift => {
                 const ms = Date.now() - new Date(shift.openedAt).getTime();
@@ -321,10 +321,10 @@ export default function AdminPage() {
                     onMouseLeave={handleTouchEnd}
                     onTouchStart={() => handleTouchStart(shift)}
                     onTouchEnd={handleTouchEnd}
-                    className="p-4 flex justify-between items-center bg-white hover:bg-[#F8FAFC] transition-colors cursor-pointer select-none active:bg-[#F1F5F9]"
+                    className="p-4 flex justify-between items-center bg-white hover:bg-canvas transition-colors cursor-pointer select-none active:bg-sunken"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#F1F5F9] flex items-center justify-center text-[#64748B]">
+                      <div className="w-10 h-10 rounded-full bg-sunken flex items-center justify-center text-ink-3">
                         <User size={20} />
                       </div>
                       <div>
@@ -332,34 +332,34 @@ export default function AdminPage() {
                           <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                           <p className="font-bold text-[15px]">{shift.user?.name || 'Cashier'}</p>
                         </div>
-                        <div className="flex items-center gap-1 text-[12px] text-[#64748B] mt-0.5">
+                        <div className="flex items-center gap-1 text-[12px] text-ink-3 mt-0.5">
                           <Clock size={12} />
                           <span>{h}h {m}m</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[14px] font-bold text-[#0F172A]">{shift._count?.orders ?? 0} orders</p>
+                      <p className="text-[14px] font-bold text-ink">{shift._count?.orders ?? 0} orders</p>
                     </div>
                   </div>
                 );
               })
             )}
           </div>
-          <p className="text-[11px] text-[#94A3B8] mt-2 px-2 text-center">Long-press a shift to force close remotely.</p>
+          <p className="text-[11px] text-ink-4 mt-2 px-2 text-center">Long-press a shift to force close remotely.</p>
         </section>
 
         {/* Section 3: Pending Approvals */}
         <section>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider">Pending Approvals</h2>
+            <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider">Pending Approvals</h2>
             {pendingApprovals.length > 0 && (
               <span className="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full animate-pulse">{pendingApprovals.length}</span>
             )}
           </div>
           
           {pendingApprovals.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] p-6 text-center text-[#94A3B8]">
+            <div className="bg-white rounded-2xl shadow-sm border border-line p-6 text-center text-ink-4">
               <ShieldAlert size={32} className="mx-auto mb-2 opacity-50" />
               <p className="font-medium text-[14px]">No pending manager approvals.</p>
             </div>
@@ -373,21 +373,21 @@ export default function AdminPage() {
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-red-100 text-red-700`}>
                           VOID ITEM
                         </span>
-                        <span className="text-[12px] font-bold text-[#64748B]">Requested by {req.cashier?.name}</span>
+                        <span className="text-[12px] font-bold text-ink-3">Requested by {req.cashier?.name}</span>
                       </div>
-                      <p className="text-[14px] font-medium text-[#0F172A]">Order #{req.order?.orderNumber} • Remove {req.quantity}x • Reason: {req.reason}</p>
+                      <p className="text-[14px] font-medium text-ink">Order #{req.order?.orderNumber} • Remove {req.quantity}x • Reason: {req.reason}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => handleDeny(req.id)}
-                      className="flex-1 py-2 rounded-lg border border-[#E2E8F0] text-[#64748B] font-bold text-[13px] hover:bg-[#F8FAFC] transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 py-2 rounded-lg border border-line text-ink-3 font-bold text-[13px] hover:bg-canvas transition-colors flex items-center justify-center gap-1"
                     >
                       <XCircle size={16} /> Deny
                     </button>
                     <button 
                       onClick={() => handleApprove(req.id)}
-                      className="flex-1 py-2 rounded-lg bg-[#10b981] text-white font-bold text-[13px] hover:bg-[#059669] transition-colors flex items-center justify-center gap-1 shadow-sm"
+                      className="flex-1 py-2 rounded-lg bg-ok text-white font-bold text-[13px] hover:bg-ok transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                       <CheckCircle2 size={16} /> Approve
                     </button>
@@ -400,8 +400,8 @@ export default function AdminPage() {
 
         {/* Section 4: Quick Actions */}
         <section>
-          <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Quick Actions</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
+          <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider mb-3">Quick Actions</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-line overflow-hidden divide-y divide-line">
             <ActionRow
               icon={<Receipt size={20} className="text-blue-500" />}
               label="Reprint Last Receipt"
@@ -423,7 +423,7 @@ export default function AdminPage() {
               onClick={() => router.push('/pos/tables')}
             />
             <ActionRow
-              icon={<Lock size={20} className="text-[#64748B]" />}
+              icon={<Lock size={20} className="text-ink-3" />}
               label="Lock This Terminal"
               onClick={() => {
                 // clearPosSession() ends the login session without wiping
@@ -440,8 +440,8 @@ export default function AdminPage() {
 
         {/* Section 5: Shift Report */}
         <section>
-          <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Shift Report</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
+          <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider mb-3">Shift Report</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-line overflow-hidden divide-y divide-line">
             <ActionRow
               icon={<FileText size={20} className="text-indigo-500" />}
               label="Generate Shift Report"
@@ -452,14 +452,14 @@ export default function AdminPage() {
 
         {/* Section 6: Printing Settings */}
         <section>
-          <h2 className="text-[14px] font-bold text-[#64748B] uppercase tracking-wider mb-3">Printing Settings</h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] overflow-hidden divide-y divide-[#E2E8F0]">
-            <div className="p-4 flex items-center justify-between bg-white hover:bg-[#F8FAFC] transition-colors">
+          <h2 className="text-[14px] font-bold text-ink-3 uppercase tracking-wider mb-3">Printing Settings</h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-line overflow-hidden divide-y divide-line">
+            <div className="p-4 flex items-center justify-between bg-white hover:bg-canvas transition-colors">
               <div className="flex items-center gap-3">
                 <Printer size={20} className="text-gray-500" />
                 <div>
-                  <span className="font-bold text-[15px] text-[#0F172A] block">PDF Mode (Development)</span>
-                  <span className="text-[12px] text-[#64748B]">Generate PDF instead of sending ESC/POS</span>
+                  <span className="font-bold text-[15px] text-ink block">PDF Mode (Development)</span>
+                  <span className="text-[12px] text-ink-3">Generate PDF instead of sending ESC/POS</span>
                 </div>
               </div>
               <button 
@@ -492,33 +492,33 @@ export default function AdminPage() {
           ever touched local state and never called the backend. */}
       {forceCloseTarget && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-white border border-[#E2E8F0] rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
+          <div className="w-full max-w-[400px] bg-white border border-line rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
             <div className="p-7">
-              <div className="w-12 h-12 rounded-full bg-[#FDECEC] text-[#DC2626] flex items-center justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mb-4">
                 <ShieldAlert size={24} />
               </div>
-              <h2 className="text-[19px] font-bold text-[#0F172A] mb-2">Force Close {forceCloseTarget.name}'s Shift?</h2>
-              <p className="text-[14px] text-[#64748B] leading-relaxed mb-4">
+              <h2 className="text-[19px] font-bold text-ink mb-2">Force Close {forceCloseTarget.name}'s Shift?</h2>
+              <p className="text-[14px] text-ink-3 leading-relaxed mb-4">
                 This closes their shift remotely with no cash count. Use this only when the terminal is unreachable.
               </p>
               <textarea
                 value={forceCloseReason}
                 onChange={(e) => setForceCloseReason(e.target.value)}
                 placeholder="Reason for force closing this shift (required)..."
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[var(--pos-primary,#F59E0B)] transition-colors resize-none h-20 mb-6"
+                className="w-full bg-canvas border border-line rounded-xl p-3 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:border-brand transition-colors resize-none h-20 mb-6"
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setForceCloseTarget(null)}
                   disabled={isForceClosing}
-                  className="flex-1 h-[46px] bg-white text-[#475569] font-bold text-[14px] rounded-xl border border-[#E2E8F0] hover:bg-[#F1F5F9] active:scale-95 transition-all disabled:opacity-50"
+                  className="flex-1 h-[46px] bg-white text-ink-2 font-bold text-[14px] rounded-xl border border-line hover:bg-sunken active:scale-95 transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmForceClose}
                   disabled={isForceClosing}
-                  className="flex-1 h-[46px] bg-[#DC2626] hover:bg-[#C4362E] text-white font-bold text-[14px] rounded-xl active:scale-95 transition-all shadow-lg shadow-[#DC2626]/25 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 h-[46px] bg-danger hover:bg-danger text-white font-bold text-[14px] rounded-xl active:scale-95 transition-all shadow-lg shadow-danger/25 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isForceClosing ? 'Closing...' : 'Force Close'}
                 </button>
@@ -535,13 +535,13 @@ function ActionRow({ icon, label, onClick }: { icon: React.ReactNode, label: str
   return (
     <div 
       onClick={onClick}
-      className="p-4 flex items-center justify-between bg-white hover:bg-[#F8FAFC] active:bg-[#F1F5F9] transition-colors cursor-pointer select-none"
+      className="p-4 flex items-center justify-between bg-white hover:bg-canvas active:bg-sunken transition-colors cursor-pointer select-none"
     >
       <div className="flex items-center gap-3">
         {icon}
-        <span className="font-bold text-[15px] text-[#0F172A]">{label}</span>
+        <span className="font-bold text-[15px] text-ink">{label}</span>
       </div>
-      <ChevronRight size={20} className="text-[#CBD5E1]" />
+      <ChevronRight size={20} className="text-ink-4" />
     </div>
   );
 }

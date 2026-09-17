@@ -98,14 +98,14 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
                   <AlertTriangle size={22} className="text-rose-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-[16px] font-bold text-[#0F172A] leading-snug">
+                  <h2 className="text-[16px] font-bold text-ink leading-snug">
                     {itemsLabel} cannot be made
                   </h2>
-                  <p className="text-[13px] text-[#64748B] mt-1 leading-relaxed">
+                  <p className="text-[13px] text-ink-3 mt-1 leading-relaxed">
                     <span className="font-semibold text-rose-600">{alert.name}</span> is out of stock.
                   </p>
                 </div>
-                <button onClick={onDismiss} className="text-[#94A3B8] hover:text-[#0F172A] shrink-0" title="Dismiss">
+                <button onClick={onDismiss} className="text-ink-4 hover:text-ink shrink-0" title="Dismiss">
                   <X size={18} />
                 </button>
               </div>
@@ -114,19 +114,19 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
               <button
                 onClick={handleMarkUnavailable}
                 disabled={isMarking}
-                className="w-full h-[48px] rounded-xl bg-[#0F172A] text-white font-bold text-[14px] hover:bg-[#1E293B] disabled:opacity-60 active:scale-[0.98] transition-all"
+                className="w-full h-[48px] rounded-xl bg-ink text-white font-bold text-[14px] hover:bg-ink disabled:opacity-60 active:scale-[0.98] transition-all"
               >
                 {isMarking ? 'Updating…' : 'Mark Item(s) Unavailable'}
               </button>
               <button
                 onClick={() => setShowPinModal(true)}
-                className="w-full h-[48px] rounded-xl bg-white border border-[#E2E8F0] text-[#475569] font-bold text-[14px] hover:bg-[#F8FAFC] active:scale-[0.98] transition-all"
+                className="w-full h-[48px] rounded-xl bg-white border border-line text-ink-2 font-bold text-[14px] hover:bg-canvas active:scale-[0.98] transition-all"
               >
                 Add Anyway (Manager Override)
               </button>
               <button
                 onClick={onDismiss}
-                className="w-full h-[42px] rounded-xl text-[#94A3B8] font-semibold text-[13px] hover:text-[#64748B] transition-colors"
+                className="w-full h-[42px] rounded-xl text-ink-4 font-semibold text-[13px] hover:text-ink-3 transition-colors"
               >
                 Cancel
               </button>

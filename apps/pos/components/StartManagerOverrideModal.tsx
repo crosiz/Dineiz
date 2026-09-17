@@ -64,19 +64,19 @@ export function StartManagerOverrideModal({ onClose }: { onClose: () => void }) 
           type="password" inputMode="numeric" maxLength={8} value={pin} autoFocus
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
-          className="w-full h-11 rounded-xl border border-slate-200 px-3 text-lg font-bold tracking-[0.3em] text-center outline-none focus:border-[#FF5722] mb-3"
+          className="w-full h-11 rounded-xl border border-slate-200 px-3 text-lg font-bold tracking-[0.3em] text-center outline-none focus:border-brand mb-3"
           placeholder="••••"
         />
 
         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reason</label>
         <textarea
           value={reason} onChange={(e) => setReason(e.target.value)}
-          className="w-full h-16 rounded-xl border border-slate-200 p-2.5 text-[16px] outline-none focus:border-[#FF5722] resize-none mb-3"
+          className="w-full h-16 rounded-xl border border-slate-200 p-2.5 text-[16px] outline-none focus:border-brand resize-none mb-3"
           placeholder="e.g. Customer changed their order"
         />
 
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" checked={oneShot} onChange={(e) => setOneShot(e.target.checked)} className="w-4 h-4 accent-[#FF5722]" />
+          <input type="checkbox" checked={oneShot} onChange={(e) => setOneShot(e.target.checked)} className="w-4 h-4 accent-brand" />
           <span className="text-[12px] text-slate-600">Exit automatically after one action</span>
         </label>
 

@@ -90,15 +90,15 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
           padded viewport. z-[var(--z-modal-nested)] (400) instead of the
           base modal tier (200) so it always wins over whatever opened it. */}
       <div
-        className={`w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-[#E2E8F0] shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
+        className={`w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-line shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
       >
         {/* Lock icon */}
         <div className="text-center mb-2">
-          <div className="w-13 h-13 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 border border-[var(--pos-primary,#F59E0B)]/30 flex items-center justify-center mx-auto mb-3">
-            <Lock className="text-[var(--pos-primary,#F59E0B)] w-[26px] h-[26px]" />
+          <div className="w-13 h-13 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center mx-auto mb-3">
+            <Lock className="text-brand w-[26px] h-[26px]" />
           </div>
-          <h2 className="text-[#0F172A] text-[18px] font-bold clash-display">Manager Access</h2>
-          <p className="text-[#64748B] text-[13px] mt-1.5">Enter your 4-digit manager PIN</p>
+          <h2 className="text-ink text-[18px] font-bold clash-display">Manager Access</h2>
+          <p className="text-ink-3 text-[13px] mt-1.5">Enter your 4-digit manager PIN</p>
         </div>
 
         {/* PIN dots */}
@@ -108,8 +108,8 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
               key={i}
               className={`w-[18px] h-[18px] rounded-full border-2 transition-all duration-150 ${
                 i < pin.length
-                  ? (error ? 'bg-rose-500 border-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-[var(--pos-primary,#F59E0B)] border-[var(--pos-primary,#F59E0B)] shadow-[0_0_8px_rgba(245,158,11,0.5)]')
-                  : 'bg-transparent border-[#CBD5E1]'
+                  ? (error ? 'bg-rose-500 border-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'bg-brand border-brand shadow-[0_0_8px_rgba(245,158,11,0.5)]')
+                  : 'bg-transparent border-line-strong'
               }`}
             />
           ))}
@@ -132,9 +132,9 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
               <button
                 key={key}
                 onClick={() => handleKey(isDel ? 'DEL' : key)}
-                className="h-[58px] rounded-xl bg-[#F1F5F9] border border-[#E2E8F0] text-[#0F172A] font-bold text-[20px] flex items-center justify-center hover:bg-[#E2E8F0] active:scale-95 transition-all"
+                className="h-[58px] rounded-xl bg-sunken border border-line text-ink font-bold text-[20px] flex items-center justify-center hover:bg-hover active:scale-95 transition-all"
               >
-                {isDel ? <Delete className="text-[#64748B] w-[20px] h-[20px]" /> : key}
+                {isDel ? <Delete className="text-ink-3 w-[20px] h-[20px]" /> : key}
               </button>
             )
           })}
@@ -143,7 +143,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
         {/* Cancel button */}
         <button
           onClick={onClose}
-          className="w-full mt-4 py-3 rounded-xl bg-transparent text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] text-[14px] font-semibold transition-colors"
+          className="w-full mt-4 py-3 rounded-xl bg-transparent text-ink-3 hover:text-ink hover:bg-sunken text-[14px] font-semibold transition-colors"
         >
           Cancel
         </button>

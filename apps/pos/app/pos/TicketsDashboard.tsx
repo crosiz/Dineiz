@@ -161,13 +161,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     backPath: '/pos/home',
     rightActions: (
       <div className="flex items-center gap-3">
-        <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-[var(--pos-primary)] border-[var(--pos-primary)] text-white' : 'bg-white border-[#CBD5E1] text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`} title="Advanced Filter & History">
+        <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
           <ListFilter className="w-[22px] h-[22px] transition-colors" />
         </button>
-        <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-[#F8FAFC] transition-all border border-[#CBD5E1] text-[#475569] hover:text-[#0F172A] shadow-sm" title="Shift Summary">
+        <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
           <Clock className="w-[22px] h-[22px] transition-colors" />
         </button>
-        <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-[#0F172A] border-[#0F172A] text-white' : 'bg-white border-[#CBD5E1] text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]'}`} title="My Orders">
+        <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
           <CircleUser className="w-[22px] h-[22px] transition-colors" />
         </button>
       </div>
@@ -519,14 +519,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     if (layout === 'list') {
       return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-[#E2E8F0] p-4 rounded-xl transition-all shadow-sm min-w-0 cursor-pointer hover:border-[#CBD5E1] ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : ''}`}>
+        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-line p-4 rounded-xl transition-all shadow-sm min-w-0 cursor-pointer hover:border-line-strong ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : ''}`}>
           <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
             <div className="w-16 shrink-0">
-              <span className="text-xl font-bold text-[#0F172A]">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
+              <span className="text-xl font-bold text-ink">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
             </div>
             {order.tableLabel && (
               <div className="shrink-0 hidden sm:block">
-                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-[#64748B] bg-[#F8FAFC] border-[#E2E8F0]'}`}>T-{order.tableLabel}</span>
+                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-ink-3 bg-canvas border-line'}`}>T-{order.tableLabel}</span>
               </div>
             )}
             {order.assignedWaiterName && (
@@ -538,13 +538,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               </div>
             )}
             <div className="w-20 shrink-0 hidden sm:block">
-              <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded-md uppercase">{typeLabel}</span>
+              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase">{typeLabel}</span>
             </div>
-            <div className="flex-1 truncate text-[#475569] text-sm min-w-0 font-medium">
+            <div className="flex-1 truncate text-ink-2 text-sm min-w-0 font-medium">
               {parsedItems.length > 0 ? parsedItems.map((i:any) => `${i.quantity || i.qty}x ${i.name || i.itemName || i.item?.name}`).join(', ') : `${order.itemCount || 0} items`}
             </div>
             <div className="w-24 text-right shrink-0">
-              <span className="text-[#0F172A] font-bold text-sm">{formatPKR(totalAmount)}</span>
+              <span className="text-ink font-bold text-sm">{formatPKR(totalAmount)}</span>
             </div>
             <div className="flex justify-end shrink-0 gap-2">
               {dataMode === 'history' ? (
@@ -552,7 +552,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   onClick={(e) => handlePrintBill(order, e)}
                   disabled={printingId === order.id}
                   title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
                 >
                   {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   Reprint
@@ -585,7 +585,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   onClick={(e) => handlePrintBill(order, e)}
                   disabled={printingId === order.id}
                   title="Print Bill"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 >
                   {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
                   <span className="hidden md:inline">Bill</span>
@@ -598,13 +598,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   title="Message Customer"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors flex items-center gap-1.5"
+                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5"
                 >
                   <MessageSquare className="w-[18px] h-[18px]" />
                   <span className="hidden md:inline">Message</span>
                 </a>
               )}
-              <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] hover:bg-[#E2E8F0]'}`}>
+              <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-sunken border border-line-strong text-ink hover:bg-hover'}`}>
                 {!!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
               </button>
             </div>
@@ -615,12 +615,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     if (layout === 'kanban') {
       return (
-        <div key={order.id} onClick={openOrder} className="flex flex-col py-3 border-b border-[#E2E8F0] group shrink-0 w-full cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all">
+        <div key={order.id} onClick={openOrder} className="flex flex-col py-3 border-b border-line group shrink-0 w-full cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all">
           <div className="flex justify-between items-start mb-2 w-full gap-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg font-bold text-[#0F172A] tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-[#64748B] bg-[#F8FAFC] border-[#E2E8F0]'}`}>T-{order.tableLabel}</span>}
-              <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
+              <span className="text-lg font-bold text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
+              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-ink-3 bg-canvas border-line'}`}>T-{order.tableLabel}</span>}
+              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
               {order.assignedWaiterName && (
                 <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
                   <User className="w-[10px] h-[10px]" />
@@ -642,7 +642,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </div>
             <div className="flex justify-end gap-1 shrink-0">
               {dataMode === 'history' ? (
-                <div className="px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]">
+                <div className="px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide bg-sunken text-ink-3 border-line">
                   {order.status}
                 </div>
               ) : (
@@ -663,21 +663,21 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             {parsedItems.map((item: any, idx: number) => (
               <div key={idx} className="flex justify-between items-start text-[11px] leading-relaxed py-0.5 w-full gap-2">
                 <div className="flex gap-2 flex-1 min-w-0">
-                  <span className="text-[#64748B] font-bold shrink-0">{item.quantity || item.qty}x</span>
-                  <span className="text-[#475569] font-medium truncate">
+                  <span className="text-ink-3 font-bold shrink-0">{item.quantity || item.qty}x</span>
+                  <span className="text-ink-2 font-medium truncate">
                     {(item as any).name || (item as any).itemName || (item as any).item?.name}
                   </span>
                 </div>
               </div>
             ))}
             {parsedItems.length === 0 && (
-              <div className="text-xs text-[#64748B] font-medium py-1">{order.itemCount || 0} Items</div>
+              <div className="text-xs text-ink-3 font-medium py-1">{order.itemCount || 0} Items</div>
             )}
           </div>
           
           {dataMode === 'live' && (
             <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-[#0F172A] font-bold text-[12px]">{formatPKR(totalAmount)}</span>
+              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
               <div className="flex gap-2">
                 {!!order.heldAt && (
                   <button
@@ -692,7 +692,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                     onClick={(e) => handlePrintBill(order, e)}
                     disabled={printingId === order.id}
                     title="Print Bill"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
                   >
                     {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   </button>
@@ -704,7 +704,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     title="Message Customer"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors"
+                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
                   >
                     <MessageSquare className="w-[14px] h-[14px]" />
                   </a>
@@ -712,7 +712,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <button
                   disabled={isUpdatingThis || (isInKitchen && useKDS)}
                   onClick={onActionClick}
-                  className={`text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md ${isReady ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : isPending ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : (isInKitchen && useKDS) ? 'bg-blue-50 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-white border border-[#CBD5E1] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9]'}`}
+                  className={`text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md ${isReady ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : isPending ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : (isInKitchen && useKDS) ? 'bg-blue-50 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-white border border-line-strong text-ink-2 hover:text-ink hover:bg-sunken'}`}
                 >
                   {!!order.heldAt ? 'Resume' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In KDS...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect' : 'View Order'}
                 </button>
@@ -721,12 +721,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           )}
           {dataMode === 'history' && (
             <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-[#0F172A] font-bold text-[12px]">{formatPKR(totalAmount)}</span>
+              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
               <button
                 onClick={(e) => handlePrintBill(order, e)}
                 disabled={printingId === order.id}
                 title="Reprint Receipt"
-                className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-[#CBD5E1] text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
               >
                 {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
               </button>
@@ -737,12 +737,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
 
     return (
-      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-[#CBD5E1] hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
+      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-line shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-line-strong hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
         <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <span className="text-2xl font-black text-[#0F172A] tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`ml-2 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-base' : 'text-sm text-[#64748B] bg-[#F8FAFC] border-[#E2E8F0]'}`}>Table {order.tableLabel}</span>}
+              <span className="text-2xl font-black text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
+              {order.tableLabel && <span className={`ml-2 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-base' : 'text-sm text-ink-3 bg-canvas border-line'}`}>Table {order.tableLabel}</span>}
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
               {dataMode === 'history' ? (
@@ -750,7 +750,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   onClick={(e) => handlePrintBill(order, e)}
                   disabled={printingId === order.id}
                   title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
                 >
                   {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
                   Reprint
@@ -764,7 +764,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2 mb-4 mt-[-4px]">
-            <span className="text-xs font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-1 rounded-md uppercase tracking-wider">{typeLabel}</span>
+            <span className="text-xs font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase tracking-wider">{typeLabel}</span>
             {order.assignedWaiterName && (
               <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md text-[10px] font-bold">
                 <User className="w-[12px] h-[12px]" />
@@ -776,29 +776,29 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           <div className="space-y-2.5 mb-6 flex-1">
             {parsedItems.slice(0, 4).map((item: any, idx: number) => (
               <div key={idx} className="flex justify-between text-sm leading-tight">
-                <span className="text-[#475569] font-medium truncate pr-2">
-                  <span className="text-[#64748B] mr-1.5 font-bold">{item.quantity || item.qty}x</span>
+                <span className="text-ink-2 font-medium truncate pr-2">
+                  <span className="text-ink-3 mr-1.5 font-bold">{item.quantity || item.qty}x</span>
                   {(item as any).name || (item as any).itemName || (item as any).item?.name}
                 </span>
               </div>
             ))}
             {parsedItems.length > 4 && (
-              <div className="text-[11px] text-[#64748B] font-bold tracking-wide pt-1">
+              <div className="text-[11px] text-ink-3 font-bold tracking-wide pt-1">
                 + {parsedItems.length - 4} MORE ITEMS
               </div>
             )}
             {parsedItems.length === 0 && (
-              <div className="text-sm text-[#475569] font-medium py-1">{order.itemCount || 0} Items included in this order</div>
+              <div className="text-sm text-ink-2 font-medium py-1">{order.itemCount || 0} Items included in this order</div>
             )}
           </div>
           
-          <div className="flex justify-between items-end pt-4 border-t border-[#F1F5F9]">
+          <div className="flex justify-between items-end pt-4 border-t border-line">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase text-[#64748B] font-bold tracking-wider mb-0.5">Total Amount</span>
-              <span className="text-lg font-black text-[#0F172A] tracking-tight">{formatPKR(totalAmount)}</span>
+              <span className="text-[10px] uppercase text-ink-3 font-bold tracking-wider mb-0.5">Total Amount</span>
+              <span className="text-lg font-black text-ink tracking-tight">{formatPKR(totalAmount)}</span>
             </div>
             {dataMode === 'history' && (
-              <span className="text-xs font-bold text-[#64748B] bg-[#F1F5F9] border border-[#E2E8F0] px-2 py-1 rounded uppercase tracking-wider">
+              <span className="text-xs font-bold text-ink-3 bg-sunken border border-line px-2 py-1 rounded uppercase tracking-wider">
                 {order.status}
               </span>
             )}
@@ -806,11 +806,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
         
         {dataMode === 'live' && (
-          <div className="flex border-t border-[#E2E8F0] bg-[#F8FAFC]">
+          <div className="flex border-t border-line bg-canvas">
             {!!order.heldAt && (
               <button
                 onClick={(e) => deleteHeldOrder(order.id, e)}
-                className="w-1/3 py-3.5 text-sm font-bold transition-colors flex justify-center items-center text-red-600 hover:bg-red-50 border-r border-[#E2E8F0]"
+                className="w-1/3 py-3.5 text-sm font-bold transition-colors flex justify-center items-center text-red-600 hover:bg-red-50 border-r border-line"
               >
                 Delete
               </button>
@@ -820,7 +820,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 onClick={(e) => handlePrintBill(order, e)}
                 disabled={printingId === order.id}
                 title="Print Bill"
-                className="w-14 py-3.5 flex justify-center items-center text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors border-r border-[#E2E8F0] disabled:opacity-50"
+                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line disabled:opacity-50"
               >
                 {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
               </button>
@@ -832,7 +832,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 title="Message Customer"
-                className="w-14 py-3.5 flex justify-center items-center text-[#475569] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-colors border-r border-[#E2E8F0]"
+                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line"
               >
                 <MessageSquare className="w-[18px] h-[18px]" />
               </a>
@@ -840,7 +840,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <button
               disabled={isUpdatingThis || (isInKitchen && useKDS)}
               onClick={onActionClick}
-              className={`flex-1 py-3.5 text-sm font-bold transition-colors flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'text-[#0F172A] hover:bg-[#E2E8F0]'}`}
+              className={`flex-1 py-3.5 text-sm font-bold transition-colors flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'text-ink hover:bg-hover'}`}
             >
               {!!order.heldAt ? 'Resume Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
             </button>
@@ -851,16 +851,16 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   };
 
   return (
-    <main className="flex-1 bg-[#F8FAFC] overflow-y-auto no-scrollbar font-body-md pb-24 text-[#0F172A]">
+    <main className="flex-1 bg-canvas overflow-y-auto no-scrollbar font-body-md pb-24 text-ink">
       {/* Background sync pill — only visible while network is fetching over cached data */}
       {isStale && (
-        <div className="fixed top-4 right-4 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-[#E2E8F0] shadow-sm text-[11px] font-bold text-[#64748B] pointer-events-none">
+        <div className="fixed top-4 right-4 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-line shadow-sm text-[11px] font-bold text-ink-3 pointer-events-none">
           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
           Syncing
         </div>
       )}
       {/* Sub-header Toolbar */}
-      <div className="px-8 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#E2E8F0]">
+      <div className="px-8 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-line">
         
         {/* Left: Filter Buttons / Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
@@ -871,8 +871,8 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 onClick={() => setFilter(tab as any)}
                 className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
                   filter === tab
-                    ? 'bg-[var(--pos-primary,#F59E0B)] text-white border-[var(--pos-primary,#F59E0B)] shadow-sm'
-                    : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
+                    ? 'bg-brand text-white border-brand shadow-sm'
+                    : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
                 {tab === 'ALL' ? 'All Live' : tab.replace('_', ' ')}
@@ -885,8 +885,8 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 onClick={() => setFilter(tab as any)}
                 className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
                   filter === tab
-                    ? 'bg-[var(--pos-primary,#F59E0B)] text-white border-[var(--pos-primary,#F59E0B)] shadow-sm'
-                    : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
+                    ? 'bg-brand text-white border-brand shadow-sm'
+                    : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
                 {tab === 'ALL' ? 'All History' : tab}
@@ -899,12 +899,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
                 sourceFilter === 'WHATSAPP'
                   ? 'bg-[#25D366] text-white border-[#25D366] shadow-sm'
-                  : 'bg-white border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
+                  : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
               }`}
             >
               <MessageSquare className="w-[14px] h-[14px]" />
               WhatsApp
-              <span className={`px-1.5 rounded-full text-[10px] ${sourceFilter === 'WHATSAPP' ? 'bg-white/20' : 'bg-[#F1F5F9]'}`}>{counts.WHATSAPP}</span>
+              <span className={`px-1.5 rounded-full text-[10px] ${sourceFilter === 'WHATSAPP' ? 'bg-white/20' : 'bg-sunken'}`}>{counts.WHATSAPP}</span>
             </button>
           )}
         </div>
@@ -918,9 +918,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 placeholder="Search ticket #, customer..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="bg-white border border-[#CBD5E1] focus:border-[var(--pos-primary,#F59E0B)] rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-[#0F172A] placeholder:text-[#94A3B8] outline-none shadow-sm"
+                className="bg-white border border-line-strong focus:border-brand rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-ink placeholder:text-ink-4 outline-none shadow-sm"
               />
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] w-[16px] h-[16px]" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-4 w-[16px] h-[16px]" />
             </div>
           )}
 
@@ -929,19 +929,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
-              className="bg-white border border-[#CBD5E1] rounded-xl px-3 py-2 text-xs font-bold text-[#0F172A] outline-none appearance-none pr-8 shadow-sm cursor-pointer"
+              className="bg-white border border-line-strong rounded-xl px-3 py-2 text-xs font-bold text-ink outline-none appearance-none pr-8 shadow-sm cursor-pointer"
             >
               <option value="oldest">Oldest First</option>
               <option value="newest">Newest First</option>
               <option value="table">By Table</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#64748B] pointer-events-none w-[18px] h-[18px]" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none w-[18px] h-[18px]" />
           </div>
           
-          <div className="hidden sm:flex items-center bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
-            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`} title="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
+          <div className="hidden sm:flex items-center bg-sunken border border-line-strong p-1 rounded-xl">
+            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
           </div>
         </div>
       </div>
@@ -949,8 +949,8 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         {/* Order Cards Area */}
         <div className="px-8 mt-2">
           {/* History-only first-load spinner — live always shows cached data instantly */}
-          {isLoading && <div className="text-[#94A3B8] text-center py-10 font-medium">Loading order history...</div>}
-          {!isLoading && filteredOrders.length === 0 && <div className="text-[#94A3B8] text-center py-10 font-medium">No orders found.</div>}
+          {isLoading && <div className="text-ink-4 text-center py-10 font-medium">Loading order history...</div>}
+          {!isLoading && filteredOrders.length === 0 && <div className="text-ink-4 text-center py-10 font-medium">No orders found.</div>}
 
           {!isLoading && filteredOrders.length > 0 && (viewMode === 'list' || viewMode === 'grid') && !groupByType && (
             viewMode === 'list' ? (
@@ -970,9 +970,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <section>
                   <div className="flex items-center gap-2.5 mb-4">
                     <span className="w-2 h-2 rounded-full bg-[#2A5DB0]" />
-                    <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">Dine-In</h3>
-                    <span className="text-[12px] font-bold text-[#94A3B8]">{dineInOrders.length} table{dineInOrders.length === 1 ? '' : 's'}</span>
-                    <div className="h-px flex-1 bg-[#E2E8F0]" />
+                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Dine-In</h3>
+                    <span className="text-[12px] font-bold text-ink-4">{dineInOrders.length} table{dineInOrders.length === 1 ? '' : 's'}</span>
+                    <div className="h-px flex-1 bg-hover" />
                   </div>
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3">
@@ -989,10 +989,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {otherOrders.length > 0 && (
                 <section>
                   <div className="flex items-center gap-2.5 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-[var(--pos-primary,#F59E0B)]" />
-                    <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">Takeaway &amp; Delivery</h3>
-                    <span className="text-[12px] font-bold text-[#94A3B8]">{otherOrders.length} waiting</span>
-                    <div className="h-px flex-1 bg-[#E2E8F0]" />
+                    <span className="w-2 h-2 rounded-full bg-brand" />
+                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Takeaway &amp; Delivery</h3>
+                    <span className="text-[12px] font-bold text-ink-4">{otherOrders.length} waiting</span>
+                    <div className="h-px flex-1 bg-hover" />
                   </div>
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3">

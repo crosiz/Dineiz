@@ -479,12 +479,12 @@ export default function PaymentModal({
 
   if (showSuccess && receiptSnapshot) {
     return (
-      <div className="fixed inset-0 bg-[#F8FAFC] flex flex-col items-center z-[60] animate-in fade-in duration-300 overflow-y-auto py-8 px-4">
-        <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-[#10B981] rounded-full flex items-center justify-center mb-4 shrink-0 animate-in zoom-in-95 duration-500">
-          <Check className="text-[#10B981] font-bold w-[40px] h-[40px]" />
+      <div className="fixed inset-0 bg-canvas flex flex-col items-center z-[60] animate-in fade-in duration-300 overflow-y-auto py-8 px-4">
+        <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-ok rounded-full flex items-center justify-center mb-4 shrink-0 animate-in zoom-in-95 duration-500">
+          <Check className="text-ok font-bold w-[40px] h-[40px]" />
         </div>
-        <h2 className="text-2xl font-bold text-[#0F172A] mb-1">Payment Successful</h2>
-        <p className="text-[#64748B] mb-6">{finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0 ? `Give ${finalPaymentInfo.change.toFixed(0)} change` : 'Order completed'}</p>
+        <h2 className="text-2xl font-bold text-ink mb-1">Payment Successful</h2>
+        <p className="text-ink-3 mb-6">{finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0 ? `Give ${finalPaymentInfo.change.toFixed(0)} change` : 'Order completed'}</p>
 
         <ReceiptView data={receiptSnapshot} />
 
@@ -493,7 +493,7 @@ export default function PaymentModal({
             <button
               onClick={() => handlePrintReceipt(finalPaymentInfo?.method || receiptSnapshot.paymentMethod, finalPaymentInfo?.tendered || 0, finalPaymentInfo?.change || 0)}
               disabled={isPrinting}
-              className="flex-1 h-[52px] rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold flex items-center justify-center gap-2 hover:bg-[#F1F5F9] transition-all disabled:opacity-50"
+              className="flex-1 h-[52px] rounded-xl border border-line-strong bg-white text-ink font-bold flex items-center justify-center gap-2 hover:bg-sunken transition-all disabled:opacity-50"
             >
               {isPrinting ? <Loader2 className="animate-spin w-[20px] h-[20px]" /> : <Printer className="w-[20px] h-[20px]" />}
               {isPrinting ? 'Printing…' : 'Print Receipt'}
@@ -512,7 +512,7 @@ export default function PaymentModal({
           </div>
           <button
             onClick={handleDone}
-            className="w-full h-[52px] rounded-xl bg-[var(--pos-primary,#F59E0B)] text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all shadow-md"
+            className="w-full h-[52px] rounded-xl bg-brand text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all shadow-md"
           >
             Done
           </button>
@@ -531,19 +531,19 @@ export default function PaymentModal({
       <div className="absolute inset-0 z-0" onClick={onClose}></div>
 
       {/* MAIN CHECKOUT OVERLAY */}
-      <div className="relative h-[95dvh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-[#0F172A] overflow-hidden border-t border-[#E2E8F0]">
+      <div className="relative h-[95dvh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-ink overflow-hidden border-t border-line">
 
         {/* Drag Handle & Header */}
-        <div className="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0 relative z-10 bg-[#F8FAFC] border-b border-[#E2E8F0]">
-          <div className="w-12 h-1.5 bg-[#CBD5E1] rounded-full mb-4"></div>
+        <div className="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0 relative z-10 bg-canvas border-b border-line">
+          <div className="w-12 h-1.5 bg-hover rounded-full mb-4"></div>
           <div className="w-full flex justify-between items-start">
             <div className="flex flex-col">
-              <h1 className="font-headline-md text-[22px] leading-tight text-[#0F172A] font-bold">Checkout</h1>
-              <p className="text-body-sm text-[#64748B] font-medium mt-0.5">
+              <h1 className="font-headline-md text-[22px] leading-tight text-ink font-bold">Checkout</h1>
+              <p className="text-body-sm text-ink-3 font-medium mt-0.5">
                 {tableLabel ? `Table ${tableLabel}` : 'Takeaway'} · #{orderId.slice(-6)}
               </p>
             </div>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0] hover:text-[#0F172A] transition-all" onClick={onClose}>
+            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-sunken text-ink-3 hover:bg-hover hover:text-ink transition-all" onClick={onClose}>
               <X className="w-[20px] h-[20px]" />
             </button>
           </div>
@@ -558,20 +558,20 @@ export default function PaymentModal({
             to ~0 width and clipped by this container's overflow-hidden. */}
         <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden relative z-10 bg-white">
           {/* Left Panel: Order Summary & Totals */}
-          <div className="w-full md:w-[400px] flex flex-col px-6 py-6 md:overflow-y-auto custom-scrollbar border-r border-[#E2E8F0] bg-[#F8FAFC]">
+          <div className="w-full md:w-[400px] flex flex-col px-6 py-6 md:overflow-y-auto custom-scrollbar border-r border-line bg-canvas">
             
             {/* Loyalty Block */}
             {loyaltyProfile && loyaltySettings && loyaltySettings.isActive && (
-              <div className="mb-4 bg-[#FF5722]/5 border border-[#FF5722]/20 rounded-xl p-4 flex justify-between items-center">
+              <div className="mb-4 bg-brand/5 border border-brand/20 rounded-xl p-4 flex justify-between items-center">
                 <div>
-                  <h4 className="font-bold text-[#FF5722] text-sm">Loyalty Points</h4>
-                  <p className="text-xs text-[#FF5722]/80 font-medium">Available: {loyaltyProfile.loyaltyPoints}</p>
+                  <h4 className="font-bold text-brand text-sm">Loyalty Points</h4>
+                  <p className="text-xs text-brand/80 font-medium">Available: {loyaltyProfile.loyaltyPoints}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-bold text-gray-700">Use Points</span>
                   <button 
                     onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
-                    className={`w-12 h-6 rounded-full relative transition-colors ${useLoyaltyPoints ? 'bg-[#FF5722]' : 'bg-gray-300'}`}
+                    className={`w-12 h-6 rounded-full relative transition-colors ${useLoyaltyPoints ? 'bg-brand' : 'bg-gray-300'}`}
                   >
                     <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${useLoyaltyPoints ? 'translate-x-6' : ''}`}></div>
                   </button>
@@ -582,17 +582,17 @@ export default function PaymentModal({
             {/* Order Items Summary */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-headline-sm text-xs tracking-widest uppercase text-[#64748B] font-bold">Order Summary</h2>
+                <h2 className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Order Summary</h2>
               </div>
               <ul className="space-y-4">
                 {displayItems.map((c: any, i: number) => (
                   <li key={i} className="flex justify-between items-start">
                     <div className="flex gap-3">
-                      <span className="font-bold text-[#D97706] min-w-[20px]">{c.quantity}×</span>
+                      <span className="font-bold text-brand min-w-[20px]">{c.quantity}×</span>
                       <div>
-                        <p className="font-bold text-sm text-[#0F172A]">{c.name || c.item?.name || c.itemName || 'Item'}</p>
+                        <p className="font-bold text-sm text-ink">{c.name || c.item?.name || c.itemName || 'Item'}</p>
                         {(c.selectedVariation || c.options?.variation || c.selectedAddOns?.length > 0 || c.options?.addOns?.length > 0) && (
-                          <p className="text-xs text-[#64748B] italic mt-0.5">
+                          <p className="text-xs text-ink-3 italic mt-0.5">
                             {c.selectedVariation?.name || c.options?.variation?.name}
                             {((c.selectedAddOns?.length > 0 || c.options?.addOns?.length > 0) && (c.selectedVariation || c.options?.variation)) ? ', ' : ''}
                             {(c.selectedAddOns || c.options?.addOns || []).map((a: any) => a.name).join(', ')}
@@ -600,7 +600,7 @@ export default function PaymentModal({
                         )}
                       </div>
                     </div>
-                    <span className="font-bold text-sm text-[#0F172A] whitespace-nowrap ml-2">
+                    <span className="font-bold text-sm text-ink whitespace-nowrap ml-2">
                       {formatPKR(c.subtotal || (c.unitPrice * c.quantity) || 0)}
                     </span>
                   </li>
@@ -609,10 +609,10 @@ export default function PaymentModal({
             </div>
 
             {/* Totals Block */}
-            <div className="mt-auto space-y-3 pt-6 border-t border-[#E2E8F0]">
+            <div className="mt-auto space-y-3 pt-6 border-t border-line">
               <div className="flex justify-between text-body-md font-medium">
-                <span className="text-[#64748B]">Subtotal</span>
-                <span className="text-[#0F172A] font-semibold">{formatPKR(subtotal)}</span>
+                <span className="text-ink-3">Subtotal</span>
+                <span className="text-ink font-semibold">{formatPKR(subtotal)}</span>
               </div>
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-red-500 font-medium">
@@ -621,40 +621,40 @@ export default function PaymentModal({
                 </div>
               )}
               {loyaltyDiscount > 0 && (
-                <div className="flex justify-between text-sm text-[#FF5722] font-bold">
+                <div className="flex justify-between text-sm text-brand font-bold">
                   <span>Loyalty Discount (-{redeemedPoints} pts)</span>
                   <span>−{formatPKR(loyaltyDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm font-medium">
-                <span className="text-[#64748B]">{taxLabel}</span>
-                <span className="text-[#0F172A] font-semibold">{formatPKR(taxAmount)}</span>
+                <span className="text-ink-3">{taxLabel}</span>
+                <span className="text-ink font-semibold">{formatPKR(taxAmount)}</span>
               </div>
               {tipAmount > 0 && (
                 <div className="flex justify-between text-body-md font-medium text-emerald-600">
-                  <span className="text-[#64748B]">Tip</span>
+                  <span className="text-ink-3">Tip</span>
                   <span className="font-semibold">+{formatPKR(tipAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-end pt-4 border-t border-[#E2E8F0]">
-                <span className="font-headline-sm text-lg font-bold text-[#0F172A]">Total Due</span>
-                <span className="font-clash text-[32px] text-[#D97706] leading-none font-bold">{formatPKR(totalWithTip)}</span>
+              <div className="flex justify-between items-end pt-4 border-t border-line">
+                <span className="font-headline-sm text-lg font-bold text-ink">Total Due</span>
+                <span className="font-clash text-[32px] text-brand leading-none font-bold">{formatPKR(totalWithTip)}</span>
               </div>
             </div>
 
             {/* Tip Selector */}
             <div className="mt-8 pb-8">
-              <h2 className="font-headline-sm text-xs tracking-widest uppercase text-[#64748B] mb-4 font-bold">Add Tip</h2>
+              <h2 className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 mb-4 font-bold">Add Tip</h2>
               {showCustomTip ? (
                 <div className="flex gap-2 items-center">
                   <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-[#64748B]">PKR</span>
+                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
                     <input
                       type="number"
                       value={customTip}
                       onChange={e => setCustomTip(e.target.value)}
                       placeholder="0"
-                      className="w-full pl-14 pr-4 py-3 bg-white border border-[#CBD5E1] rounded-xl outline-none focus:border-[var(--pos-primary,#F59E0B)] text-[#0F172A] font-bold"
+                      className="w-full pl-14 pr-4 py-3 bg-white border border-line-strong rounded-xl outline-none focus:border-brand text-ink font-bold"
                       autoFocus
                     />
                   </div>
@@ -671,14 +671,14 @@ export default function PaymentModal({
                     <button
                       key={pct}
                       onClick={() => setTipPercent(pct)}
-                      className={`py-3 px-2 border rounded-xl font-bold transition-all shadow-sm ${tipPercent === pct && !showCustomTip ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-white hover:border-[var(--pos-primary,#F59E0B)] text-[#0F172A] hover:bg-amber-50'}`}
+                      className={`py-3 px-2 border rounded-xl font-bold transition-all shadow-sm ${tipPercent === pct && !showCustomTip ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-white hover:border-brand text-ink hover:bg-amber-50'}`}
                     >
                       {pct === 0 ? 'None' : `${pct}%`}
                     </button>
                   ))}
                   <button
                     onClick={() => { setShowCustomTip(true); setTipPercent(0); }}
-                    className="py-3 px-2 border border-[#CBD5E1] bg-white rounded-xl font-bold hover:border-[var(--pos-primary,#F59E0B)] transition-all text-xs col-span-4 text-[#0F172A] hover:bg-amber-50 shadow-sm"
+                    className="py-3 px-2 border border-line-strong bg-white rounded-xl font-bold hover:border-brand transition-all text-xs col-span-4 text-ink hover:bg-amber-50 shadow-sm"
                   >
                     Custom Amount
                   </button>
@@ -703,10 +703,10 @@ export default function PaymentModal({
                     key={method}
                     onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
                     title={isUnconfigured ? `${label} isn't connected yet` : undefined}
-                    className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-[#F8FAFC] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-[#F1F5F9] text-[#0F172A]'} ${isUnconfigured ? 'opacity-60' : ''}`}
+                    className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-canvas hover:border-brand hover:bg-sunken text-ink'} ${isUnconfigured ? 'opacity-60' : ''}`}
                   >
                     {isUnconfigured && (
-                      <Lock className="absolute top-1.5 right-1.5 w-[13px] h-[13px] text-[#94A3B8]" />
+                      <Lock className="absolute top-1.5 right-1.5 w-[13px] h-[13px] text-ink-4" />
                     )}
                     <Icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
                     <span className="font-bold text-xs">{label}</span>
@@ -720,14 +720,14 @@ export default function PaymentModal({
               <div className="flex-1 flex flex-col md:flex-row gap-8 mt-4">
                 <div className="flex-1 flex flex-col justify-center gap-8">
                   <div className="space-y-2">
-                    <label className="font-headline-sm text-xs tracking-widest uppercase text-[#64748B] font-bold">Cash Received</label>
-                    <div className="text-[56px] font-clash font-bold leading-tight border-b-2 border-[#E2E8F0] py-2 text-[#0F172A]">
-                      <span className="text-[#94A3B8]">PKR</span> <span>{amountEntered || '0'}</span>
+                    <label className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Cash Received</label>
+                    <div className="text-[56px] font-clash font-bold leading-tight border-b-2 border-line py-2 text-ink">
+                      <span className="text-ink-4">PKR</span> <span>{amountEntered || '0'}</span>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="font-headline-sm text-xs tracking-widest uppercase text-[#64748B] font-bold">Change to Return</label>
-                    <div className={`text-[48px] font-clash font-bold leading-tight ${cashNum >= totalWithTip ? 'text-emerald-600' : 'text-[#94A3B8]'}`}>
+                    <label className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Change to Return</label>
+                    <div className={`text-[48px] font-clash font-bold leading-tight ${cashNum >= totalWithTip ? 'text-emerald-600' : 'text-ink-4'}`}>
                       <span className="opacity-70 text-3xl">PKR</span> {Math.round(changeDue).toLocaleString('en-US')}
                     </div>
                   </div>
@@ -735,28 +735,28 @@ export default function PaymentModal({
                     <button onClick={() => setAmountEntered('')} className="px-6 py-3 bg-rose-50 border border-rose-200 text-rose-600 font-bold rounded-full hover:bg-rose-100 active:scale-95 transition-all shadow-sm">
                       Clear
                     </button>
-                    <button onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())} className="px-6 py-3 bg-amber-50 border border-[var(--pos-primary,#F59E0B)] text-[#D97706] font-bold rounded-full hover:bg-amber-100 active:scale-95 transition-all shadow-sm">
+                    <button onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())} className="px-6 py-3 bg-amber-50 border border-brand text-brand font-bold rounded-full hover:bg-amber-100 active:scale-95 transition-all shadow-sm">
                       Exact
                     </button>
                     {[500, 1000, 2000, 5000].map(amt => (
-                      <button key={amt} onClick={() => setAmountEntered(prev => (Number(prev || 0) + amt).toString())} className="px-6 py-3 bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] font-bold rounded-full hover:bg-[#E2E8F0] active:scale-95 transition-all shadow-sm">
+                      <button key={amt} onClick={() => setAmountEntered(prev => (Number(prev || 0) + amt).toString())} className="px-6 py-3 bg-sunken border border-line-strong text-ink font-bold rounded-full hover:bg-hover active:scale-95 transition-all shadow-sm">
                         +{amt}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="w-full md:w-[320px] grid grid-cols-3 gap-3 p-4 bg-[#F8FAFC] rounded-[32px] shrink-0 h-fit border border-[#CBD5E1] shadow-sm">
+                <div className="w-full md:w-[320px] grid grid-cols-3 gap-3 p-4 bg-canvas rounded-[32px] shrink-0 h-fit border border-line-strong shadow-sm">
                   {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'].map((key, idx) => {
                     if (key === 'backspace') {
                       return (
-                        <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-[#CBD5E1] rounded-2xl shadow-sm flex items-center justify-center active:scale-95 transition-transform duration-100 text-[#0F172A] hover:bg-[#F1F5F9]">
+                        <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-line-strong rounded-2xl shadow-sm flex items-center justify-center active:scale-95 transition-transform duration-100 text-ink hover:bg-sunken">
                           <Delete className="w-[20px] h-[20px]" />
                         </button>
                       );
                     }
                     return (
-                      <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-[#CBD5E1] rounded-2xl shadow-sm text-2xl font-bold active:scale-95 transition-transform duration-100 text-[#0F172A] hover:bg-[#F1F5F9]">
+                      <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-line-strong rounded-2xl shadow-sm text-2xl font-bold active:scale-95 transition-transform duration-100 text-ink hover:bg-sunken">
                         {key}
                       </button>
                     );
@@ -769,11 +769,11 @@ export default function PaymentModal({
             {(activeMethod === 'CARD') && (
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="w-32 h-32 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center mb-6 shadow-sm">
-                  <CreditCard className="text-[#D97706] w-[60px] h-[60px]" />
+                  <CreditCard className="text-brand w-[60px] h-[60px]" />
                 </div>
-                <h3 className="text-2xl font-bold font-clash text-[#0F172A]">Card Payment</h3>
-                <p className="text-[#64748B] font-medium mt-2">Amount Due: {formatPKR(totalWithTip)}</p>
-                <input type="text" value={authCode} onChange={(e) => setAuthCode(e.target.value)} placeholder="Authorization Code" className="w-72 px-4 py-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl mt-6 outline-none focus:border-[var(--pos-primary,#F59E0B)] text-[#0F172A] font-bold" />
+                <h3 className="text-2xl font-bold font-clash text-ink">Card Payment</h3>
+                <p className="text-ink-3 font-medium mt-2">Amount Due: {formatPKR(totalWithTip)}</p>
+                <input type="text" value={authCode} onChange={(e) => setAuthCode(e.target.value)} placeholder="Authorization Code" className="w-72 px-4 py-3 bg-canvas border border-line-strong rounded-xl mt-6 outline-none focus:border-brand text-ink font-bold" />
               </div>
             )}
 
@@ -781,11 +781,11 @@ export default function PaymentModal({
                 honest about it instead of showing a QR that goes nowhere. */}
             {(activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && (
               <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-                <div className="w-32 h-32 rounded-full border-2 border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center mb-6">
-                  <Lock className="text-[#94A3B8] w-[60px] h-[60px]" />
+                <div className="w-32 h-32 rounded-full border-2 border-line bg-canvas flex items-center justify-center mb-6">
+                  <Lock className="text-ink-4 w-[60px] h-[60px]" />
                 </div>
-                <h3 className="text-2xl font-bold font-clash text-[#0F172A]">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} Isn't Connected</h3>
-                <p className="text-[#64748B] font-medium mt-2 max-w-sm">
+                <h3 className="text-2xl font-bold font-clash text-ink">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} Isn't Connected</h3>
+                <p className="text-ink-3 font-medium mt-2 max-w-sm">
                   This payment gateway hasn't been configured for this branch yet. Ask a manager to set it up, or take payment as Cash or Card instead.
                 </p>
               </div>
@@ -794,25 +794,25 @@ export default function PaymentModal({
             {/* Split Panel */}
             {(activeMethod === 'SPLIT') && (
               <div className="flex-1 flex flex-col gap-6 mt-6 max-w-lg">
-                <h3 className="font-bold text-lg text-[#0F172A]">Split Payment — Total: {formatPKR(totalWithTip)}</h3>
+                <h3 className="font-bold text-lg text-ink">Split Payment — Total: {formatPKR(totalWithTip)}</h3>
                 <div className="flex gap-4 items-center">
-                  <select value={splitMethod1} onChange={(e) => setSplitMethod1(e.target.value as any)} className="px-4 py-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl flex-1 outline-none text-[#0F172A] font-semibold">
+                  <select value={splitMethod1} onChange={(e) => setSplitMethod1(e.target.value as any)} className="px-4 py-3 bg-canvas border border-line-strong rounded-xl flex-1 outline-none text-ink font-semibold">
                     <option value="CASH">Cash</option>
                     <option value="CARD">Card</option>
                   </select>
                   <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-[#64748B]">PKR</span>
-                    <input type="number" value={splitAmount1} onChange={(e) => setSplitAmount1(e.target.value)} className="w-full pl-14 pr-4 py-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl outline-none text-[#0F172A] font-bold" />
+                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
+                    <input type="number" value={splitAmount1} onChange={(e) => setSplitAmount1(e.target.value)} className="w-full pl-14 pr-4 py-3 bg-canvas border border-line-strong rounded-xl outline-none text-ink font-bold" />
                   </div>
                 </div>
                 <div className="flex gap-4 items-center">
-                  <select value={splitMethod2} onChange={(e) => setSplitMethod2(e.target.value as any)} className="px-4 py-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl flex-1 outline-none text-[#0F172A] font-semibold">
+                  <select value={splitMethod2} onChange={(e) => setSplitMethod2(e.target.value as any)} className="px-4 py-3 bg-canvas border border-line-strong rounded-xl flex-1 outline-none text-ink font-semibold">
                     <option value="CASH">Cash</option>
                     <option value="CARD">Card</option>
                   </select>
                   <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-[#64748B]">PKR</span>
-                    <input type="text" readOnly value={Math.round(splitNum2).toLocaleString('en-US')} className="w-full pl-14 pr-4 py-3 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl outline-none text-[#0F172A] font-bold opacity-70" />
+                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
+                    <input type="text" readOnly value={Math.round(splitNum2).toLocaleString('en-US')} className="w-full pl-14 pr-4 py-3 bg-canvas border border-line-strong rounded-xl outline-none text-ink font-bold opacity-70" />
                   </div>
                 </div>
                 {splitNum1 > 0 && !isSplitValid && (
@@ -824,7 +824,7 @@ export default function PaymentModal({
         </div>
 
         {/* Sticky Bottom Bar */}
-        <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-[#E2E8F0] bg-[#F8FAFC]">
+        <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-line bg-canvas">
           {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
             <p className="text-amber-600 text-[12px] font-semibold text-center">
               Billing this order&apos;s full total (PKR {Math.round(orderTotal).toLocaleString()}). The server confirms the final amount.
@@ -839,7 +839,7 @@ export default function PaymentModal({
             <button
               onClick={handleConfirm}
               disabled={totalWithTip <= 0 || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
-              className={`flex-1 h-[60px] bg-[var(--pos-primary,#F59E0B)] text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
+              className={`flex-1 h-[60px] bg-brand text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
             >
               {isProcessing ? (
@@ -851,7 +851,7 @@ export default function PaymentModal({
             </button>
             <button
               onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
-              className="w-[60px] h-[60px] flex items-center justify-center rounded-2xl border border-[#CBD5E1] bg-white transition-all text-[#0F172A] hover:bg-[#F1F5F9] shadow-sm"
+              className="w-[60px] h-[60px] flex items-center justify-center rounded-2xl border border-line-strong bg-white transition-all text-ink hover:bg-sunken shadow-sm"
             >
               <Printer className="w-[20px] h-[20px]" />
             </button>

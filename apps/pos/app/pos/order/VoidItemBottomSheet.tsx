@@ -182,23 +182,23 @@ export function VoidItemBottomSheet({
               scroll region and could scroll out of view on a short
               viewport instead of staying reachable as a pinned footer. */}
           <div className="p-6 overflow-y-auto flex-1 min-h-0">
-            <h2 className="text-[20px] font-bold text-[#0F172A] mb-1">Remove Sent Item</h2>
-            <p className="text-[14px] text-[#64748B] mb-6">
+            <h2 className="text-[20px] font-bold text-ink mb-1">Remove Sent Item</h2>
+            <p className="text-[14px] text-ink-3 mb-6">
               This item has already been sent to the kitchen. Why are you removing it?
             </p>
 
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-xl mb-6">
-              <h4 className="font-bold text-[#0F172A]">{item.itemName || item.item?.name}</h4>
-              <p className="text-sm text-[#64748B]">Total Quantity: {item.quantity}</p>
+            <div className="bg-canvas border border-line p-4 rounded-xl mb-6">
+              <h4 className="font-bold text-ink">{item.itemName || item.item?.name}</h4>
+              <p className="text-sm text-ink-3">Total Quantity: {item.quantity}</p>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-bold text-[#0F172A] mb-2">Quantity to Remove</label>
+              <label className="block text-sm font-bold text-ink mb-2">Quantity to Remove</label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setQuantityToVoid(Math.max(1, quantityToVoid - 1))}
                   disabled={quantityToVoid <= 1}
-                  className="w-10 h-10 rounded-xl border border-[#CBD5E1] flex items-center justify-center text-[#0F172A] disabled:opacity-50"
+                  className="w-10 h-10 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
                 >
                   <Minus className="w-[20px] h-[20px]" />
                 </button>
@@ -206,7 +206,7 @@ export function VoidItemBottomSheet({
                 <button
                   onClick={() => setQuantityToVoid(Math.min(item.quantity, quantityToVoid + 1))}
                   disabled={quantityToVoid >= item.quantity}
-                  className="w-10 h-10 rounded-xl border border-[#CBD5E1] flex items-center justify-center text-[#0F172A] disabled:opacity-50"
+                  className="w-10 h-10 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
                 >
                   <Plus className="w-[20px] h-[20px]" />
                 </button>
@@ -214,7 +214,7 @@ export function VoidItemBottomSheet({
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-bold text-[#0F172A] mb-3">Reason</label>
+              <label className="block text-sm font-bold text-ink mb-3">Reason</label>
               <div className="space-y-3">
                 {reasons.map((r) => (
                   <label key={r} className="flex items-center gap-3 cursor-pointer">
@@ -226,7 +226,7 @@ export function VoidItemBottomSheet({
                       onChange={() => setReason(r)}
                       className="w-4 h-4 text-orange-500 border-slate-300 focus:ring-orange-500"
                     />
-                    <span className="text-sm text-[#334155] font-medium">{r}</span>
+                    <span className="text-sm text-ink-2 font-medium">{r}</span>
                   </label>
                 ))}
                 <label className="flex items-center gap-3 cursor-pointer">
@@ -238,7 +238,7 @@ export function VoidItemBottomSheet({
                     onChange={() => setReason('Other')}
                     className="w-4 h-4 text-orange-500 border-slate-300 focus:ring-orange-500"
                   />
-                  <span className="text-sm text-[#334155] font-medium">Other</span>
+                  <span className="text-sm text-ink-2 font-medium">Other</span>
                 </label>
               </div>
               
@@ -247,7 +247,7 @@ export function VoidItemBottomSheet({
                   value={otherReason}
                   onChange={(e) => setOtherReason(e.target.value)}
                   placeholder="Please specify..."
-                  className="mt-3 w-full border border-[#CBD5E1] rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="mt-3 w-full border border-line-strong rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                   rows={3}
                 />
               )}
@@ -257,11 +257,11 @@ export function VoidItemBottomSheet({
           {/* Pinned footer — outside the scroll region above so these
               buttons are always reachable, not just whenever the content
               happens to fit. */}
-          <div className="flex gap-3 p-6 pt-4 shrink-0 border-t border-[#E2E8F0]">
+          <div className="flex gap-3 p-6 pt-4 shrink-0 border-t border-line">
               <button
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-white text-[#64748B] font-bold text-[14px] rounded-xl border border-[#CBD5E1] hover:bg-[#F8FAFC] active:scale-95 transition-all"
+                className="flex-1 py-3 bg-white text-ink-3 font-bold text-[14px] rounded-xl border border-line-strong hover:bg-canvas active:scale-95 transition-all"
               >
                 Cancel
               </button>

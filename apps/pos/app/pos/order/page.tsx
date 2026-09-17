@@ -49,7 +49,7 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
   };
 
   return (
-    <div className="relative overflow-hidden border-b border-[#E2E8F0] group bg-white">
+    <div className="relative overflow-hidden border-b border-line group bg-white">
       {/* Delete Background */}
       <div className="absolute inset-y-0 right-0 w-24 bg-rose-600 flex items-center justify-center">
         <button
@@ -70,17 +70,17 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
       >
         <div className="flex justify-between items-start mb-2">
           <div>
-            <h4 className="text-[16px] font-bold text-[#0F172A]">{cartItem.name}</h4>
+            <h4 className="text-[16px] font-bold text-ink">{cartItem.name}</h4>
             {cartItem.selectedVariation?.name && (
-              <span className="text-[13px] text-[#64748B] font-medium">{cartItem.selectedVariation.name}</span>
+              <span className="text-[13px] text-ink-3 font-medium">{cartItem.selectedVariation.name}</span>
             )}
           </div>
-          <span className="font-mono text-[16px] font-bold text-[#0F172A]">{formatPKR(cartItem.subtotal)}</span>
+          <span className="font-mono text-[16px] font-bold text-ink">{formatPKR(cartItem.subtotal)}</span>
         </div>
         <div className="flex justify-between items-center mt-2">
           <div className="flex flex-wrap gap-2">
             {cartItem.selectedAddOns.map((addon: any) => (
-              <span key={addon.id} className="bg-[#F1F5F9] border border-[#CBD5E1] text-[11px] font-bold text-[#475569] px-2 py-0.5 rounded-md uppercase">
+              <span key={addon.id} className="bg-sunken border border-line-strong text-[11px] font-bold text-ink-2 px-2 py-0.5 rounded-md uppercase">
                 +{addon.name}
               </span>
             ))}
@@ -89,12 +89,12 @@ function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem 
             {/* h-11/w-11 (44px) — this pair is the single most-tapped control
                 in the order flow; it was 28px, well under the touch-target
                 minimum every other primary control in this file follows. */}
-            <div className="flex items-center bg-[#F8FAFC] rounded-full border border-[#CBD5E1] h-11 px-1">
-              <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
+            <div className="flex items-center bg-canvas rounded-full border border-line-strong h-11 px-1">
+              <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-hover rounded-full text-ink shrink-0">
                 <Minus className="w-[14px] h-[14px]" />
               </button>
-              <span className="font-mono text-sm px-2 font-bold text-[#0F172A]">{cartItem.quantity}</span>
-              <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-[#E2E8F0] rounded-full text-[#0F172A] shrink-0">
+              <span className="font-mono text-sm px-2 font-bold text-ink">{cartItem.quantity}</span>
+              <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-hover rounded-full text-ink shrink-0">
                 <Plus className="w-[14px] h-[14px]" />
               </button>
             </div>
@@ -1059,10 +1059,10 @@ function OrderEntryPageContent() {
             router.push('/pos/tables');
           }
         }}
-        className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}
+        className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}
       >Dine-in</button>
-      <button onClick={() => setOrderType('TAKEAWAY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Takeaway</button>
-      <button onClick={() => setOrderType('DELIVERY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-[#0F172A] shadow-sm' : 'text-[#64748B] hover:text-[#0F172A]'}`}>Delivery</button>
+      <button onClick={() => setOrderType('TAKEAWAY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Takeaway</button>
+      <button onClick={() => setOrderType('DELIVERY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Delivery</button>
     </>
   );
 
@@ -1103,7 +1103,7 @@ function OrderEntryPageContent() {
       // share — the full-width inline copy below (lg:hidden) stays legible
       // through phone AND tablet portrait; only larger/landscape screens get
       // the compact header version.
-      <div className="hidden lg:flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
+      <div className="hidden lg:flex bg-sunken border border-line-strong p-1 rounded-xl">
         {orderTypeButtons}
       </div>
     ),
@@ -1111,7 +1111,7 @@ function OrderEntryPageContent() {
       <button
         onClick={holdOrder}
         disabled={cart.length === 0}
-        className="flex items-center justify-center px-4 h-10 rounded-lg bg-[#F1F5F9] hover:bg-[#E2E8F0] transition-colors border border-[#CBD5E1] text-[#0F172A] font-bold text-[13px] tracking-wide disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+        className="flex items-center justify-center px-4 h-10 rounded-lg bg-sunken hover:bg-hover transition-colors border border-line-strong text-ink font-bold text-[13px] tracking-wide disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
       >
         <Pause className="mr-2 w-[18px] h-[18px]" />
         HOLD
@@ -1120,7 +1120,7 @@ function OrderEntryPageContent() {
   });
 
   return (
-    <div className="flex flex-col h-full select-none bg-[#F8FAFC] text-[#0F172A] overflow-hidden font-body-md">
+    <div className="flex flex-col h-full select-none bg-canvas text-ink overflow-hidden font-body-md">
       <ConfirmModal
         isOpen={promptContinueOpen}
         title="Continue Order?"
@@ -1161,21 +1161,21 @@ function OrderEntryPageContent() {
         style={{ '--cart-width': `${cartWidthPercent}%` } as React.CSSProperties}
       >
         {/* LEFT - MENU BROWSER */}
-        <section className="w-full lg:flex-1 flex flex-col bg-[#F8FAFC] relative overflow-hidden">
+        <section className="w-full lg:flex-1 flex flex-col bg-canvas relative overflow-hidden">
           {/* Order type — the lg:hidden counterpart of centerSlot above,
               here instead of squeezed into the shared header (see
               orderTypeButtons' own comment for why). */}
           <div className="lg:hidden shrink-0 px-3 pt-3">
-            <div className="flex bg-[#F1F5F9] border border-[#CBD5E1] p-1 rounded-xl">
+            <div className="flex bg-sunken border border-line-strong p-1 rounded-xl">
               {orderTypeButtons}
             </div>
           </div>
           {/* Category Bar */}
           <div className="relative shrink-0">
-            <div className="h-[52px] bg-white border-b border-[#E2E8F0] flex items-center px-4 gap-2 overflow-x-auto no-scrollbar relative z-10">
+            <div className="h-[52px] bg-white border-b border-line flex items-center px-4 gap-2 overflow-x-auto no-scrollbar relative z-10">
               <button
                 onClick={() => setActiveCategoryId(null)}
-                className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
+                className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
               >
                 All
               </button>
@@ -1183,34 +1183,34 @@ function OrderEntryPageContent() {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategoryId(cat.id)}
-                  className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-[var(--pos-primary,#F59E0B)] text-white shadow-sm' : 'border border-[#CBD5E1] bg-[#F8FAFC] text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]'}`}
+                  className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
                 >
                   {cat.name}
                 </button>
               ))}
             </div>
             {/* Fade right edge */}
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-[#F8FAFC] to-transparent pointer-events-none z-20" />
+            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-canvas to-transparent pointer-events-none z-20" />
           </div>
 
           {/* Search Bar & View Toggle */}
-          <div className="p-3 border-b border-[#E2E8F0] bg-[#F8FAFC] flex gap-2 items-center">
+          <div className="p-3 border-b border-line bg-canvas flex gap-2 items-center">
             {/* min-w-0 on both this wrapper and the <input> — flex items
                 default to min-width:auto (their content's natural size, and
                 a bare <input> has its own non-trivial intrinsic minimum),
                 which silently overrode flex-1's ability to shrink and pushed
                 this row ~80px past a 360px viewport, clipped by the section's
                 overflow-hidden with no visible sign anything was cut off. */}
-            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-[#CBD5E1] rounded-xl px-4 h-11 transition-colors focus-within:border-[var(--pos-primary,#F59E0B)] shadow-sm">
-              <Search className="text-[#94A3B8] shrink-0 w-[18px] h-[18px]" />
+            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-line-strong rounded-xl px-4 h-11 transition-colors focus-within:border-brand shadow-sm">
+              <Search className="text-ink-4 shrink-0 w-[18px] h-[18px]" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search menu items..."
-                className="bg-transparent border-none outline-none text-[16px] text-[#0F172A] flex-1 min-w-0 placeholder:text-[#94A3B8]"
+                className="bg-transparent border-none outline-none text-[16px] text-ink flex-1 min-w-0 placeholder:text-ink-4"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-[#64748B] hover:text-[#0F172A] transition-colors shrink-0">
+                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
                   <X className="w-[18px] h-[18px]" />
                 </button>
               )}
@@ -1253,9 +1253,9 @@ function OrderEntryPageContent() {
                   return (
                     <section key={cat.id}>
                       <div className="flex items-center gap-2.5 mb-3">
-                        <h3 className="text-[13px] font-bold text-[#0F172A] uppercase tracking-widest">{cat.name}</h3>
-                        <span className="text-[12px] font-bold text-[#94A3B8]">{catItems.length}</span>
-                        <div className="h-px flex-1 bg-[#E2E8F0]" />
+                        <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">{cat.name}</h3>
+                        <span className="text-[12px] font-bold text-ink-4">{catItems.length}</span>
+                        <div className="h-px flex-1 bg-hover" />
                       </div>
                       <div className={`grid content-start ${gridColsClass}`}>
                         {catItems.map(item => (
@@ -1274,7 +1274,7 @@ function OrderEntryPageContent() {
                   );
                 })}
                 {filteredItems.length === 0 && (
-                  <div className="text-center text-[#94A3B8] py-10 font-medium">No menu items match your search.</div>
+                  <div className="text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
                 )}
               </div>
             ) : (
@@ -1291,7 +1291,7 @@ function OrderEntryPageContent() {
                   />
                 ))}
                 {filteredItems.length === 0 && (
-                  <div className="col-span-full text-center text-[#94A3B8] py-10 font-medium">No menu items match your search.</div>
+                  <div className="col-span-full text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
                 )}
               </div>
             )}
@@ -1302,7 +1302,7 @@ function OrderEntryPageContent() {
         <div className="lg:hidden absolute bottom-4 left-4 right-4 z-40">
           <button
             onClick={() => setIsCartDrawerOpen(true)}
-            className="w-full bg-[var(--pos-primary,#F59E0B)] text-white h-14 rounded-2xl font-bold flex items-center justify-between px-6 shadow-lg active:scale-[0.98] transition-transform"
+            className="w-full bg-brand text-white h-14 rounded-2xl font-bold flex items-center justify-between px-6 shadow-lg active:scale-[0.98] transition-transform"
           >
             <div className="flex items-center gap-3">
               <div className="bg-black/20 px-2.5 py-1 rounded-md text-sm shadow-inner flex items-center gap-1">
@@ -1333,10 +1333,10 @@ function OrderEntryPageContent() {
 
         {/* RESIZER HANDLE */}
         <div
-          className="hidden lg:flex w-2 cursor-col-resize hover:bg-amber-100 active:bg-amber-200 items-center justify-center border-l border-r border-[#E2E8F0] z-50 shrink-0 relative transition-colors group"
+          className="hidden lg:flex w-2 cursor-col-resize hover:bg-amber-100 active:bg-amber-200 items-center justify-center border-l border-r border-line z-50 shrink-0 relative transition-colors group"
           onPointerDown={(e) => { e.preventDefault(); setIsResizing(true); }}
         >
-          <div className="w-0.5 h-10 bg-[#CBD5E1] group-hover:bg-[var(--pos-primary,#F59E0B)] rounded-full transition-colors" />
+          <div className="w-0.5 h-10 bg-hover group-hover:bg-brand rounded-full transition-colors" />
           <div className="absolute inset-y-0 -left-2 -right-2 z-10 cursor-col-resize" />
         </div>
 
@@ -1353,35 +1353,35 @@ function OrderEntryPageContent() {
         <section className={`
           fixed lg:relative inset-x-0 bottom-0 lg:inset-auto z-[110] lg:z-auto
           w-full lg:w-[var(--cart-width)] h-[85dvh] lg:h-auto shrink-0 flex flex-col bg-white overflow-hidden
-          border-t lg:border-t-0 border-[#E2E8F0]
+          border-t lg:border-t-0 border-line
           transition-transform duration-300 ease-in-out
           ${isCartDrawerOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
           rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-none
         `}>
           {/* Mobile Drawer Handle */}
-          <div className="w-full h-10 flex items-center justify-center lg:hidden cursor-pointer shrink-0 border-b border-[#E2E8F0] bg-[#F8FAFC] rounded-t-3xl" onClick={() => setIsCartDrawerOpen(false)}>
-            <div className="w-12 h-1.5 bg-[#CBD5E1] rounded-full" />
+          <div className="w-full h-10 flex items-center justify-center lg:hidden cursor-pointer shrink-0 border-b border-line bg-canvas rounded-t-3xl" onClick={() => setIsCartDrawerOpen(false)}>
+            <div className="w-12 h-1.5 bg-hover rounded-full" />
           </div>
 
           {/* Cart Header */}
-          <div className="p-6 lg:p-6 pb-4 pt-4 lg:pt-6 bg-[#F8FAFC] border-b border-[#E2E8F0] shrink-0">
+          <div className="p-6 lg:p-6 pb-4 pt-4 lg:pt-6 bg-canvas border-b border-line shrink-0">
             <div className="flex justify-between items-start mb-1">
-              <h2 className="text-[20px] font-bold text-[#0F172A] flex items-center gap-2">
+              <h2 className="text-[20px] font-bold text-ink flex items-center gap-2">
                 Current Order
                 {cart.length > 0 && existingItems.length > 0 && (
-                  <span className="bg-[#10b981] text-white text-[12px] px-2 py-0.5 rounded-full font-bold shadow-sm animate-in zoom-in">
+                  <span className="bg-ok text-white text-[12px] px-2 py-0.5 rounded-full font-bold shadow-sm animate-in zoom-in">
                     +{cart.reduce((acc, c) => acc + c.quantity, 0)}
                   </span>
                 )}
               </h2>
-              <button onClick={startNewOrder} className="bg-white text-[#475569] text-[12px] font-bold px-2.5 py-1 rounded border border-[#CBD5E1] uppercase tracking-wider hover:bg-[#F1F5F9] transition-colors shadow-sm">New Order</button>
+              <button onClick={startNewOrder} className="bg-white text-ink-2 text-[12px] font-bold px-2.5 py-1 rounded border border-line-strong uppercase tracking-wider hover:bg-sunken transition-colors shadow-sm">New Order</button>
             </div>
             {/* Counts UNITS, not lines. It used to read `cart.length +
                 existingItems.length`, so two of the same dish showed as
                 "1 items total" — wrong number and wrong grammar. A cashier
                 reading this back to a customer wants how many things are on
                 the order. */}
-            <p className="text-[#64748B] text-[12px] font-medium mb-3">
+            <p className="text-ink-3 text-[12px] font-medium mb-3">
               {(() => {
                 const units =
                   cart.reduce((n, c) => n + (c.quantity || 0), 0) +
@@ -1398,21 +1398,21 @@ function OrderEntryPageContent() {
                 all, so loyalty redemption only ever worked for orders that
                 arrived pre-tagged (e.g. from WhatsApp/QR). */}
             {customerId ? (
-              <div className="flex items-center justify-between gap-2 bg-white border border-[#E2E8F0] rounded-xl px-3 py-2">
+              <div className="flex items-center justify-between gap-2 bg-white border border-line rounded-xl px-3 py-2">
                 <button onClick={() => setCustomerPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
-                  <div className="w-6 h-6 rounded-full bg-[var(--pos-primary,#F59E0B)]/10 flex items-center justify-center text-[var(--pos-primary,#F59E0B)] font-bold text-[10px] shrink-0">
+                  <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-[10px] shrink-0">
                     {(customerName || 'C').charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-[13px] font-bold text-[#0F172A] truncate">{customerName || 'Customer'}</span>
+                  <span className="text-[13px] font-bold text-ink truncate">{customerName || 'Customer'}</span>
                 </button>
-                <button onClick={() => setCustomer(null)} className="text-[#94A3B8] hover:text-[#DC2626] transition-colors shrink-0" title="Remove customer">
+                <button onClick={() => setCustomer(null)} className="text-ink-4 hover:text-danger transition-colors shrink-0" title="Remove customer">
                   <X className="w-[16px] h-[16px]" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setCustomerPickerOpen(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-white text-[12px] font-bold transition-all"
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-line-strong text-ink-3 hover:text-ink hover:border-brand hover:bg-white text-[12px] font-bold transition-all"
               >
                 <UserPlus className="w-[16px] h-[16px]" />
                 Attach Customer
@@ -1430,7 +1430,7 @@ function OrderEntryPageContent() {
             {orderType === 'DINE_IN' && (
               <div className="mt-2">
                 {waiterId ? (
-                  <div className="flex items-center justify-between gap-2 bg-white border border-[#E2E8F0] rounded-xl px-3 py-2">
+                  <div className="flex items-center justify-between gap-2 bg-white border border-line rounded-xl px-3 py-2">
                     <button onClick={() => setWaiterPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
                       <div
                         className="w-6 h-6 rounded-full grid place-items-center text-white font-bold text-[10px] shrink-0"
@@ -1438,11 +1438,11 @@ function OrderEntryPageContent() {
                       >
                         {(waiterName || 'W').charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-[13px] font-bold text-[#0F172A] truncate">{waiterName}</span>
+                      <span className="text-[13px] font-bold text-ink truncate">{waiterName}</span>
                     </button>
                     <button
                       onClick={() => setWaiter(null)}
-                      className="text-[#94A3B8] hover:text-[#DC2626] transition-colors shrink-0"
+                      className="text-ink-4 hover:text-danger transition-colors shrink-0"
                       title="Remove waiter"
                     >
                       <X className="w-[16px] h-[16px]" />
@@ -1451,7 +1451,7 @@ function OrderEntryPageContent() {
                 ) : (
                   <button
                     onClick={() => setWaiterPickerOpen(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-white text-[12px] font-bold transition-all"
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-line-strong text-ink-3 hover:text-ink hover:border-brand hover:bg-white text-[12px] font-bold transition-all"
                   >
                     <ConciergeBell className="w-[16px] h-[16px]" />
                     Assign Waiter
@@ -1465,14 +1465,14 @@ function OrderEntryPageContent() {
           {!orderType && (
             <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 shrink-0">
               <Info className="text-amber-600 w-[20px] h-[20px]" />
-              <p className="text-[13px] font-semibold text-[#92400E]">Select Dine-in, Takeaway, or Delivery above to continue.</p>
+              <p className="text-[13px] font-semibold text-brand-strong">Select Dine-in, Takeaway, or Delivery above to continue.</p>
             </div>
           )}
           {needsTable && (
             <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2.5 shrink-0">
               <div className="flex items-center gap-2.5">
                 <Armchair className="text-amber-600 w-[20px] h-[20px]" />
-                <p className="text-[13px] font-semibold text-[#92400E]">This dine-in order needs a table.</p>
+                <p className="text-[13px] font-semibold text-brand-strong">This dine-in order needs a table.</p>
               </div>
               <button
                 onClick={() => router.push('/pos/tables')}
@@ -1489,20 +1489,20 @@ function OrderEntryPageContent() {
               overflow-y-auto and the parent's new overflow-hidden bound. */}
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar bg-white">
             {existingItems.length > 0 && (
-              <div className="border-b border-[#E2E8F0]">
-                <div className="bg-[#F1F5F9] px-6 py-2 border-b border-[#E2E8F0] flex justify-between items-center">
-                  <span className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Already in Order</span>
-                  <span className="bg-[#E2E8F0] text-[#475569] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Sent</span>
+              <div className="border-b border-line">
+                <div className="bg-sunken px-6 py-2 border-b border-line flex justify-between items-center">
+                  <span className="text-[12px] font-bold text-ink-3 uppercase tracking-wider">Already in Order</span>
+                  <span className="bg-hover text-ink-2 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Sent</span>
                 </div>
                 {existingItems.map((i: any, idx: number) => (
-                  <div key={idx} className="px-6 py-3 border-b border-[#F1F5F9] last:border-b-0 bg-[#F8FAFC]">
+                  <div key={idx} className="px-6 py-3 border-b border-line last:border-b-0 bg-canvas">
                     <div className="flex justify-between items-start mb-1">
                       <div>
-                        <h4 className="text-[14px] font-semibold text-[#64748B]">{i.quantity}x {i.itemName || i.item?.name}</h4>
-                        {i.variationName && <span className="text-[12px] text-[#94A3B8]">{i.variationName}</span>}
+                        <h4 className="text-[14px] font-semibold text-ink-3">{i.quantity}x {i.itemName || i.item?.name}</h4>
+                        {i.variationName && <span className="text-[12px] text-ink-4">{i.variationName}</span>}
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="font-mono text-[14px] text-[#64748B]">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
+                        <span className="font-mono text-[14px] text-ink-3">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
                         <button
                           onClick={() => setVoidSheetState({ isOpen: true, item: i })}
                           className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
@@ -1517,20 +1517,20 @@ function OrderEntryPageContent() {
             )}
 
             {cart.length > 0 && existingItems.length > 0 && (
-              <div className="bg-[#F8FAFC] px-6 py-2 border-b border-[#E2E8F0]">
-                <span className="text-[12px] font-bold text-[#0F172A] uppercase tracking-wider">Adding Now</span>
+              <div className="bg-canvas px-6 py-2 border-b border-line">
+                <span className="text-[12px] font-bold text-ink uppercase tracking-wider">Adding Now</span>
               </div>
             )}
 
             {cart.length === 0 && existingItems.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-[#94A3B8]">
-                <ShoppingCart className="mb-4 text-[#CBD5E1] w-[48px] h-[48px]" />
-                <p className="font-bold text-lg text-[#0F172A]">Your cart is empty</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-ink-4">
+                <ShoppingCart className="mb-4 text-ink-4 w-[48px] h-[48px]" />
+                <p className="font-bold text-lg text-ink">Your cart is empty</p>
                 {/* `selectedTableId` — a raw UUID — used to be interpolated
                     straight into this sentence, so a dine-in order read "for
                     Table cmsuv8x…" and a takeaway one read "for Table ." with a
                     dangling full stop. Use the label, and only when there is one. */}
-                <p className="text-sm mt-1 max-w-[240px] text-[#64748B]">
+                <p className="text-sm mt-1 max-w-[240px] text-ink-3">
                   {selectedTableLabel
                     ? `Pick items from the menu to start Table ${selectedTableLabel}'s order.`
                     : 'Pick items from the menu to start this order.'}
@@ -1551,12 +1551,12 @@ function OrderEntryPageContent() {
 
           {/* Order Note */}
           {showKitchenNote && (
-            <div className="px-6 py-4 bg-[#F8FAFC] shrink-0 border-t border-[#E2E8F0] animate-in slide-in-from-bottom-2">
+            <div className="px-6 py-4 bg-canvas shrink-0 border-t border-line animate-in slide-in-from-bottom-2">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-[#0F172A]">Kitchen Note</span>
+                <span className="text-sm font-bold text-ink">Kitchen Note</span>
                 <button
                   onClick={() => { setShowKitchenNote(false); setOrderNote(''); }}
-                  className="text-[#64748B] hover:text-[#0F172A] transition-colors"
+                  className="text-ink-3 hover:text-ink transition-colors"
                 >
                   <X className="w-[14px] h-[14px]" />
                 </button>
@@ -1565,22 +1565,22 @@ function OrderEntryPageContent() {
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
                 placeholder="Add special instructions for the kitchen..."
-                className="w-full bg-white border border-[#CBD5E1] rounded-lg p-3 text-sm text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:border-[var(--pos-primary,#F59E0B)] transition-colors resize-none h-16 shadow-sm"
+                className="w-full bg-white border border-line-strong rounded-lg p-3 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:border-brand transition-colors resize-none h-16 shadow-sm"
               />
             </div>
           )}
 
           {/* Cart Footer / Totals */}
-          <div className="bg-[#F8FAFC] border-t border-[#E2E8F0] p-6 space-y-4 shrink-0">
-            <div className="space-y-2 text-sm text-[#64748B] font-medium">
+          <div className="bg-canvas border-t border-line p-6 space-y-4 shrink-0">
+            <div className="space-y-2 text-sm text-ink-3 font-medium">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span className="text-[#0F172A] font-semibold">{formatPKR(combinedSubtotal)}</span>
+                <span className="text-ink font-semibold">{formatPKR(combinedSubtotal)}</span>
               </div>
               {combinedTaxAmount > 0 && (
                 <div className="flex justify-between">
                   <span>{taxLabel}</span>
-                  <span className="text-[#0F172A] font-semibold">{formatPKR(combinedTaxAmount)}</span>
+                  <span className="text-ink font-semibold">{formatPKR(combinedTaxAmount)}</span>
                 </div>
               )}
               {discountAmount > 0 && (
@@ -1591,29 +1591,29 @@ function OrderEntryPageContent() {
               )}
             </div>
 
-            <div className="flex justify-between items-end pt-2 border-t border-[#E2E8F0]">
-              <span className="text-[16px] font-bold uppercase tracking-wider text-[#0F172A]">Order Total</span>
+            <div className="flex justify-between items-end pt-2 border-t border-line">
+              <span className="text-[16px] font-bold uppercase tracking-wider text-ink">Order Total</span>
               <div className="text-right">
-                <p className="text-[#D97706] text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
+                <p className="text-brand text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
               </div>
             </div>
 
             {/* Actions */}
             <div className="space-y-2 pt-4">
               <div className="grid grid-cols-4 gap-2">
-                <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={() => setDiscountModalOpen(true)}>
+                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={() => setDiscountModalOpen(true)}>
                   <Percent className="w-[14px] h-[14px]" /> Discount
                 </button>
-                <button className={`h-11 border rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 transition-colors shadow-sm ${showKitchenNote || orderNote ? 'border-[var(--pos-primary,#F59E0B)] bg-amber-50 text-[#D97706]' : 'border-[#CBD5E1] bg-white text-[#0F172A] hover:bg-[#F1F5F9]'}`} onClick={() => setShowKitchenNote(!showKitchenNote)}>
+                <button className={`h-11 border rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 transition-colors shadow-sm ${showKitchenNote || orderNote ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-white text-ink hover:bg-sunken'}`} onClick={() => setShowKitchenNote(!showKitchenNote)}>
                   <NotebookPen className="w-[14px] h-[14px]" /> Note
                 </button>
-                <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={() => {
+                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={() => {
                   if (cart.length === 0) return;
                   setConfirmClearOpen(true);
                 }}>
                   <Trash2 className="w-[14px] h-[14px]" /> Clear
                 </button>
-                <button className="h-11 border border-[#CBD5E1] bg-white text-[#0F172A] rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-[#F1F5F9] transition-colors shadow-sm" onClick={holdOrder}>
+                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={holdOrder}>
                   <PauseCircle className="w-[14px] h-[14px]" /> Hold
                 </button>
               </div>
@@ -1624,10 +1624,10 @@ function OrderEntryPageContent() {
                   title={needsTable ? 'Select a table first' : !orderType ? 'Select an order type first' : undefined}
                   disabled={cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder}
                   className={`flex-1 h-[52px] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm ${cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder
-                      ? 'bg-[#E2E8F0] text-[#94A3B8] cursor-not-allowed'
+                      ? 'bg-hover text-ink-4 cursor-not-allowed'
                       : paymentOrderId
-                        ? 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] cursor-pointer hover:bg-[#E2E8F0]'
-                        : 'bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] cursor-pointer hover:bg-[#E2E8F0]'
+                        ? 'bg-sunken border border-line-strong text-ink cursor-pointer hover:bg-hover'
+                        : 'bg-sunken border border-line-strong text-ink cursor-pointer hover:bg-hover'
                     }`}
                 >
                   {kitchenLoading ? (
@@ -1748,14 +1748,14 @@ export default function OrderEntryPage() {
 
   if (!isMounted) return (
     <div className="flex-1 flex items-center justify-center bg-[var(--pos-bg-base)] text-white h-full">
-      <Loader2 className="animate-spin text-[var(--pos-primary)] w-[36px] h-[36px]" />
+      <Loader2 className="animate-spin text-brand w-[36px] h-[36px]" />
     </div>
   );
 
   return (
     <Suspense fallback={
       <div className="flex-1 flex items-center justify-center bg-[var(--pos-bg-base)] text-white h-full">
-        <Loader2 className="animate-spin text-[var(--pos-primary)] w-[36px] h-[36px]" />
+        <Loader2 className="animate-spin text-brand w-[36px] h-[36px]" />
       </div>
     }>
       <OrderEntryPageContent />

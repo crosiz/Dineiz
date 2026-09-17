@@ -96,7 +96,7 @@ export default function ShiftSyncedPage() {
             </p>
             <button
               onClick={clearAndLeave}
-              className="w-full h-11 rounded-xl bg-[#FF5722] text-white font-semibold text-xs hover:bg-orange-600 transition-colors"
+              className="w-full h-11 rounded-xl bg-brand text-white font-semibold text-xs hover:bg-orange-600 transition-colors"
             >
               Done
             </button>
@@ -114,7 +114,7 @@ export default function ShiftSyncedPage() {
             </p>
 
             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-1.5">
-              <div className="h-full bg-[#FF5722] transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
             </div>
             <p className="text-[11px] text-slate-500 font-medium tabular-nums mb-4">{shipped} of {base.total}</p>
 

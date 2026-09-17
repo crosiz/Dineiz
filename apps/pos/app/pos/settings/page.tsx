@@ -52,12 +52,17 @@ const SECTION_ALIASES: Record<string, SectionId> = {
 
 function Row({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-slate-100 last:border-0">
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-slate-800">{label}</p>
-        {hint && <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">{hint}</p>}
+    <div className="flex items-start justify-between gap-6 py-3.5 border-b border-line last:border-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-medium text-ink">{label}</p>
+        {/* Capped independently of the row: a hint set to the full row width
+            reads as a paragraph, not as a caption on the control beside it. */}
+        {hint && <p className="text-[12px] text-ink-3 mt-1 leading-relaxed max-w-[46ch]">{hint}</p>}
       </div>
-      <div className="shrink-0">{children}</div>
+      {/* A fixed control column keeps every value on the same vertical line, so
+          the eye tracks straight down the page instead of hunting for where the
+          control ended up on each row. */}
+      <div className="shrink-0 min-w-[150px] flex justify-end items-center gap-2 pt-0.5 text-[14px] text-ink-2 text-right">{children}</div>
     </div>
   );
 }
@@ -66,15 +71,16 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   return (
     <button
       onClick={() => onChange(!on)}
-      className={`w-10 h-6 rounded-full p-0.5 transition-colors ${on ? 'bg-[#FF5722]' : 'bg-slate-200'}`}
+      aria-pressed={on}
+      className={`w-11 h-6 rounded-full p-0.5 transition-colors shrink-0 ${on ? 'bg-brand' : 'bg-hover'}`}
     >
-      <span className={`block w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-4' : ''}`} />
+      <span className={`block w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-5' : ''}`} />
     </button>
   );
 }
 
-const selectCls = 'h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[13px] text-slate-800 outline-none focus:border-[#FF5722] min-w-[120px]';
-const inputCls = 'h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[13px] text-slate-800 outline-none focus:border-[#FF5722] min-w-[140px]';
+const selectCls = 'h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[140px]';
+const inputCls = 'h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[160px]';
 
 export default function POSSettingsPage() {
   const router = useRouter();
@@ -129,34 +135,43 @@ export default function POSSettingsPage() {
 
   const openSection = (id: SectionId) => { setSection(id); setMobileOpen(true); };
 
+  // The content column is CAPPED, not full-bleed.
+  //
+  // It used to stretch the whole pane, so on a 1280px terminal a setting's
+  // label sat at x=178 and its control at x=770 — nearly 600px of eye travel
+  // to connect the two, and help text set to a 90-character measure that is
+  // simply hard to read. 760px is about 75 characters at this size, which is
+  // the measure every settings screen worth copying (Apple, Stripe, Linear)
+  // lands on.
   const panel = (
-    <div className="p-5 sm:p-6 overflow-y-auto h-full">
+    <div className="overflow-y-auto h-full">
+      <div className="max-w-[760px] px-5 sm:px-8 py-6 sm:py-8">
       {section === 'account' && (
         <>
-          <h2 className="text-[15px] font-bold text-slate-900 mb-3">Account</h2>
+          <h2 className="text-[18px] font-semibold text-ink mb-1">Account</h2>
           <Row label="Name">{session?.name ?? '—'}</Row>
           <Row label="Role">{session?.role ?? '—'}</Row>
           <Row label="Branch">{session?.branchName ?? session?.branchId ?? '—'}</Row>
           <Row label="Session expires" hint="This terminal signs you out automatically after this.">
-            <span className="text-[13px] text-slate-600 tabular-nums">
+            <span className="text-[13px] text-ink-2 tabular-nums">
               {session?.expiresAt ? new Date(session.expiresAt).toLocaleString() : '—'}
             </span>
           </Row>
           <Row label="PIN" hint="Your PIN unlocks this terminal. Only a branch manager can reset it, from the console.">
-            <span className="text-[13px] text-slate-400">Set by your manager</span>
+            <span className="text-[13px] text-ink-4">Set by your manager</span>
           </Row>
         </>
       )}
 
       {section === 'terminal' && (
         <>
-          <h2 className="text-[15px] font-bold text-slate-900 mb-1">This Terminal</h2>
-          <p className="text-[12px] text-slate-500 leading-relaxed mb-4">
+          <h2 className="text-[15px] font-bold text-ink mb-1">This Terminal</h2>
+          <p className="text-[12px] text-ink-3 leading-relaxed mb-4">
             Stored on this device only — never synced. A terminal with a thermal printer
             attached and one without can&apos;t share these.
           </p>
 
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-4 mb-1">Printing</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4 mt-7 mb-1">Printing</p>
           <Row label="Print mode" hint="PDF downloads a receipt. Printer sends ESC/POS over USB or Bluetooth. System Dialog reaches a WiFi/LAN printer or an OS-paired Bluetooth one.">
             <select className={selectCls} value={settings.printMode} onChange={(e) => set('printMode', e.target.value as any)}>
               <option value="PDF">PDF</option>
@@ -198,7 +213,7 @@ export default function POSSettingsPage() {
                 {printer.status === 'ready' ? (
                   <button
                     onClick={() => printer.disconnect()}
-                    className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-1.5"
+                    className="h-9 px-3 rounded-lg border border-line bg-white text-[12px] font-semibold text-ink-2 hover:bg-sunken flex items-center gap-1.5"
                   >
                     <Unplug size={14} /> Forget
                   </button>
@@ -223,13 +238,13 @@ export default function POSSettingsPage() {
             </>
           )}
           {settings.printMode === 'SYSTEM' && (
-            <p className="text-[11px] text-slate-400 leading-relaxed -mt-1 mb-2 flex items-start gap-1.5">
+            <p className="text-[11px] text-ink-4 leading-relaxed -mt-1 mb-2 flex items-start gap-1.5">
               <Printer size={13} className="shrink-0 mt-0.5" />
               Opens this tablet's print dialog for every receipt/KOT — pick whichever printer the OS already has set up (WiFi, Bluetooth, or a print-service app like Epson iPrint / Mopria).
             </p>
           )}
 
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-1">Device</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4 mt-7 mb-1">Device</p>
           <Row label="Terminal name" hint="Printed on the KOT header so the kitchen knows which till fired the ticket.">
             <input className={inputCls} value={settings.terminalName} onChange={(e) => set('terminalName', e.target.value)} placeholder="e.g. Terminal A" />
           </Row>
@@ -237,8 +252,14 @@ export default function POSSettingsPage() {
             <Toggle on={settings.soundEnabled} onChange={(v) => set('soundEnabled', v)} />
           </Row>
           <Row label="Volume">
-            <input type="range" min={0} max={100} value={settings.soundVolume} disabled={!settings.soundEnabled}
-              onChange={(e) => set('soundVolume', Number(e.target.value))} className="w-[140px] accent-[#FF5722] disabled:opacity-40" />
+            {/* A slider with no readout is a control you can only set by ear —
+                on a terminal whose sound may currently be muted. */}
+            <input type="range" min={0} max={100} step={5} value={settings.soundVolume} disabled={!settings.soundEnabled}
+              aria-label="Sound volume"
+              onChange={(e) => set('soundVolume', Number(e.target.value))} className="w-[120px] accent-brand disabled:opacity-40" />
+            <span className={`w-9 text-right tabular-nums ${settings.soundEnabled ? 'text-ink-2' : 'text-ink-4'}`}>
+              {settings.soundVolume}%
+            </span>
           </Row>
           <Row label="Keep screen awake" hint="Stops the terminal dimming during a shift.">
             <Toggle on={settings.keepAwake} onChange={(v) => set('keepAwake', v)} />
@@ -252,47 +273,58 @@ export default function POSSettingsPage() {
 
       {section === 'managed' && <ManagedPanel managed={managed} isManager={isManager} />}
 
-      {!loaded && <p className="text-[12px] text-slate-400 mt-4">Loading terminal settings…</p>}
+        {!loaded && <p className="text-[12px] text-ink-4 mt-4">Loading terminal settings…</p>}
+      </div>
     </div>
   );
 
   return (
     <div className="fixed inset-0 z-[90] bg-[var(--pos-bg-base,#F6F7F9)] flex flex-col">
-      {/* Header */}
-      <div className="h-14 shrink-0 bg-white border-b border-slate-200 flex items-center gap-3 px-4">
+      {/* Header. The title is the title; Back is a control beside it, not a
+          second label competing with it — it used to render "← Back" and
+          "Settings" at the same size and weight, so neither read as the page's
+          name. */}
+      <div className="h-16 shrink-0 bg-surface border-b border-line flex items-center gap-3 px-4 sm:px-6">
         <button
           onClick={() => (detailOpen ? setMobileOpen(false) : router.back())}
-          className="flex items-center gap-2 text-[13px] font-semibold text-slate-700 hover:text-slate-900"
+          aria-label={detailOpen ? 'Back to settings' : 'Leave settings'}
+          className="grid place-items-center w-10 h-10 -ml-1 rounded-xl text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
         >
-          <ArrowLeft size={16} /> {detailOpen ? 'Settings' : 'Back'}
+          <ArrowLeft size={18} />
         </button>
-        {!detailOpen && <span className="text-[13px] font-semibold text-slate-900">Settings</span>}
+        <h1 className="text-[17px] font-semibold text-ink">
+          {detailOpen ? NAV.find((n) => n.id === section)?.label ?? 'Settings' : 'Settings'}
+        </h1>
       </div>
 
       <div className="flex-1 min-h-0 flex">
         {/* Sidebar */}
-        <nav className={`w-full sm:w-[260px] shrink-0 bg-white sm:border-r border-slate-200 overflow-y-auto py-2 ${mobileOpen ? 'hidden sm:block' : 'block'}`}>
+        <nav className={`w-full sm:w-[260px] shrink-0 bg-white sm:border-r border-line overflow-y-auto py-2 ${mobileOpen ? 'hidden sm:block' : 'block'}`}>
           {NAV.map(({ id, label, hint, Icon }) => {
-            const active = section === id;
+            // On a phone the list IS the page until you tap into a section, so
+            // nothing is selected yet — highlighting a row there claims you are
+            // already inside it. On desktop both panes are on screen, so the
+            // highlight isthe whole time.
+            const active = section === id && (!isNarrow || mobileOpen);
             const attention = id === 'sync' ? (summary?.poisoned ?? 0) + (summary?.abandoned ?? 0) : 0;
             return (
               <button
                 key={id}
                 onClick={() => openSection(id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  active ? 'bg-orange-50 text-[#FF5722]' : 'text-slate-700 hover:bg-slate-50'
+                  active ? 'bg-brand-soft text-brand' : 'text-ink-2 hover:bg-sunken'
                 }`}
               >
                 <Icon size={16} className="shrink-0" />
                 <span className="flex-1 min-w-0">
                   <span className="block text-[13px] font-semibold truncate">{label}</span>
-                  <span className={`block text-[11px] truncate ${active ? 'text-[#FF5722]/70' : 'text-slate-400'}`}>{hint}</span>
+                  <span className={`block text-[11px] truncate ${active ? 'text-brand/70' : 'text-ink-4'}`}>{hint}</span>
                 </span>
                 {attention > 0 && (
                   <span className="text-[10px] font-bold text-white bg-rose-500 rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shrink-0">{attention}</span>
                 )}
-                {id === 'managed' && <Lock size={12} className="text-slate-300 shrink-0" />}
-                <ChevronRight size={14} className="sm:hidden text-slate-300 shrink-0" />
+                {id === 'managed' && <Lock size={12} className="text-ink-4 shrink-0" />}
+                <ChevronRight size={14} className="sm:hidden text-ink-4 shrink-0" />
               </button>
             );
           })}
@@ -379,18 +411,18 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
 
   return (
     <>
-      <h2 className="text-[15px] font-bold text-slate-900 mb-1">Sync &amp; Data</h2>
-      <p className="text-[12px] text-slate-500 leading-relaxed mb-4">
+      <h2 className="text-[15px] font-bold text-ink mb-1">Sync &amp; Data</h2>
+      <p className="text-[12px] text-ink-3 leading-relaxed mb-4">
         Everything you do is saved on this device first, then sent to the server.
         Every figure below is read live from this terminal&apos;s event log.
       </p>
 
       {/* Live status — the dot colour and the "updated" clock both move on
           their own, so this reads as a running readout, not a static form. */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 mb-5">
+      <div className="flex items-center gap-2.5 rounded-xl border border-line bg-white px-4 py-3 mb-5">
         <span className={`w-2 h-2 rounded-full shrink-0 ${headline.d}`} />
         <span className={`text-[14px] font-bold ${headline.c}`}>{headline.t}</span>
-        <span className="ml-auto text-[11px] text-slate-400 tabular-nums shrink-0">updated {agoStr}</span>
+        <span className="ml-auto text-[11px] text-ink-4 tabular-nums shrink-0">updated {agoStr}</span>
       </div>
 
       {s?.circuitOpen && (
@@ -401,13 +433,13 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       )}
 
       <Row label="Waiting to send">
-        <span className={`text-[13px] font-semibold tabular-nums ${(s?.count ?? 0) > 0 ? 'text-amber-600' : 'text-slate-600'}`}>{s?.count ?? '…'}</span>
+        <span className={`text-[13px] font-semibold tabular-nums ${(s?.count ?? 0) > 0 ? 'text-amber-600' : 'text-ink-2'}`}>{s?.count ?? '…'}</span>
       </Row>
       <Row label="Sent today">
-        <span className="text-[13px] text-slate-600 tabular-nums">{s?.confirmedToday ?? '…'}</span>
+        <span className="text-[13px] text-ink-2 tabular-nums">{s?.confirmedToday ?? '…'}</span>
       </Row>
       <Row label="Last synced">
-        <span className="text-[13px] text-slate-600 tabular-nums">
+        <span className="text-[13px] text-ink-2 tabular-nums">
           {diag?.lastProgressAt ? new Date(diag.lastProgressAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'}
         </span>
       </Row>
@@ -415,7 +447,7 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       <button
         onClick={() => { forceSyncNow(); toast.message('Trying now…'); }}
         disabled={nothingToDo}
-        className="mt-4 h-10 px-4 rounded-xl bg-[#FF5722] text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-slate-100 disabled:text-slate-400"
+        className="mt-4 h-10 px-4 rounded-xl bg-brand text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-sunken disabled:text-ink-4"
       >
         {nothingToDo ? 'Nothing waiting' : 'Sync now'}
       </button>
@@ -423,18 +455,18 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       {attention.length > 0 && (
         <>
           <div className="flex items-center justify-between mt-5 mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rejected payments</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4">Rejected payments</p>
             <button
               onClick={async () => {
                 for (const a of attention) await discardStuckEvent(a.id);
                 toast.success(`Dismissed ${attention.length} — the orders are back on the board`);
               }}
-              className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+              className="text-[11px] font-semibold text-ink-3 hover:text-ink-2"
             >
               Dismiss all {attention.length}
             </button>
           </div>
-          <p className="text-[11px] text-slate-400 mb-2.5 leading-relaxed">
+          <p className="text-[11px] text-ink-4 mb-2.5 leading-relaxed">
             The server turned these down — the amount charged didn&apos;t match
             the order. They won&apos;t go through by retrying. Dismiss to put the
             order back on the board, then collect payment again.
@@ -447,15 +479,15 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
         </>
       )}
 
-      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-5 mb-1">Storage</p>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4 mt-7 mb-1">Storage</p>
       <Row label="Events held on this device" hint="Kept until the server confirms them.">
-        <span className="text-[13px] text-slate-600 tabular-nums">{totalEvents}</span>
+        <span className="text-[13px] text-ink-2 tabular-nums">{totalEvents}</span>
       </Row>
       <Row label="Space used">
-        <span className="text-[13px] text-slate-600 tabular-nums">{mb(est?.usage)}{est?.quota ? ` of ${mb(est.quota)}` : ''}</span>
+        <span className="text-[13px] text-ink-2 tabular-nums">{mb(est?.usage)}{est?.quota ? ` of ${mb(est.quota)}` : ''}</span>
       </Row>
       <Row label="App version">
-        <span className="text-[13px] text-slate-600">v{APP_VERSION}</span>
+        <span className="text-[13px] text-ink-2">v{APP_VERSION}</span>
       </Row>
 
       <div className="flex flex-wrap gap-2 mt-4">
@@ -465,14 +497,14 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
             await snapshotViews();
             toast.success('Confirmed history compacted');
           }}
-          className="h-10 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-[13px] hover:bg-slate-50 transition-colors"
+          className="h-10 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken transition-colors"
         >
           Free Up Space
         </button>
         <button
           onClick={exportDiag}
           disabled={busy}
-          className="h-10 px-4 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-[13px] hover:bg-slate-50 disabled:opacity-50 transition-colors inline-flex items-center gap-2"
+          className="h-10 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken disabled:opacity-50 transition-colors inline-flex items-center gap-2"
         >
           <Download size={14} /> {busy ? 'Preparing…' : 'Export Diagnostics'}
         </button>
@@ -513,14 +545,14 @@ function RejectedRow({ a, onDone }: { a: any; onDone: () => void }) {
   return (
     <div className="bg-rose-50/70 border border-rose-200 rounded-xl px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-bold text-slate-900">
+        <span className="text-[13px] font-bold text-ink">
           {orderLabel ? `Order ${orderLabel}` : 'A payment'}
         </span>
         <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white text-rose-600 shrink-0">Rejected</span>
       </div>
-      <p className="text-[12px] text-slate-600 mt-1 leading-relaxed">{reason}</p>
+      <p className="text-[12px] text-ink-2 mt-1 leading-relaxed">{reason}</p>
       {when && (
-        <p className="text-[10px] text-slate-400 mt-1 tabular-nums">
+        <p className="text-[10px] text-ink-4 mt-1 tabular-nums">
           {when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, {when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
         </p>
       )}
@@ -531,14 +563,14 @@ function RejectedRow({ a, onDone }: { a: any; onDone: () => void }) {
               await discardStuckEvent(a.id);
               router.push(`/pos/order?orderId=${order!.serverId || order!.id}&checkout=true`);
             }}
-            className="text-[11px] font-bold text-[#FF5722] hover:underline"
+            className="text-[11px] font-bold text-brand hover:underline"
           >
             Settle this order
           </button>
         )}
         <button
           onClick={async () => { await discardStuckEvent(a.id); onDone(); }}
-          className="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+          className="text-[11px] font-semibold text-ink-3 hover:text-ink-2"
         >
           Dismiss
         </button>
@@ -566,25 +598,25 @@ function ManagedPanel({ managed, isManager }: { managed: any; isManager: boolean
   return (
     <>
       <div className="flex items-center gap-2 mb-1">
-        <Lock size={15} className="text-slate-400" />
-        <h2 className="text-[15px] font-bold text-slate-900">Managed by your administrator</h2>
+        <Lock size={15} className="text-ink-4" />
+        <h2 className="text-[18px] font-semibold text-ink">Managed by your administrator</h2>
       </div>
-      <p className="text-[12px] text-slate-500 mb-4">
+      <p className="text-[12px] text-ink-3 mb-4">
         These come from the console and are read-only here.
         {isManager && (
           <> {' '}
             <a href={`${(process.env.NEXT_PUBLIC_CONSOLE_URL || '').replace(/\/$/, '')}/dashboard/settings`} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1 font-semibold text-[#FF5722]">
+              className="inline-flex items-center gap-1 font-semibold text-brand">
               Change in Console <ExternalLink size={11} />
             </a>
           </>
         )}
       </p>
-      <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-1">
+      <div className="bg-sunken border border-line rounded-xl px-4 py-1">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex items-center justify-between gap-4 py-2 border-b border-slate-100 last:border-0">
-            <span className="text-[12px] text-slate-500">{k}</span>
-            <span className="text-[12px] font-semibold text-slate-800 text-right">{v}</span>
+          <div key={k} className="flex items-center justify-between gap-4 py-2 border-b border-line last:border-0">
+            <span className="text-[12px] text-ink-3">{k}</span>
+            <span className="text-[12px] font-semibold text-ink text-right">{v}</span>
           </div>
         ))}
       </div>

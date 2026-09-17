@@ -72,7 +72,7 @@ export function DineizLogo({
       {/* Optional Badge (Only if showBadge is explicitly true) */}
       {showBadge && (
         <span
-          className={`inline-flex items-center justify-center font-extrabold uppercase tracking-[0.15em] px-2.5 py-0.5 rounded-full border ${badgeFontSize} bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#FBBF24]`}
+          className={`inline-flex items-center justify-center font-extrabold uppercase tracking-[0.15em] px-2.5 py-0.5 rounded-full border ${badgeFontSize} bg-brand/10 border-brand/30 text-warn`}
         >
           {badgeText}
         </span>

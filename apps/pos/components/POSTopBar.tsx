@@ -318,10 +318,10 @@ export function POSTopBar() {
   const avatarTitle = isMounted ? (session.cashierName || 'Operator') : 'Operator';
   const cashierRole = posSession?.role?.replace(/_/g, ' ') || 'CASHIER';
 
-  let roleBadgeStyle = 'bg-[#E2E8F0] text-[#475569]'; // default gray for Cashier
+  let roleBadgeStyle = 'bg-hover text-ink-2'; // default gray for Cashier
   if (posSession?.role === 'WAITER') roleBadgeStyle = 'bg-blue-100 text-blue-700';
   else if (posSession?.role === 'BRANCH_MANAGER' || posSession?.role === 'TENANT_ADMIN') {
-    roleBadgeStyle = 'bg-[var(--pos-primary,#F59E0B)] text-white';
+    roleBadgeStyle = 'bg-brand text-white';
   }
 
   return (
@@ -334,7 +334,7 @@ export function POSTopBar() {
           header's own 72px height is left untouched: ClientTableMap.tsx hard-
           codes `calc(100vh - 72px - 64px)` against this exact value. */}
       <div className="shrink-0 sticky top-0 z-[var(--z-nav)] bg-white pt-safe">
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-line bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
 
         {/* Left Slot: Logo & Titles. max-w caps this slot's own footprint —
             a page's pageTitle/breadcrumb can be arbitrarily wide (order/
@@ -348,7 +348,7 @@ export function POSTopBar() {
             order-type selector and the avatar cluster. A real max-width is
             what forces the title/breadcrumb block below to actually need
             its own truncate/scroll. */}
-        <div className="flex items-center gap-2 sm:gap-3.5 text-[#0F172A] min-w-0 max-w-[45%] sm:max-w-[40%]">
+        <div className="flex items-center gap-2 sm:gap-3.5 text-ink min-w-0 max-w-[45%] sm:max-w-[40%]">
           {config.showBackButton && config.backPath && (
             <button
               onClick={() => {
@@ -360,7 +360,7 @@ export function POSTopBar() {
                   router.push(config.backPath!);
                 }
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium text-[13px] flex items-center gap-1.5 hover:text-[#0F172A] hover:bg-[#E2E8F0] transition-all active:scale-95 shadow-sm shrink-0"
+              className="px-2.5 py-1.5 rounded-xl bg-sunken border border-line-strong text-ink-2 font-medium text-[13px] flex items-center gap-1.5 hover:text-ink hover:bg-hover transition-all active:scale-95 shadow-sm shrink-0"
             >
               <ArrowLeft size={15} />
               <span className="hidden sm:inline">Back</span>
@@ -374,10 +374,10 @@ export function POSTopBar() {
           />
 
           {(config.pageTitle || config.breadcrumb) && (
-            <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-[#E2E8F0] min-w-0 shrink">
+            <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-line min-w-0 shrink">
               <div className="min-w-0 shrink">
-                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A] truncate">{config.pageTitle}</h2>}
-                {config.breadcrumb && <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
+                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-ink truncate">{config.pageTitle}</h2>}
+                {config.breadcrumb && <div className="text-[10px] text-ink-3 uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
               </div>
             </div>
           )}
@@ -410,7 +410,7 @@ export function POSTopBar() {
             </div>
           )}
 
-          {config.rightActions && <div className="w-[1px] h-6 bg-[#CBD5E1] mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>}
+          {config.rightActions && <div className="w-[1px] h-6 bg-hover mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>}
 
           {/* Permanent Info — deliberately minimal: only surface the
               exception (offline), not the default (online); the clock is
@@ -430,7 +430,7 @@ export function POSTopBar() {
 
             {isMounted && <SyncHealthDot />}
 
-            <span className="hidden md:inline font-mono text-[13px] font-semibold text-[#64748B] tabular-nums">{clockStr}</span>
+            <span className="hidden md:inline font-mono text-[13px] font-semibold text-ink-3 tabular-nums">{clockStr}</span>
 
             <div className="relative" ref={dropdownRef}>
               <button
@@ -563,7 +563,7 @@ export function POSTopBar() {
             
             <h3 className="font-bold text-slate-900 text-base mb-1">Sign Out of POS?</h3>
             <p className="text-slate-500 text-xs leading-relaxed mb-6">
-              Your session will be closed, but your <strong className="text-[var(--pos-primary,#F59E0B)]">shift will remain active</strong> for when you return.
+              Your session will be closed, but your <strong className="text-brand">shift will remain active</strong> for when you return.
             </p>
 
             <div className="flex gap-2.5 w-full">
@@ -606,7 +606,7 @@ export function POSTopBar() {
               <button
                 onClick={holdCartThenSignOut}
                 disabled={holdBusy}
-                className="w-full h-10 rounded-xl bg-[var(--pos-primary,#F59E0B)] hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                className="w-full h-10 rounded-xl bg-brand hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
                 {holdBusy ? <RefreshCw size={13} className="animate-spin" /> : <ShoppingBag size={13} />}
                 Hold It &amp; Sign Out
@@ -688,7 +688,7 @@ export function POSTopBar() {
 
             <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mb-4">
               <div
-                className="h-full bg-[var(--pos-primary,#F59E0B)] transition-all duration-500 ease-out"
+                className="h-full bg-brand transition-all duration-500 ease-out"
                 style={{
                   width: `${Math.max(0, Math.min(100, Math.round((1 - (unsyncedInfo?.count ?? 0) / Math.max(signOutInitialCountRef.current, 1)) * 100)))}%`,
                 }}
@@ -821,7 +821,7 @@ export function POSTopBar() {
                   }
                   router.push('/login?reason=break');
                 }}
-                className="flex-1 h-10 rounded-xl bg-[#FF5722] hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-10 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Lock Screen
               </button>

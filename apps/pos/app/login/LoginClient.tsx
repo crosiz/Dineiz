@@ -503,13 +503,13 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
   };
 
   return (
-    <main className="flex flex-col lg:flex-row h-dvh w-full bg-[#F8FAFC] text-[#0F172A] overflow-hidden font-body-md">
+    <main className="flex flex-col lg:flex-row h-dvh w-full bg-canvas text-ink overflow-hidden font-body-md">
       {/* Link Terminal Modal */}
       {linkModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
-          <div className="w-full max-w-[380px] bg-white border border-[#E2E8F0] rounded-2xl p-8 shadow-2xl">
-            <h3 className="font-clash font-bold text-xl text-[#0F172A] mb-2">Link Terminal</h3>
-            <p className="text-[#64748B] text-sm mb-6">Enter the POS Code displayed in your Dashboard to link this terminal to a branch.</p>
+          <div className="w-full max-w-[380px] bg-white border border-line rounded-2xl p-8 shadow-2xl">
+            <h3 className="font-clash font-bold text-xl text-ink mb-2">Link Terminal</h3>
+            <p className="text-ink-3 text-sm mb-6">Enter the POS Code displayed in your Dashboard to link this terminal to a branch.</p>
             <input
               type="text"
               autoFocus
@@ -517,12 +517,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleLinkTerminal()}
               placeholder="e.g. POS-A4BX"
-              className="w-full bg-[#F8FAFC] border border-[#CBD5E1] focus:border-[var(--pos-primary,#F59E0B)] rounded-xl px-4 py-3 text-[#0F172A] text-[16px] font-mono tracking-widest placeholder:text-[#94A3B8] outline-none transition-colors mb-4"
+              className="w-full bg-canvas border border-line-strong focus:border-brand rounded-xl px-4 py-3 text-ink text-[16px] font-mono tracking-widest placeholder:text-ink-4 outline-none transition-colors mb-4"
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setLinkModalOpen(false)}
-                className="flex-1 h-11 rounded-xl border border-[#CBD5E1] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-all font-semibold"
+                className="flex-1 h-11 rounded-xl border border-line-strong text-ink-2 hover:text-ink hover:bg-sunken transition-all font-semibold"
               >Cancel</button>
               <button
                 onClick={handleLinkTerminal}
@@ -543,20 +543,20 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           change-branch tap target, shift-active badge, break banner — down
           to phone/tablet-portrait so nothing here is lost, just decorative
           content (clock, tagline, dot-grid) that doesn't fit is dropped. */}
-      <section className="hidden lg:flex relative w-1/2 bg-[#F8FAFC] flex-col justify-between p-16 border-r border-[#E2E8F0]">
+      <section className="hidden lg:flex relative w-1/2 bg-canvas flex-col justify-between p-16 border-r border-line">
         <div className="absolute inset-0 amber-dot-grid pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, var(--pos-primary, #F59E0B) 1px, transparent 1px)', backgroundSize: '20px 20px', opacity: 0.05 }}></div>
 
         {/* Top: Flush Left Dineiz Logo (Light Variant) & Tagline */}
         <div className="relative z-10 animate-entrance-fade" style={{ animationDelay: '0.1s' }}>
           <DineizLogo size="xl" variant="light" showBadge={false} />
-          <p className="text-[12px] text-[#64748B] font-semibold tracking-[0.2em] mt-3 uppercase">
+          <p className="text-[12px] text-ink-3 font-semibold tracking-[0.2em] mt-3 uppercase">
             Restaurant Intelligence Platform
           </p>
         </div>
 
         {/* Middle: Clock & Greet */}
         <div className="relative z-10 animate-entrance-up" style={{ animationDelay: '0.2s' }}>
-          <div className="font-mono text-[64px] font-bold text-[#0F172A] tracking-tighter leading-none mb-4">
+          <div className="font-mono text-[64px] font-bold text-ink tracking-tighter leading-none mb-4">
             {timeStr}
           </div>
           <p className="text-[20px] font-semibold" style={{ color: 'var(--pos-primary, #F59E0B)' }}>
@@ -582,12 +582,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         <div className="relative z-10 animate-entrance-fade" style={{ animationDelay: '0.3s' }}>
           <div className="flex items-end justify-between">
             <div>
-              <h2 className="text-[20px] font-semibold text-[#0F172A] mb-2 flex flex-col cursor-pointer hover:text-slate-600 transition-colors" onClick={promptBranchChange} title="Click to change branch">
+              <h2 className="text-[20px] font-semibold text-ink mb-2 flex flex-col cursor-pointer hover:text-slate-600 transition-colors" onClick={promptBranchChange} title="Click to change branch">
                 <span className="flex items-center gap-2">
                   {activeBranchName}
-                  <Pencil className="text-[#64748B] w-[16px] h-[16px]" />
+                  <Pencil className="text-ink-3 w-[16px] h-[16px]" />
                 </span>
-                <span className="text-[12px] text-[#64748B] font-semibold tracking-wide uppercase mt-1">Terminal Linked</span>
+                <span className="text-[12px] text-ink-3 font-semibold tracking-wide uppercase mt-1">Terminal Linked</span>
               </h2>
               {!isShiftLoading && (
                 hasActiveShift ? (
@@ -604,7 +604,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               )}
             </div>
             {activeBranchId && (
-              <div className="text-right text-[12px] text-[#64748B] leading-relaxed font-medium font-mono" title={activeBranchId}>
+              <div className="text-right text-[12px] text-ink-3 leading-relaxed font-medium font-mono" title={activeBranchId}>
                 <p>Branch Ref: {activeBranchId.slice(-8).toUpperCase()}</p>
               </div>
             )}
@@ -616,7 +616,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           Carries only what's functional (branch/change-branch, shift status,
           break banner) so it stays useful on a phone/tablet without pushing
           the actual login flow below the fold. */}
-      <div className="lg:hidden shrink-0 bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 pt-safe">
+      <div className="lg:hidden shrink-0 bg-canvas border-b border-line px-4 pt-safe">
         <div className="flex items-center justify-between pt-3">
           <DineizLogo size="sm" variant="light" showBadge={false} />
           {!isShiftLoading && (
@@ -635,11 +635,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </div>
         <button
           onClick={promptBranchChange}
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0F172A] py-2.5 -mx-1 px-1"
+          className="flex items-center gap-1.5 text-[13px] font-semibold text-ink py-2.5 -mx-1 px-1"
           title="Tap to change branch"
         >
           {activeBranchName}
-          <Pencil className="text-[#64748B] w-[14px] h-[14px]" />
+          <Pencil className="text-ink-3 w-[14px] h-[14px]" />
         </button>
         {isBreakMode && (
           <div className="mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
@@ -658,26 +658,26 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         {/* Step 1: Role Selection */}
         <div className={`w-full max-w-[400px] space-y-8 transition-all duration-300 absolute ${!selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
           <header className="text-center space-y-2 mb-10">
-            <h3 className="font-clash font-bold text-2xl text-[#0F172A]">Select your role</h3>
-            <p className="text-[#64748B]">Identify yourself to begin the shift</p>
+            <h3 className="font-clash font-bold text-2xl text-ink">Select your role</h3>
+            <p className="text-ink-3">Identify yourself to begin the shift</p>
           </header>
 
           <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
             {availableRoles.length === 0 && (
-              <div className="text-center text-[#64748B] py-8">No roles configured for this branch.</div>
+              <div className="text-center text-ink-3 py-8">No roles configured for this branch.</div>
             )}
 
             {availableRoles.map((role) => (
               <button
                 key={role.id}
-                className="role-card group flex items-center justify-between h-[56px] px-6 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl hover:bg-[#F1F5F9] transition-all hover:border-[var(--pos-primary,#F59E0B)] relative overflow-hidden shrink-0 shadow-sm"
+                className="role-card group flex items-center justify-between h-[56px] px-6 bg-canvas border border-line rounded-xl hover:bg-sunken transition-all hover:border-brand relative overflow-hidden shrink-0 shadow-sm"
                 onClick={() => setSelectedRole(role.id)}
               >
                 <div className="flex items-center gap-4">
-                  <role.Icon className="w-5 h-5 text-[#64748B] group-hover:text-[var(--pos-primary,#F59E0B)] transition-colors" />
-                  <span className="font-bold text-[#0F172A]">{role.label}</span>
+                  <role.Icon className="w-5 h-5 text-ink-3 group-hover:text-brand transition-colors" />
+                  <span className="font-bold text-ink">{role.label}</span>
                 </div>
-                <ChevronRight className="text-[#64748B] chevron transition-transform group-hover:translate-x-1 w-[20px] h-[20px]" />
+                <ChevronRight className="text-ink-3 chevron transition-transform group-hover:translate-x-1 w-[20px] h-[20px]" />
               </button>
             ))}
           </div>
@@ -687,27 +687,27 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         <div className={`w-full max-w-[400px] space-y-8 transition-all duration-300 absolute ${selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
           <header className="text-center space-y-3 mb-10">
             <button
-              className="flex items-center gap-2 mx-auto text-[#64748B] hover:text-[var(--pos-primary,#F59E0B)] transition-colors group"
+              className="flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
               onClick={() => setSelectedRole(null)}
             >
               <ArrowLeft className="group-hover:-translate-x-1 transition-transform w-[16px] h-[16px]" />
               <span className="text-[12px] font-bold uppercase tracking-wider">Change Role</span>
             </button>
             <div>
-              <h3 className="font-clash font-bold text-2xl text-[#0F172A]">Select User</h3>
-              <p className="text-[#64748B]">Choose your profile</p>
+              <h3 className="font-clash font-bold text-2xl text-ink">Select User</h3>
+              <p className="text-ink-3">Choose your profile</p>
             </div>
           </header>
 
           <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
             {staffList.filter(s => s.role === selectedRole || (selectedRole === 'MANAGER' && s.role === 'BRANCH_MANAGER')).length === 0 && (
-              <div className="text-center text-[#64748B] py-8">No staff found for this role.</div>
+              <div className="text-center text-ink-3 py-8">No staff found for this role.</div>
             )}
 
             {staffList.filter(s => s.role === selectedRole || (selectedRole === 'MANAGER' && s.role === 'BRANCH_MANAGER')).map((staff) => (
               <button
                 key={staff.id}
-                className="role-card group flex items-center justify-between h-[56px] px-6 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl hover:bg-[#F1F5F9] transition-all hover:border-[var(--pos-primary,#F59E0B)] relative overflow-hidden shrink-0 shadow-sm"
+                className="role-card group flex items-center justify-between h-[56px] px-6 bg-canvas border border-line rounded-xl hover:bg-sunken transition-all hover:border-brand relative overflow-hidden shrink-0 shadow-sm"
                 onClick={() => setSelectedStaff(staff)}
               >
                 <div className="flex items-center gap-4">
@@ -717,10 +717,10 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   >
                     {staff.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="font-bold text-[#0F172A] group-hover:text-[#0F172A] transition-colors">{staff.name}</span>
+                  <span className="font-bold text-ink group-hover:text-ink transition-colors">{staff.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <ChevronRight className="text-[#64748B] transition-transform group-hover:translate-x-1 group-hover:text-[var(--pos-primary,#F59E0B)] w-[20px] h-[20px]" />
+                  <ChevronRight className="text-ink-3 transition-transform group-hover:translate-x-1 group-hover:text-brand w-[20px] h-[20px]" />
                 </div>
               </button>
             ))}
@@ -733,7 +733,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             <>
               <header className="text-center space-y-3">
                 <button
-                  className="flex items-center gap-2 mx-auto text-[#64748B] hover:text-[var(--pos-primary,#F59E0B)] transition-colors group"
+                  className="flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
                   onClick={() => {
                     setSelectedStaff(null);
                     setPin('');
@@ -751,8 +751,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   >
                     {selectedStaff.name.charAt(0).toUpperCase()}
                   </div>
-                  <h3 className="font-clash font-bold text-2xl text-[#0F172A]">{selectedStaff.name}</h3>
-                  <p className="text-[#64748B] mt-1 font-medium text-sm">
+                  <h3 className="font-clash font-bold text-2xl text-ink">{selectedStaff.name}</h3>
+                  <p className="text-ink-3 mt-1 font-medium text-sm">
                     {lockoutTimer > 0
                       ? <span className="text-rose-600 font-bold">Locked out for {lockoutTimer}s</span>
                       : pinStatus === 'error'
@@ -769,11 +769,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   const isSuccess = pinStatus === 'success';
                   const isError = pinStatus === 'error';
 
-                  let dotClass = 'bg-transparent border-[#CBD5E1]';
+                  let dotClass = 'bg-transparent border-line-strong';
                   let style = {};
 
                   if (isSuccess) {
-                    dotClass = 'bg-[#10B981] border-[#10B981] scale-110';
+                    dotClass = 'bg-ok border-ok scale-110';
                   } else if (isError) {
                     dotClass = 'bg-rose-500 border-rose-500';
                   } else if (isFilled) {
@@ -800,9 +800,9 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                         key={idx}
                         onClick={() => handleKey(key)}
                         disabled={lockoutTimer > 0}
-                        className="flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#F8FAFC] rounded-xl border border-[#CBD5E1] hover:bg-[#E2E8F0] active:scale-95 transition-all disabled:opacity-50 shadow-sm"
+                        className="flex items-center justify-center h-[56px] w-[72px] mx-auto bg-canvas rounded-xl border border-line-strong hover:bg-hover active:scale-95 transition-all disabled:opacity-50 shadow-sm"
                       >
-                        <Delete className="text-[#475569] w-[20px] h-[20px]" />
+                        <Delete className="text-ink-2 w-[20px] h-[20px]" />
                       </button>
                     );
                   }
@@ -815,7 +815,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                         disabled={!isReady || pinStatus === 'loading' || lockoutTimer > 0}
                         className={`flex items-center justify-center h-[56px] w-[72px] mx-auto rounded-xl border transition-all duration-300 active:scale-95 ${isReady && lockoutTimer === 0
                             ? 'text-white cursor-pointer shadow-md'
-                            : 'bg-[#F8FAFC] border-[#CBD5E1] opacity-50 cursor-not-allowed text-[#94A3B8]'
+                            : 'bg-canvas border-line-strong opacity-50 cursor-not-allowed text-ink-4'
                           }`}
                         style={isReady && lockoutTimer === 0 ? { backgroundColor: 'var(--pos-primary, #F59E0B)', borderColor: 'var(--pos-primary, #F59E0B)', color: '#FFFFFF' } : {}}
                       >
@@ -832,7 +832,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                       key={idx}
                       onClick={() => handleKey(key)}
                       disabled={lockoutTimer > 0}
-                      className="flex items-center justify-center h-[56px] w-[72px] mx-auto bg-[#F8FAFC] rounded-xl border border-[#CBD5E1] hover:bg-[#E2E8F0] active:scale-95 transition-all disabled:opacity-50 text-xl font-bold text-[#0F172A] shadow-sm"
+                      className="flex items-center justify-center h-[56px] w-[72px] mx-auto bg-canvas rounded-xl border border-line-strong hover:bg-hover active:scale-95 transition-all disabled:opacity-50 text-xl font-bold text-ink shadow-sm"
                     >
                       {key}
                     </button>
@@ -844,7 +844,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </div>
 
         {/* Decorative Icons */}
-        <div className="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none text-[#64748B]">
+        <div className="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none text-ink-3">
           <Wifi className="w-[36px] h-[36px]" />
           <BatteryCharging className="w-[36px] h-[36px]" />
         </div>

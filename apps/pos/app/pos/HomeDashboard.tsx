@@ -276,22 +276,22 @@ export default function HomeDashboard() {
   // the moment either one changes (as it did the moment BottomNav grew by a
   // device's safe-area inset).
   return (
-    <div className="flex flex-col h-full w-full bg-[#F8FAFC] overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-canvas overflow-hidden">
       {/* Search Header Strip */}
-      <div className="bg-white border-b border-[#E2E8F0] px-8 py-4 shrink-0 shadow-xs flex items-center justify-between">
+      <div className="bg-white border-b border-line px-8 py-4 shrink-0 shadow-xs flex items-center justify-between">
         <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#64748B] w-[20px] h-[20px]" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3 w-[20px] h-[20px]" />
           <input
             type="text"
             placeholder="Search orders, tables, or tickets..."
             value={homeSearch}
             onChange={(e) => setHomeSearch(e.target.value)}
-            className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#F1F5F9] border border-[#CBD5E1] text-[#0F172A] placeholder-[#94A3B8] text-[16px] font-medium focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:bg-white transition-all"
+            className="w-full h-11 pl-11 pr-4 rounded-xl bg-sunken border border-line-strong text-ink placeholder-ink-4 text-[16px] font-medium focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-all"
           />
           {homeSearch && (
             <button
               onClick={() => setHomeSearch('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-[#0F172A]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
             >
               <X className="w-[14px] h-[14px]" />
             </button>
@@ -345,24 +345,24 @@ export default function HomeDashboard() {
                   onClick={action.onClick}
                   className={`hero-card h-[180px] rounded-2xl flex flex-col justify-between p-6 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.98] ${
                     action.usePrimary
-                      ? 'bg-[#EA580C] text-white shadow-xl shadow-orange-500/30 border-none'
-                      : 'bg-white border border-[#E2E8F0] hover:border-[#CBD5E1] shadow-sm text-[#0F172A]'
+                      ? 'bg-brand text-white shadow-xl shadow-orange-500/30 border-none'
+                      : 'bg-white border border-line hover:border-line-strong shadow-sm text-ink'
                   }`}
                 >
                   <div
                     className={`w-12 h-12 rounded-full flex items-center justify-center ${
                       action.usePrimary
                         ? 'bg-white/20 border border-white/30 text-white'
-                        : 'bg-amber-50 border border-amber-200 text-[#D97706]'
+                        : 'bg-amber-50 border border-amber-200 text-brand'
                     }`}
                   >
                     <action.Icon className="w-7 h-7" />
                   </div>
                   <div>
-                    <div className={`clash-display text-2xl font-bold ${action.usePrimary ? 'text-white' : 'text-[#0F172A]'}`}>
+                    <div className={`clash-display text-2xl font-bold ${action.usePrimary ? 'text-white' : 'text-ink'}`}>
                       {action.label}
                     </div>
-                    <div className={`text-sm font-semibold ${action.usePrimary ? 'text-white/95' : 'text-[#64748B]'}`}>
+                    <div className={`text-sm font-semibold ${action.usePrimary ? 'text-white/95' : 'text-ink-3'}`}>
                       {action.sublabel}
                     </div>
                   </div>
@@ -374,17 +374,17 @@ export default function HomeDashboard() {
           {/* Active Orders Strip */}
           <section>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="clash-display text-2xl text-[#0F172A]">Active Orders</h3>
+              <h3 className="clash-display text-2xl text-ink">Active Orders</h3>
               <button
                 onClick={() => router.push('/pos/tickets')}
-                className="text-[#D97706] font-bold text-sm flex items-center gap-1 hover:underline"
+                className="text-brand font-bold text-sm flex items-center gap-1 hover:underline"
               >
                 View All <ArrowRight className="w-[14px] h-[14px]" />
               </button>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
               {activeOrders.length === 0 && homeSearch === '' ? (
-                <div className="text-[#64748B] italic p-4">No active orders</div>
+                <div className="text-ink-3 italic p-4">No active orders</div>
               ) : (
                 (() => {
                   const filtered = homeSearch
@@ -397,7 +397,7 @@ export default function HomeDashboard() {
                     : activeOrders;
 
                   if (filtered.length === 0 && homeSearch !== '') {
-                    return <div className="text-[#64748B] italic p-4">No orders match your search</div>;
+                    return <div className="text-ink-3 italic p-4">No orders match your search</div>;
                   }
 
                   return filtered.map((order: any) => {
@@ -417,21 +417,21 @@ export default function HomeDashboard() {
                         key={order.id}
                         onClick={() => openOrderDetails(order)}
                         style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
-                        className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-[#CBD5E1] transition-all border border-[#E2E8F0] flex flex-col gap-2.5"
+                        className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-line-strong transition-all border border-line flex flex-col gap-2.5"
                       >
                         <div className="flex justify-between items-start gap-2">
-                          <span className="text-[#0F172A] font-bold clash-display text-lg leading-none">#{order.tokenNumber || order.orderNumber}</span>
+                          <span className="text-ink font-bold clash-display text-lg leading-none">#{order.tokenNumber || order.orderNumber}</span>
                           <StatusBadge status={order.status} />
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
+                          <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
                           {order.tableLabel && (
-                            <span className="text-[10px] font-bold text-[#475569] bg-[#F8FAFC] border border-[#E2E8F0] px-1.5 py-0.5 rounded">T-{order.tableLabel}</span>
+                            <span className="text-[10px] font-bold text-ink-2 bg-canvas border border-line px-1.5 py-0.5 rounded">T-{order.tableLabel}</span>
                           )}
                         </div>
-                        <div className="text-xs text-[#64748B] font-medium truncate">{itemCount} item{itemCount === 1 ? '' : 's'}</div>
-                        <div className="flex justify-between items-end pt-1 mt-auto border-t border-[#F1F5F9]">
-                          <span className="text-[#0F172A] font-bold clash-display">{formatPKR(Math.round(amount))}</span>
+                        <div className="text-xs text-ink-3 font-medium truncate">{itemCount} item{itemCount === 1 ? '' : 's'}</div>
+                        <div className="flex justify-between items-end pt-1 mt-auto border-t border-line">
+                          <span className="text-ink font-bold clash-display">{formatPKR(Math.round(amount))}</span>
                           {order.createdAt && <TicketTimer createdAt={order.createdAt} />}
                         </div>
                       </div>
@@ -448,7 +448,7 @@ export default function HomeDashboard() {
               that endpoint never returned, and showed manager-facing
               ingredient stock to a cashier — see HomeDashboard notes above). */}
           <section className="flex flex-col gap-2" id="needs-attention-section">
-            <h3 className="clash-display text-2xl mb-1 text-[#0F172A]">Needs Attention</h3>
+            <h3 className="clash-display text-2xl mb-1 text-ink">Needs Attention</h3>
             {needsAttentionCount === 0 ? (
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700">
                 <CheckCircle2 className="w-[20px] h-[20px]" />
@@ -467,8 +467,8 @@ export default function HomeDashboard() {
                       <div className="flex items-center gap-4">
                         <Clock className="text-amber-600 w-[20px] h-[20px]" />
                         <div>
-                          <p className="font-bold text-[#0F172A]">Order #{order.tokenNumber || order.orderNumber} has been waiting {minutes}m</p>
-                          <p className="text-xs text-[#64748B]">{order.tableLabel ? `Table ${order.tableLabel}` : order.type} · still {order.status === 'PENDING' ? 'not sent to kitchen' : 'in the kitchen'}</p>
+                          <p className="font-bold text-ink">Order #{order.tokenNumber || order.orderNumber} has been waiting {minutes}m</p>
+                          <p className="text-xs text-ink-3">{order.tableLabel ? `Table ${order.tableLabel}` : order.type} · still {order.status === 'PENDING' ? 'not sent to kitchen' : 'in the kitchen'}</p>
                         </div>
                       </div>
                       <span className="text-amber-700 font-bold text-xs uppercase tracking-widest px-2">View</span>
@@ -485,8 +485,8 @@ export default function HomeDashboard() {
                     <div className="flex items-center gap-4">
                       <Banknote className="text-rose-600 w-[20px] h-[20px]" />
                       <div>
-                        <p className="font-bold text-[#0F172A]">Table {t.label} is waiting for the bill</p>
-                        <p className="text-xs text-[#64748B]">Customer requested payment</p>
+                        <p className="font-bold text-ink">Table {t.label} is waiting for the bill</p>
+                        <p className="text-xs text-ink-3">Customer requested payment</p>
                       </div>
                     </div>
                     <span className="text-rose-700 font-bold text-xs uppercase tracking-widest px-2">Go to Table</span>
@@ -502,12 +502,12 @@ export default function HomeDashboard() {
                         ? <AlertCircle className="w-5 h-5 text-rose-600" />
                         : <CloudOff className="w-5 h-5 text-sky-600" />}
                       <div>
-                        <p className="font-bold text-[#0F172A]">
+                        <p className="font-bold text-ink">
                           {stuckCount > 0
                             ? `${stuckCount} change${stuckCount > 1 ? 's' : ''} the server rejected — needs a manager`
                             : `${unsyncedCount} change${unsyncedCount > 1 ? 's' : ''} not yet synced`}
                         </p>
-                        <p className="text-xs text-[#64748B]">
+                        <p className="text-xs text-ink-3">
                           {stuckCount > 0 ? 'Review in Settings → Sync & Data' : 'Will sync automatically in the background'}
                         </p>
                       </div>
@@ -527,14 +527,14 @@ export default function HomeDashboard() {
         </div>
 
         {/* Right Column (40%) */}
-        <div className="lg:col-span-5 bg-[#F8FAFC] border-t lg:border-t-0 lg:border-l border-[#E2E8F0] p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
+        <div className="lg:col-span-5 bg-canvas border-t lg:border-t-0 lg:border-l border-line p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
           {/* Shift Info Card */}
-          <section className="bg-white border border-[#E2E8F0] rounded-2xl p-6 shadow-sm">
+          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h4 className="text-[#64748B] text-xs font-bold uppercase tracking-wider mb-1">Your Shift</h4>
+                <h4 className="text-ink-3 text-xs font-bold uppercase tracking-wider mb-1">Your Shift</h4>
                 <div className="flex items-center gap-2">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">
+                  <span className="clash-display text-2xl font-bold text-ink">
                     {isMounted ? session?.cashierName || 'Operator' : 'Operator'}
                   </span>
                   {activeShift && (
@@ -556,7 +556,7 @@ export default function HomeDashboard() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-[#D97706]">
+            <div className="flex items-center gap-2 text-brand">
               <Clock className="w-[20px] h-[20px]" />
               <span className="clash-display text-xl font-bold tracking-wide">Elapsed: {shiftElapsed}</span>
             </div>
@@ -564,27 +564,27 @@ export default function HomeDashboard() {
 
           {/* Today at a Glance */}
           <section>
-            <h4 className="clash-display text-2xl mb-4 text-[#0F172A]">Today's Performance</h4>
+            <h4 className="clash-display text-2xl mb-4 text-ink">Today's Performance</h4>
             <div className="flex flex-col gap-3">
-              <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-[#64748B] font-semibold">Orders served</span>
+              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
+                <span className="text-ink-3 font-semibold">Orders served</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-[36px] font-bold text-[#0F172A] leading-none">{perf.ordersServed}</span>
-                  <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
+                  <span className="clash-display text-[36px] font-bold text-ink leading-none">{perf.ordersServed}</span>
+                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
-              <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-[#64748B] font-semibold">Total value</span>
+              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
+                <span className="text-ink-3 font-semibold">Total value</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.totalValue))}</span>
-                  <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
+                  <span className="clash-display text-2xl font-bold text-ink">{formatPKR(Math.round(perf.totalValue))}</span>
+                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
                 </div>
               </div>
-              <div className="bg-white border border-[#E2E8F0] p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-[#64748B] font-semibold">Average per order</span>
+              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
+                <span className="text-ink-3 font-semibold">Average per order</span>
                 <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-[#0F172A]">{formatPKR(Math.round(perf.averagePerOrder))}</span>
-                  <span className="text-xs text-[#94A3B8] font-medium mt-1">{activeShift ? 'Per order this shift' : 'No shift open'}</span>
+                  <span className="clash-display text-2xl font-bold text-ink">{formatPKR(Math.round(perf.averagePerOrder))}</span>
+                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'Per order this shift' : 'No shift open'}</span>
                 </div>
               </div>
             </div>
@@ -593,12 +593,12 @@ export default function HomeDashboard() {
           {/* Table Status Mini Map (Original UI) */}
           <section className="flex-1 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h4 className="clash-display text-2xl text-[#0F172A]">Table Overview</h4>
-              <button onClick={() => router.push('/pos/tables')} className="text-[#D97706] text-sm font-bold border-b border-[#D97706] hover:text-[#B45309]">
+              <h4 className="clash-display text-2xl text-ink">Table Overview</h4>
+              <button onClick={() => router.push('/pos/tables')} className="text-brand text-sm font-bold border-b border-brand hover:text-brand-strong">
                 View Full Floor
               </button>
             </div>
-            <div className="flex-1 bg-white border border-[#E2E8F0] rounded-2xl p-4 flex flex-col relative overflow-hidden shadow-sm">
+            <div className="flex-1 bg-white border border-line rounded-2xl p-4 flex flex-col relative overflow-hidden shadow-sm">
               {(() => {
                 const tablesByFloor = tables.reduce((acc, t) => {
                   const f = t.floorNumber || 1;
@@ -618,7 +618,7 @@ export default function HomeDashboard() {
                     style={{ scrollBehavior: 'smooth', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
                   >
                     {floorNumbers.length === 0 ? (
-                      <div className="w-full flex flex-col items-center justify-center text-[#64748B] gap-2 my-auto">
+                      <div className="w-full flex flex-col items-center justify-center text-ink-3 gap-2 my-auto">
                         <Armchair className="w-[30px] h-[30px]" />
                         <span className="text-sm font-medium">No floor plan data loaded</span>
                       </div>
@@ -626,7 +626,7 @@ export default function HomeDashboard() {
                       floorNumbers.map((fNum) => (
                         <div key={fNum} className="min-w-full flex-shrink-0 snap-center flex flex-col items-center justify-start w-full pt-1">
                           {floorNumbers.length > 1 && (
-                            <h5 className="text-[#64748B] text-xs font-bold uppercase tracking-wider mb-2 text-center w-full shrink-0">
+                            <h5 className="text-ink-3 text-xs font-bold uppercase tracking-wider mb-2 text-center w-full shrink-0">
                               Floor {fNum}
                             </h5>
                           )}
@@ -646,7 +646,7 @@ export default function HomeDashboard() {
                                     t.status !== 'FREE' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
                                   } ring-4 shadow-sm`}
                                 />
-                                <span className="text-xs text-[#0F172A] font-bold text-center">{t.label}</span>
+                                <span className="text-xs text-ink font-bold text-center">{t.label}</span>
                               </div>
                             ))}
                           </div>

@@ -202,7 +202,7 @@ export default function KDSPage() {
   };
 
   return (
-    <div className={`flex flex-col h-screen select-none font-body-md text-[#0F172A] bg-[#F8FAFC] overflow-hidden font-size-${settings.fontSize}`}>
+    <div className={`flex flex-col h-screen select-none font-body-md text-ink bg-canvas overflow-hidden font-size-${settings.fontSize}`}>
       <style dangerouslySetInnerHTML={{ __html: `
         .pulse-green { animation: pulseGreen 1.5s infinite; }
         @keyframes pulseGreen { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
@@ -222,10 +222,10 @@ export default function KDSPage() {
           secondary text hidden below sm, safe-area gutter added above
           without changing the 72px content height. */}
       <div className="shrink-0 relative z-10 pt-safe">
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-[#E2E8F0] bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-line bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
 
         {/* Left Slot: Logo & Titles */}
-        <div className="flex items-center gap-2 sm:gap-3.5 text-[#0F172A] min-w-0 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3.5 text-ink min-w-0 shrink-0">
           <DineizLogo
             size="md"
             variant="light"
@@ -233,10 +233,10 @@ export default function KDSPage() {
             badgeText="KDS"
           />
 
-          <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-[#E2E8F0] min-w-0">
+          <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-line min-w-0">
             <div className="min-w-0">
-              <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-[#0F172A] truncate">Kitchen Display</h2>
-              <div className="text-[10px] text-[#64748B] uppercase tracking-widest leading-none font-semibold truncate">
+              <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-ink truncate">Kitchen Display</h2>
+              <div className="text-[10px] text-ink-3 uppercase tracking-widest leading-none font-semibold truncate">
                 {isMounted ? (session?.branchName || 'Branch') : 'Branch'}
               </div>
             </div>
@@ -253,13 +253,13 @@ export default function KDSPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Live</span>
           </div>
 
-          <div className="w-[1px] h-6 bg-[#CBD5E1] mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>
+          <div className="w-[1px] h-6 bg-hover mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>
 
-          <button onClick={fetchDashboard} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1] shrink-0">
-            <RefreshCw size={20} className="text-[#475569]" />
+          <button onClick={fetchDashboard} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
+            <RefreshCw size={20} className="text-ink-2" />
           </button>
-          <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-[#F1F5F9] transition-colors border border-transparent hover:border-[#CBD5E1] shrink-0">
-            <Settings size={20} className="text-[#475569]" />
+          <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
+            <Settings size={20} className="text-ink-2" />
           </button>
           <button onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200 shrink-0">
             <LogOut size={16} />
@@ -270,13 +270,13 @@ export default function KDSPage() {
       </div>
 
       {/* Station Filter Tabs */}
-      <div className="h-[48px] bg-white border-b border-[#E2E8F0] flex items-center px-2 overflow-x-auto no-scrollbar shrink-0">
+      <div className="h-[48px] bg-white border-b border-line flex items-center px-2 overflow-x-auto no-scrollbar shrink-0">
         <button
           onClick={() => setActiveStationId(null)}
           className={`px-4 h-full flex items-center gap-2 border-b-2 transition-colors shrink-0 ${
             activeStationId === null
-              ? 'border-[var(--pos-primary,#3B82F6)] text-[var(--pos-primary,#3B82F6)] font-semibold'
-              : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+              ? 'border-brand text-brand font-semibold'
+              : 'border-transparent text-ink-3 hover:text-ink'
           }`}
         >
           All Orders
@@ -287,24 +287,24 @@ export default function KDSPage() {
             onClick={() => setActiveStationId(st.id)}
             className={`px-4 h-full flex items-center gap-2 border-b-2 transition-colors shrink-0 ${
               activeStationId === st.id
-                ? 'border-[var(--pos-primary,#3B82F6)] text-[var(--pos-primary,#3B82F6)] font-semibold'
-                : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+                ? 'border-brand text-brand font-semibold'
+                : 'border-transparent text-ink-3 hover:text-ink'
             }`}
           >
             {st.name}
             {st.orderCount > 0 && (
-              <span className="bg-[#E2E8F0] text-[#64748B] px-2 py-0.5 rounded-full text-[12px] font-medium">{st.orderCount}</span>
+              <span className="bg-hover text-ink-3 px-2 py-0.5 rounded-full text-[12px] font-medium">{st.orderCount}</span>
             )}
           </button>
         ))}
       </div>
 
       {/* Order Cards Grid */}
-      <main className="flex-1 overflow-y-auto p-4 bg-[#F8FAFC]">
+      <main className="flex-1 overflow-y-auto p-4 bg-canvas">
         {isLoading ? (
-          <div className="h-full flex items-center justify-center text-[#64748B]">Loading...</div>
+          <div className="h-full flex items-center justify-center text-ink-3">Loading...</div>
         ) : orders.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[#64748B]">No active orders</div>
+          <div className="h-full flex items-center justify-center text-ink-3">No active orders</div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-max">
             {orders.map(order => (
@@ -325,7 +325,7 @@ export default function KDSPage() {
       </main>
 
       {/* Bottom Status Bar */}
-      <footer className="h-[32px] bg-white border-t border-[#E2E8F0] flex items-center justify-between px-4 shrink-0 text-[12px] text-[#64748B]">
+      <footer className="h-[32px] bg-white border-t border-line flex items-center justify-between px-4 shrink-0 text-[12px] text-ink-3">
         <div className="flex gap-4">
           <span>Queue: {summary?.inQueue || 0}</span>
           <span>In Progress: {summary?.inProgress || 0}</span>
@@ -349,49 +349,49 @@ export default function KDSPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-[400px] max-h-[85vh] overflow-y-auto bg-white border border-[#E2E8F0] rounded-xl p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
+          <div className="w-full max-w-[400px] max-h-[85vh] overflow-y-auto bg-white border border-line rounded-xl p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-[20px] font-semibold text-[#0F172A]">KDS Settings</h2>
-              <button onClick={() => setShowSettings(false)} className="text-[#64748B] hover:text-[#0F172A]">
+              <h2 className="text-[20px] font-semibold text-ink">KDS Settings</h2>
+              <button onClick={() => setShowSettings(false)} className="text-ink-3 hover:text-ink">
                 <X size={24} />
               </button>
             </div>
             
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <span className="text-[#475569] font-medium">Sound Alerts</span>
+                <span className="text-ink-2 font-medium">Sound Alerts</span>
                 <button 
                   onClick={() => saveSettings({...settings, soundAlerts: !settings.soundAlerts})}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundAlerts ? 'bg-green-500' : 'bg-[#CBD5E1]'}`}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundAlerts ? 'bg-green-500' : 'bg-hover'}`}
                 >
                   <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundAlerts ? 'translate-x-6' : ''}`} />
                 </button>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[#475569] font-medium">Auto-Scroll to New</span>
+                <span className="text-ink-2 font-medium">Auto-Scroll to New</span>
                 <button 
                   onClick={() => saveSettings({...settings, autoScroll: !settings.autoScroll})}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoScroll ? 'bg-green-500' : 'bg-[#CBD5E1]'}`}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoScroll ? 'bg-green-500' : 'bg-hover'}`}
                 >
                   <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoScroll ? 'translate-x-6' : ''}`} />
                 </button>
               </div>
 
               <div>
-                <label className="text-[#475569] font-medium block mb-2">Rush Threshold (minutes)</label>
+                <label className="text-ink-2 font-medium block mb-2">Rush Threshold (minutes)</label>
                 <input 
                   type="number" 
                   value={settings.rushThreshold}
                   onChange={(e) => saveSettings({...settings, rushThreshold: parseInt(e.target.value) || 15})}
-                  className="w-full bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg px-3 py-2 text-[#0F172A] outline-none focus:border-[var(--pos-primary,#3B82F6)]"
+                  className="w-full bg-canvas border border-line-strong rounded-lg px-3 py-2 text-ink outline-none focus:border-brand"
                   min={1}
                 />
               </div>
 
               <div>
-                <label className="text-[#475569] font-medium block mb-2">Font Size</label>
+                <label className="text-ink-2 font-medium block mb-2">Font Size</label>
                 <div className="flex gap-2">
                   {['small', 'medium', 'large'].map(sz => (
                      <button 
@@ -399,8 +399,8 @@ export default function KDSPage() {
                        onClick={() => saveSettings({...settings, fontSize: sz as any})}
                        className={`flex-1 py-1.5 rounded-lg border capitalize transition-colors ${
                          settings.fontSize === sz 
-                           ? 'border-[var(--pos-primary,#3B82F6)] bg-[var(--pos-primary,#3B82F6)]/10 text-[var(--pos-primary,#3B82F6)]' 
-                           : 'border-[#CBD5E1] text-[#64748B] hover:border-[#94A3B8]'
+                           ? 'border-brand bg-brand/10 text-brand' 
+                           : 'border-line-strong text-ink-3 hover:border-ink-4'
                        }`}
                      >
                        {sz}
@@ -540,7 +540,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   if (order.type === 'TAKEAWAY') typeBadgeColor = 'border-purple-500 text-purple-400 bg-purple-500/10';
   if (order.type === 'DELIVERY') typeBadgeColor = 'border-orange-500 text-orange-400 bg-orange-500/10';
 
-  let headerBg = 'bg-[#eab308]';
+  let headerBg = 'bg-warn';
   let headerText = 'text-black';
   if (elapsedMin >= rushThreshold) {
     headerBg = 'bg-red-500 pulse-red';
@@ -550,7 +550,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   }
 
   return (
-    <article className="bg-white rounded-xl shadow-md border border-[#E2E8F0] flex flex-col h-[340px] overflow-hidden">
+    <article className="bg-white rounded-xl shadow-md border border-line flex flex-col h-[340px] overflow-hidden">
       {/* Header */}
       <div className={`${headerBg} ${headerText} p-3 flex justify-between items-center transition-colors duration-500 shrink-0`}>
         <div className="flex items-baseline gap-2">
@@ -568,7 +568,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
           <span className={`px-2 py-0.5 rounded border text-[10px] font-bold tracking-widest uppercase ${typeBadgeColor}`}>
             {order.type.replace('-', ' ')}
           </span>
-          <div className="flex items-center gap-1.5 text-[#eab308] text-[12px] font-bold">
+          <div className="flex items-center gap-1.5 text-warn text-[12px] font-bold">
             <UtensilsCrossed className="w-[16px] h-[16px]" />
             <span>Cooking</span>
           </div>
@@ -582,23 +582,23 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
             return (
               <div 
                 key={oi.id} 
-                className={`bg-[#F8FAFC] rounded-md p-2 flex items-start gap-2.5 cursor-pointer transition-all border border-transparent hover:border-[#E2E8F0] ${checked ? 'opacity-50' : ''}`} 
+                className={`bg-canvas rounded-md p-2 flex items-start gap-2.5 cursor-pointer transition-all border border-transparent hover:border-line ${checked ? 'opacity-50' : ''}`} 
                 onClick={() => toggleItem(oi.id)}
               >
-                <div className={`text-[#0F172A] font-bold text-[14px] w-7 h-7 rounded flex items-center justify-center shrink-0 shadow-sm transition-colors ${checked ? 'bg-[#E2E8F0] border-transparent' : 'bg-white border border-[#E2E8F0]'}`}>
+                <div className={`text-ink font-bold text-[14px] w-7 h-7 rounded flex items-center justify-center shrink-0 shadow-sm transition-colors ${checked ? 'bg-hover border-transparent' : 'bg-white border border-line'}`}>
                   {oi.quantity}
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className={`text-[14px] font-medium leading-tight transition-colors ${checked ? 'line-through text-[#64748B]' : 'text-[#0F172A]'}`}>
+                  <p className={`text-[14px] font-medium leading-tight transition-colors ${checked ? 'line-through text-ink-3' : 'text-ink'}`}>
                     {oi.name}
                   </p>
                   {(oi.variation || (oi.addons && oi.addons.length > 0)) && (
-                    <p className={`text-[11px] italic mt-0.5 transition-colors ${checked ? 'line-through text-[#94A3B8]' : 'text-[#64748B]'}`}>
+                    <p className={`text-[11px] italic mt-0.5 transition-colors ${checked ? 'line-through text-ink-4' : 'text-ink-3'}`}>
                       {[oi.variation, ...(oi.addons || [])].filter(Boolean).join(', ')}
                     </p>
                   )}
                 </div>
-                <div className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors ${checked ? 'border-green-500 bg-green-500 text-white' : 'border-[#CBD5E1] bg-white'}`}>
+                <div className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors ${checked ? 'border-green-500 bg-green-500 text-white' : 'border-line-strong bg-white'}`}>
                   {checked && <Check size={12} strokeWidth={3} />}
                 </div>
               </div>
@@ -611,18 +611,18 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
       </div>
 
       {/* Footer Buttons */}
-      <div className="p-3 bg-[#F8FAFC] flex flex-row gap-2 shrink-0 border-t border-[#E2E8F0]">
+      <div className="p-3 bg-canvas flex flex-row gap-2 shrink-0 border-t border-line">
         <button
           onClick={handleReprintKOT}
           disabled={isReprinting}
-          className="flex-[0.8] h-11 rounded-md border border-[#CBD5E1] text-[#475569] text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-[#F1F5F9] transition-colors disabled:opacity-50"
+          className="flex-[0.8] h-11 rounded-md border border-line-strong text-ink-2 text-[13px] font-semibold flex justify-center items-center gap-1.5 hover:bg-sunken transition-colors disabled:opacity-50"
         >
           {isReprinting ? <Loader2 className="animate-spin w-[16px] h-[16px]" /> : <Printer className="w-[16px] h-[16px]" />}
           KOT
         </button>
         <button
           onClick={handleMarkReady}
-          className="flex-[1.2] h-11 rounded-md bg-[#10b981] hover:bg-[#059669] text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
+          className="flex-[1.2] h-11 rounded-md bg-ok hover:bg-ok text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
         >
           <CheckCircle2 className="w-[16px] h-[16px]" />
           Bump

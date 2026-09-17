@@ -173,8 +173,8 @@ export function CashDrawerModal({
           {/* Amount */}
           <div>
             <label className="block text-[11px] font-bold uppercase tracking-wider mb-2">Amount</label>
-            <div className="h-[58px] border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
-              <span className="text-xs font-bold text-[#FF5722]">PKR</span>
+            <div className="h-[58px] border-2 border-slate-200 focus-within:border-brand rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+              <span className="text-xs font-bold text-brand">PKR</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -213,7 +213,7 @@ export function CashDrawerModal({
               value={reason}
               onChange={e => setReason(e.target.value)}
               placeholder="Or type your own reason…"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[16px] outline-none focus:border-[#FF5722] transition-colors placeholder:text-slate-400"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-[16px] outline-none focus:border-brand transition-colors placeholder:text-slate-400"
             />
           </div>
 
@@ -221,7 +221,7 @@ export function CashDrawerModal({
           {entries.length > 0 && (
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">This shift</p>
-              <div className="border border-slate-200 rounded-xl divide-y divide-[#F1F5F9] max-h-[160px] overflow-y-auto custom-scrollbar">
+              <div className="border border-slate-200 rounded-xl divide-y divide-line max-h-[160px] overflow-y-auto custom-scrollbar">
                 {entries.map((e: any) => (
                   <div key={e.id} className="flex items-center justify-between px-3.5 py-2.5">
                     <div className="min-w-0 pr-3">
@@ -242,7 +242,7 @@ export function CashDrawerModal({
           <button
             onClick={submit}
             disabled={submitting || amount === '' || !reason.trim()}
-            className="w-full h-[52px] rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+            className="w-full h-[52px] rounded-xl bg-brand hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
           >
             {submitting
               ? <Loader2 size={16} className="animate-spin" />

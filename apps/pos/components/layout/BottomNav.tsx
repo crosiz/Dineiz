@@ -55,7 +55,7 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="shrink-0 bg-white border-t border-[#E2E8F0] shadow-md relative z-[var(--z-nav)] pb-safe">
+      <nav className="shrink-0 bg-white border-t border-line shadow-md relative z-[var(--z-nav)] pb-safe">
         <div className="h-16 flex items-center justify-around px-1 sm:px-4">
         {NAV_ITEMS.map(item => {
           // Role-based visibility

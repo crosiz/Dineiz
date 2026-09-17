@@ -173,7 +173,7 @@ export default function ShiftOpenGate() {
               Count what&apos;s physically in the drawer right now.
             </p>
 
-            <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-[#FF5722]">
+            <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-brand">
               <span className="text-[15px] font-semibold text-slate-400 shrink-0">PKR</span>
               {/* type="text" + inputMode: a number input renders its own inset
                   field chrome (the faint box the amount sat in) even with
@@ -203,7 +203,7 @@ export default function ShiftOpenGate() {
                     onClick={() => setFloat(v)}
                     className={`h-9 rounded-lg text-[13px] font-bold border transition-colors ${
                       float === v
-                        ? 'border-[#FF5722] bg-[#FF5722]/10 text-[#FF5722]'
+                        ? 'border-brand bg-brand/10 text-brand'
                         : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -240,7 +240,7 @@ export default function ShiftOpenGate() {
                           const n = Number(e.target.value.replace(/[^\d]/g, '').slice(0, 4));
                           setNotes((p) => ({ ...p, [d]: n || 0 }));
                         }}
-                        className="w-14 h-8 text-center rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-900 outline-none focus:border-[#FF5722] focus:shadow-none focus-visible:shadow-none"
+                        className="w-14 h-8 text-center rounded-lg border border-slate-200 bg-white text-[13px] font-semibold text-slate-900 outline-none focus:border-brand focus:shadow-none focus-visible:shadow-none"
                       />
                       <span className="ml-auto text-[13px] font-semibold text-slate-500 tabular-nums">{pkr(d * c)}</span>
                     </div>
@@ -260,7 +260,7 @@ export default function ShiftOpenGate() {
               type="button"
               onClick={handleStartShift}
               disabled={submitting}
-              className="w-full h-[52px] rounded-xl bg-[var(--pos-primary,#FF5722)] text-white font-bold text-[15px] flex items-center justify-center gap-2 transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
+              className="w-full h-[52px] rounded-xl bg-brand text-white font-bold text-[15px] flex items-center justify-center gap-2 transition-all hover:brightness-105 active:scale-[0.99] disabled:opacity-60 disabled:active:scale-100"
             >
               {submitting ? (
                 <><Loader2 size={18} className="animate-spin" /> Starting…</>

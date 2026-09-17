@@ -26,12 +26,12 @@ export function ConfirmModal({
 
   const btnColorClass =
     variant === 'danger' ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-xs' :
-    variant === 'info' ? 'bg-[#FF5722] hover:bg-orange-600 text-white shadow-xs' :
+    variant === 'info' ? 'bg-brand hover:bg-orange-600 text-white shadow-xs' :
     'bg-slate-900 hover:bg-slate-800 text-white shadow-xs';
 
   const iconBg =
     variant === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-    variant === 'info' ? 'bg-orange-50 text-[#FF5722] border-orange-100' :
+    variant === 'info' ? 'bg-orange-50 text-brand border-orange-100' :
     'bg-amber-50 text-amber-600 border-amber-100';
 
   const renderIcon = () => {

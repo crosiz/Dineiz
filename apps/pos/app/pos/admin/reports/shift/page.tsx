@@ -67,25 +67,25 @@ export default function ShiftReportSelectorPage() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-[#F8FAFC] p-6 flex justify-center pt-20">
-        <div className="w-8 h-8 border-4 border-[var(--pos-primary)] border-t-transparent rounded-full animate-spin"></div>
+      <div className="h-full bg-canvas p-6 flex justify-center pt-20">
+        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-[#F8FAFC] text-[#0F172A] pb-24 overflow-y-auto">
+    <div className="h-full bg-canvas text-ink pb-24 overflow-y-auto">
       <main className="max-w-3xl mx-auto p-4 lg:p-6 space-y-4">
         
         {shifts.length === 0 ? (
-          <div className="text-center p-8 bg-white rounded-2xl border border-[#E2E8F0]">
-            <FileText size={48} className="mx-auto text-[#CBD5E1] mb-4" />
-            <p className="font-bold text-[#64748B]">No shifts found for this branch.</p>
+          <div className="text-center p-8 bg-white rounded-2xl border border-line">
+            <FileText size={48} className="mx-auto text-ink-4 mb-4" />
+            <p className="font-bold text-ink-3">No shifts found for this branch.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {shifts.map(shift => (
-              <div key={shift.id} className="bg-white rounded-2xl shadow-sm border border-[#E2E8F0] p-4 flex flex-col md:flex-row gap-4 justify-between md:items-center">
+              <div key={shift.id} className="bg-white rounded-2xl shadow-sm border border-line p-4 flex flex-col md:flex-row gap-4 justify-between md:items-center">
                 
                 <div className="flex gap-4 items-start">
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${shift.status === 'OPEN' ? 'bg-amber-100 text-amber-600' : 'bg-green-100 text-green-600'}`}>
@@ -93,7 +93,7 @@ export default function ShiftReportSelectorPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-[16px]">{shift.user?.name || 'Unknown Cashier'}</h3>
-                    <div className="text-[13px] text-[#64748B] space-y-0.5 mt-1">
+                    <div className="text-[13px] text-ink-3 space-y-0.5 mt-1">
                       <p>Opened: {new Date(shift.openedAt).toLocaleString()}</p>
                       {shift.closedAt && <p>Closed: {new Date(shift.closedAt).toLocaleString()}</p>}
                       {shift.status === 'OPEN' && <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase rounded">Interim Report</span>}
@@ -105,7 +105,7 @@ export default function ShiftReportSelectorPage() {
                   <button
                     onClick={() => handleDownload(shift.id, 'pdf')}
                     disabled={downloadingId === shift.id}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-[#E2E8F0] text-[#0F172A] rounded-xl hover:bg-[#F8FAFC] transition-colors font-bold text-[14px]"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-line text-ink rounded-xl hover:bg-canvas transition-colors font-bold text-[14px]"
                   >
                     <Download size={18} />
                     PDF
@@ -113,7 +113,7 @@ export default function ShiftReportSelectorPage() {
                   <button
                     onClick={() => handleDownload(shift.id, 'excel')}
                     disabled={downloadingId === shift.id}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-[#10b981] text-white rounded-xl hover:bg-[#059669] transition-colors font-bold text-[14px] shadow-sm"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-ok text-white rounded-xl hover:bg-ok transition-colors font-bold text-[14px] shadow-sm"
                   >
                     <Download size={18} />
                     Excel

@@ -109,7 +109,7 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
                                 <>
                                   <button
                                     onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
-                                    className="text-[11px] font-semibold text-[#FF5722] hover:underline"
+                                    className="text-[11px] font-semibold text-brand hover:underline"
                                   >
                                     Settle
                                   </button>

@@ -308,25 +308,25 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
       <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92dvh] flex flex-col">
         {!order ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="animate-spin text-[#94A3B8] w-[30px] h-[30px]" />
+            <Loader2 className="animate-spin text-ink-4 w-[30px] h-[30px]" />
           </div>
         ) : (
           <>
             {/* Header */}
-            <div className="p-5 border-b border-[#E2E8F0] flex items-start justify-between shrink-0">
+            <div className="p-5 border-b border-line flex items-start justify-between shrink-0">
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-[20px] font-bold text-[#0F172A] clash-display">#{order.tokenNumber || order.orderNumber}</h2>
+                  <h2 className="text-[20px] font-bold text-ink clash-display">#{order.tokenNumber || order.orderNumber}</h2>
                   <StatusBadge status={order.status} />
                   {order.createdAt && !isFinal && <TicketTimer createdAt={order.createdAt} />}
                 </div>
-                <p className="text-[13px] text-[#64748B] font-medium">
+                <p className="text-[13px] text-ink-3 font-medium">
                   {order.type === 'DINE_IN' ? 'Dine-In' : order.type === 'TAKEAWAY' ? 'Takeaway' : 'Delivery'}
                   {order.table?.label && ` · Table ${order.table.label}`}
                   {order.assignedWaiter?.name && ` · ${order.assignedWaiter.name}`}
                 </p>
               </div>
-              <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#F1F5F9] text-[#64748B]">
+              <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-sunken text-ink-3">
                 <X className="w-[20px] h-[20px]" />
               </button>
             </div>
@@ -339,8 +339,8 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   const done = i <= stepIndex;
                   return (
                     <div key={step} className="flex items-center flex-1 last:flex-none">
-                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${done ? 'bg-[var(--pos-primary)]' : 'bg-[#E2E8F0]'}`} />
-                      {i < STEPS.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${i < stepIndex ? 'bg-[var(--pos-primary)]' : 'bg-[#E2E8F0]'}`} />}
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${done ? 'bg-brand' : 'bg-hover'}`} />
+                      {i < STEPS.length - 1 && <div className={`h-0.5 flex-1 mx-1 ${i < stepIndex ? 'bg-brand' : 'bg-hover'}`} />}
                     </div>
                   );
                 })}
@@ -358,25 +358,25 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
               {order.__partial ? (
                 <div className="space-y-3 animate-pulse">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="h-10 bg-[#F1F5F9] rounded-lg" />
+                    <div key={i} className="h-10 bg-sunken rounded-lg" />
                   ))}
                 </div>
               ) : order.items.map((item: any) => (
-                <div key={item.id} className="flex items-start justify-between gap-3 pb-3 border-b border-[#F1F5F9] last:border-0">
+                <div key={item.id} className="flex items-start justify-between gap-3 pb-3 border-b border-line last:border-0">
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#0F172A] text-[14px]">{item.quantity}x {item.item?.name || 'Item'}</p>
+                    <p className="font-bold text-ink text-[14px]">{item.quantity}x {item.item?.name || 'Item'}</p>
                     {item.options?.variation?.name && (
-                      <p className="text-[12px] text-[#64748B]">{item.options.variation.name}</p>
+                      <p className="text-[12px] text-ink-3">{item.options.variation.name}</p>
                     )}
                     {item.options?.addOns?.length > 0 && (
-                      <p className="text-[12px] text-[#64748B]">
+                      <p className="text-[12px] text-ink-3">
                         {item.options.addOns.map((a: any) => a.price ? `+${a.name} (${formatPKR(a.price)})` : `+${a.name}`).join(', ')}
                       </p>
                     )}
-                    {item.notes && <p className="text-[12px] text-[#94A3B8] italic">"{item.notes}"</p>}
+                    {item.notes && <p className="text-[12px] text-ink-4 italic">"{item.notes}"</p>}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-bold text-[#0F172A] text-[14px]">{formatPKR(item.subtotal)}</span>
+                    <span className="font-bold text-ink text-[14px]">{formatPKR(item.subtotal)}</span>
                     {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
@@ -392,26 +392,26 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             </div>
 
             {/* Total */}
-            <div className="px-5 py-3 border-t border-[#E2E8F0] flex items-center justify-between shrink-0 bg-[#F8FAFC]">
-              <span className="text-[13px] font-bold text-[#64748B] uppercase tracking-wide">Total</span>
-              <span className="text-[20px] font-bold text-[#0F172A] clash-display">{formatPKR(netAmount)}</span>
+            <div className="px-5 py-3 border-t border-line flex items-center justify-between shrink-0 bg-canvas">
+              <span className="text-[13px] font-bold text-ink-3 uppercase tracking-wide">Total</span>
+              <span className="text-[20px] font-bold text-ink clash-display">{formatPKR(netAmount)}</span>
             </div>
 
             {/* Actions */}
-            <div className="p-4 border-t border-[#E2E8F0] shrink-0 space-y-2">
+            <div className="p-4 border-t border-line shrink-0 space-y-2">
               {canAct && (
                 // Spec Part 11 — View Mode keeps the non-financial actions
                 // (assign waiter, reprint KOT) but drops "Add Item".
                 <div className={`grid ${viewMode ? 'grid-cols-2' : 'grid-cols-3'} gap-2`}>
                   {!viewMode && (
-                    <button onClick={handleAddItem} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                    <button onClick={handleAddItem} className="h-11 rounded-xl border border-line-strong bg-white text-ink font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-sunken transition-colors">
                       <PlusCircle className="w-[18px] h-[18px]" /> Add Item
                     </button>
                   )}
-                  <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                  <button onClick={() => setAssignOpen(true)} className="h-11 rounded-xl border border-line-strong bg-white text-ink font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-sunken transition-colors">
                     <UserPlus className="w-[18px] h-[18px]" /> Waiter
                   </button>
-                  <button onClick={handleReprintKOT} className="h-11 rounded-xl border border-[#CBD5E1] bg-white text-[#0F172A] font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-[#F1F5F9] transition-colors">
+                  <button onClick={handleReprintKOT} className="h-11 rounded-xl border border-line-strong bg-white text-ink font-bold text-[12px] flex flex-col items-center justify-center gap-0.5 hover:bg-sunken transition-colors">
                     <ReceiptText className="w-[18px] h-[18px]" /> KOT
                   </button>
                 </div>
@@ -458,7 +458,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                     </button>
                   ) : isInKitchen ? (
                     useKDS ? (
-                      <button disabled className="flex-1 h-12 rounded-xl font-bold text-[#94A3B8] text-[14px] bg-[#F1F5F9] cursor-not-allowed">
+                      <button disabled className="flex-1 h-12 rounded-xl font-bold text-ink-4 text-[14px] bg-sunken cursor-not-allowed">
                         In Kitchen (KDS)…
                       </button>
                     ) : (
@@ -484,13 +484,13 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
         <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
           <div className="fixed inset-0 bg-black/50" onClick={() => setAssignOpen(false)} />
           <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70dvh] overflow-y-auto">
-            <h3 className="font-bold text-[16px] text-[#0F172A] mb-4">Assign Waiter</h3>
+            <h3 className="font-bold text-[16px] text-ink mb-4">Assign Waiter</h3>
             <div className="space-y-1.5">
-              <button onClick={() => handleAssign(null)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#F1F5F9] text-[#64748B] font-medium text-[14px]">
+              <button onClick={() => handleAssign(null)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-sunken text-ink-3 font-medium text-[14px]">
                 Unassigned
               </button>
               {waiters.map((w: any) => (
-                <button key={w.id} onClick={() => handleAssign(w)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#F1F5F9] text-[#0F172A] font-bold text-[14px]">
+                <button key={w.id} onClick={() => handleAssign(w)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-sunken text-ink font-bold text-[14px]">
                   {w.name}
                 </button>
               ))}

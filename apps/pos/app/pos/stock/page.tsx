@@ -152,7 +152,7 @@ export default function StockPage() {
     rightActions: (
       <button
         onClick={() => refetchStock()}
-        className={`p-1.5 rounded-full text-[#64748B] hover:bg-[#E2E8F0] transition-colors ${refreshing ? 'animate-spin text-[var(--pos-primary)]' : ''}`}
+        className={`p-1.5 rounded-full text-ink-3 hover:bg-hover transition-colors ${refreshing ? 'animate-spin text-brand' : ''}`}
         title="Refresh"
       >
         <RefreshCw size={18} />
@@ -281,7 +281,7 @@ export default function StockPage() {
   if (loading && !data) {
     return (
       <div className="flex-1 min-h-0 flex items-center justify-center bg-[var(--pos-bg-base,#F8FAFC)]">
-        <p className="text-[#94A3B8] text-[13px] font-medium">Loading stock status…</p>
+        <p className="text-ink-4 text-[13px] font-medium">Loading stock status…</p>
       </div>
     );
   }
@@ -303,39 +303,39 @@ export default function StockPage() {
   });
 
   return (
-    <div className="h-full bg-[#F8FAFC] text-[#0F172A] pb-24 font-body-md select-none overflow-y-auto">
+    <div className="h-full bg-canvas text-ink pb-24 font-body-md select-none overflow-y-auto">
       <main className="max-w-3xl mx-auto p-4 lg:p-6 space-y-5">
         {/* Summary cards */}
         <section className="grid grid-cols-3 gap-3">
           <button
             onClick={() => setFilter('OUT')}
             className={`rounded-2xl p-4 text-left border transition-all active:scale-[0.98] ${
-              filter === 'OUT' ? 'bg-rose-600 border-rose-600 shadow-md' : 'bg-white border-[#E2E8F0] hover:border-rose-200'
+              filter === 'OUT' ? 'bg-rose-600 border-rose-600 shadow-md' : 'bg-white border-line hover:border-rose-200'
             }`}
           >
             <AlertTriangle size={18} className={filter === 'OUT' ? 'text-white' : 'text-rose-600'} />
-            <p className={`text-[26px] font-bold mt-2 ${filter === 'OUT' ? 'text-white' : 'text-[#0F172A]'}`}>{counts.out}</p>
-            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'OUT' ? 'text-white/80' : 'text-[#64748B]'}`}>Out of Stock</p>
+            <p className={`text-[26px] font-bold mt-2 ${filter === 'OUT' ? 'text-white' : 'text-ink'}`}>{counts.out}</p>
+            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'OUT' ? 'text-white/80' : 'text-ink-3'}`}>Out of Stock</p>
           </button>
           <button
             onClick={() => setFilter('LOW')}
             className={`rounded-2xl p-4 text-left border transition-all active:scale-[0.98] ${
-              filter === 'LOW' ? 'bg-amber-500 border-amber-500 shadow-md' : 'bg-white border-[#E2E8F0] hover:border-amber-200'
+              filter === 'LOW' ? 'bg-amber-500 border-amber-500 shadow-md' : 'bg-white border-line hover:border-amber-200'
             }`}
           >
             <AlertCircle size={18} className={filter === 'LOW' ? 'text-white' : 'text-amber-600'} />
-            <p className={`text-[26px] font-bold mt-2 ${filter === 'LOW' ? 'text-white' : 'text-[#0F172A]'}`}>{counts.low}</p>
-            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'LOW' ? 'text-white/80' : 'text-[#64748B]'}`}>Low Stock</p>
+            <p className={`text-[26px] font-bold mt-2 ${filter === 'LOW' ? 'text-white' : 'text-ink'}`}>{counts.low}</p>
+            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'LOW' ? 'text-white/80' : 'text-ink-3'}`}>Low Stock</p>
           </button>
           <button
             onClick={() => setFilter('OK')}
             className={`rounded-2xl p-4 text-left border transition-all active:scale-[0.98] ${
-              filter === 'OK' ? 'bg-emerald-600 border-emerald-600 shadow-md' : 'bg-white border-[#E2E8F0] hover:border-emerald-200'
+              filter === 'OK' ? 'bg-emerald-600 border-emerald-600 shadow-md' : 'bg-white border-line hover:border-emerald-200'
             }`}
           >
             <CheckCircle2 size={18} className={filter === 'OK' ? 'text-white' : 'text-emerald-600'} />
-            <p className={`text-[26px] font-bold mt-2 ${filter === 'OK' ? 'text-white' : 'text-[#0F172A]'}`}>{counts.ok}</p>
-            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'OK' ? 'text-white/80' : 'text-[#64748B]'}`}>OK</p>
+            <p className={`text-[26px] font-bold mt-2 ${filter === 'OK' ? 'text-white' : 'text-ink'}`}>{counts.ok}</p>
+            <p className={`text-[11px] font-bold uppercase tracking-wider mt-0.5 ${filter === 'OK' ? 'text-white/80' : 'text-ink-3'}`}>OK</p>
           </button>
         </section>
 
@@ -347,8 +347,8 @@ export default function StockPage() {
               onClick={() => setFilter(tab.key)}
               className={`shrink-0 px-3.5 py-2 rounded-full text-[12px] font-bold tracking-wide transition-colors border ${
                 filter === tab.key
-                  ? 'bg-[#0F172A] border-[#0F172A] text-white'
-                  : 'bg-white border-[#E2E8F0] text-[#64748B] hover:bg-[#F1F5F9]'
+                  ? 'bg-ink border-ink text-white'
+                  : 'bg-white border-line text-ink-3 hover:bg-sunken'
               }`}
             >
               {tab.label}
@@ -358,14 +358,14 @@ export default function StockPage() {
 
         {/* Items */}
         {filteredItems.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm p-10 flex flex-col items-center text-center">
+          <div className="bg-white rounded-2xl border border-line shadow-sm p-10 flex flex-col items-center text-center">
             <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
               <PackageCheck size={26} className="text-emerald-600" />
             </div>
-            <h3 className="text-[16px] font-bold text-[#0F172A]">
+            <h3 className="text-[16px] font-bold text-ink">
               {noProblems && (filter === 'PROBLEMS' || filter === 'OUT' || filter === 'LOW') ? 'All stocked up' : 'No items in this view'}
             </h3>
-            <p className="text-[13px] text-[#64748B] mt-1 max-w-[280px]">
+            <p className="text-[13px] text-ink-3 mt-1 max-w-[280px]">
               {noProblems && (filter === 'PROBLEMS' || filter === 'OUT' || filter === 'LOW')
                 ? 'Every ingredient is above its low-stock threshold. Nice work.'
                 : 'Try a different filter to see more ingredients.'}
@@ -394,13 +394,13 @@ export default function StockPage() {
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeQuickAdjust} />
           <div className="relative z-10 w-full max-w-[360px] bg-white rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.3)] p-6">
             <div className="flex items-start justify-between mb-1">
-              <h2 className="text-[17px] font-bold text-[#0F172A]">Quick Adjust</h2>
-              <button onClick={closeQuickAdjust} className="text-[#94A3B8] hover:text-[#0F172A]">
+              <h2 className="text-[17px] font-bold text-ink">Quick Adjust</h2>
+              <button onClick={closeQuickAdjust} className="text-ink-4 hover:text-ink">
                 <X size={18} />
               </button>
             </div>
-            <p className="text-[13px] text-[#64748B] mb-4">{adjustItem.name} — set the new on-hand quantity.</p>
-            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1.5">
+            <p className="text-[13px] text-ink-3 mb-4">{adjustItem.name} — set the new on-hand quantity.</p>
+            <label className="block text-[11px] font-bold text-ink-4 uppercase tracking-wider mb-1.5">
               New Quantity ({formatUnit(adjustItem.unit)})
             </label>
             <input
@@ -411,18 +411,18 @@ export default function StockPage() {
               value={adjustQty}
               onChange={(e) => setAdjustQty(e.target.value)}
               autoFocus
-              className="w-full h-[52px] px-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[16px] font-bold text-[#0F172A] focus:outline-none focus:border-[#0F172A] focus:ring-1 focus:ring-[#0F172A] mb-5"
+              className="w-full h-[52px] px-4 bg-canvas border border-line rounded-xl text-[16px] font-bold text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink mb-5"
             />
             <div className="flex gap-3">
               <button
                 onClick={closeQuickAdjust}
-                className="flex-1 h-[46px] rounded-xl border border-[#E2E8F0] text-[#475569] font-bold text-[14px] hover:bg-[#F8FAFC] active:scale-[0.98] transition-all"
+                className="flex-1 h-[46px] rounded-xl border border-line text-ink-2 font-bold text-[14px] hover:bg-canvas active:scale-[0.98] transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={submitQtyStep}
-                className="flex-1 h-[46px] rounded-xl bg-[#0F172A] text-white font-bold text-[14px] hover:bg-[#1E293B] active:scale-[0.98] transition-all"
+                className="flex-1 h-[46px] rounded-xl bg-ink text-white font-bold text-[14px] hover:bg-ink active:scale-[0.98] transition-all"
               >
                 Continue
               </button>
@@ -471,7 +471,7 @@ function StockItemCard({
     ? { border: 'border-rose-200', badgeBg: 'bg-rose-50', badgeText: 'text-rose-600', label: 'OUT' }
     : isLow
       ? { border: 'border-amber-200', badgeBg: 'bg-amber-50', badgeText: 'text-amber-600', label: 'LOW' }
-      : { border: 'border-[#E2E8F0]', badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-600', label: 'OK' };
+      : { border: 'border-line', badgeBg: 'bg-emerald-50', badgeText: 'text-emerald-600', label: 'OK' };
 
   const StatusIcon = isOut ? AlertTriangle : isLow ? AlertCircle : CheckCircle2;
 
@@ -491,16 +491,16 @@ function StockItemCard({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[15px] font-bold text-[#0F172A] truncate">{item.name}</h3>
+            <h3 className="text-[15px] font-bold text-ink truncate">{item.name}</h3>
             <span className={`shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${statusStyles.badgeBg} ${statusStyles.badgeText}`}>
               {statusStyles.label}
             </span>
           </div>
-          <div className="flex items-center gap-2 mt-1 text-[13px] text-[#64748B] font-medium">
+          <div className="flex items-center gap-2 mt-1 text-[13px] text-ink-3 font-medium">
             <span>{formatQty(item.quantity)} {formatUnit(item.unit)} on hand</span>
             {item.estimatedPortions !== null && (
               <>
-                <span className="text-[#CBD5E1]">•</span>
+                <span className="text-ink-4">•</span>
                 <span>Est. {item.estimatedPortions} more portion{item.estimatedPortions === 1 ? '' : 's'}</span>
               </>
             )}
@@ -519,7 +519,7 @@ function StockItemCard({
           <button
             onClick={onMarkUnavailable}
             disabled={isMarkingUnavailable}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0F172A] text-white text-[12px] font-bold hover:bg-[#1E293B] disabled:opacity-60 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-ink text-white text-[12px] font-bold hover:bg-ink disabled:opacity-60 active:scale-95 transition-all"
           >
             <EyeOff size={14} />
             {isMarkingUnavailable ? 'Updating…' : 'Mark Items Unavailable'}
@@ -527,7 +527,7 @@ function StockItemCard({
           <button
             onClick={onNotifyManager}
             disabled={isNotifying}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-[#475569] text-[12px] font-bold hover:bg-[#F8FAFC] disabled:opacity-60 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-line text-ink-2 text-[12px] font-bold hover:bg-canvas disabled:opacity-60 active:scale-95 transition-all"
           >
             <Bell size={14} />
             {isNotifying ? 'Notifying…' : 'Notify Manager'}
@@ -535,7 +535,7 @@ function StockItemCard({
           {isManager && (
             <button
               onClick={onQuickAdjust}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-[#E2E8F0] text-[#475569] text-[12px] font-bold hover:bg-[#F8FAFC] active:scale-95 transition-all"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white border border-line text-ink-2 text-[12px] font-bold hover:bg-canvas active:scale-95 transition-all"
             >
               <SlidersHorizontal size={14} />
               Quick Adjust

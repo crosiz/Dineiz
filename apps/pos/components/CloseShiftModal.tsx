@@ -381,7 +381,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       <h2 className="text-base font-bold text-slate-900">Syncing your shift</h2>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-1.5">
-                      <div className="h-full bg-[#FF5722] transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
                     </div>
                     <p className="text-[11px] text-slate-500 font-medium tabular-nums mb-4">{done} of {base.total}</p>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 mb-4">
@@ -520,7 +520,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             <div className="flex flex-col gap-2.5 w-full">
               <button
                 onClick={() => shiftId && printShiftReport(shiftId, token).catch(e => toast.error(e.message))}
-                className="w-full h-11 bg-[#FF5722] text-white rounded-xl font-semibold text-xs hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 shadow-xs"
+                className="w-full h-11 bg-brand text-white rounded-xl font-semibold text-xs hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 shadow-xs"
               >
                 <Printer size={15} />
                 Print Report
@@ -546,7 +546,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             {/* Header */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-[#FF5722]">
+                <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-brand">
                   <Clock size={18} />
                 </div>
                 <div>
@@ -590,7 +590,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     </button>
                     <button
                       onClick={() => { onClose(); router.push('/pos/shift/open'); }}
-                      className="h-10 px-4 rounded-xl bg-[#FF5722] hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+                      className="h-10 px-4 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
                     >
                       Open a New Shift
                     </button>
@@ -654,7 +654,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                                 <span className="font-bold text-slate-900 font-mono">{formatPKR(o.netAmount)}</span>
                                 <button
                                   onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
-                                  className="text-[11px] font-semibold text-[#FF5722] hover:underline"
+                                  className="text-[11px] font-semibold text-brand hover:underline"
                                 >
                                   Settle
                                 </button>
@@ -711,8 +711,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     </div>
 
                     {countMode === 'total' ? (
-                      <div className="h-14 border-2 border-slate-200 focus-within:border-[#FF5722] rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
-                        <span className="text-xs font-bold text-[#FF5722]">PKR</span>
+                      <div className="h-14 border-2 border-slate-200 focus-within:border-brand rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
+                        <span className="text-xs font-bold text-brand">PKR</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -743,7 +743,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                                 setCounts(c => ({ ...c, [d]: v }));
                               }}
                               placeholder="0"
-                              className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-[16px] font-bold text-center text-slate-900 outline-none focus:border-[#FF5722] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-[16px] font-bold text-center text-slate-900 outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <span className="flex-1 text-right text-xs font-bold text-slate-600 tabular-nums">
                               {(counts[d] || 0) > 0 ? formatPKR(d * counts[d]) : '—'}
@@ -790,7 +790,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Explain any variance, refunds or payouts…"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-xs outline-none focus:border-[#FF5722] transition-colors resize-none h-20 placeholder:text-slate-400"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-xs outline-none focus:border-brand transition-colors resize-none h-20 placeholder:text-slate-400"
                     />
                   </div>
                 </div>
@@ -803,7 +803,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 <button
                   onClick={handleSubmit}
                   disabled={isLoading || isSubmitting || !summary || (cashCountRequired && closingCash === '')}
-                  className="w-full h-11 rounded-xl bg-[#FF5722] hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
+                  className="w-full h-11 rounded-xl bg-brand hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
                 >
                   {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={15} />}
                   Close Shift &amp; Save Report
