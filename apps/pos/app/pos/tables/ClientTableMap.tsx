@@ -30,6 +30,8 @@ import {
   Loader2,
   Sparkles,
   Layers,
+  Map as MapIcon,
+  Rows3,
   User,
   UserPlus,
 } from 'lucide-react';
@@ -38,6 +40,9 @@ import { useScreenSize } from '@/lib/use-screen-size';
 import { TableListView } from './TableListView';
 
 const MIN_ZOOM = 0.3;
+// Below this a table stops being readable or reliably tappable on a phone — see
+// computeFit. 0.8 keeps an 88px table at ~70px with a ~13px label.
+const MIN_FIT_ZOOM_NARROW = 0.8;
 const MAX_ZOOM = 2.5;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
@@ -141,6 +146,23 @@ export default function ClientTableMap() {
 
   const { isMobile: isNarrow } = useScreenSize();
 
+  // Plan is the default everywhere, phones included. The list is the escape
+  // hatch for a floor the plan genuinely can't serve at phone width — a long
+  // narrow room, or more tables than fit legibly at any zoom. Remembered per
+  // terminal so a waiter who prefers one isn't re-choosing every shift.
+  const [narrowView, setNarrowView] = useState<'plan' | 'list'>('plan');
+  useEffect(() => {
+    const saved = localStorage.getItem('pos_tables_view');
+    if (saved === 'list' || saved === 'plan') setNarrowView(saved);
+  }, []);
+  const toggleNarrowView = () => {
+    setNarrowView((v) => {
+      const next = v === 'plan' ? 'list' : 'plan';
+      localStorage.setItem('pos_tables_view', next);
+      return next;
+    });
+  };
+
   // ── Canvas zoom & pan ───────────────────────────────────────────────────
   //
   // `view` maps floor-plan coordinates to screen pixels as `screen = p·zoom + pan`,
@@ -227,7 +249,23 @@ export default function ClientTableMap() {
   // Configure TopBar explicitly without duplicate titles or clutter
   useTopBar({
     pageTitle: 'Floor Plan',
-    rightActions: legendElement,
+    rightActions: (
+      <div className="flex items-center gap-2">
+        {legendElement}
+        {/* Phone only — there is room for the plan on anything wider, so the
+            choice doesn't arise there and the control shouldn't either. */}
+        {isNarrow && (
+          <button
+            onClick={toggleNarrowView}
+            title={narrowView === 'plan' ? 'Show as a list' : 'Show the floor plan'}
+            aria-label={narrowView === 'plan' ? 'Show tables as a list' : 'Show the floor plan'}
+            className="grid place-items-center w-10 h-10 rounded-xl border border-line bg-surface text-ink-2 active:bg-sunken transition-colors"
+          >
+            {narrowView === 'plan' ? <Rows3 className="w-[18px] h-[18px]" /> : <MapIcon className="w-[18px] h-[18px]" />}
+          </button>
+        )}
+      </div>
+    ),
     showBackButton: false,
   });
 
@@ -620,29 +658,42 @@ export default function ClientTableMap() {
    */
   const computeFit = useCallback((cw: number, ch: number) => {
     if (!floorBounds || cw === 0 || ch === 0) return null;
-    const gutter = cw < 640 ? 16 : 40;
+    const narrow = cw < 640;
+    const gutter = narrow ? 16 : 40;
+
+    // On a phone, legibility beats completeness.
+    //
+    // Fitting a typical 5×2 floor to 375px lands at ~57%: an 88px table renders
+    // at 50px with a 9px label, which is neither readable nor a comfortable tap
+    // target. Holding a floor at MIN_FIT_ZOOM_NARROW keeps tables at ~70px with
+    // a ~13px label — you pan to reach whatever falls outside the viewport,
+    // which is how any map on a phone works. On a tablet or a counter terminal
+    // there's room to show the whole floor, so it fits properly there.
+    const minFit = narrow ? MIN_FIT_ZOOM_NARROW : MIN_ZOOM;
     const zoom = clamp(
       Math.min((cw - gutter * 2) / floorBounds.width, (ch - gutter * 2) / floorBounds.height),
-      MIN_ZOOM,
+      minFit,
       1.4,
     );
+    const scaledW = floorBounds.width * zoom;
     const scaledH = floorBounds.height * zoom;
-    // Centre horizontally always. Vertically: centre on a tablet or desktop,
-    // where the spare room reads as breathing space around the plan — but
-    // top-align on a phone, where a wide layout fitted to a tall portrait
-    // screen leaves so much slack that centring strands the tables in the
-    // middle with dead space above AND below. Collecting it all at the bottom
-    // (where the zoom controls live) reads as a floor plan instead of a
-    // mistake.
-    const y = cw < 640
+
+    // An axis that still fits gets centred; one that overflows starts at the
+    // gutter, so you open on the top-left of the room and pan from there rather
+    // than in the middle of it with tables cut off on both sides.
+    const x = scaledW <= cw - gutter * 2
+      ? (cw - scaledW) / 2 - floorBounds.minX * zoom
+      : gutter - floorBounds.minX * zoom;
+
+    // Vertically, a floor that fits is centred on a tablet or desktop, where the
+    // spare room reads as breathing space — but top-aligned on a phone, where a
+    // wide layout on a tall portrait screen leaves so much slack that centring
+    // strands the tables in the middle with dead space above AND below.
+    const y = scaledH > ch - gutter * 2 || narrow
       ? gutter - floorBounds.minY * zoom
       : (ch - scaledH) / 2 - floorBounds.minY * zoom;
 
-    return {
-      zoom,
-      x: (cw - floorBounds.width * zoom) / 2 - floorBounds.minX * zoom,
-      y,
-    };
+    return { zoom, x, y };
   }, [floorBounds]);
 
   const handleResetZoom = useCallback(() => {
@@ -676,7 +727,7 @@ export default function ClientTableMap() {
     // this dep the effect wouldn't re-run: no fit, no ResizeObserver, and the
     // floor sat at its initial translate(0,0) scale(1) in the corner.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFloor, floorTables.length, isNarrow]);
+  }, [activeFloor, floorTables.length, isNarrow, narrowView]);
 
   /**
    * Where a table's detail card goes.
@@ -999,12 +1050,16 @@ export default function ClientTableMap() {
     </>
   );
 
-  // A scale drawing of a room does not fit a phone: fitted to 375×812 a typical
-  // 5×2 floor renders at ~57% — 50px tables with 6px labels, and ~70% of the
-  // screen empty dot grid. Below `sm` the same information becomes a list of
-  // real tap targets instead; the canvas is unchanged from `sm` up. See
-  // TableListView's header.
-  if (isNarrow) {
+  // The floor plan is the view on every screen size, phones included — a waiter
+  // navigates by where a table physically is, and taking that away costs more
+  // than the cramped rendering does. What a phone needs is not a different
+  // screen but a legible one: `computeFit` holds a minimum zoom below `sm` so
+  // tables never shrink to unreadable, and you pan to reach the rest.
+  //
+  // The list stays available behind the toggle in the header for the case the
+  // plan is genuinely bad at — a long narrow room, or a floor with more tables
+  // than fits legibly at any zoom.
+  if (isNarrow && narrowView === 'list') {
     return (
       <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden">
         {floors.length > 1 && (
