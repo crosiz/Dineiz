@@ -825,7 +825,24 @@ export function seedServerOrder(raw: any): string {
  * one, since a table's identity/floor-plan geometry is reference data, not
  * something an order event should be inventing.
  */
-export async function seedTablesFromServer(branchId: string): Promise<void> {
+// Callers that legitimately overlap: POSLayout's bootstrap, ClientTableMap's
+// own mount, the table:status_changed socket handler, and a reconnect resync —
+// which on a single visit to the Tables screen produced four identical
+// GET /api/floor-plan requests. Share one in-flight promise per branch instead;
+// a caller that arrives while a fetch is running awaits the same result.
+const inflightTableSeeds = new Map<string, Promise<void>>();
+
+export function seedTablesFromServer(branchId: string): Promise<void> {
+  const existing = inflightTableSeeds.get(branchId);
+  if (existing) return existing;
+  const p = doSeedTablesFromServer(branchId).finally(() => {
+    inflightTableSeeds.delete(branchId);
+  });
+  inflightTableSeeds.set(branchId, p);
+  return p;
+}
+
+async function doSeedTablesFromServer(branchId: string): Promise<void> {
   try {
     const { getToken } = await import('@/lib/pos-session');
     const res = await fetch(`${API_URL}/api/floor-plan/${branchId}`, {

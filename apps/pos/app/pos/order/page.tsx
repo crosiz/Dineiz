@@ -551,9 +551,13 @@ function OrderEntryPageContent() {
   // the grid — a decision a cashier has to make mid-service that changes nothing
   // about the job. Grid for browsing by sight, list for a long menu you know by
   // name.
+  // Both layouts are dense now that the card is text-first (see MenuItemCard's
+  // header — 1 of 36 items in the seeded tenant has a photo, so an image-shaped
+  // card meant two items visible on a phone out of thirty-six). Grid is the
+  // fat-finger tablet layout; list packs more in and aligns the price column.
   const gridColsClass = viewMode === 'list'
-    ? 'grid-cols-1 gap-2'
-    : 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5';
+    ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5'
+    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
 
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
@@ -1210,14 +1214,13 @@ function OrderEntryPageContent() {
               there would just repeat the category chip above it. */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24 lg:pb-3">
             {menuLoading ? (
-              <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="bg-white border border-[#E2E8F0] rounded-2xl h-[220px] animate-pulse flex flex-col overflow-hidden">
-                    <div className="h-[120px] bg-[#F1F5F9]"></div>
-                    <div className="p-3 space-y-2">
-                      <div className="h-4 bg-[#E2E8F0] rounded w-3/4"></div>
-                      <div className="h-3 bg-[#E2E8F0] rounded w-1/2"></div>
-                    </div>
+              // Mirrors the real tile, at the real height — a skeleton that
+              // predicts a different shape than what arrives is just filler.
+              <div className={`grid content-start ${gridColsClass}`}>
+                {Array.from({ length: 18 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-line bg-surface min-h-[76px] p-2.5 flex flex-col justify-between animate-pulse">
+                    <div className="h-3.5 bg-sunken rounded w-4/5" />
+                    <div className="h-3 bg-sunken rounded w-1/3" />
                   </div>
                 ))}
               </div>
@@ -1233,7 +1236,7 @@ function OrderEntryPageContent() {
                         <span className="text-[12px] font-bold text-[#94A3B8]">{catItems.length}</span>
                         <div className="h-px flex-1 bg-[#E2E8F0]" />
                       </div>
-                      <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
+                      <div className={`grid content-start ${gridColsClass}`}>
                         {catItems.map(item => (
                           <MenuItemCard
                             key={item.id}
@@ -1254,7 +1257,7 @@ function OrderEntryPageContent() {
                 )}
               </div>
             ) : (
-              <div className={`grid gap-2.5 content-start ${gridColsClass}`}>
+              <div className={`grid content-start ${gridColsClass}`}>
                 {filteredItems.map(item => (
                   <MenuItemCard
                     key={item.id}

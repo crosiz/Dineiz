@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { useScreenSize } from '@/lib/use-screen-size';
+import { TableListView } from './TableListView';
 
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 2.5;
@@ -542,6 +543,32 @@ export default function ClientTableMap() {
     [tables, activeFloor],
   );
 
+  // Live order total per table, for the phone list (the canvas shows this on
+  // the table itself). Straight from the view store — no fetch.
+  const viewOrders = useViews((s) => s.orders);
+  const amountByTable = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const o of Object.values(viewOrders)) {
+      if (!o.tableId) continue;
+      if (!['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status)) continue;
+      m[o.tableId] = Number(o.netAmount ?? o.subtotal ?? 0);
+    }
+    return m;
+  }, [viewOrders]);
+
+  const listRows = useMemo(
+    () => floorTables.map((t) => ({
+      id: t.id,
+      label: t.label,
+      capacity: t.capacity,
+      status: t.status,
+      occupiedSince: t.occupiedSince,
+      assignedWaiterName: t.assignedWaiterName,
+      amount: amountByTable[t.id] ?? null,
+    })),
+    [floorTables, amountByTable],
+  );
+
   /** Exact extent of a floor in floor-plan coordinates, chairs included. */
   const floorBounds = useMemo(() => {
     if (floorTables.length === 0) return null;
@@ -642,8 +669,14 @@ export default function ClientTableMap() {
     const ro = new ResizeObserver(fit);
     ro.observe(container);
     return () => ro.disconnect();
+    // `isNarrow` is a dependency because the canvas is not rendered at all in
+    // the phone branch — `canvasContainerRef.current` is null there, so this
+    // effect bails out early. Crossing the breakpoint the other way (a tablet
+    // rotated to landscape) mounts a brand new container element, and without
+    // this dep the effect wouldn't re-run: no fit, no ResizeObserver, and the
+    // floor sat at its initial translate(0,0) scale(1) in the corner.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFloor, floorTables.length]);
+  }, [activeFloor, floorTables.length, isNarrow]);
 
   /**
    * Where a table's detail card goes.
@@ -678,6 +711,327 @@ export default function ClientTableMap() {
   const popupShellCls = isNarrow
     ? 'fixed inset-x-0 bottom-0 z-[var(--z-modal)] w-full max-h-[80dvh] overflow-y-auto bg-surface border-t border-line rounded-t-2xl shadow-2xl p-5 pb-safe space-y-4 text-ink animate-in slide-in-from-bottom duration-200'
     : 'fixed z-[var(--z-modal)] w-80 max-h-[calc(100dvh-32px)] overflow-y-auto bg-surface border border-line rounded-2xl shadow-2xl p-5 space-y-4 text-ink animate-in fade-in zoom-in-95 duration-150';
+
+  // The table detail sheets and modals, shared by both the canvas and the
+  // phone list — they are driven by `selectedTable`, not by which layout is
+  // on screen, so neither branch should own them.
+  const tableDetailPanels = (
+    <>
+    {/* ── ASSIGN WAITER SHEET ────────────────────────────────────────────── */}
+    {selectedTable && popupOrder && (
+      <AssignWaiterSheet
+        isOpen={isAssignWaiterOpen}
+        onClose={() => setIsAssignWaiterOpen(false)}
+        orderId={popupOrder.id}
+        tableLabel={selectedTable.label}
+        branchId={branchId}
+        currentWaiterId={popupOrder.assignedWaiterId}
+      />
+    )}
+
+    {/* TABLE DETAIL POPUP FOR OCCUPIED / BILL REQUESTED TABLES */}
+    {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
+      <div
+        style={getPopupPosition(selectedTable)}
+        className={popupShellCls}
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-black text-slate-900">{selectedTable.label}</h3>
+              <span
+                className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                  selectedTable.status === 'BILL_REQUESTED'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}
+              >
+                {selectedTable.status === 'BILL_REQUESTED' ? 'Bill Requested' : 'Occupied'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+              <Users className="w-3.5 h-3.5" /> {selectedTable.capacity} Seats
+            </p>
+          </div>
+          <button
+            onClick={() => setSelectedTable(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {popupLoading ? (
+            <div className="flex items-center justify-center py-6 gap-2 text-xs font-semibold text-slate-500">
+              <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
+              <span>Loading active order...</span>
+            </div>
+          ) : popupError ? (
+            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2 text-center">
+              <p className="text-xs text-rose-700 font-semibold">Couldn't load this table's order.</p>
+              <button
+                onClick={() => fetchActiveOrder(selectedTable.id)}
+                className="text-xs font-bold text-rose-700 underline hover:text-rose-900"
+              >
+                Retry
+              </button>
+            </div>
+          ) : popupOrder ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-500 font-medium pb-1.5 border-b border-slate-200">
+                <span>Order #{popupOrder.orderNumber || popupOrder.id?.slice(-4)}</span>
+                <span className="text-amber-600 font-extrabold">
+                  {formatPKR(popupOrder.total || popupOrder.totalAmount || 0)}
+                </span>
+              </div>
+              <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+                {popupOrder.items?.map((item: any, idx: number) => (
+                  <div key={idx} className="flex justify-between text-slate-700">
+                    <span>
+                      {item.quantity}x {item.name || item.item?.name || item.menuItem?.name || 'Item'}
+                    </span>
+                    <span className="text-slate-500 font-medium">
+                      {formatPKR((item.subtotal || (item.unitPrice * item.quantity)) || 0)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-xs text-slate-500 font-medium">
+              Tap Add Items to start adding
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 pt-1">
+          {/* Spec Part 11 — View Mode: no add-items, no payment. Print Bill
+              and Assign Waiter stay; the rest becomes an "open a shift" prompt. */}
+          {isViewMode() ? (
+            <button
+              onClick={() => router.push('/pos/shift/open')}
+              className="w-full flex flex-col items-center justify-center gap-0.5 py-2 px-3 bg-sky-50 border border-sky-200 text-sky-700 font-bold text-xs rounded-xl transition-all leading-tight"
+            >
+              Open a shift to add items or take payment
+              <span className="text-[9px] font-medium text-sky-500">You’re in view-only mode</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                router.push(
+                  `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
+                );
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Items</span>
+            </button>
+          )}
+
+          <div className={`grid ${isViewMode() ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+            <button
+              onClick={handlePrintBill}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
+            >
+              <Printer className="w-3.5 h-3.5 text-blue-600" />
+              <span>Print Bill</span>
+            </button>
+
+            {!isViewMode() && (
+            <button
+              onClick={() => {
+                if (!popupOrder) {
+                  toast.error('No active order to collect payment for');
+                  return;
+                }
+                if (popupLoading) {
+                  toast.error('Still loading this order — try again in a moment');
+                  return;
+                }
+                // PaymentModal computes the charge entirely from the
+                // `items` it's given, falling back to the shared cart
+                // store (empty, since this isn't the order-builder screen)
+                // when it's handed none — opening it against a
+                // stale/empty item list is how "Collect Payment" ends up
+                // showing PKR 0 for a real order.
+                if (!popupOrder.items || popupOrder.items.length === 0) {
+                  toast.error("Couldn't load this order's items — close and reopen the table to retry");
+                  return;
+                }
+                setIsPaymentOpen(true);
+              }}
+              disabled={popupLoading}
+              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Collect Payment</span>
+            </button>
+            )}
+          </div>
+
+          {/* Assign Waiter Button */}
+          <button
+            onClick={() => setIsAssignWaiterOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
+          >
+            {popupOrder?.assignedWaiterId ? (
+              <>
+                <div className="flex flex-col items-center">
+                  <span className="flex items-center gap-1.5 text-blue-600"><User className="w-3.5 h-3.5" /> Assigned: {popupOrder.assignedWaiterName}</span>
+                  <span className="text-[9px] text-slate-500 font-medium">Reassign Waiter</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-3.5 h-3.5 text-blue-600" />
+                <span>Assign to Waiter</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    )}
+
+    {/* POPUP FOR RESERVED TABLES */}
+    {selectedTable && selectedTable.status === 'RESERVED' && (
+      <div
+        style={getPopupPosition(selectedTable)}
+        className={popupShellCls}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-purple-600">
+            <ShieldAlert className="w-5 h-5" />
+            <h3 className="text-base font-bold text-slate-900">{selectedTable.label}</h3>
+          </div>
+          <button
+            onClick={() => setSelectedTable(null)}
+            className="p-1 text-slate-400 hover:text-slate-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-600">This table is reserved.</p>
+
+        <button
+          onClick={() => setShowOverrideModal(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+        >
+          <ShieldAlert className="w-3.5 h-3.5" />
+          <span>Override (Manager PIN)</span>
+        </button>
+      </div>
+    )}
+
+    {/* POPUP FOR DIRTY TABLES */}
+    {selectedTable && selectedTable.status === 'DIRTY' && (
+      <div
+        style={getPopupPosition(selectedTable)}
+        className={popupShellCls}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-600">
+            <Sparkles className="w-5 h-5" />
+            <h3 className="text-base font-bold text-slate-900">{selectedTable.label}</h3>
+          </div>
+          <button
+            onClick={() => setSelectedTable(null)}
+            className="p-1 text-slate-400 hover:text-slate-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-600">This table is marked as dirty.</p>
+
+        <button
+          onClick={() => handleMarkAsFree(selectedTable.id)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+        >
+          <CheckCircle2 className="w-4 h-4" />
+          <span>Mark as Free</span>
+        </button>
+      </div>
+    )}
+
+    {/* Manager PIN Override Modal */}
+    {showOverrideModal && selectedTable && (
+      <AdminPinModal
+        onClose={() => setShowOverrideModal(false)}
+        onSuccess={async () => {
+          setShowOverrideModal(false);
+          // This clears the RESERVED override, not a cleaning timer —
+          // handleMarkAsFree (markTableCleaned) only ever touches
+          // lastCompletedAt, so it left the reservation itself in place
+          // while toasting "Table marked as Free". setTableStatus with an
+          // empty status clears statusOverride AND (per its own reducer)
+          // the cleaning-timer anchor in one event, so the table actually
+          // reaches FREE instead of re-deriving back to RESERVED/DIRTY.
+          await setTableStatus(selectedTable.id, '');
+          toast.success('Reservation cleared');
+          setSelectedTable(null);
+        }}
+      />
+    )}
+
+    {/* Payment Modal */}
+    {isPaymentOpen && popupOrder && selectedTable && (
+      <PaymentModal
+        isOpen={isPaymentOpen}
+        orderId={popupOrder.id}
+        orderNumber={popupOrder.orderNumber}
+        orderTotal={popupOrder.total ?? popupOrder.totalAmount ?? 0}
+        orderItems={popupOrder.items ? popupOrder.items.map((i: any) => `${i.quantity}x ${i.name || i.itemName || 'Item'}`).join(' · ') : 'Items'}
+        items={popupOrder.items || []}
+        tableLabel={selectedTable?.label}
+        tableId={selectedTable.id}
+        customerId={popupOrder.customerId || undefined}
+        onClose={() => setIsPaymentOpen(false)}
+        onSuccess={async () => {
+          setIsPaymentOpen(false);
+          await handleMarkAsFree(selectedTable.id);
+          toast.success('Payment collected & table freed');
+        }}
+      />
+    )}
+    </>
+  );
+
+  // A scale drawing of a room does not fit a phone: fitted to 375×812 a typical
+  // 5×2 floor renders at ~57% — 50px tables with 6px labels, and ~70% of the
+  // screen empty dot grid. Below `sm` the same information becomes a list of
+  // real tap targets instead; the canvas is unchanged from `sm` up. See
+  // TableListView's header.
+  if (isNarrow) {
+    return (
+      <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden">
+        {floors.length > 1 && (
+          <div className="shrink-0 flex items-center gap-1.5 px-3 pt-3 overflow-x-auto no-scrollbar">
+            {floors.map((f) => (
+              <button
+                key={f}
+                onClick={() => setActiveFloor(f)}
+                className={`px-3 h-9 text-[13px] font-semibold rounded-full shrink-0 border transition-colors ${
+                  activeFloor === f
+                    ? 'bg-brand border-brand text-white'
+                    : 'bg-surface border-line text-ink-2'
+                }`}
+              >
+                Floor {f}
+              </button>
+            ))}
+          </div>
+        )}
+        <TableListView tables={listRows} onTap={(row) => {
+          const table = floorTables.find((t) => t.id === row.id);
+          if (table) handleTableTap(table);
+        }} />
+        {tableDetailPanels}
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
@@ -825,285 +1179,7 @@ export default function ClientTableMap() {
 
       </div>
 
-      {/* ── ASSIGN WAITER SHEET ────────────────────────────────────────────── */}
-      {selectedTable && popupOrder && (
-        <AssignWaiterSheet
-          isOpen={isAssignWaiterOpen}
-          onClose={() => setIsAssignWaiterOpen(false)}
-          orderId={popupOrder.id}
-          tableLabel={selectedTable.label}
-          branchId={branchId}
-          currentWaiterId={popupOrder.assignedWaiterId}
-        />
-      )}
-
-      {/* TABLE DETAIL POPUP FOR OCCUPIED / BILL REQUESTED TABLES */}
-      {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
-        <div
-          style={getPopupPosition(selectedTable)}
-          className={popupShellCls}
-        >
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-black text-slate-900">{selectedTable.label}</h3>
-                <span
-                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                    selectedTable.status === 'BILL_REQUESTED'
-                      ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                      : 'bg-rose-50 text-rose-700 border border-rose-200'
-                  }`}
-                >
-                  {selectedTable.status === 'BILL_REQUESTED' ? 'Bill Requested' : 'Occupied'}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 flex items-center gap-2 mt-1">
-                <Users className="w-3.5 h-3.5" /> {selectedTable.capacity} Seats
-              </p>
-            </div>
-            <button
-              onClick={() => setSelectedTable(null)}
-              className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {popupLoading ? (
-              <div className="flex items-center justify-center py-6 gap-2 text-xs font-semibold text-slate-500">
-                <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>Loading active order...</span>
-              </div>
-            ) : popupError ? (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2 text-center">
-                <p className="text-xs text-rose-700 font-semibold">Couldn't load this table's order.</p>
-                <button
-                  onClick={() => fetchActiveOrder(selectedTable.id)}
-                  className="text-xs font-bold text-rose-700 underline hover:text-rose-900"
-                >
-                  Retry
-                </button>
-              </div>
-            ) : popupOrder ? (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
-                <div className="flex justify-between items-center text-slate-500 font-medium pb-1.5 border-b border-slate-200">
-                  <span>Order #{popupOrder.orderNumber || popupOrder.id?.slice(-4)}</span>
-                  <span className="text-amber-600 font-extrabold">
-                    {formatPKR(popupOrder.total || popupOrder.totalAmount || 0)}
-                  </span>
-                </div>
-                <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
-                  {popupOrder.items?.map((item: any, idx: number) => (
-                    <div key={idx} className="flex justify-between text-slate-700">
-                      <span>
-                        {item.quantity}x {item.name || item.item?.name || item.menuItem?.name || 'Item'}
-                      </span>
-                      <span className="text-slate-500 font-medium">
-                        {formatPKR((item.subtotal || (item.unitPrice * item.quantity)) || 0)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-xs text-slate-500 font-medium">
-                Tap Add Items to start adding
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 pt-1">
-            {/* Spec Part 11 — View Mode: no add-items, no payment. Print Bill
-                and Assign Waiter stay; the rest becomes an "open a shift" prompt. */}
-            {isViewMode() ? (
-              <button
-                onClick={() => router.push('/pos/shift/open')}
-                className="w-full flex flex-col items-center justify-center gap-0.5 py-2 px-3 bg-sky-50 border border-sky-200 text-sky-700 font-bold text-xs rounded-xl transition-all leading-tight"
-              >
-                Open a shift to add items or take payment
-                <span className="text-[9px] font-medium text-sky-500">You’re in view-only mode</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  router.push(
-                    `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
-                  );
-                }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Items</span>
-              </button>
-            )}
-
-            <div className={`grid ${isViewMode() ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
-              <button
-                onClick={handlePrintBill}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
-              >
-                <Printer className="w-3.5 h-3.5 text-blue-600" />
-                <span>Print Bill</span>
-              </button>
-
-              {!isViewMode() && (
-              <button
-                onClick={() => {
-                  if (!popupOrder) {
-                    toast.error('No active order to collect payment for');
-                    return;
-                  }
-                  if (popupLoading) {
-                    toast.error('Still loading this order — try again in a moment');
-                    return;
-                  }
-                  // PaymentModal computes the charge entirely from the
-                  // `items` it's given, falling back to the shared cart
-                  // store (empty, since this isn't the order-builder screen)
-                  // when it's handed none — opening it against a
-                  // stale/empty item list is how "Collect Payment" ends up
-                  // showing PKR 0 for a real order.
-                  if (!popupOrder.items || popupOrder.items.length === 0) {
-                    toast.error("Couldn't load this order's items — close and reopen the table to retry");
-                    return;
-                  }
-                  setIsPaymentOpen(true);
-                }}
-                disabled={popupLoading}
-                className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>Collect Payment</span>
-              </button>
-              )}
-            </div>
-
-            {/* Assign Waiter Button */}
-            <button
-              onClick={() => setIsAssignWaiterOpen(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
-            >
-              {popupOrder?.assignedWaiterId ? (
-                <>
-                  <div className="flex flex-col items-center">
-                    <span className="flex items-center gap-1.5 text-blue-600"><User className="w-3.5 h-3.5" /> Assigned: {popupOrder.assignedWaiterName}</span>
-                    <span className="text-[9px] text-slate-500 font-medium">Reassign Waiter</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Assign to Waiter</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* POPUP FOR RESERVED TABLES */}
-      {selectedTable && selectedTable.status === 'RESERVED' && (
-        <div
-          style={getPopupPosition(selectedTable)}
-          className={popupShellCls}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-purple-600">
-              <ShieldAlert className="w-5 h-5" />
-              <h3 className="text-base font-bold text-slate-900">{selectedTable.label}</h3>
-            </div>
-            <button
-              onClick={() => setSelectedTable(null)}
-              className="p-1 text-slate-400 hover:text-slate-700"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <p className="text-xs text-slate-600">This table is reserved.</p>
-
-          <button
-            onClick={() => setShowOverrideModal(true)}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Override (Manager PIN)</span>
-          </button>
-        </div>
-      )}
-
-      {/* POPUP FOR DIRTY TABLES */}
-      {selectedTable && selectedTable.status === 'DIRTY' && (
-        <div
-          style={getPopupPosition(selectedTable)}
-          className={popupShellCls}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-amber-600">
-              <Sparkles className="w-5 h-5" />
-              <h3 className="text-base font-bold text-slate-900">{selectedTable.label}</h3>
-            </div>
-            <button
-              onClick={() => setSelectedTable(null)}
-              className="p-1 text-slate-400 hover:text-slate-700"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <p className="text-xs text-slate-600">This table is marked as dirty.</p>
-
-          <button
-            onClick={() => handleMarkAsFree(selectedTable.id)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Mark as Free</span>
-          </button>
-        </div>
-      )}
-
-      {/* Manager PIN Override Modal */}
-      {showOverrideModal && selectedTable && (
-        <AdminPinModal
-          onClose={() => setShowOverrideModal(false)}
-          onSuccess={async () => {
-            setShowOverrideModal(false);
-            // This clears the RESERVED override, not a cleaning timer —
-            // handleMarkAsFree (markTableCleaned) only ever touches
-            // lastCompletedAt, so it left the reservation itself in place
-            // while toasting "Table marked as Free". setTableStatus with an
-            // empty status clears statusOverride AND (per its own reducer)
-            // the cleaning-timer anchor in one event, so the table actually
-            // reaches FREE instead of re-deriving back to RESERVED/DIRTY.
-            await setTableStatus(selectedTable.id, '');
-            toast.success('Reservation cleared');
-            setSelectedTable(null);
-          }}
-        />
-      )}
-
-      {/* Payment Modal */}
-      {isPaymentOpen && popupOrder && selectedTable && (
-        <PaymentModal
-          isOpen={isPaymentOpen}
-          orderId={popupOrder.id}
-          orderNumber={popupOrder.orderNumber}
-          orderTotal={popupOrder.total ?? popupOrder.totalAmount ?? 0}
-          orderItems={popupOrder.items ? popupOrder.items.map((i: any) => `${i.quantity}x ${i.name || i.itemName || 'Item'}`).join(' · ') : 'Items'}
-          items={popupOrder.items || []}
-          tableLabel={selectedTable?.label}
-          tableId={selectedTable.id}
-          customerId={popupOrder.customerId || undefined}
-          onClose={() => setIsPaymentOpen(false)}
-          onSuccess={async () => {
-            setIsPaymentOpen(false);
-            await handleMarkAsFree(selectedTable.id);
-            toast.success('Payment collected & table freed');
-          }}
-        />
-      )}
+      {tableDetailPanels}
     </div>
   );
 }
