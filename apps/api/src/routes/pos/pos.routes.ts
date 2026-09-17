@@ -5,7 +5,7 @@ import { prisma } from '@dineiz/db';
 import { parseTableOverride } from '@dineiz/schemas';
 import { emitOrderUpdated, emitOrderCancelled, emitNewOrder } from '../../lib/socket';
 import {
-  applyOrderStatusSideEffects, createOrder, updateOrder, appendOrderItems,
+  applyOrderStatusSideEffects, createOrder, updateOrder, appendOrderItems, assignOrder,
 } from '../order/order.service';
 import { recomputeTableStatus, setTableOverride } from '../../lib/tableStatus';
 import { withIdempotency } from '../../lib/idempotency';
@@ -399,7 +399,7 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
     opId: z.string(),
     kind: z.enum([
       'CREATE_ORDER', 'ADD_ITEMS', 'UPDATE_STATUS', 'COLLECT_PAYMENT',
-      'UPDATE_TABLE_STATUS', 'REQUEST_BILL', 'CLEAN_TABLE',
+      'UPDATE_TABLE_STATUS', 'REQUEST_BILL', 'CLEAN_TABLE', 'ASSIGN_WAITER',
     ]),
     aggregateId: z.string(),
     targetId: z.string().nullable().optional(),
@@ -531,6 +531,20 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
             );
             results.push({ opId: op.opId, ok: statusCode < 300, status: statusCode, body });
             if (statusCode >= 300) failedAggregates.add(op.aggregateId);
+            break;
+          }
+
+          case 'ASSIGN_WAITER': {
+            if (!target) { results.push({ opId: op.opId, ok: false, status: 409, permanent: false, error: 'no target order yet' }); break; }
+            // No idempotency wrapper: assignOrder only sets three columns, so a
+            // replay lands on the same state — and a cached first response
+            // would be actively wrong for a field a manager can change again.
+            const assigned = await assignOrder(tenantId, target, {
+              waiterId: op.body?.waiterId,
+              waiterName: op.body?.waiterName,
+            });
+            emitOrderUpdated(tenantId, assigned.branchId, assigned);
+            results.push({ opId: op.opId, ok: true, status: 200, body: { id: assigned.id } });
             break;
           }
 

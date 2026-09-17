@@ -76,7 +76,7 @@ const ADAPTIVE_TIERS = [
 
 type TaskKind =
   | 'CREATE_ORDER' | 'ADD_ITEMS' | 'UPDATE_STATUS' | 'COLLECT_PAYMENT'
-  | 'UPDATE_TABLE_STATUS' | 'REQUEST_BILL' | 'CLEAN_TABLE';
+  | 'UPDATE_TABLE_STATUS' | 'REQUEST_BILL' | 'CLEAN_TABLE' | 'ASSIGN_WAITER';
 
 interface OutboxTask {
   kind: TaskKind;
@@ -85,6 +85,7 @@ interface OutboxTask {
   lane: SyncLane;
   status?: string;                 // UPDATE_STATUS / UPDATE_TABLE_STATUS
   billRequestedAt?: string | null; // REQUEST_BILL
+  waiter?: { waiterId: string | null; waiterName: string | null }; // ASSIGN_WAITER
   // CREATE_ORDER only: the subset of eventIds actually reflected in
   // createOrderBody (ORDER_CREATED + ITEM_ADDED). eventIds may carry other
   // event types too — bundled in only so a create can't outrun them and to
@@ -385,13 +386,32 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
         if (latestStatus) {
           chain.push({ kind: 'UPDATE_STATUS', aggregateId, status: statusForEvent(latestStatus), eventIds: [latestStatus.id], lane: laneOf([latestStatus]) });
         }
+        // Waiter assignment had a command (commands.assignWaiter) and a reducer
+        // case, but NO task here — so it fell through to the "local-only"
+        // leftover branch below and was marked CONFIRMED without ever being
+        // transmitted. The floor plan's own sheet worked around that with a raw
+        // PUT, which is why nothing had noticed; but that raw call only works
+        // on an order the server already has, and fails outright offline.
+        const waiterEvents = events.filter((e) => e.type === 'WAITER_ASSIGNED');
+        const latestWaiter = collapse(waiterEvents);
+        if (latestWaiter) {
+          chain.push({
+            kind: 'ASSIGN_WAITER', aggregateId,
+            waiter: {
+              waiterId: latestWaiter.payload?.waiterId ?? null,
+              waiterName: latestWaiter.payload?.waiterName ?? null,
+            },
+            eventIds: [latestWaiter.id], lane: laneOf([latestWaiter]),
+          });
+        }
+
         const latestPayment = collapse(paymentEvents);
         if (latestPayment) {
           chain.push({ kind: 'COLLECT_PAYMENT', aggregateId, eventIds: [latestPayment.id], lane: laneOf([latestPayment]) });
         }
 
         // Event types with a command but no server task yet — local-only.
-        const handled = new Set([...itemEvents, ...statusEvents, ...paymentEvents, ...billEvents].map((e) => e.id));
+        const handled = new Set([...itemEvents, ...statusEvents, ...paymentEvents, ...billEvents, ...waiterEvents].map((e) => e.id));
         const leftover = events.filter((e) => !handled.has(e.id));
         if (leftover.length) toConfirm.push(...leftover.map((e) => e.id));
       }
@@ -561,6 +581,12 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
     case 'REQUEST_BILL':
       if (!order) return null;
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `bill:${opId}`, body: { billRequestedAt: task.billRequestedAt ?? null } };
+    case 'ASSIGN_WAITER':
+      if (!order) return null;
+      // No idempotency key: assignOrder just sets three columns, so replaying it
+      // lands on the same state. A key would only pin the FIRST assignment's
+      // response, which is wrong for a field a manager can legitimately change.
+      return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, body: task.waiter ?? {} };
     case 'UPDATE_TABLE_STATUS':
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: task.aggregateId, body: { status: task.status } };
     case 'CLEAN_TABLE':
@@ -598,6 +624,13 @@ async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
   }
 
   if (!order?.serverId) throw new TaskError('No serverId yet', false);
+  if (task.kind === 'ASSIGN_WAITER') {
+    const res = await fetchWithTimeout(`${API_URL}/api/orders/${order.serverId}/assign`, {
+      method: 'PUT', headers: authHeaders(), body: JSON.stringify(task.waiter ?? {}),
+    });
+    if (!res.ok) throw classifyHttpError(res.status);
+    return true;
+  }
   if (task.kind === 'ADD_ITEMS') {
     const body = await addItemsBody(task, order);
     if (!body.items.length) {

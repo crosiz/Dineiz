@@ -22,6 +22,7 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
+import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -151,6 +152,12 @@ function OrderEntryPageContent() {
   const customerName = useCartStore(s => s.customerName);
   const setCustomer = useCartStore(s => s.setCustomer);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
+
+  const waiterId = useCartStore(s => s.waiterId);
+  const waiterName = useCartStore(s => s.waiterName);
+  const waiterColor = useCartStore(s => s.waiterColor);
+  const setWaiter = useCartStore(s => s.setWaiter);
+  const [waiterPickerOpen, setWaiterPickerOpen] = useState(false);
 
   const setExistingOrderData = useCartStore(s => s.setExistingOrderData);
   const setExistingItems = useCartStore(s => s.setExistingItems);
@@ -807,6 +814,13 @@ function OrderEntryPageContent() {
         addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
       });
     }
+
+    // The waiter parked on the cart becomes a real WAITER_ASSIGNED event now
+    // that there is an order to attach it to. Through commands, so it applies
+    // locally at once and the outbox ships it — this works offline.
+    if (waiterId) {
+      await commands.assignWaiter(localId, waiterId, waiterName, waiterColor);
+    }
     await commands.sendToKitchen(localId);
 
     // Tickets/Home now read live orders straight from lib/core/views.ts
@@ -944,6 +958,13 @@ function OrderEntryPageContent() {
             note: item.notes ?? null,
             addOns: item.selectedAddOns?.map(a => ({ id: a.id, name: a.name, price: a.price })) ?? null,
           });
+        }
+
+        // The waiter parked on the cart becomes a real WAITER_ASSIGNED event now
+        // that there is an order to attach it to. Through commands, so it applies
+        // locally at once and the outbox ships it — this works offline.
+        if (waiterId) {
+          await commands.assignWaiter(localId, waiterId, waiterName, waiterColor);
         }
 
         setPaymentOrderId(localId);
@@ -1355,7 +1376,20 @@ function OrderEntryPageContent() {
               </h2>
               <button onClick={startNewOrder} className="bg-white text-[#475569] text-[12px] font-bold px-2.5 py-1 rounded border border-[#CBD5E1] uppercase tracking-wider hover:bg-[#F1F5F9] transition-colors shadow-sm">New Order</button>
             </div>
-            <p className="text-[#64748B] text-[12px] font-medium mb-3">{cart.length === 0 && existingItems.length === 0 ? 'No items added yet' : `${cart.length + existingItems.length} items total`}</p>
+            {/* Counts UNITS, not lines. It used to read `cart.length +
+                existingItems.length`, so two of the same dish showed as
+                "1 items total" — wrong number and wrong grammar. A cashier
+                reading this back to a customer wants how many things are on
+                the order. */}
+            <p className="text-[#64748B] text-[12px] font-medium mb-3">
+              {(() => {
+                const units =
+                  cart.reduce((n, c) => n + (c.quantity || 0), 0) +
+                  existingItems.reduce((n: number, c: any) => n + (c.quantity || 0), 0);
+                if (units === 0) return 'No items added yet';
+                return `${units} ${units === 1 ? 'item' : 'items'}`;
+              })()}
+            </p>
 
             {/* Customer attach — real customer search/create backed by
                 /api/customers, wired to the same customerId PaymentModal
@@ -1383,6 +1417,47 @@ function OrderEntryPageContent() {
                 <UserPlus className="w-[16px] h-[16px]" />
                 Attach Customer
               </button>
+            )}
+
+            {/* Who's serving it.
+                A dine-in order is usually taken by one person and rung up by
+                another, and until now the only place to say so was the floor
+                plan's table sheet — which needs an order to already exist, so
+                it was impossible to answer the question at the moment it comes
+                up: while punching. Dine-in only; a takeaway has no waiter.
+                Deliberately built as the twin of the customer control above so
+                there's one thing to learn, not two. */}
+            {orderType === 'DINE_IN' && (
+              <div className="mt-2">
+                {waiterId ? (
+                  <div className="flex items-center justify-between gap-2 bg-white border border-[#E2E8F0] rounded-xl px-3 py-2">
+                    <button onClick={() => setWaiterPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
+                      <div
+                        className="w-6 h-6 rounded-full grid place-items-center text-white font-bold text-[10px] shrink-0"
+                        style={{ backgroundColor: waiterColor || 'var(--pos-text-secondary)' }}
+                      >
+                        {(waiterName || 'W').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[13px] font-bold text-[#0F172A] truncate">{waiterName}</span>
+                    </button>
+                    <button
+                      onClick={() => setWaiter(null)}
+                      className="text-[#94A3B8] hover:text-[#DC2626] transition-colors shrink-0"
+                      title="Remove waiter"
+                    >
+                      <X className="w-[16px] h-[16px]" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setWaiterPickerOpen(true)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-[#CBD5E1] text-[#64748B] hover:text-[#0F172A] hover:border-[var(--pos-primary,#F59E0B)] hover:bg-white text-[12px] font-bold transition-all"
+                  >
+                    <ConciergeBell className="w-[16px] h-[16px]" />
+                    Assign Waiter
+                  </button>
+                )}
+              </div>
             )}
           </div>
 
@@ -1648,13 +1723,24 @@ function OrderEntryPageContent() {
         onClose={() => setCustomerPickerOpen(false)}
         onSelect={(c: PickedCustomer) => setCustomer({ id: c.id, name: c.name })}
       />
+
+      {/* Pick mode — nothing is sent. The choice rides on the cart and is
+          applied by sendToKitchen()/handleCharge() once the order exists. */}
+      <AssignWaiterSheet
+        isOpen={waiterPickerOpen}
+        onClose={() => setWaiterPickerOpen(false)}
+        branchId={session.branchId || ''}
+        currentWaiterId={waiterId}
+        tableLabel={selectedTableLabel || undefined}
+        onPick={(w) => setWaiter(w)}
+      />
     </div>
   );
 }
 
 import { Suspense } from 'react';
 import { API_URL } from '@/lib/api';
-import { Armchair, Banknote, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X } from 'lucide-react';
+import { Armchair, Banknote, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);

@@ -93,8 +93,16 @@ interface CartStore {
   paymentOrderId: string | null;
   customerId: string | null;
   customerName: string | null;
+  // Waiter chosen BEFORE the order exists. A dine-in order is usually taken by
+  // one person and rung up by another, so the cashier needs to say whose table
+  // it is while punching — commands.assignWaiter can only run once there is an
+  // order to attach it to, so the choice is parked here and applied at creation.
+  waiterId: string | null;
+  waiterName: string | null;
+  waiterColor: string | null;
   setCustomerId: (id: string | null) => void;
   setCustomer: (customer: { id: string; name: string } | null) => void;
+  setWaiter: (waiter: { id: string; name: string; color?: string | null } | null) => void;
   isEditing: boolean;
   existingOrderData: any | null;
   setExistingOrderData: (data: any | null) => void;
@@ -241,8 +249,12 @@ export const useCartStore = create<CartStore>()(
         paymentOrderId: null,
         customerId: null,
         customerName: null,
+        waiterId: null,
+        waiterName: null,
+        waiterColor: null,
         setCustomerId: (id) => set({ customerId: id }),
         setCustomer: (customer) => set({ customerId: customer?.id ?? null, customerName: customer?.name ?? null }, false, 'setCustomer'),
+        setWaiter: (waiter) => set({ waiterId: waiter?.id ?? null, waiterName: waiter?.name ?? null, waiterColor: waiter?.color ?? null }, false, 'setWaiter'),
         isEditing: false,
         existingOrderData: null,
         existingItems: [],
@@ -367,7 +379,7 @@ export const useCartStore = create<CartStore>()(
           ),
 
         clearCart: () =>
-          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [], eligible: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null, customerId: null, customerName: null }, false, 'clearCart'),
+          set({ cart: [], orderNotes: '', discount: null, autoDeals: { promoCode: null, lastValidatedAt: null, isValidating: false, applied: [], eligible: [] }, selectedTableId: null, selectedTableLabel: null, paymentOrderId: null, isEditing: false, existingOrderData: null, existingItems: [], orderType: null, cartSessionId: uuidv4(), sourceOrderId: null, customerId: null, customerName: null, waiterId: null, waiterName: null, waiterColor: null }, false, 'clearCart'),
         setOrderType: (type) => set({ orderType: type }, false, 'setOrderType'),
         setOrderContext: (ctx) => set((s) => ({
           selectedTableId: ctx.tableId !== undefined ? ctx.tableId : s.selectedTableId,
