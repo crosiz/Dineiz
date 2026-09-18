@@ -323,3 +323,31 @@ export function branchCreatedEmail(params: {
     }),
   };
 }
+
+export function invoiceEmail(params: {
+  ownerName: string;
+  restaurantName: string;
+  invoiceNumber: string;
+  amount: string;
+  status: 'PAID' | 'DUE';
+  billingUrl: string;
+}): EmailContent {
+  const { ownerName, restaurantName, invoiceNumber, amount, status, billingUrl } = params;
+  return {
+    subject: `Invoice ${invoiceNumber} — ${restaurantName}`,
+    ...buildEmail({
+      preheaderText: `Your invoice ${invoiceNumber} for ${amount} is attached.`,
+      headline: status === 'PAID' ? 'Your invoice is ready' : 'Invoice for your subscription',
+      bodyParagraphs: [
+        `Hi ${ownerName},`,
+        `Your invoice for ${restaurantName} is attached to this email as a PDF.${status === 'PAID' ? ' This payment has been received and applied to your account.' : ' Payment is due for this billing period.'}`,
+      ],
+      detailRows: [
+        { label: 'Invoice number', value: invoiceNumber },
+        { label: 'Amount', value: amount },
+        { label: 'Status', value: status === 'PAID' ? 'Paid' : 'Due' },
+      ],
+      primaryAction: { label: 'View billing', url: billingUrl },
+    }),
+  };
+}

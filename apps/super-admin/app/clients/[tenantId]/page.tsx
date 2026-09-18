@@ -121,6 +121,11 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
   const [extendDays, setExtendDays] = useState('14');
   const [extendReason, setExtendReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showCancelTrialModal, setShowCancelTrialModal] = useState(false);
+  const [showStartSubscriptionModal, setShowStartSubscriptionModal] = useState(false);
+  const [sendInvoiceOnStart, setSendInvoiceOnStart] = useState(true);
+  const [invoiceActionId, setInvoiceActionId] = useState<string | null>(null);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [cancellationReason, setCancellationReason] = useState('');
   const [sendMessageChannel, setSendMessageChannel] = useState<'EMAIL' | 'WHATSAPP' | 'BOTH'>('EMAIL');
   const [sendMessageSubject, setSendMessageSubject] = useState('');
@@ -237,15 +242,95 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
         setShowChangePlanModal(false);
         setShowExtendTrialModal(false);
         setShowCancelModal(false);
+        setShowCancelTrialModal(false);
+        setShowStartSubscriptionModal(false);
         setDowngradeWarning(null);
         setExtendReason('');
         setCancellationReason('');
         fetchClientData();
+        if (action === 'START_SUBSCRIPTION' || action === 'END_TRIAL_EARLY') {
+          fetchPayments();
+          if (resData.invoice?.invoiceNumber) {
+            alert(`Subscription activated and invoice ${resData.invoice.invoiceNumber} emailed to owner!`);
+          } else {
+            alert('Subscription activated successfully!');
+          }
+        }
       } else {
         alert(resData.error || resData.message || 'Action failed');
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleIssueInvoice = async () => {
+    setInvoiceError(null);
+    setInvoiceActionId('ISSUE');
+    try {
+      const res = await fetch(`/api/clients/${tenantId}/invoices`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'SEND' }),
+      });
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setInvoiceError(resData.error || 'Failed to issue invoice');
+        return;
+      }
+      fetchPayments();
+      fetchClientData();
+      alert(`Invoice ${resData.invoiceNumber || ''} generated and emailed to owner successfully!`);
+    } catch (e) {
+      console.error(e);
+      setInvoiceError('Network error — could not reach the server');
+    } finally {
+      setInvoiceActionId(null);
+    }
+  };
+
+  const handleInvoiceAction = async (paymentId: string, action: 'GENERATE' | 'SEND') => {
+    setInvoiceError(null);
+    setInvoiceActionId(paymentId);
+    try {
+      const res = await fetch(`/api/clients/${tenantId}/payments/${paymentId}/invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setInvoiceError(resData.error || 'Invoice action failed');
+        return;
+      }
+      fetchPayments();
+      if (action === 'SEND') {
+        alert(`Invoice ${resData.invoiceNumber || ''} emailed to owner successfully!`);
+      }
+    } catch (e) {
+      console.error(e);
+      setInvoiceError('Network error — could not reach the server');
+    } finally {
+      setInvoiceActionId(null);
+    }
+  };
+
+  const handleWhatsAppShare = async (paymentId: string) => {
+    setInvoiceError(null);
+    setInvoiceActionId(paymentId);
+    try {
+      const res = await fetch(`/api/clients/${tenantId}/payments/${paymentId}/invoice?share=whatsapp`);
+      const resData = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setInvoiceError(resData.error || 'Failed to build WhatsApp link');
+        return;
+      }
+      window.open(resData.whatsappUrl, '_blank', 'noopener,noreferrer');
+    } catch (e) {
+      console.error(e);
+      setInvoiceError('Network error — could not reach the server');
+    } finally {
+      setInvoiceActionId(null);
     }
   };
 
@@ -263,6 +348,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
           periodEnd: paymentPeriodEnd || undefined,
         }),
       });
+      const resData = await res.json().catch(() => ({}));
       if (res.ok) {
         setShowManualPaymentModal(false);
         setPaymentAmount('');
@@ -271,6 +357,16 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
         setPaymentPeriodEnd('');
         fetchPayments();
         fetchClientData();
+
+        if (resData.payment?.id && !resData.invoiceNumber) {
+          if (confirm('Payment recorded. Generate and email the receipt to the tenant now?')) {
+            handleInvoiceAction(resData.payment.id, 'SEND');
+          }
+        } else if (resData.invoiceNumber) {
+          alert(`Payment recorded and receipt ${resData.invoiceNumber} emailed to owner!`);
+        }
+      } else {
+        alert(resData.error || 'Failed to record manual payment');
       }
     } catch (e) {
       console.error(e);
@@ -658,48 +754,84 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
               </div>
             )}
 
-            {/* Trial Management & Status Controls */}
-            <div className="space-y-4 border-t border-slate-100 pt-4">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Trial & Status Controls</h4>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  onClick={() => setShowExtendTrialModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold"
-                >
-                  Extend Trial{sub?.trialExtendedCount ? ` (extended ${sub.trialExtendedCount}×)` : ''}
-                </button>
-                <button
-                  onClick={() => handleSubscriptionAction('END_TRIAL_EARLY')}
-                  className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold border border-slate-200"
-                >
-                  End Trial Early & Activate
-                </button>
-                <button
-                  onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'ACTIVE' })}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold"
-                >
-                  Activate
-                </button>
-                <button
-                  onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'PAST_DUE' })}
-                  className="px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold"
-                >
-                  Set Past Due
-                </button>
-                <button
-                  onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'SUSPENDED' })}
-                  className="px-3.5 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-800 border border-orange-300 text-xs font-semibold"
-                >
-                  Suspend
-                </button>
-                <button
-                  onClick={() => setShowCancelModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold"
-                >
-                  Cancel Subscription
-                </button>
+            {/* Trial Management Hero (When Trialing) */}
+            {sub?.status === 'TRIALING' && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50/60 border border-blue-200 rounded-2xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm">
+                        TRIAL ACTIVE
+                      </span>
+                      {sub.trialEndsAt && (
+                        <span className="text-xs text-blue-900 font-medium">
+                          Ends on <strong>{new Date(sub.trialEndsAt).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600 mt-1.5">
+                      Client is currently in free trial period. You can extend the trial, cancel the trial, or convert to a paid subscription with an invoice.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={() => setShowStartSubscriptionModal(true)}
+                      className="px-4 py-2.5 rounded-xl text-white font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-1.5"
+                      style={{ background: 'linear-gradient(135deg, #FF6B35 0%, #E63946 100%)' }}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Start Subscription</span>
+                    </button>
+                    <button
+                      onClick={() => setShowCancelTrialModal(true)}
+                      className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1.5"
+                    >
+                      <Slash className="w-3.5 h-3.5" />
+                      <span>Cancel Trial</span>
+                    </button>
+                    <button
+                      onClick={() => setShowExtendTrialModal(true)}
+                      className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition-all"
+                    >
+                      Extend Trial{sub?.trialExtendedCount ? ` (${sub.trialExtendedCount}×)` : ''}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Standard Subscription Controls (When not trialing) */}
+            {sub?.status !== 'TRIALING' && (
+              <div className="space-y-4 border-t border-slate-100 pt-4">
+                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Subscription Status Controls</h4>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'ACTIVE' })}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold"
+                  >
+                    Activate
+                  </button>
+                  <button
+                    onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'PAST_DUE' })}
+                    className="px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold"
+                  >
+                    Set Past Due
+                  </button>
+                  <button
+                    onClick={() => handleSubscriptionAction('UPDATE_STATUS', { newStatus: 'SUSPENDED' })}
+                    className="px-3.5 py-2 rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-800 border border-orange-300 text-xs font-semibold"
+                  >
+                    Suspend
+                  </button>
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold"
+                  >
+                    Cancel Subscription
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -707,16 +839,34 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
       {/* TAB 3: PAYMENTS */}
       {activeTab === 'PAYMENTS' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h3 className="text-base font-bold text-slate-900">Payment History</h3>
-            <button
-              onClick={() => setShowManualPaymentModal(true)}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Manual Payment</span>
-            </button>
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={handleIssueInvoice}
+                disabled={invoiceActionId === 'ISSUE'}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
+                title="Bills the current subscription amount, with payment details, before any payment is recorded"
+              >
+                <FileText className="w-4 h-4 text-orange-600" />
+                <span>{invoiceActionId === 'ISSUE' ? 'Issuing Invoice…' : 'Issue Invoice for Current Period'}</span>
+              </button>
+              <button
+                onClick={() => setShowManualPaymentModal(true)}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Manual Payment</span>
+              </button>
+            </div>
           </div>
+
+          {invoiceError && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <span>{invoiceError}</span>
+            </div>
+          )}
 
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
             <table className="w-full text-left text-xs">
@@ -727,26 +877,73 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
                   <th className="py-3.5 px-4">Method</th>
                   <th className="py-3.5 px-4">Reference #</th>
                   <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4 text-right">Invoice</th>
+                  <th className="py-3.5 px-4 text-right">Invoice / Receipt</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
                 {payments.map((p) => (
                   <tr key={p.id}>
-                    <td className="py-3.5 px-4 text-slate-500">{new Date(p.paidAt).toLocaleDateString()}</td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      {new Date(p.status === 'DUE' ? p.createdAt : p.paidAt).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
                     <td className="py-3.5 px-4 font-bold text-slate-900">PKR {p.amount.toLocaleString()}</td>
-                    <td className="py-3.5 px-4 text-orange-600">{p.method}</td>
-                    <td className="py-3.5 px-4 font-mono text-slate-600">{p.reference || 'N/A'}</td>
+                    <td className="py-3.5 px-4 text-orange-600">{p.status === 'DUE' ? '—' : p.method}</td>
+                    <td className="py-3.5 px-4 font-mono text-slate-600">{p.status === 'DUE' ? 'N/A' : p.reference || 'N/A'}</td>
                     <td className="py-3.5 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          p.status === 'DUE'
+                            ? 'bg-orange-50 text-orange-700 border-orange-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
                         {p.status}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button className="text-orange-600 hover:underline flex items-center gap-1 ml-auto">
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>PDF Invoice</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        {p.invoiceUrl ? (
+                          <>
+                            <a
+                              href={`/api/clients/${tenantId}/payments/${p.id}/invoice`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-orange-600 hover:underline flex items-center gap-1 font-semibold"
+                              title="Download signed PDF invoice"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>{p.invoiceNumber || 'View PDF'}</span>
+                            </a>
+                            <button
+                              onClick={() => handleInvoiceAction(p.id, 'SEND')}
+                              disabled={invoiceActionId === p.id}
+                              className="text-slate-500 hover:text-slate-800 flex items-center gap-1 disabled:opacity-50"
+                              title="Email invoice PDF to tenant"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                              <span>{invoiceActionId === p.id ? 'Sending…' : 'Email'}</span>
+                            </button>
+                            <button
+                              onClick={() => handleWhatsAppShare(p.id)}
+                              disabled={invoiceActionId === p.id}
+                              className="text-emerald-600 hover:text-emerald-800 flex items-center gap-1 disabled:opacity-50"
+                              title="Open WhatsApp with signed invoice download link"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5" />
+                              <span>WhatsApp</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleInvoiceAction(p.id, 'GENERATE')}
+                            disabled={invoiceActionId === p.id}
+                            className="text-orange-600 hover:underline flex items-center gap-1 font-semibold disabled:opacity-50"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{invoiceActionId === p.id ? 'Generating…' : 'Generate PDF'}</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1043,6 +1240,108 @@ export default function ClientDetailPage({ params }: { params: Promise<{ tenantI
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl"
               >
                 Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Trial Modal */}
+      {showCancelTrialModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-rose-600 font-bold text-base">
+                <Slash className="w-5 h-5" />
+                <span>Cancel Free Trial</span>
+              </div>
+              <button onClick={() => setShowCancelTrialModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              Are you sure you want to cancel the trial for <strong>{data.name}</strong>? Their status will be set to <strong className="text-rose-600">CANCELLED</strong> and trial ended immediately.
+            </p>
+            <div className="text-xs space-y-1">
+              <label className="block text-slate-700 font-semibold">Reason for Cancellation</label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Client requested cancellation or did not proceed"
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setShowCancelTrialModal(false)} className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                Back
+              </button>
+              <button
+                onClick={() => {
+                  handleSubscriptionAction('CANCEL_TRIAL', { cancellationReason });
+                  setShowCancelTrialModal(false);
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-sm"
+              >
+                Confirm Cancel Trial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Start Subscription Modal */}
+      {showStartSubscriptionModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-orange-600 font-bold text-base">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>Start Subscription</span>
+              </div>
+              <button onClick={() => setShowStartSubscriptionModal(false)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              End the free trial early and activate the subscription for <strong>{data.name}</strong>.
+            </p>
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Plan</span>
+                <span className="font-bold text-slate-900">{sub?.plan || 'STARTER'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Billing Cycle</span>
+                <span className="font-semibold text-slate-700">{sub?.billingCycle || 'MONTHLY'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Billing Amount</span>
+                <span className="font-bold text-orange-600">PKR {(sub?.amount || 2999).toLocaleString()}</span>
+              </div>
+            </div>
+            <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={sendInvoiceOnStart}
+                onChange={(e) => setSendInvoiceOnStart(e.target.checked)}
+                className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500"
+              />
+              <span>Generate and email pre-payment invoice (DUE) with PDF attached to owner ({data.owner?.email || 'N/A'})</span>
+            </label>
+            <div className="flex justify-end gap-3 pt-2">
+              <button onClick={() => setShowStartSubscriptionModal(false)} className="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleSubscriptionAction('START_SUBSCRIPTION', { sendInvoice: sendInvoiceOnStart });
+                  setShowStartSubscriptionModal(false);
+                }}
+                className="px-4 py-2 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all"
+                style={{ background: 'linear-gradient(135deg, #FF6B35 0%, #E63946 100%)' }}
+              >
+                Confirm & Activate Subscription
               </button>
             </div>
           </div>
