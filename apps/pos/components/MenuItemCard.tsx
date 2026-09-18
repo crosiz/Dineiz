@@ -14,9 +14,51 @@ interface MenuItemCardProps {
   showCategory?: boolean;
 }
 
-export function MenuItemCard({ item, cartQty, onTap, onToggleAvailable, isTogglingAvailable, showCategory }: MenuItemCardProps) {
+export function MenuItemCard({ item, cartQty, onTap, viewMode = 'grid', onToggleAvailable, isTogglingAvailable, showCategory }: MenuItemCardProps) {
   const unavailable = item.isAvailable === false;
   const hasOptions = !!(item.variations?.length || item.addOns?.length);
+  const isList = viewMode === 'list';
+
+  if (isList) {
+    return (
+      <div className={`relative rounded-xl border overflow-hidden transition-colors ${cartQty ? 'border-brand bg-brand-soft' : 'border-line bg-surface'}`}>
+        <button
+          type="button"
+          data-testid="menu-item"
+          onClick={() => onTap(item)}
+          disabled={unavailable}
+          aria-label={`${item.name}, ${formatPKR(item.basePrice)}${unavailable ? ', sold out' : ''}${cartQty ? ', ' + cartQty + ' in order' : ''}`}
+          className="flex w-full min-h-[56px] items-center gap-3 px-3 py-2 text-left hover:bg-sunken/50 disabled:opacity-50"
+        >
+          {item.image && <img src={item.image} alt="" loading="lazy" className="h-9 w-9 shrink-0 rounded-lg object-cover" />}
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-medium leading-tight text-ink truncate">{item.name}</span>
+            {(showCategory && item.categoryName) || unavailable ? (
+              <span className="block text-[11px] leading-tight text-ink-3 truncate">
+                {unavailable ? 'Sold out' : item.categoryName}
+              </span>
+            ) : null}
+          </span>
+          {hasOptions && !unavailable && <ChevronRight size={16} className="text-ink-3 shrink-0" aria-label="Choose options" />}
+          <span className="text-sm font-semibold text-ink-2 tabular-nums shrink-0">{unavailable ? 'Sold out' : formatPKR(item.basePrice)}</span>
+          {cartQty > 0 && <span className="min-w-5 rounded-md bg-brand px-1 text-center text-xs leading-5 font-semibold text-white tabular-nums shrink-0">{cartQty}</span>}
+          {onToggleAvailable && <div className="w-9 shrink-0" />}
+        </button>
+        {onToggleAvailable && (
+          <button
+            type="button"
+            disabled={isTogglingAvailable}
+            onClick={() => onToggleAvailable(item, unavailable)}
+            aria-label={unavailable ? `Mark ${item.name} available` : `Mark ${item.name} sold out`}
+            className="absolute right-1 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 hover:bg-sunken"
+          >
+            {isTogglingAvailable ? <Loader2 size={16} className="animate-spin" /> : unavailable ? <RotateCcw size={16} /> : <Ban size={16} />}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`relative rounded-xl border overflow-hidden transition-colors ${cartQty ? 'border-brand bg-brand-soft' : 'border-line bg-surface'}`}>
       <button type="button" data-testid="menu-item" onClick={() => onTap(item)} disabled={unavailable}

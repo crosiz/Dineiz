@@ -1,11 +1,12 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, Receipt, Users, ArrowRight, ShieldCheck } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Dialog, DialogButton } from './ui/Dialog';
+import { OrderTypeBadge } from './OrderStatusBadge';
+import { formatPKR } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ManagerOverrideModal } from './ManagerOverrideModal';
 import { cancelOrder } from '@/lib/core/commands';
-import { Modal } from '@/components/ui/Modal';
-import { formatPKR } from '@/lib/utils';
 
 interface ShiftCloseBlockerModalProps {
   isOpen: boolean;
@@ -57,98 +58,75 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
     );
   }
 
+  const orders = blockers.flatMap((b) => (Array.isArray(b.orders) ? b.orders : []));
+  const lastCashier = blockers.some((b) => b.type === 'SOLE_CASHIER_ACTIVE');
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} labelledBy="shift-close-blocker-title" className="max-w-[460px] max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-32px)] flex flex-col">
-        <div className="p-6 pb-4 flex flex-col items-center text-center">
-          <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mb-3">
-            <AlertTriangle size={22} />
-          </div>
-          <h2 id="shift-close-blocker-title" className="text-lg font-semibold text-ink leading-tight mb-1">Finish these orders first</h2>
-          <p className="text-xs text-ink-3">The server still considers these orders open. Settle, cancel, or use a manager override.</p>
-        </div>
-
-        <div className="px-6 pb-5 max-h-[48dvh] overflow-y-auto space-y-2.5 custom-scrollbar shrink-0">
-          {blockers.map((blocker, idx) => (
-            <div key={idx} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-              <div className="flex items-start gap-3">
-                <div className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${blocker.type === 'PENDING_ORDERS' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                  {blocker.type === 'PENDING_ORDERS' ? (
-                    <Receipt size={14} />
-                  ) : (
-                    <Users size={14} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-xs text-slate-900">
-                    {blocker.type === 'PENDING_ORDERS' ? 'Unpaid Orders' : 'Only Cashier Active'}
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-normal">
-                    {blocker.message}
+    <Dialog
+      onClose={onClose}
+      z={200}
+      size="md"
+      icon={AlertTriangle}
+      tone="warn"
+      title="Settle open orders before closing"
+      description={
+        blockers.length === 1
+          ? blockers[0].message
+          : blockers.map((b) => b.message).join(' ')
+      }
+      footer={
+        <>
+          <DialogButton onClick={() => { onClose(); router.push('/pos/tickets'); }}>Open tickets</DialogButton>
+          <DialogButton variant="ink" onClick={() => setShowOverride(true)}>Manager override</DialogButton>
+        </>
+      }
+    >
+      {orders.length > 0 ? (
+        <ul className="border border-line rounded-xl divide-y divide-line overflow-hidden">
+          {orders.map((o: any) => {
+            const done = resolved.has(o.id);
+            return (
+              <li key={o.id} className={`px-3.5 py-3 flex items-center gap-3 ${done ? 'opacity-50' : ''}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[14px] font-semibold text-ink tabular-nums whitespace-nowrap">#{o.orderNumber || o.id.slice(-4)}</span>
+                    <OrderTypeBadge type={o.table?.label ? 'DINE_IN' : 'TAKEAWAY'} tableLabel={o.table?.label} size="sm" />
+                  </div>
+                  <p className="mt-0.5 text-[12.5px] text-ink-3">
+                    {formatPKR(Number(o.netAmount ?? o.totalAmount ?? 0))}
+                    {o.status ? ` · ${String(o.status).replace('_', ' ').toLowerCase()}` : ''}
                   </p>
-
-                  {blocker.orders && blocker.orders.length > 0 && (
-                    <div className="mt-2.5 space-y-1.5">
-                      {blocker.orders.map((o: any) => {
-                        const done = resolved.has(o.id);
-                        return (
-                            <div key={o.id} className={`flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border text-xs ${done ? 'border-line opacity-50' : 'border-line'}`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="font-bold text-slate-900 font-mono">#{o.orderNumber || o.id.slice(-4)}</span>
-                              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase shrink-0">
-                                {o.table?.label || 'Takeaway'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2.5 shrink-0">
-                              <span className="font-bold text-ink tabular-nums">{formatPKR(o.totalAmount ?? 0)}</span>
-                              {done ? (
-                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cancelled</span>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
-                                    className="text-[11px] font-semibold text-brand hover:underline"
-                                  >
-                                    Settle
-                                  </button>
-                                  <button
-                                    onClick={() => cancelFromList(o.id)}
-                                    disabled={busyId === o.id}
-                                    className="text-[11px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
-                                  >
-                                    {busyId === o.id ? '…' : 'Cancel'}
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-2">
-          <button
-            onClick={() => {
-              onClose();
-              router.push('/pos/tickets');
-            }}
-            className="w-full h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
-          >
-            Resolve Orders First
-          </button>
-          <button
-            onClick={() => setShowOverride(true)}
-            className="w-full h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-100 active:scale-95 transition-all"
-          >
-            Request Manager Override
-          </button>
-        </div>
-    </Modal>
+                {done ? (
+                  <span className="text-[12.5px] font-medium text-ink-3">Cancelled</span>
+                ) : (
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => cancelFromList(o.id)}
+                      disabled={busyId === o.id}
+                      className="h-9 px-3 rounded-lg border border-line text-[13px] font-semibold text-danger hover:bg-danger/10 hover:border-danger/30 disabled:opacity-50"
+                    >
+                      {busyId === o.id ? 'Working…' : 'Cancel'}
+                    </button>
+                    <button
+                      onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
+                      className="h-9 px-3.5 rounded-lg bg-brand text-on-brand text-[13px] font-semibold hover:bg-brand-strong"
+                    >
+                      Settle
+                    </button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="text-[13.5px] text-ink-2">
+          {lastCashier
+            ? 'Settle the branch’s open orders from Tickets, or ask a manager to close anyway.'
+            : 'Resolve the items above, or ask a manager to close anyway.'}
+        </p>
+      )}
+    </Dialog>
   );
 }
-

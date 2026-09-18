@@ -7,7 +7,7 @@ import { useMenu, groupByCategory } from '@/hooks/useMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VariationPicker, DiscountModal } from './components';
 import type { CachedMenuItem } from '@/lib/db';
-import { MenuItemCard } from '@/components/MenuItemCard';
+import { MenuItemCard, type ViewMode } from '@/components/MenuItemCard';
 import { toast } from 'sonner';
 import { getDB } from '@/lib/db';
 import { v4 as uuid } from 'uuid';
@@ -22,92 +22,47 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
+import { ScrollRail } from '@/components/ScrollRail';
 import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
 
-function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [swiped, setSwiped] = useState(false);
-
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => setTouchEnd(e.targetTouches[0].clientX);
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) setSwiped(true);
-    if (isRightSwipe) setSwiped(false);
-  };
+// One line of the order being punched: name and modifiers, a stepper, the line
+// total — in one row. It was two rows per line (name + price, then add-on caps
+// chips + a 44px pill stepper + a separate trash button), which left room for
+// about two lines between the panel's header and footer. At quantity 1 the
+// minus becomes a remove (decrementItem drops a line at 0), so there's no
+// separate delete control to aim for, and no swipe gesture to discover.
+function SwipeableCartItem({ cartItem, incrementItem, decrementItem }: any) {
+  const addOns: string[] = (cartItem.selectedAddOns ?? []).map((a: any) => a.name);
+  const detail = [cartItem.selectedVariation?.name, ...addOns.map((n) => `+ ${n}`)].filter(Boolean).join(' · ');
+  const lastOne = cartItem.quantity <= 1;
+  const stepBtn = 'w-10 h-10 grid place-items-center text-ink-2 hover:bg-sunken hover:text-ink transition-colors';
 
   return (
-    <div className="relative overflow-hidden border-b border-line group bg-white">
-      {/* Delete Background */}
-      <div className="absolute inset-y-0 right-0 w-24 bg-rose-600 flex items-center justify-center">
+    <div className="px-4 py-2.5 flex items-center gap-3 border-b border-line last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold text-ink leading-snug truncate">{cartItem.name}</p>
+        {detail && <p className="text-[12px] text-ink-3 leading-snug truncate">{detail}</p>}
+      </div>
+      <div className="flex items-center h-10 rounded-lg border border-line-strong overflow-hidden shrink-0">
         <button
-          onClick={() => removeItem(cartItem.itemId, cartItem.selectedVariation?.id)}
-          className="w-full h-full text-white font-bold flex flex-col items-center justify-center hover:bg-rose-700 transition-colors"
+          onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)}
+          className={`${stepBtn} ${lastOne ? 'text-danger hover:text-danger hover:bg-danger/10' : ''}`}
+          aria-label={lastOne ? `Remove ${cartItem.name}` : `One less ${cartItem.name}`}
         >
-          <Trash2 className="mb-1 w-[20px] h-[20px]" />
-          <span className="text-[10px] uppercase tracking-wider">Delete</span>
+          {lastOne ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+        </button>
+        <span className="w-7 text-center text-[14px] font-semibold text-ink tabular-nums">{cartItem.quantity}</span>
+        <button
+          onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)}
+          className={stepBtn}
+          aria-label={`One more ${cartItem.name}`}
+        >
+          <Plus className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Foreground Content */}
-      <div
-        className={`relative bg-white py-4 px-6 transition-transform duration-300 ease-out ${swiped ? '-translate-x-24' : 'translate-x-0'}`}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h4 className="text-[16px] font-bold text-ink">{cartItem.name}</h4>
-            {cartItem.selectedVariation?.name && (
-              <span className="text-[13px] text-ink-3 font-medium">{cartItem.selectedVariation.name}</span>
-            )}
-          </div>
-          <span className="font-mono text-[16px] font-bold text-ink">{formatPKR(cartItem.subtotal)}</span>
-        </div>
-        <div className="flex justify-between items-center mt-2">
-          <div className="flex flex-wrap gap-2">
-            {cartItem.selectedAddOns.map((addon: any) => (
-              <span key={addon.id} className="bg-sunken border border-line-strong text-[11px] font-bold text-ink-2 px-2 py-0.5 rounded-md uppercase">
-                +{addon.name}
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-2">
-            {/* h-11/w-11 (44px) — this pair is the single most-tapped control
-                in the order flow; it was 28px, well under the touch-target
-                minimum every other primary control in this file follows. */}
-            <div className="flex items-center bg-canvas rounded-full border border-line-strong h-11 px-1">
-              <button onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-hover rounded-full text-ink shrink-0">
-                <Minus className="w-[14px] h-[14px]" />
-              </button>
-              <span className="font-mono text-sm px-2 font-bold text-ink">{cartItem.quantity}</span>
-              <button onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)} className="w-11 h-11 flex items-center justify-center hover:bg-hover rounded-full text-ink shrink-0">
-                <Plus className="w-[14px] h-[14px]" />
-              </button>
-            </div>
-            {/* Desktop delete button */}
-            <button
-              onClick={() => removeItem(cartItem.itemId, cartItem.selectedVariation?.id)}
-              className="w-9 h-9 hidden lg:flex items-center justify-center hover:bg-rose-50 rounded-full text-rose-600 border border-transparent hover:border-rose-200 transition-all"
-            >
-              <Trash2 className="w-[14px] h-[14px]" />
-            </button>
-          </div>
-        </div>
-      </div>
+      <span className="w-[84px] text-right text-[14px] font-semibold text-ink tabular-nums shrink-0">
+        {formatPKR(cartItem.subtotal)}
+      </span>
     </div>
   );
 }
@@ -256,6 +211,8 @@ function OrderEntryPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+
   const [cartWidthPercent, setCartWidthPercent] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -288,6 +245,21 @@ function OrderEntryPageContent() {
       window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [isResizing, cartWidthPercent]);
+
+  useEffect(() => {
+    // 'pos_menu_layout', NOT 'pos_view_mode'. That key belongs to lib/view-mode.ts
+    // (signed-in-without-shift), and the two features were sharing it: opening a
+    // shift calls removeItem('pos_view_mode'), silently wiping the cashier's menu
+    // layout, and choosing 'Continue Without Shift' wrote '1' into it, which then
+    // loaded back here as a layout name that doesn't exist.
+    const saved = localStorage.getItem('pos_menu_layout') as ViewMode | null;
+    if (saved === 'grid' || saved === 'list') setViewMode(saved);
+  }, []);
+
+  const handleViewChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('pos_menu_layout', mode);
+  };
 
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
@@ -537,16 +509,23 @@ function OrderEntryPageContent() {
     return items;
   }, [menuItems, activeCategoryId, debouncedSearch]);
 
-  // One menu layout keeps a known item in the same place at every terminal.
-  // Cashiers can filter or search; they should not need to decide how the menu
-  // itself is drawn before they can start an order.
-  const gridColsClass = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
+  // Two layouts. There were five, three of them reachable from a toggle above
+  // the grid — a decision a cashier has to make mid-service that changes nothing
+  // about the job. Grid for browsing by sight, list for a long menu you know by
+  // name.
+  // Both layouts are dense now that the card is text-first (see MenuItemCard's
+  // header — 1 of 36 items in the seeded tenant has a photo, so an image-shaped
+  // card meant two items visible on a phone out of thirty-six). Grid is the
+  // fat-finger tablet layout; list packs more in and aligns the price column.
+  const gridColsClass = viewMode === 'list'
+    ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5'
+    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
 
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
   const handleItemTap = (item: CachedMenuItem) => {
     if (!item.isAvailable) return;
-    if (item.variations?.length || item.addOns?.length) {
+    if (item.variations && item.variations.length > 0) {
       setSelectedItem(item);
     } else {
       addItem({
@@ -1090,17 +1069,9 @@ function OrderEntryPageContent() {
       <div className="hidden lg:flex bg-sunken border border-line-strong p-1 rounded-xl">
         {orderTypeButtons}
       </div>
-    ),
-    rightActions: (
-      <button
-        onClick={holdOrder}
-        disabled={cart.length === 0}
-        className="flex items-center justify-center px-4 h-10 rounded-lg bg-sunken hover:bg-hover transition-colors border border-line-strong text-ink font-bold text-[13px] tracking-wide disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-      >
-        <Pause className="mr-2 w-[18px] h-[18px]" />
-        HOLD
-      </button>
     )
+    // No Hold here: the order panel has it, next to Clear. Two copies of the
+    // same button a screen apart was part of what made this screen busy.
   });
 
   return (
@@ -1154,43 +1125,72 @@ function OrderEntryPageContent() {
               {orderTypeButtons}
             </div>
           </div>
-          {/* A category rail plus a search row plus a view switch made the
-              menu feel like settings before the cashier could see food. This
-              one compact toolbar is the entire browse surface. */}
-          <div className="shrink-0 p-3 border-b border-line bg-surface flex gap-2 items-center">
-            <label className="relative shrink-0">
-              <span className="sr-only">Menu category</span>
-              <select
-                value={activeCategoryId ?? ''}
-                onChange={(e) => setActiveCategoryId(e.target.value || null)}
-                className="h-11 max-w-[132px] appearance-none rounded-xl border border-line-strong bg-canvas pl-3 pr-8 text-[13px] font-semibold text-ink outline-none focus:border-brand"
+          {/* Category bar. ScrollRail, not a bare overflow-x div: with eleven
+              categories on a 1280px screen, 568px of this strip — everything
+              from Pizza onward — had no way to be reached with a mouse. */}
+          <ScrollRail
+            aria-label="Menu categories"
+            className="shrink-0 h-[52px] bg-surface border-b border-line px-3"
+          >
+            {/* min-w so a two-letter label still reads as a pill rather than
+                rendering as a circle next to its wider neighbours. */}
+            <button
+              onClick={() => setActiveCategoryId(null)}
+              className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
+            >
+              All
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategoryId(cat.id)}
+                className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
               >
-                <option value="">All items</option>
-                {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </select>
-              <GalleryVerticalEnd className="pointer-events-none absolute right-2.5 top-1/2 w-4 h-4 -translate-y-1/2 text-ink-3" />
-            </label>
-            <div className="flex-1 min-w-0 flex items-center gap-2 bg-canvas border border-line-strong rounded-xl px-3 h-11 transition-colors focus-within:border-brand">
+                {cat.name}
+              </button>
+            ))}
+          </ScrollRail>
+
+          {/* Search Bar & View Toggle */}
+          <div className="p-3 border-b border-line bg-canvas flex gap-2 items-center">
+            {/* min-w-0 on both this wrapper and the <input> — flex items
+                default to min-width:auto (their content's natural size, and
+                a bare <input> has its own non-trivial intrinsic minimum),
+                which silently overrode flex-1's ability to shrink and pushed
+                this row ~80px past a 360px viewport, clipped by the section's
+                overflow-hidden with no visible sign anything was cut off. */}
+            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-line-strong rounded-xl px-4 h-11 transition-colors focus-within:border-brand shadow-sm">
               <Search className="text-ink-4 shrink-0 w-[18px] h-[18px]" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search menu"
-                aria-label="Search menu"
+                placeholder="Search menu items..."
                 className="bg-transparent border-none outline-none text-[16px] text-ink flex-1 min-w-0 placeholder:text-ink-4"
               />
               {searchQuery && (
-                <button aria-label="Clear search" onClick={() => setSearchQuery('')} className="w-11 h-11 -mr-2 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
+                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
                   <X className="w-[18px] h-[18px]" />
                 </button>
               )}
             </div>
-            <span className="hidden md:block shrink-0 text-[12px] font-medium tabular-nums text-ink-3">{filteredItems.length} items</span>
+
+            {/* One toggle, two states — not a three-way segmented control for
+                five layouts that all showed the same four facts. */}
+            <button
+              onClick={() => handleViewChange(viewMode === 'grid' ? 'list' : 'grid')}
+              title={viewMode === 'grid' ? 'Switch to list' : 'Switch to grid'}
+              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+              className="shrink-0 grid place-items-center w-11 h-11 rounded-xl border border-line-strong bg-surface text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
+            >
+              {viewMode === 'grid' ? <Rows3 className="w-[18px] h-[18px]" /> : <LayoutGrid className="w-[18px] h-[18px]" />}
+            </button>
           </div>
 
-          {/* A flat, stable grid is faster to scan than repeatedly restarting
-              at category headers. The filter above provides the same narrowing
-              without wasting vertical space. */}
+          {/* Menu Grid — "All" groups items under a category divider per
+              section (a flat, undifferentiated grid of the whole menu was
+              genuinely hard to scan mid-service); picking one category
+              already narrows the grid to just that category, so a divider
+              there would just repeat the category chip above it. */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24 lg:pb-3">
             {menuLoading ? (
               // Mirrors the real tile, at the real height — a skeleton that
@@ -1203,6 +1203,38 @@ function OrderEntryPageContent() {
                   </div>
                 ))}
               </div>
+            ) : !activeCategoryId ? (
+              <div className="flex flex-col gap-7">
+                {categories.map(cat => {
+                  const catItems = filteredItems.filter(i => i.categoryId === cat.id);
+                  if (catItems.length === 0) return null;
+                  return (
+                    <section key={cat.id}>
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">{cat.name}</h3>
+                        <span className="text-[12px] font-bold text-ink-4">{catItems.length}</span>
+                        <div className="h-px flex-1 bg-hover" />
+                      </div>
+                      <div className={`grid content-start ${gridColsClass}`}>
+                        {catItems.map(item => (
+                          <MenuItemCard
+                            key={item.id}
+                            item={item}
+                            cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
+                            onTap={handleItemTap}
+                            viewMode={viewMode}
+                            onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
+                            isTogglingAvailable={togglingItemId === item.id}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+                {filteredItems.length === 0 && (
+                  <div className="text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
+                )}
+              </div>
             ) : (
               <div className={`grid content-start ${gridColsClass}`}>
                 {filteredItems.map(item => (
@@ -1211,6 +1243,7 @@ function OrderEntryPageContent() {
                     item={item}
                     cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                     onTap={handleItemTap}
+                    viewMode={viewMode}
                     onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
                     isTogglingAvailable={togglingItemId === item.id}
                   />
@@ -1288,177 +1321,154 @@ function OrderEntryPageContent() {
             <div className="w-12 h-1.5 bg-hover rounded-full" />
           </div>
 
-          {/* Cart Header */}
-          <div className="p-6 lg:p-6 pb-4 pt-4 lg:pt-6 bg-canvas border-b border-line shrink-0">
-            <div className="flex justify-between items-start mb-1">
-              <h2 className="text-[20px] font-bold text-ink flex items-center gap-2">
-                Current Order
+          {/* Header: what this order is, and who it's for / who serves it. */}
+          <div className="px-4 pt-3.5 pb-3 border-b border-line shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <h2 className="text-[17px] font-semibold text-ink">{existingItems.length > 0 ? 'Order' : 'New order'}</h2>
+                <span className="text-[13px] text-ink-3 tabular-nums whitespace-nowrap">
+                  {(() => {
+                    // Units, not lines: two of the same dish is "2 items".
+                    const units =
+                      cart.reduce((n, c) => n + (c.quantity || 0), 0) +
+                      existingItems.reduce((n: number, c: any) => n + (c.quantity || 0), 0);
+                    return units === 0 ? 'Empty' : `${units} ${units === 1 ? 'item' : 'items'}`;
+                  })()}
+                </span>
                 {cart.length > 0 && existingItems.length > 0 && (
-                  <span className="bg-ok text-white text-[12px] px-2 py-0.5 rounded-full font-bold shadow-sm animate-in zoom-in">
-                    +{cart.reduce((acc, c) => acc + c.quantity, 0)}
+                  <span className="h-5 px-1.5 rounded-md bg-ok/10 text-ok text-[11px] font-semibold tabular-nums">
+                    +{cart.reduce((acc, c) => acc + c.quantity, 0)} new
                   </span>
                 )}
-              </h2>
-              <button onClick={startNewOrder} className="bg-white text-ink-2 text-[12px] font-bold px-2.5 py-1 rounded border border-line-strong uppercase tracking-wider hover:bg-sunken transition-colors shadow-sm">New Order</button>
-            </div>
-            {/* Counts UNITS, not lines. It used to read `cart.length +
-                existingItems.length`, so two of the same dish showed as
-                "1 items total" — wrong number and wrong grammar. A cashier
-                reading this back to a customer wants how many things are on
-                the order. */}
-            <p className="text-ink-3 text-[12px] font-medium mb-3">
-              {(() => {
-                const units =
-                  cart.reduce((n, c) => n + (c.quantity || 0), 0) +
-                  existingItems.reduce((n: number, c: any) => n + (c.quantity || 0), 0);
-                if (units === 0) return 'No items added yet';
-                return `${units} ${units === 1 ? 'item' : 'items'}`;
-              })()}
-            </p>
-
-            {/* Customer attach — real customer search/create backed by
-                /api/customers, wired to the same customerId PaymentModal
-                already reads for loyalty point redemption. Previously
-                there was no way to attach a customer to a walk-in order at
-                all, so loyalty redemption only ever worked for orders that
-                arrived pre-tagged (e.g. from WhatsApp/QR). */}
-            {customerId ? (
-              <div className="flex items-center justify-between gap-2 bg-white border border-line rounded-xl px-3 py-2">
-                <button onClick={() => setCustomerPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
-                  <div className="w-6 h-6 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-[10px] shrink-0">
-                    {(customerName || 'C').charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-[13px] font-bold text-ink truncate">{customerName || 'Customer'}</span>
-                </button>
-                <button onClick={() => setCustomer(null)} className="text-ink-4 hover:text-danger transition-colors shrink-0" title="Remove customer">
-                  <X className="w-[16px] h-[16px]" />
-                </button>
               </div>
-            ) : (
               <button
-                onClick={() => setCustomerPickerOpen(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-line-strong text-ink-3 hover:text-ink hover:border-brand hover:bg-white text-[12px] font-bold transition-all"
+                onClick={startNewOrder}
+                className="h-8 px-2.5 rounded-lg text-[12.5px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink flex items-center gap-1.5 shrink-0"
+                title="Start a fresh order"
               >
-                <UserPlus className="w-[16px] h-[16px]" />
-                Attach Customer
+                <Plus className="w-3.5 h-3.5" /> New
               </button>
-            )}
+            </div>
 
-            {/* Who's serving it.
-                A dine-in order is usually taken by one person and rung up by
-                another, and until now the only place to say so was the floor
-                plan's table sheet — which needs an order to already exist, so
-                it was impossible to answer the question at the moment it comes
-                up: while punching. Dine-in only; a takeaway has no waiter.
-                Deliberately built as the twin of the customer control above so
-                there's one thing to learn, not two. */}
-            {orderType === 'DINE_IN' && (
-              <div className="mt-2">
-                {waiterId ? (
-                  <div className="flex items-center justify-between gap-2 bg-white border border-line rounded-xl px-3 py-2">
-                    <button onClick={() => setWaiterPickerOpen(true)} className="flex items-center gap-2 min-w-0 text-left">
-                      <div
-                        className="w-6 h-6 rounded-full grid place-items-center text-white font-bold text-[10px] shrink-0"
+            {/* Customer and (dine-in) waiter, side by side: the same control
+                twice, so there's one thing to learn. Customer feeds loyalty
+                redemption in PaymentModal; waiter can be set while punching,
+                not only from the floor plan once an order exists. */}
+            <div className="mt-2.5 flex gap-2">
+              {customerId ? (
+                <div className="flex-1 min-w-0 h-9 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
+                  <button onClick={() => setCustomerPickerOpen(true)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                    <span className="w-5 h-5 rounded-full bg-brand/15 text-brand grid place-items-center text-[10px] font-bold shrink-0">
+                      {(customerName || 'C').charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-[13px] font-semibold text-ink truncate">{customerName || 'Customer'}</span>
+                  </button>
+                  <button onClick={() => setCustomer(null)} className="w-7 h-7 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove customer">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setCustomerPickerOpen(true)}
+                  className="flex-1 min-w-0 h-9 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
+                >
+                  <UserPlus className="w-4 h-4 shrink-0" /> <span className="truncate">Customer</span>
+                </button>
+              )}
+
+              {orderType === 'DINE_IN' && (
+                waiterId ? (
+                  <div className="flex-1 min-w-0 h-9 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
+                    <button onClick={() => setWaiterPickerOpen(true)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                      <span
+                        className="w-5 h-5 rounded-full grid place-items-center text-white text-[10px] font-bold shrink-0"
                         style={{ backgroundColor: waiterColor || 'var(--pos-text-secondary)' }}
                       >
                         {(waiterName || 'W').charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-[13px] font-bold text-ink truncate">{waiterName}</span>
+                      </span>
+                      <span className="text-[13px] font-semibold text-ink truncate">{waiterName}</span>
                     </button>
-                    <button
-                      onClick={() => setWaiter(null)}
-                      className="text-ink-4 hover:text-danger transition-colors shrink-0"
-                      title="Remove waiter"
-                    >
-                      <X className="w-[16px] h-[16px]" />
+                    <button onClick={() => setWaiter(null)} className="w-7 h-7 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove waiter">
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setWaiterPickerOpen(true)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-line-strong text-ink-3 hover:text-ink hover:border-brand hover:bg-white text-[12px] font-bold transition-all"
+                    className="flex-1 min-w-0 h-9 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
                   >
-                    <ConciergeBell className="w-[16px] h-[16px]" />
-                    Assign Waiter
+                    <ConciergeBell className="w-4 h-4 shrink-0" /> <span className="truncate">Waiter</span>
                   </button>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
 
-          {/* Order-context warning — blocks Kitchen/Charge until resolved */}
+          {/* What's blocking Kitchen/Charge, said once, in place. */}
           {!orderType && (
-            <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-2.5 shrink-0">
-              <Info className="text-amber-600 w-[20px] h-[20px]" />
-              <p className="text-[13px] font-semibold text-brand-strong">Select Dine-in, Takeaway, or Delivery above to continue.</p>
+            <div className="mx-4 mt-3 px-3 py-2.5 rounded-lg bg-warn/10 border border-warn/30 flex items-center gap-2.5 shrink-0">
+              <Info className="text-warn w-4 h-4 shrink-0" />
+              <p className="text-[13px] font-medium text-ink-2">Choose dine-in, takeaway or delivery above.</p>
             </div>
           )}
           {needsTable && (
-            <div className="mx-6 mt-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2.5 shrink-0">
-              <div className="flex items-center gap-2.5">
-                <Armchair className="text-amber-600 w-[20px] h-[20px]" />
-                <p className="text-[13px] font-semibold text-brand-strong">This dine-in order needs a table.</p>
+            <div className="mx-4 mt-3 pl-3 pr-1.5 py-1.5 rounded-lg bg-warn/10 border border-warn/30 flex items-center justify-between gap-2.5 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Armchair className="text-warn w-4 h-4 shrink-0" />
+                <p className="text-[13px] font-medium text-ink-2 truncate">Dine-in needs a table.</p>
               </div>
               <button
                 onClick={() => router.push('/pos/tables')}
-                className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-bold transition-colors"
+                className="h-8 px-3 rounded-md bg-ink text-white text-[12.5px] font-semibold shrink-0 hover:bg-ink-2"
               >
-                Select Table
+                Pick table
               </button>
             </div>
           )}
 
-          {/* Cart Items — min-h-0 overrides a flex item's default min-height:
-              auto (= its content size), which would otherwise refuse to
-              shrink below "every item unwrapped" and defeat both this
-              overflow-y-auto and the parent's new overflow-hidden bound. */}
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar bg-white">
+          {/* Lines. min-h-0 lets this flex child shrink so it scrolls instead
+              of pushing the footer off the bottom (see the section note). */}
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
             {existingItems.length > 0 && (
-              <div className="border-b border-line">
-                <div className="bg-sunken px-6 py-2 border-b border-line flex justify-between items-center">
-                  <span className="text-[12px] font-bold text-ink-3 uppercase tracking-wider">Already in Order</span>
-                  <span className="bg-hover text-ink-2 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Sent</span>
+              <div>
+                <div className="px-4 pt-3 pb-1.5 flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-ink-3">Sent to kitchen</span>
+                  <span className="text-[12px] text-ink-4 tabular-nums">
+                    {existingItems.reduce((n: number, c: any) => n + (c.quantity || 0), 0)}
+                  </span>
                 </div>
                 {existingItems.map((i: any, idx: number) => (
-                  <div key={idx} className="px-6 py-3 border-b border-line last:border-b-0 bg-canvas">
-                    <div className="flex justify-between items-start mb-1">
-                      <div>
-                        <h4 className="text-[14px] font-semibold text-ink-3">{i.quantity}x {i.itemName || i.item?.name}</h4>
-                        {i.variationName && <span className="text-[12px] text-ink-4">{i.variationName}</span>}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-[14px] text-ink-3">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
-                        <button
-                          onClick={() => setVoidSheetState({ isOpen: true, item: i })}
-                          className="w-8 h-8 flex items-center justify-center rounded-full text-rose-500 hover:bg-rose-100 transition-colors"
-                        >
-                          <Trash2 className="w-[14px] h-[14px]" />
-                        </button>
-                      </div>
+                  <div key={idx} className="px-4 py-2 flex items-center gap-3 border-b border-line last:border-b-0">
+                    <span className="w-6 text-right text-[13px] font-semibold text-ink-3 tabular-nums shrink-0">{i.quantity}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] text-ink-2 truncate">{i.itemName || i.item?.name}</p>
+                      {i.variationName && <p className="text-[12px] text-ink-4 truncate">{i.variationName}</p>}
                     </div>
+                    <span className="text-[13.5px] text-ink-3 tabular-nums shrink-0">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
+                    <button
+                      onClick={() => setVoidSheetState({ isOpen: true, item: i })}
+                      className="w-8 h-8 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-danger/10 shrink-0"
+                      aria-label={`Void ${i.itemName || 'item'}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 ))}
               </div>
             )}
 
             {cart.length > 0 && existingItems.length > 0 && (
-              <div className="bg-canvas px-6 py-2 border-b border-line">
-                <span className="text-[12px] font-bold text-ink uppercase tracking-wider">Adding Now</span>
+              <div className="px-4 pt-4 pb-1.5">
+                <span className="text-[12px] font-semibold text-ok">Adding now</span>
               </div>
             )}
 
             {cart.length === 0 && existingItems.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-ink-4">
-                <ShoppingCart className="mb-4 text-ink-4 w-[48px] h-[48px]" />
-                <p className="font-bold text-lg text-ink">Your cart is empty</p>
-                {/* `selectedTableId` — a raw UUID — used to be interpolated
-                    straight into this sentence, so a dine-in order read "for
-                    Table cmsuv8x…" and a takeaway one read "for Table ." with a
-                    dangling full stop. Use the label, and only when there is one. */}
-                <p className="text-sm mt-1 max-w-[240px] text-ink-3">
-                  {selectedTableLabel
-                    ? `Pick items from the menu to start Table ${selectedTableLabel}'s order.`
-                    : 'Pick items from the menu to start this order.'}
+              <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center px-6">
+                <ShoppingCart className="mb-3 text-ink-4 w-8 h-8" strokeWidth={1.75} />
+                <p className="text-[14px] font-semibold text-ink">Nothing on this order yet</p>
+                <p className="text-[13px] mt-1 max-w-[240px] text-ink-3">
+                  {selectedTableLabel ? `Tap items on the menu to start ${selectedTableLabel}'s order.` : 'Tap items on the menu to add them.'}
                 </p>
               </div>
             ) : (
@@ -1474,142 +1484,106 @@ function OrderEntryPageContent() {
             )}
           </div>
 
-          {/* Order Note */}
+          {/* Kitchen note */}
           {showKitchenNote && (
-            <div className="px-6 py-4 bg-canvas shrink-0 border-t border-line animate-in slide-in-from-bottom-2">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-ink">Kitchen Note</span>
+            <div className="px-4 py-3 border-t border-line shrink-0">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-[12.5px] font-semibold text-ink-2">Kitchen note</span>
                 <button
                   onClick={() => { setShowKitchenNote(false); setOrderNote(''); }}
-                  className="text-ink-3 hover:text-ink transition-colors"
+                  className="w-7 h-7 grid place-items-center rounded-md text-ink-3 hover:bg-sunken hover:text-ink"
+                  aria-label="Remove note"
                 >
-                  <X className="w-[14px] h-[14px]" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
               <textarea
                 value={orderNote}
                 onChange={(e) => setOrderNote(e.target.value)}
-                placeholder="Add special instructions for the kitchen..."
-                className="w-full bg-white border border-line-strong rounded-lg p-3 text-sm text-ink placeholder:text-ink-4 focus:outline-none focus:border-brand transition-colors resize-none h-16 shadow-sm"
+                placeholder="e.g. No onions, extra spicy"
+                className="w-full bg-surface border border-line-strong rounded-lg px-3 py-2 text-[14px] text-ink placeholder:text-ink-4 focus:outline-none focus:border-ink resize-none h-14"
               />
             </div>
           )}
 
-          {/* Cart Footer / Totals */}
-          <div className="bg-canvas border-t border-line p-6 space-y-4 shrink-0">
-            <div className="space-y-2 text-sm text-ink-3 font-medium">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span className="text-ink font-semibold">{formatPKR(combinedSubtotal)}</span>
+          {/* Totals and actions */}
+          <div className="border-t border-line px-4 pt-3 pb-4 shrink-0 bg-surface">
+            <dl className="space-y-1 text-[13px]">
+              <div className="flex justify-between text-ink-3">
+                <dt>Subtotal</dt>
+                <dd className="tabular-nums text-ink-2">{formatPKR(combinedSubtotal)}</dd>
               </div>
               {combinedTaxAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>{taxLabel}</span>
-                  <span className="text-ink font-semibold">{formatPKR(combinedTaxAmount)}</span>
+                <div className="flex justify-between text-ink-3">
+                  <dt>{taxLabel}</dt>
+                  <dd className="tabular-nums text-ink-2">{formatPKR(combinedTaxAmount)}</dd>
                 </div>
               )}
               {discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Discount</span>
-                  <span>- {formatPKR(discountAmount)}</span>
+                <div className="flex justify-between text-ok">
+                  <dt>Discount</dt>
+                  <dd className="tabular-nums">− {formatPKR(discountAmount)}</dd>
                 </div>
               )}
+              <div className="flex justify-between items-baseline pt-2 mt-1.5 border-t border-line">
+                <dt className="text-[15px] font-semibold text-ink">Total</dt>
+                <dd className="text-[22px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(combinedTotal)}</dd>
+              </div>
+            </dl>
+
+            {/* Tools: Discount and Note apply to the order, so they work while
+                editing a sent order; Hold and Clear act on the cart, so they
+                follow it. */}
+            <div className="mt-3 grid grid-cols-4 gap-1.5">
+              {[
+                { label: 'Discount', Icon: Percent, onClick: () => setDiscountModalOpen(true), disabled: orderEmpty, active: discountAmount > 0 },
+                { label: 'Note', Icon: NotebookPen, onClick: () => setShowKitchenNote(!showKitchenNote), disabled: orderEmpty, active: showKitchenNote || !!orderNote },
+                { label: 'Hold', Icon: PauseCircle, onClick: holdOrder, disabled: cart.length === 0, active: false },
+                { label: 'Clear', Icon: Trash2, onClick: () => setConfirmClearOpen(true), disabled: cart.length === 0, active: false },
+              ].map(({ label, Icon, onClick, disabled, active }) => (
+                <button
+                  key={label}
+                  onClick={onClick}
+                  disabled={disabled}
+                  className={`h-10 rounded-lg border text-[12.5px] font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    active ? 'border-brand/40 bg-brand/10 text-brand-strong' : 'border-line text-ink-2 enabled:hover:bg-sunken enabled:hover:text-ink'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" /> {label}
+                </button>
+              ))}
             </div>
 
-            <div className="flex justify-between items-end pt-2 border-t border-line">
-              <span className="text-[16px] font-bold uppercase tracking-wider text-ink">Order Total</span>
-              <div className="text-right">
-                <p className="text-brand text-[36px] font-extrabold leading-none">{formatPKR(combinedTotal)}</p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2 pt-4">
-              {/* All four were live on an empty order, so Discount and Note
-                  opened a dialog about nothing and Clear silently did nothing.
-                  Hold was the clearest tell: the identical HOLD in the top bar
-                  disables itself when the cart is empty and this one didn't, so
-                  the same action disagreed with itself depending on which copy
-                  you reached for.
-
-                  Discount and Note stay available while EDITING a sent order
-                  (cart empty, existingItems not) — they apply to the order.
-                  Clear and Hold act on the cart, so they follow the cart. */}
-              <div className="grid grid-cols-4 gap-2">
-                <button
-                  disabled={orderEmpty}
-                  className={actionBtnCls}
-                  onClick={() => setDiscountModalOpen(true)}
-                >
-                  <Percent className="w-[14px] h-[14px]" /> Discount
-                </button>
-                <button
-                  disabled={orderEmpty}
-                  className={`${actionBtnCls} ${showKitchenNote || orderNote ? 'border-brand! bg-brand-soft! text-brand!' : ''}`}
-                  onClick={() => setShowKitchenNote(!showKitchenNote)}
-                >
-                  <NotebookPen className="w-[14px] h-[14px]" /> Note
-                </button>
-                <button
-                  disabled={cart.length === 0}
-                  className={actionBtnCls}
-                  onClick={() => setConfirmClearOpen(true)}
-                >
-                  <Trash2 className="w-[14px] h-[14px]" /> Clear
-                </button>
-                <button
-                  disabled={cart.length === 0}
-                  className={actionBtnCls}
-                  onClick={holdOrder}
-                >
-                  <PauseCircle className="w-[14px] h-[14px]" /> Hold
-                </button>
-              </div>
-
-              <div className="flex gap-2 h-14 mt-2">
-                <button
-                  onClick={sendToKitchen}
-                  title={needsTable ? 'Select a table first' : !orderType ? 'Select an order type first' : undefined}
-                  disabled={cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder}
-                  className={`flex-1 h-[52px] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 transition-all shadow-sm ${cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder
-                      ? 'bg-hover text-ink-4 cursor-not-allowed'
-                      : paymentOrderId
-                        ? 'bg-sunken border border-line-strong text-ink cursor-pointer hover:bg-hover'
-                        : 'bg-sunken border border-line-strong text-ink cursor-pointer hover:bg-hover'
-                    }`}
-                >
-                  {kitchenLoading ? (
-                    <><Loader2 className="animate-spin w-[18px] h-[18px]" /> SENDING...</>
-                  ) : (
-                    <><Printer className="w-[18px] h-[18px]" /> {paymentOrderId ? 'RE-SEND' : 'KITCHEN'}</>
-                  )}
-                </button>
-                <button
-                  onClick={handleCharge}
-                  title={needsTable ? 'Select a table first' : !orderType ? 'Select an order type first' : undefined}
-                  disabled={cart.length === 0 || chargeLoading || !canSubmitOrder}
-                  style={{
-                    flex: 1,
-                    height: '52px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    cursor: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'pointer' : 'not-allowed',
-                    backgroundColor: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'var(--pos-primary, #F59E0B)' : '#E2E8F0',
-                    color: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 'white' : '#94A3B8',
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    opacity: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? 1 : 0.5,
-                    boxShadow: (cart.length > 0 && !chargeLoading && canSubmitOrder) ? '0 4px 14px rgba(245,158,11,0.35)' : 'none',
-                    transition: 'all 0.15s ease',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  }}
-                >
-                  {chargeLoading
-                    ? <><Loader2 className="animate-spin w-[18px] h-[18px]" /> CREATING...</>
-                    : <><Banknote className="w-[18px] h-[18px]" /> CHARGE</>
-                  }
-                </button>
-              </div>
+            <div className="mt-2 flex gap-2">
+              {(() => {
+                const kitchenOff = cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder;
+                const chargeOff = cart.length === 0 || chargeLoading || !canSubmitOrder;
+                const why = needsTable ? 'Pick a table first' : !orderType ? 'Choose an order type first' : undefined;
+                return (
+                  <>
+                    <button
+                      onClick={sendToKitchen}
+                      title={why}
+                      disabled={kitchenOff}
+                      className="flex-1 h-12 rounded-xl bg-ink text-white text-[14px] font-semibold flex items-center justify-center gap-2 transition-colors enabled:hover:bg-ink-2 disabled:bg-sunken disabled:text-ink-4 disabled:cursor-not-allowed"
+                    >
+                      {kitchenLoading
+                        ? <><Loader2 className="animate-spin w-4 h-4" /> Sending…</>
+                        : <><ChefHat className="w-[18px] h-[18px]" /> {paymentOrderId ? 'Send again' : 'Send to kitchen'}</>}
+                    </button>
+                    <button
+                      onClick={handleCharge}
+                      title={why}
+                      disabled={chargeOff}
+                      className="flex-1 h-12 rounded-xl bg-brand text-on-brand text-[14px] font-semibold flex items-center justify-center gap-2 transition-colors enabled:hover:bg-brand-strong disabled:bg-sunken disabled:text-ink-4 disabled:cursor-not-allowed"
+                    >
+                      {chargeLoading
+                        ? <><Loader2 className="animate-spin w-4 h-4" /> Opening…</>
+                        : <>Charge <span className="tabular-nums">{formatPKR(combinedTotal)}</span></>}
+                    </button>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </section>
@@ -1688,7 +1662,7 @@ function OrderEntryPageContent() {
 
 import { Suspense } from 'react';
 import { API_URL } from '@/lib/api';
-import { Armchair, Banknote, GalleryVerticalEnd, Info, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
+import { Armchair, Banknote, ChefHat, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);

@@ -34,6 +34,9 @@ export const CloseShiftSchema = z.object({
   // Spec Part 6 — the terminal still has queued events; close to PENDING_SYNC.
   pendingSync: z.boolean().optional(),
   pendingSyncCount: z.number().int().nonnegative().optional(),
+  // When the cashier actually closed; sent by a terminal replaying a close
+  // it made offline. Clamped server-side.
+  closedAt: z.string().datetime().optional(),
 });
 
 /**

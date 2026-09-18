@@ -287,6 +287,12 @@ export interface CloseShiftInput {
    */
   pendingSync?: boolean;
   pendingSyncCount?: number;
+  /**
+   * When the cashier actually closed. A terminal that closed with no
+   * connection replays the close later; stamping it with the server's clock
+   * then would add the whole outage to the shift. Clamped to [openedAt, now].
+   */
+  closedAt?: string;
 }
 
 export async function closeShift(tenantId: string, id: string, data: CloseShiftInput) {
@@ -358,7 +364,11 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
   const counted = data.closingCash;
   const cashVariance = counted === null ? null : parseFloat((counted - expectedCash).toFixed(2));
   const denominations = data.denominations ?? [];
-  const closedAt = new Date();
+  const nowMs = Date.now();
+  const requestedClose = data.closedAt ? new Date(data.closedAt).getTime() : NaN;
+  const closedAt = new Date(
+    Number.isFinite(requestedClose) ? Math.min(nowMs, Math.max(shift.openedAt.getTime(), requestedClose)) : nowMs,
+  );
 
   // Read outside the transaction. Everything inside an interactive transaction
   // races Prisma's 5s timeout, and on a remote Postgres each round trip is
@@ -526,6 +536,10 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
     const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { timezone: true } });
     const { from, to } = getBusinessDayRange(branch?.timezone || 'Asia/Karachi');
 
+    // Returned as a list, not just a count. With only a number, the POS could
+    // say "1 order from today is not settled" but not WHICH — and since these
+    // can belong to other (already closed) shifts, the cashier looked through
+    // their own tickets, found nothing open, and was stuck.
     const branchPending = await prisma.order.findMany({
       where: {
         branchId, tenantId,
@@ -536,14 +550,17 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
         createdAt: { gte: from, lte: to },
         items: { some: {} },
       },
-      select: { id: true, orderNumber: true, totalAmount: true, status: true, table: { select: { label: true } } },
+      select: { id: true, orderNumber: true, totalAmount: true, netAmount: true, status: true, table: { select: { label: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 40,
     });
 
     if (branchPending.length > 0) {
+      const n = branchPending.length;
       blockers.push({
         type: 'SOLE_CASHIER_ACTIVE',
-        message: `You are the only cashier on shift at this branch. There are ${branchPending.length} unassigned orders from this business day that have not been settled. Closing your shift would leave these orders unresolved.`,
-        count: branchPending.length,
+        message: `You're the last cashier on shift, and ${n === 1 ? '1 order from today is' : `${n} orders from today are`} still open at this branch. Settle or cancel ${n === 1 ? 'it' : 'them'} first, or ask a manager to close anyway.`,
+        count: n,
         orders: branchPending,
       });
     }

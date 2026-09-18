@@ -18,10 +18,23 @@ import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, Refresh
 import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
 import { SyncHealthDot } from '@/components/SyncHealthDot';
 import { useManagerOverlay } from '@/lib/manager-overlay';
-import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, type UnsyncedSummary } from '@/lib/core/outbox';
+import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, flushOutbox, isSettledLocally, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startBreak } from '@/lib/core/commands';
 import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
 import { API_URL } from '@/lib/api';
+
+// An order the server still counts as open but that this terminal has already
+// settled (paid, cancelled) is not a blocker: it's in the queue, and the close
+// screen's sync step sends it before the close itself goes out.
+function realBlockers(blockers: any[] | undefined): any[] {
+  return (blockers || [])
+    .map((b) => {
+      if (!Array.isArray(b.orders)) return b;
+      const orders = b.orders.filter((o: any) => !isSettledLocally(o));
+      return { ...b, orders, count: orders.length };
+    })
+    .filter((b) => !Array.isArray(b.orders) || b.orders.length > 0);
+}
 
 export function POSTopBar() {
   const config = useContext(TopBarStateContext);
@@ -87,21 +100,45 @@ export function POSTopBar() {
       });
       if (!res.ok) return;
       const data = await res.json();
-      if (data.canClose) {
+      const real = data.canClose ? [] : realBlockers(data.blockers);
+      if (real.length === 0) {
         setIsBlockerOpen(false);
         setBlockers([]);
         setIsCloseShiftOpen(true);
       } else {
-        setBlockers(data.blockers || []);
+        setBlockers(real);
       }
     } catch { /* offline — the list stays as-is, override is still available */ }
   };
 
-  const handleCloseShiftClick = () => {
+  const handleCloseShiftClick = async () => {
     setIsDropdownOpen(false);
     // The close dialog owns sync, verification and blockers in one flow.
-    // A second racing request must not replace it with a stale warning.
     setIsCloseShiftOpen(true);
+
+    try {
+      // Send what this terminal is still holding before asking the server
+      // what's open. Asking first reported an order paid a moment ago as
+      // unpaid, and blocked the close over an order that wasn't open.
+      await flushOutbox(8000);
+      const token = localStorage.getItem('pos_token');
+      const res = await fetch(`${API_URL}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error('Validation check failed');
+      const data = await res.json();
+
+      if (!data.canClose) {
+        const real = realBlockers(data.blockers);
+        if (real.length === 0) return;
+        setIsCloseShiftOpen(false);
+        setBlockers(real);
+        setIsBlockerOpen(true);
+      }
+    } catch (e) {
+      console.warn('Shift close validation skipped', e);
+    }
   };
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {

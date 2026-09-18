@@ -146,11 +146,11 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
           isOpen={true}
           onClose={() => setShowPinModal(false)}
           onConfirm={handleOverrideConfirm}
-          title="Manager Override"
-          description={`Enter your manager PIN and a reason to add ${itemsLabel} even though ${alert.name} is out of stock.`}
-          reasonLabel="Reason for Override"
+          title="Add despite low stock"
+          description={`${alert.name} is out of stock. A manager can still add ${itemsLabel}.`}
+          reasonLabel="Reason"
           reasonPlaceholder="e.g. Substituting with backup ingredient"
-          confirmLabel="Authorize Override"
+          confirmLabel="Add anyway"
         />
       )}
     </>

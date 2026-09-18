@@ -438,11 +438,11 @@ export default function StockPage() {
           isOpen={true}
           onClose={() => setAdjustStep('qty')}
           onConfirm={handleQuickAdjustConfirm}
-          title="Quick Adjust"
-          description={`Enter your manager PIN and a reason to set ${adjustItem.name} to ${formatQty(parseFloat(adjustQty) || 0)} ${formatUnit(adjustItem.unit)}.`}
-          reasonLabel="Reason for Adjustment"
+          title="Adjust stock"
+          description={`Set ${adjustItem.name} to ${formatQty(parseFloat(adjustQty) || 0)} ${formatUnit(adjustItem.unit)}.`}
+          reasonLabel="Reason"
           reasonPlaceholder="e.g. Recount, waste, delivery received"
-          confirmLabel="Authorize Adjustment"
+          confirmLabel="Adjust"
         />
       )}
     </div>

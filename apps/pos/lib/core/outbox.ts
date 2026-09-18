@@ -36,6 +36,9 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 8000;      // spec: hard 8s AbortController
 const DEFAULT_MAX_LIFETIME_MS = EVENT_MAX_LIFETIME_MS; // 24h from event-log.ts
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 32000];
 const DEGRADED_RETRY_MS = 60000;
+// How long an order with no live items may sit before its events are treated as
+// local-only (see deriveTaskChains). Far longer than createOrder → addItem.
+const EMPTY_ORDER_GRACE_MS = 2 * 60 * 1000;
 const CRITICAL_RETRY_MS = [500, 1000, 2000];  // spec: 3 fast retries for CRITICAL
 // A payment waits longer than everything else — see runCriticalTask.
 const CRITICAL_REQUEST_TIMEOUT_MS = 20000;
@@ -378,6 +381,18 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
               bodyEventIds, lane: laneOf(events),
             });
           } else {
+            // Nothing to create: the order has no live items. Normally that is
+            // the few milliseconds between createOrder and its first addItem,
+            // so wait. But an order that was emptied (every line removed) or
+            // cancelled before it ever synced stays that way, and waiting on it
+            // kept one change "pending" forever: the sync indicator never
+            // cleared and closing the shift reported an order that doesn't
+            // exist. The server never needs to hear about an order that never
+            // held anything, so those events end here.
+            const newest = Math.max(...events.map((e) => Date.parse(e.clientTime) || 0));
+            if (ORDER_TERMINAL_STATUSES.has(order.status) || now - newest > EMPTY_ORDER_GRACE_MS) {
+              toConfirm.push(...events.map((e) => e.id));
+            }
             continue;
           }
         }
@@ -1182,10 +1197,14 @@ async function drain(): Promise<void> {
     }
   } finally {
     draining = false;
+    // Spec Part 6 — if a shift was closed with events still queued and the
+    // queue is now empty, tell the server to finalise it (PENDING_SYNC → CLOSED).
+    // In `finally` because the commonest case is exactly the one that took
+    // the early `return` above: nothing left to ship. Sitting after the block,
+    // it never ran then, so a shift closed offline with its orders already
+    // synced never had its close replayed and stayed OPEN on the server.
+    await finalisePendingSyncShiftIfDrained().catch(() => {});
   }
-  // Spec Part 6 — if a shift was closed with events still queued and the
-  // queue is now empty, tell the server to finalise it (PENDING_SYNC → CLOSED).
-  await finalisePendingSyncShiftIfDrained().catch(() => {});
 }
 
 function bundleLane(tasks: OutboxTask[]): SyncLane {
@@ -1475,6 +1494,38 @@ export function forceSyncNow(): void {
 }
 
 /**
+ * Send everything queued and wait for it, up to `timeoutMs`. Resolves with
+ * how many changes are still unsent (0 = all through).
+ *
+ * For steps that ask the server a question about work this terminal may not
+ * have sent yet. Closing a shift asked "is anything still open?" before
+ * shipping the queue, so an order paid a few seconds earlier came back as
+ * unpaid and blocked the close.
+ */
+export async function flushOutbox(timeoutMs = 8000): Promise<number> {
+  forceSyncNow();
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const left = (await getUnsyncedSummary()).count;
+    if (left === 0 || Date.now() >= deadline) return left;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+}
+
+/**
+ * True when an order the server reports as still open is already settled on
+ * this terminal (paid, cancelled, voided): the server just hasn't received it.
+ */
+export function isSettledLocally(serverOrder: { id?: string; orderNumber?: string }): boolean {
+  const orders = useViews.getState().orders;
+  const local = Object.values(orders).find(
+    (o) => (serverOrder.id && (o.serverId === serverOrder.id || o.id === serverOrder.id)) ||
+      (serverOrder.orderNumber && o.orderNumber === serverOrder.orderNumber),
+  );
+  return !!local && ORDER_TERMINAL_STATUSES.has(local.status);
+}
+
+/**
  * Operator-initiated discard of a POISONED / ABANDONED event that can never
  * succeed on retry (a stale PKR 0 payment the server keeps rejecting, an
  * event whose order was cancelled server-side, …). Marks it SUPERSEDED —
@@ -1670,7 +1721,21 @@ async function adoptServerShift(localId: string, serverId: string): Promise<void
 
   const { getPosShift, setPosShift } = await import('@/lib/pos-session');
   const current = getPosShift();
-  if (current?.shiftId === localId) setPosShift({ ...current, shiftId: serverId });
+  if (current?.shiftId === localId) {
+    // The joined shift's own opening time and float are the true ones: the
+    // home screen's elapsed timer and the drawer expectation run off them.
+    let openedAt = current.openedAt;
+    let openingFloat = current.openingFloat;
+    try {
+      const res = await fetchWithTimeout(`${API_URL}/api/shifts/${serverId}`, { headers: authHeaders() });
+      if (res.ok) {
+        const s = await res.json();
+        openedAt = s.openedAt ?? openedAt;
+        openingFloat = s.openingFloat ?? openingFloat;
+      }
+    } catch { /* keep this terminal's values */ }
+    setPosShift({ shiftId: serverId, openedAt, openingFloat });
+  }
 
   const { useCartStore } = await import('@/lib/store');
   const session = useCartStore.getState().session;
@@ -1694,7 +1759,22 @@ async function adoptServerShift(localId: string, serverId: string): Promise<void
   useViews.getState()._setSnapshot({ orders: patched });
 }
 
+// One at a time: every drain ends here, and drains overlap (a kick lands while
+// the previous finalise is still waiting on the network). Without this each
+// one replayed the close and toasted "finished syncing" again.
+let finalising = false;
+
 async function finalisePendingSyncShiftIfDrained(): Promise<void> {
+  if (finalising) return;
+  finalising = true;
+  try {
+    await finalisePendingSyncShift();
+  } finally {
+    finalising = false;
+  }
+}
+
+async function finalisePendingSyncShift(): Promise<void> {
   let localShiftId: string | null = null;
   try { localShiftId = localStorage.getItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
   if (!localShiftId) return;

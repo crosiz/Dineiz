@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { AlertCircle, Delete, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertCircle, ShieldCheck } from 'lucide-react';
+import { Dialog, DialogButton } from '@/components/ui/Dialog';
+import { PinPad } from '@/components/ui/PinPad';
 
 interface ManagerOverrideModalProps {
   isOpen: boolean;
@@ -13,15 +15,23 @@ interface ManagerOverrideModalProps {
   confirmLabel?: string;
 }
 
+// Manager PIN + reason, for anything that needs a manager's sign-off (force
+// closing a shift, adopting orphaned orders…).
+//
+// The reason used to sit below a 60px-key keypad inside a scrolling area, so on
+// a landscape tablet it was off-screen: the manager entered the PIN, the button
+// stayed grey, and nothing said why. The reason now comes first, the keypad is
+// compact enough that the whole dialog fits, and the button names what's still
+// missing instead of just being disabled.
 export function ManagerOverrideModal({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Manager Override',
-  description = 'Enter your manager PIN and a reason to authorize force closing this shift.',
-  reasonLabel = 'Reason for Force Close',
-  reasonPlaceholder = 'e.g. System glitch, customer left',
-  confirmLabel = 'Authorize Force Close',
+  title = 'Manager override',
+  description = 'A manager’s PIN and a reason are needed to force close this shift.',
+  reasonLabel = 'Reason',
+  reasonPlaceholder = 'e.g. Customer left without paying',
+  confirmLabel = 'Force close',
 }: ManagerOverrideModalProps) {
   const [pin, setPin] = useState('');
   const [reason, setReason] = useState('');
@@ -30,149 +40,61 @@ export function ManagerOverrideModal({
 
   if (!isOpen) return null;
 
-  const handleKeyPress = (key: string) => {
-    if (pin.length < 4) setPin((prev) => prev + key);
-  };
-
-  const handleBackspace = () => {
-    setPin((prev) => prev.slice(0, -1));
-  };
+  const ready = pin.length === 4 && reason.trim().length > 0;
+  const buttonLabel = !reason.trim() ? 'Add a reason' : pin.length < 4 ? 'Enter manager PIN' : confirmLabel;
 
   const handleSubmit = async () => {
-    if (pin.length !== 4) {
-      setError('Please enter a 4-digit PIN');
-      return;
-    }
-    if (!reason.trim()) {
-      setError('Please provide a reason for force closing');
-      return;
-    }
+    if (!ready) return;
     setError('');
     setIsSubmitting(true);
     try {
-      await onConfirm(pin, reason);
+      await onConfirm(pin, reason.trim());
     } catch (e: any) {
-      setError(e.message || 'Invalid PIN or insufficient permissions');
+      setError(e.message || 'That PIN wasn’t accepted.');
+      setPin('');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    // This is always a follow-up confirmation ON TOP of whichever modal
-    // triggered it (OrphanResolutionModal and ShiftCloseBlockerModal both
-    // render this at z-[200]) — z-[110] put it BEHIND its own parent,
-    // making the PIN pad completely inaccessible. z-[400] is above every
-    // other stacking context in this app (the highest otherwise is
-    // StartManagerOverrideModal's z-[320]), so this always wins regardless
-    // of what opened it.
-    <div className="fixed inset-0 z-[400] grid place-items-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity" onClick={onClose} />
-      
-      {/* max-h + flex-col with a shrink-0 header/footer and an overflow-y-auto
-          middle — this had none of that: icon + title + description + PIN
-          dots + a 3x4 numpad (each key 60px tall) + reason field is
-          realistically 700px+ of content that clipped top or bottom on any
-          short/landscape viewport, or with the keyboard open (the reason
-          field needs it). No min-w either — matching w-full/max-w-[420px]
-          alone (see AdminPinModal's identical fix) rather than min-w-[320px]
-          fighting max-w on anything under ~350px wide. */}
-      <div
-        className="relative z-10 w-full max-w-[420px] max-h-[calc(100dvh-32px)] bg-white rounded-[28px] shadow-[0_30px_80px_rgba(0,0,0,0.4)] overflow-hidden flex flex-col"
-        style={{ animation: 'slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
-      >
-        <div className="p-8 pb-6 flex flex-col items-center text-center shrink-0">
-          <div className="w-16 h-16 rounded-full bg-slate-900 flex items-center justify-center mb-5 shadow-md shadow-slate-900/20">
-            <ShieldCheck className="text-white w-[32px] h-[32px]" />
-          </div>
-          <h2 className="text-[26px] font-bold text-slate-900 tracking-tight leading-tight mb-2">{title}</h2>
-          <p className="text-[15px] text-slate-500 font-medium px-4">{description}</p>
-        </div>
+    // Always opened on top of another dialog (orphan adoption, shift-close
+    // blockers), so it stacks above all of them.
+    <Dialog
+      onClose={onClose}
+      z={400}
+      icon={ShieldCheck}
+      tone="neutral"
+      title={title}
+      description={description}
+      footer={
+        <>
+          <DialogButton onClick={onClose}>Cancel</DialogButton>
+          <DialogButton variant="ink" onClick={handleSubmit} disabled={!ready} busy={isSubmitting}>
+            {buttonLabel}
+          </DialogButton>
+        </>
+      }
+    >
+      <label className="block text-[13px] font-medium text-ink-2 mb-1.5" htmlFor="override-reason">{reasonLabel}</label>
+      <input
+        id="override-reason"
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+        placeholder={reasonPlaceholder}
+        className="w-full h-11 px-3.5 rounded-xl bg-surface border border-line-strong text-[15px] text-ink placeholder:text-ink-4 outline-none focus:border-ink"
+      />
 
-        <div className="px-8 pb-4 overflow-y-auto flex-1 min-h-0">
-          {error && (
-            <div className="mb-6 p-4 bg-rose-50 rounded-[16px] border border-rose-100 flex items-start gap-3">
-              <AlertCircle className="text-rose-500 shrink-0 w-[20px] h-[20px]" />
-              <p className="text-rose-700 text-[14px] font-medium leading-snug">{error}</p>
-            </div>
-          )}
-          
-          <div className="flex justify-center gap-3 mb-8">
-            {[0, 1, 2, 3].map((i) => (
-              <div 
-                key={i} 
-                className={`w-14 h-16 rounded-[16px] border-[2.5px] flex items-center justify-center text-[28px] transition-all duration-200 ${
-                  pin.length > i 
-                    ? 'border-slate-900 bg-slate-900 text-white shadow-md' 
-                    : pin.length === i 
-                      ? 'border-slate-400 bg-white shadow-sm ring-4 ring-slate-100'
-                      : 'border-slate-200 bg-slate-50 text-transparent'
-                }`}
-              >
-                {pin.length > i ? '•' : ''}
-              </div>
-            ))}
-          </div>
+      <p className="mt-5 mb-3 text-[13px] font-medium text-ink-2 text-center">Manager PIN</p>
+      <PinPad value={pin} onChange={(v) => { setPin(v); setError(''); }} error={!!error} disabled={isSubmitting} />
 
-          <div className="grid grid-cols-3 gap-2.5 mb-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-              <button
-                key={num}
-                onClick={() => handleKeyPress(num.toString())}
-                className="h-[60px] rounded-[16px] bg-slate-50 border border-slate-200 text-slate-900 font-bold text-[24px] hover:bg-slate-100 hover:border-slate-300 active:scale-95 transition-all"
-              >
-                {num}
-              </button>
-            ))}
-            <div className="h-[60px]"></div>
-            <button
-              onClick={() => handleKeyPress('0')}
-              className="h-[60px] rounded-[16px] bg-slate-50 border border-slate-200 text-slate-900 font-bold text-[24px] hover:bg-slate-100 hover:border-slate-300 active:scale-95 transition-all"
-            >
-              0
-            </button>
-            <button
-              onClick={handleBackspace}
-              className="h-[60px] rounded-[16px] bg-slate-50 border border-slate-200 text-slate-600 flex items-center justify-center hover:bg-slate-100 hover:border-slate-300 hover:text-slate-900 active:scale-95 transition-all"
-            >
-              <Delete className="w-[28px] h-[28px]" />
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-[13px] font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">{reasonLabel}</label>
-            <input
-              type="text"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={reasonPlaceholder}
-              className="w-full px-5 h-[56px] bg-slate-50 border border-slate-200 rounded-[16px] text-[16px] font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-all"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 pt-4 mt-2 flex flex-col gap-3 shrink-0">
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || pin.length !== 4 || !reason.trim()}
-            className="w-full h-[56px] rounded-[16px] bg-slate-900 text-white font-bold text-[16px] hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-slate-900 active:scale-[0.98] transition-all shadow-[0_8px_20px_rgba(15,23,42,0.15)] flex items-center justify-center disabled:active:scale-100"
-          >
-            {isSubmitting ? <Loader2 className="animate-spin w-[24px] h-[24px]" /> : confirmLabel}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full h-[56px] rounded-[16px] bg-transparent text-slate-500 font-bold text-[15px] hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98] transition-all"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(40px) scale(0.96); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}} />
-    </div>
+      {error && (
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-medium text-danger">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </p>
+      )}
+    </Dialog>
   );
 }

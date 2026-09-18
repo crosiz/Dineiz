@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation';
 import { AssignWaiterSheet } from './AssignWaiterSheet';
 import { PremiumTable, getTableDimensions, CHAIR_PAD } from '@/components/PremiumTable';
+import { TABLE_TONE } from '@/lib/table-tone';
 import PaymentModal from '@/components/PaymentModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useSocket } from '@/contexts/SocketContext';
@@ -211,35 +212,33 @@ export default function ClientTableMap() {
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
 
 
-  // Status legend uses the same restrained dots as the plan. A floor map is
-  // already colour-dense, so the legend clarifies meaning without competing
-  // with a table's label.
+  // Status Legend Component for POSTopBar. hidden below sm: at phone width
+  // POSTopBar's rightActions slot has only ~40-95px free once the always-
+  // visible avatar/sync cluster takes its share, and this pill wants ~360px
+  // unwrapped — rather than a barely-discoverable horizontal-scroll sliver,
+  // it's dropped in favor of the table colors on the canvas itself (which
+  // this legend is only a supplementary key for; tapping a table also shows
+  // its status by name).
   const legendElement = useMemo(
-    () => (
-      <div className="hidden lg:flex items-center gap-3 text-[11px] font-semibold text-ink-3">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-ok" />
-          <span>Free</span>
+    () => {
+      const counts: Record<string, number> = {};
+      for (const t of tables) {
+        const st = String(t.status || 'FREE').toUpperCase();
+        counts[st] = (counts[st] || 0) + 1;
+      }
+      return (
+        <div className="hidden sm:flex items-center gap-3.5 h-9 px-3 rounded-lg border border-line bg-surface text-[12.5px] text-ink-3">
+          {(['FREE', 'OCCUPIED', 'BILL_REQUESTED', 'RESERVED', 'DIRTY'] as const).map((st) => (
+            <span key={st} className="flex items-center gap-1.5 whitespace-nowrap">
+              <span className={`w-2 h-2 rounded-full ${TABLE_TONE[st].dot}`} />
+              <span className="font-semibold text-ink-2 tabular-nums">{counts[st] || 0}</span>
+              <span>{TABLE_TONE[st].label.charAt(0).toUpperCase() + TABLE_TONE[st].label.slice(1)}</span>
+            </span>
+          ))}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-danger" />
-          <span>Occupied</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-info" />
-          <span>Billed</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-special" />
-          <span>Reserved</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-warn" />
-          <span>Dirty</span>
-        </div>
-      </div>
-    ),
-    []
+      );
+    },
+    [tables]
   );
 
   // Configure TopBar explicitly without duplicate titles or clutter
@@ -1085,7 +1084,7 @@ export default function ClientTableMap() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden relative">
+    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
       {/* Main Floor Canvas Container. height:100% (not the old hardcoded
           calc(100vh - 72px - 64px)) — this root now fills POSLayout's
           already-correctly-sized flex-1 content slot via h-full above, so
@@ -1115,18 +1114,18 @@ export default function ClientTableMap() {
         }}
         className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
-        {/* Floor selector stays attached to the canvas, not to a decorative
-            glass panel, so it remains quiet while the map itself is primary. */}
+        {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
+            3-4 floors instead of running off the edge of a narrow screen. */}
         {floors.length > 1 && (
-          <div className="absolute top-4 left-4 z-40 flex items-center gap-1 rounded-xl bg-surface border border-line p-1.5 shadow-sm max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
-            <Layers className="w-4 h-4 text-ink-3 ml-1 mr-0.5 shrink-0" />
+          <div className="absolute top-4 sm:top-5 left-4 sm:left-5 right-4 sm:right-auto z-40 flex items-center gap-0.5 bg-surface border border-line p-1 rounded-xl shadow-[0_2px_8px_rgba(15,23,42,0.06)] max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
+            <Layers className="w-4 h-4 text-ink-3 ml-1.5 mr-1 shrink-0" />
             {floors.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFloor(f)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all shrink-0 ${
+                className={`h-8 px-3 text-[13px] font-semibold rounded-lg transition-colors shrink-0 ${
                   activeFloor === f
-                    ? 'bg-brand text-white shadow-sm'
+                    ? 'bg-ink text-white'
                     : 'text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
@@ -1179,7 +1178,7 @@ export default function ClientTableMap() {
               {/* Waiter Avatar Indicator directly on the floor map table */}
               {table.assignedWaiterName && table.status !== 'FREE' && table.status !== 'AVAILABLE' && (
                 <div 
-                  className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-md border-[1.5px] border-white z-10"
+                  className="absolute bottom-3 left-3 w-6 h-6 rounded-full grid place-items-center text-white text-[10px] font-semibold border-2 border-surface z-20"
                   style={{ backgroundColor: table.assignedWaiterColor || '#3b82f6' }}
                   title={`Waiter: ${table.assignedWaiterName}`}
                 >
@@ -1196,32 +1195,33 @@ export default function ClientTableMap() {
           ))}
         </div>
 
-        <div className="absolute bottom-4 right-4 z-40 flex items-center gap-1 bg-surface border border-line p-1.5 rounded-xl shadow-sm">
+        {/* Floating Glassmorphism Zoom Controls */}
+        <div className="absolute bottom-5 right-5 z-40 flex items-center gap-0.5 bg-surface border border-line p-1 rounded-xl shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
           <button
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-[11px] font-semibold text-ink-2 w-11 text-center tabular-nums">
+          <span className="text-[12.5px] font-semibold text-ink-2 w-12 text-center tabular-nums">
             {Math.round(view.zoom * 100)}%
           </span>
           <button
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
-          <div className="h-4 w-px bg-line my-auto" />
+          <div className="h-5 w-px bg-line mx-0.5" />
           <button
             type="button"
             onClick={handleResetZoom}
             title="Reset View"
-            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
