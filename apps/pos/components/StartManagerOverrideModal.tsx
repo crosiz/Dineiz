@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Unlock } from 'lucide-react';
+import { AlertCircle, Unlock } from 'lucide-react';
 import { getPosSession, getToken } from '@/lib/pos-session';
 import { getPosShift } from '@/lib/pos-session';
 import { useManagerOverlay } from '@/lib/manager-overlay';
 import { API_URL } from '@/lib/api';
+import { Dialog, DialogButton } from '@/components/ui/Dialog';
+import { PinPad } from '@/components/ui/PinPad';
 
 
 // Spec Part 10 — start a manager overlay. Manager PIN + a reason + an
 // optional "one action only" mode. The cashier's session is untouched.
+// Same dialog and keypad as every other PIN prompt (this one used to be a
+// password text field with its own amber styling).
 export function StartManagerOverrideModal({ onClose }: { onClose: () => void }) {
   const start = useManagerOverlay((s) => s.start);
   const [pin, setPin] = useState('');
@@ -35,60 +39,58 @@ export function StartManagerOverrideModal({ onClose }: { onClose: () => void }) 
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Could not start manager override');
+      if (!res.ok) throw new Error(data.error || 'Could not start manager mode');
       start({ overrideId: data.id, managerId: data.manager.id, managerName: data.manager.name }, { reason: reason.trim(), oneShot });
       toast.success(`Manager mode — ${data.manager.name}`);
       onClose();
     } catch (e: any) {
       setError(e.message || 'Failed');
+      setPin('');
       setBusy(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[320] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-[380px] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-slate-200 p-6">
-        <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-4">
-          <Unlock size={19} />
-        </div>
-        <h2 className="text-base font-bold text-slate-900 mb-1">Manager Override</h2>
-        <p className="text-[12px] text-slate-500 leading-relaxed mb-4">
-          Act on this terminal to approve a void, discount, table or stock change — without signing
-          {' '}{getPosSession()?.name ?? 'the cashier'} out. It ends on its own after a few idle minutes.
+    <Dialog
+      onClose={onClose}
+      z={320}
+      icon={Unlock}
+      title="Manager mode"
+      description={`Approve a void, discount, table or stock change on this terminal without signing ${getPosSession()?.name?.split(' ')[0] ?? 'the cashier'} out. It ends on its own after a few idle minutes.`}
+      footer={
+        <>
+          <DialogButton onClick={onClose}>Cancel</DialogButton>
+          <DialogButton variant="ink" onClick={submit} disabled={pin.length < 4} busy={busy}>
+            {pin.length < 4 ? 'Enter manager PIN' : 'Start manager mode'}
+          </DialogButton>
+        </>
+      }
+    >
+      <label className="block text-[13px] font-medium text-ink-2 mb-1.5" htmlFor="mm-reason">
+        Reason <span className="text-ink-4 font-normal">(optional)</span>
+      </label>
+      <input
+        id="mm-reason"
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="e.g. Customer changed their order"
+        className="w-full h-11 px-3.5 rounded-xl bg-surface border border-line-strong text-[15px] text-ink placeholder:text-ink-4 outline-none focus:border-ink"
+      />
+
+      <label className="mt-3 flex items-center gap-2.5 cursor-pointer select-none">
+        <input type="checkbox" checked={oneShot} onChange={(e) => setOneShot(e.target.checked)} className="w-4 h-4 accent-brand" />
+        <span className="text-[13px] text-ink-2">End after one action</span>
+      </label>
+
+      <p className="mt-5 mb-3 text-[13px] font-medium text-ink-2 text-center">Manager PIN</p>
+      <PinPad value={pin} onChange={(v) => { setPin(v); setError(''); }} error={!!error} disabled={busy} />
+
+      {error && (
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-[13px] font-medium text-danger">
+          <AlertCircle className="w-4 h-4" /> {error}
         </p>
-
-        {error && <div className="mb-3 text-[12px] font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</div>}
-
-        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Manager PIN</label>
-        <input
-          type="password" inputMode="numeric" maxLength={8} value={pin} autoFocus
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-          className="w-full h-11 rounded-xl border border-slate-200 px-3 text-lg font-bold tracking-[0.3em] text-center outline-none focus:border-brand mb-3"
-          placeholder="••••"
-        />
-
-        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reason</label>
-        <textarea
-          value={reason} onChange={(e) => setReason(e.target.value)}
-          className="w-full h-16 rounded-xl border border-slate-200 p-2.5 text-[16px] outline-none focus:border-brand resize-none mb-3"
-          placeholder="e.g. Customer changed their order"
-        />
-
-        <label className="flex items-center gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" checked={oneShot} onChange={(e) => setOneShot(e.target.checked)} className="w-4 h-4 accent-brand" />
-          <span className="text-[12px] text-slate-600">Exit automatically after one action</span>
-        </label>
-
-        <div className="flex gap-2.5">
-          <button onClick={onClose} className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 transition-colors">
-            Cancel
-          </button>
-          <button onClick={submit} disabled={busy} className="flex-1 h-10 rounded-xl bg-amber-500 text-white font-semibold text-xs hover:bg-amber-600 disabled:opacity-50 transition-colors">
-            {busy ? 'Starting…' : 'Start Manager Mode'}
-          </button>
-        </div>
-      </div>
-    </div>
+      )}
+    </Dialog>
   );
 }

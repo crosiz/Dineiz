@@ -5,6 +5,8 @@ import { AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatPKR } from '@/lib/utils';
 import { ManagerOverrideModal } from '../ManagerOverrideModal';
+import { Dialog, DialogButton } from '../ui/Dialog';
+import { OrderTypeBadge, StatusBadge } from '../OrderStatusBadge';
 import { API_URL } from '@/lib/api';
 
 
@@ -171,106 +173,81 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, currentUser
 
   return (
     <>
-      <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" />
-
-        {/* Sized, shaped and toned to match ShiftCloseBlockerModal — its
-            closest sibling (same "resolve these orders before you can
-            proceed" job) — rather than its own one-off scale: rounded-2xl
-            not rounded-[20px], shadow-2xl not a hand-tuned rgba shadow,
-            slate-950/60 backdrop not black/70, and an actual entrance
-            animation, which this modal previously had none of at all.
-            A hard-capped flex column: header and footer never move, only
-            the list in the middle scrolls. Without the cap + shrink-0/
-            flex-1 split the list overflowed the card and the first row was
-            clipped under the header. */}
-        <div className="relative z-10 w-full max-w-[460px] max-h-[85dvh] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-          <div className="p-6 pb-4 shrink-0">
-            <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                <AlertTriangle size={22} />
-              </div>
-              <div className="min-w-0 pt-0.5">
-                <h2 className="text-lg font-bold text-slate-900 leading-tight">
-                  {orphans.length} order{orphans.length === 1 ? '' : 's'} from an earlier shift {orphans.length === 1 ? 'is' : 'are'} still open
-                </h2>
-                <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
-                  {allSelfOwned
-                    ? 'These are your own orders from before — continue them into this shift, or void them (voiding still needs a manager PIN).'
-                    : 'Take them into this shift, or void them. Either way needs a manager PIN — one PIN covers the whole batch below.'}
-                </p>
-              </div>
+      {/* Not dismissible: orders can't be taken until this list is clear.
+          On the shared Dialog; bulk actions only appear when there is more
+          than one order, which is what produced "Adopt all 1 orders". */}
+      <Dialog
+        onClose={() => {}}
+        dismissible={false}
+        z={200}
+        size="md"
+        icon={AlertTriangle}
+        tone="warn"
+        title={`${orphans.length === 1 ? 'An order' : `${orphans.length} orders`} from an earlier shift ${orphans.length === 1 ? 'is' : 'are'} still open`}
+        description={
+          allSelfOwned
+            ? 'They’re your own. Continue them in this shift, or void them (voiding needs a manager PIN).'
+            : 'Take them into this shift, or void them. Either needs a manager PIN; one PIN covers the whole batch.'
+        }
+        footer={
+          bulk !== null ? (
+            <div className="w-full flex items-center justify-center gap-2 h-11 text-[13px] font-medium text-ink-2">
+              <Loader2 size={16} className="animate-spin" />
+              Resolving {bulk.done} of {bulk.total}…
             </div>
-          </div>
-
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-5 space-y-2.5 custom-scrollbar">
-            {orphans.map((o) => (
-              <div key={o.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono tabular-nums font-bold text-xs text-slate-900 truncate">{o.orderNumber}</span>
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase shrink-0">{o.status}</span>
-                    </div>
-                    <div className="text-[11px] text-slate-500 mt-1 truncate">
-                      {o.tableLabel ? `Table ${o.tableLabel}` : o.type} · {o.itemCount} item{o.itemCount === 1 ? '' : 's'} · {formatPKR(o.total)}
-                      {o.originalCashier ? ` · ${o.originalCashier}` : ''}
-                    </div>
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    <button
-                      disabled={busy}
-                      onClick={() => (isSelfOwned(o) ? adoptSelf(o) : setPending({ kind: 'one', order: o, action: 'ADOPT' }))}
-                      className="h-[34px] px-3 rounded-lg bg-slate-900 text-white font-semibold text-[11px] hover:bg-slate-800 active:scale-95 transition-all disabled:opacity-40"
-                    >
-                      {selfBusyId === o.id ? '…' : isSelfOwned(o) ? 'Continue' : 'Adopt'}
-                    </button>
-                    <button
-                      disabled={busy}
-                      onClick={() => setPending({ kind: 'one', order: o, action: 'CANCEL' })}
-                      className="h-[34px] px-3 rounded-lg bg-white border border-slate-200 text-rose-600 font-semibold text-[11px] hover:bg-rose-50 active:scale-95 transition-all disabled:opacity-40"
-                    >
-                      Void
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
-            {bulk !== null ? (
-              <div className="flex items-center justify-center gap-2 h-10 text-xs font-semibold text-slate-600">
-                <Loader2 size={15} className="animate-spin" />
-                Resolving {bulk.done} of {bulk.total}…
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <button
-                    disabled={busy}
-                    onClick={() => (allSelfOwned ? adoptAllSelf() : setPending({ kind: 'all', action: 'ADOPT' }))}
-                    className="flex-1 h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 active:scale-95 transition-all shadow-xs disabled:opacity-40"
-                  >
-                    {allSelfOwned ? `Continue all ${orphans.length}` : `Adopt all ${orphans.length}`}
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => setPending({ kind: 'all', action: 'CANCEL' })}
-                    className="flex-1 h-10 rounded-xl bg-white border border-slate-200 text-rose-600 font-semibold text-xs hover:bg-rose-50 active:scale-95 transition-all disabled:opacity-40"
-                  >
+          ) : (
+            <div className="w-full">
+              {orphans.length > 1 && (
+                <div className="flex gap-2.5 mb-2.5">
+                  <DialogButton variant="danger" disabled={busy} onClick={() => setPending({ kind: 'all', action: 'CANCEL' })}>
                     Void all {orphans.length}
-                  </button>
+                  </DialogButton>
+                  <DialogButton variant="ink" disabled={busy} onClick={() => (allSelfOwned ? adoptAllSelf() : setPending({ kind: 'all', action: 'ADOPT' }))}>
+                    {allSelfOwned ? `Continue all ${orphans.length}` : `Adopt all ${orphans.length}`}
+                  </DialogButton>
                 </div>
-                <p className="text-center text-[11px] text-slate-400 mt-2.5 leading-relaxed">
-                  {formatPKR(total)} across {orphans.length} order{orphans.length === 1 ? '' : 's'}.
-                  You can’t take orders until this list is clear.
+              )}
+              <p className="text-center text-[12.5px] text-ink-3">
+                {formatPKR(total)} across {orphans.length === 1 ? '1 order' : `${orphans.length} orders`}. New orders open once this list is clear.
+              </p>
+            </div>
+          )
+        }
+      >
+        <ul className="border border-line rounded-xl divide-y divide-line overflow-hidden">
+          {orphans.map((o) => (
+            <li key={o.id} className="px-3.5 py-3 flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[14px] font-semibold text-ink tabular-nums whitespace-nowrap">#{o.orderNumber}</span>
+                  <OrderTypeBadge type={o.type} tableLabel={o.tableLabel} size="sm" />
+                  <StatusBadge status={o.status} className="hidden sm:inline-flex" />
+                </div>
+                <p className="mt-0.5 text-[12.5px] text-ink-3 truncate">
+                  {o.itemCount} item{o.itemCount === 1 ? '' : 's'} · {formatPKR(o.total)}
+                  {o.originalCashier ? ` · ${o.originalCashier}` : ''}
                 </p>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  disabled={busy}
+                  onClick={() => setPending({ kind: 'one', order: o, action: 'CANCEL' })}
+                  className="h-9 px-3 rounded-lg border border-line text-[13px] font-semibold text-danger hover:bg-danger/10 hover:border-danger/30 disabled:opacity-40"
+                >
+                  Void
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => (isSelfOwned(o) ? adoptSelf(o) : setPending({ kind: 'one', order: o, action: 'ADOPT' }))}
+                  className="h-9 px-3.5 rounded-lg bg-ink text-white text-[13px] font-semibold hover:bg-ink-2 disabled:opacity-40"
+                >
+                  {selfBusyId === o.id ? 'Working…' : isSelfOwned(o) ? 'Continue' : 'Adopt'}
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Dialog>
 
       {pending && (
         <ManagerOverrideModal
@@ -279,17 +256,13 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, currentUser
           onConfirm={resolve}
           title={
             pending.kind === 'all'
-              ? pending.action === 'ADOPT' ? `Adopt all ${orphans.length} orders` : `Cancel all ${orphans.length} orders`
-              : pending.action === 'ADOPT' ? 'Adopt Order' : 'Cancel Orphan Order'
+              ? `${pending.action === 'ADOPT' ? 'Adopt' : 'Cancel'} ${orphans.length === 1 ? '1 order' : `all ${orphans.length} orders`}`
+              : `${pending.action === 'ADOPT' ? 'Adopt' : 'Cancel'} order ${pending.order.orderNumber}`
           }
           description={
-            pending.kind === 'all'
-              ? pending.action === 'ADOPT'
-                ? `Enter your manager PIN and a reason to move all ${orphans.length} orders into the current shift.`
-                : `Enter your manager PIN and a reason to cancel all ${orphans.length} orders. This voids every one.`
-              : pending.action === 'ADOPT'
-                ? `Enter your manager PIN and a reason to move ${pending.order.orderNumber} into the current shift.`
-                : `Enter your manager PIN and a reason to cancel ${pending.order.orderNumber}. This voids the order.`
+            pending.action === 'ADOPT'
+              ? `${pending.kind === 'all' ? (orphans.length === 1 ? 'It moves' : 'They move') : 'It moves'} into the current shift and counts toward it from now on.`
+              : `${pending.kind === 'all' && orphans.length > 1 ? 'Every one is voided' : 'The order is voided'}. This can’t be undone.`
           }
           reasonLabel="Reason"
           reasonPlaceholder={
@@ -297,8 +270,8 @@ export function OrphanResolutionModal({ orphans, intoShiftId, token, currentUser
           }
           confirmLabel={
             pending.kind === 'all'
-              ? pending.action === 'ADOPT' ? `Adopt ${orphans.length}` : `Cancel ${orphans.length}`
-              : pending.action === 'ADOPT' ? 'Adopt Order' : 'Cancel Order'
+              ? `${pending.action === 'ADOPT' ? 'Adopt' : 'Cancel'} ${orphans.length === 1 ? 'order' : orphans.length}`
+              : pending.action === 'ADOPT' ? 'Adopt order' : 'Cancel order'
           }
         />
       )}
