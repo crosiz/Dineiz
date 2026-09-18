@@ -567,20 +567,29 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
     const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { timezone: true } });
     const { from, to } = getBusinessDayRange(branch?.timezone || 'Asia/Karachi');
 
-    const branchPending = await prisma.order.count({
+    // Returned as a list, not just a count. With only a number, the POS could
+    // say "1 order from today is not settled" but not WHICH — and since these
+    // can belong to other (already closed) shifts, the cashier looked through
+    // their own tickets, found nothing open, and was stuck.
+    const branchPending = await prisma.order.findMany({
       where: {
         branchId, tenantId,
         status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
         createdAt: { gte: from, lte: to },
         items: { some: {} }, // ignore phantom empty orders (see above)
       },
+      select: { id: true, orderNumber: true, totalAmount: true, netAmount: true, status: true, table: { select: { label: true } } },
+      orderBy: { createdAt: 'asc' },
+      take: 40,
     });
 
-    if (branchPending > 0) {
+    if (branchPending.length > 0) {
+      const n = branchPending.length;
       blockers.push({
         type: 'SOLE_CASHIER_ACTIVE',
-        message: `You are the only cashier on shift at this branch. There are ${branchPending} orders from today that have not been settled. Closing your shift would leave these orders unresolved.`,
-        count: branchPending,
+        message: `You're the last cashier on shift, and ${n === 1 ? '1 order from today is' : `${n} orders from today are`} still open at this branch. Settle or cancel ${n === 1 ? 'it' : 'them'} first, or ask a manager to close anyway.`,
+        count: n,
+        orders: branchPending,
       });
     }
   } else if (activeShifts.length > 1) {

@@ -36,6 +36,9 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 8000;      // spec: hard 8s AbortController
 const DEFAULT_MAX_LIFETIME_MS = EVENT_MAX_LIFETIME_MS; // 24h from event-log.ts
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 16000, 32000];
 const DEGRADED_RETRY_MS = 60000;
+// How long an order with no live items may sit before its events are treated as
+// local-only (see deriveTaskChains). Far longer than createOrder → addItem.
+const EMPTY_ORDER_GRACE_MS = 2 * 60 * 1000;
 const CRITICAL_RETRY_MS = [500, 1000, 2000];  // spec: 3 fast retries for CRITICAL
 // A payment waits longer than everything else — see runCriticalTask.
 const CRITICAL_REQUEST_TIMEOUT_MS = 20000;
@@ -378,6 +381,18 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
               bodyEventIds, lane: laneOf(events),
             });
           } else {
+            // Nothing to create: the order has no live items. Normally that is
+            // the few milliseconds between createOrder and its first addItem,
+            // so wait. But an order that was emptied (every line removed) or
+            // cancelled before it ever synced stays that way, and waiting on it
+            // kept one change "pending" forever: the sync indicator never
+            // cleared and closing the shift reported an order that doesn't
+            // exist. The server never needs to hear about an order that never
+            // held anything, so those events end here.
+            const newest = Math.max(...events.map((e) => Date.parse(e.clientTime) || 0));
+            if (ORDER_TERMINAL_STATUSES.has(order.status) || now - newest > EMPTY_ORDER_GRACE_MS) {
+              toConfirm.push(...events.map((e) => e.id));
+            }
             continue;
           }
         }
@@ -1463,6 +1478,38 @@ export function forceSyncNow(): void {
   consecutiveFailures = 0;
   circuitOpen = false;
   kickOutbox('immediate');
+}
+
+/**
+ * Send everything queued and wait for it, up to `timeoutMs`. Resolves with
+ * how many changes are still unsent (0 = all through).
+ *
+ * For steps that ask the server a question about work this terminal may not
+ * have sent yet. Closing a shift asked "is anything still open?" before
+ * shipping the queue, so an order paid a few seconds earlier came back as
+ * unpaid and blocked the close.
+ */
+export async function flushOutbox(timeoutMs = 8000): Promise<number> {
+  forceSyncNow();
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const left = (await getUnsyncedSummary()).count;
+    if (left === 0 || Date.now() >= deadline) return left;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+}
+
+/**
+ * True when an order the server reports as still open is already settled on
+ * this terminal (paid, cancelled, voided): the server just hasn't received it.
+ */
+export function isSettledLocally(serverOrder: { id?: string; orderNumber?: string }): boolean {
+  const orders = useViews.getState().orders;
+  const local = Object.values(orders).find(
+    (o) => (serverOrder.id && (o.serverId === serverOrder.id || o.id === serverOrder.id)) ||
+      (serverOrder.orderNumber && o.orderNumber === serverOrder.orderNumber),
+  );
+  return !!local && ORDER_TERMINAL_STATUSES.has(local.status);
 }
 
 /**

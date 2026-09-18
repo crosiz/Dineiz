@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
 import {
-  getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox,
+  getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox, flushOutbox, isSettledLocally,
   type SyncCategoryProgress,
 } from '@/lib/core/outbox';
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
@@ -38,6 +38,21 @@ interface CloseShiftModalProps {
 }
 
 
+// An order the server still lists as unpaid but this terminal has settled
+// (its payment is in the queue) is not an open order; the sync step before the
+// close sends it. Listing it made the cashier hunt for an order that was paid.
+function dropLocallySettled(summary: any) {
+  if (!Array.isArray(summary?.unpaidOrdersList)) return summary;
+  const list = summary.unpaidOrdersList.filter((o: any) => !isSettledLocally(o));
+  if (list.length === summary.unpaidOrdersList.length) return summary;
+  return {
+    ...summary,
+    unpaidOrdersList: list,
+    unpaidOrders: list.length,
+    unpaidValue: list.reduce((sum: number, o: any) => sum + (Number(o.netAmount) || 0), 0),
+  };
+}
+
 /** PKR notes and coins, largest first — the order a cashier counts them in. */
 const DENOMINATIONS = [5000, 1000, 500, 100, 50, 20, 10, 5];
 
@@ -51,6 +66,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const closeWithUnsyncedRequiresPin = cfg.closeWithUnsyncedRequiresPin ?? true;
   const SYNC_TIMEOUT_MS = Math.max(5, Number(cfg.shiftCloseSyncTimeoutSec ?? 45)) * 1000 || DEFAULT_SYNC_TIMEOUT_MS;
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingNote, setLoadingNote] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [summary, setSummary] = useState<any>(null);
   // The shift this terminal thinks is open was already closed server-side
@@ -108,6 +124,17 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     if (showSpinner) setIsLoading(true);
     setNoOpenShift(false);
     try {
+      // The summary is the server's view of this shift. Anything still queued
+      // here (a payment taken seconds ago) goes first, or it comes back as an
+      // unpaid order.
+      const pending = await getUnsyncedSummary();
+      const queued = pending.count;
+      const reachable = navigator.onLine !== false && !pending.circuitOpen;
+      if (queued > 0 && reachable) {
+        setLoadingNote(`Sending ${queued} change${queued === 1 ? '' : 's'} to the server…`);
+        await flushOutbox(8000);
+      }
+      setLoadingNote(null);
       const resolvedId = await resolveActiveShiftId(API_URL);
       setShiftId(resolvedId);
       // resolveActiveShiftId already cleared the stale `pos_shift` from
@@ -138,7 +165,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         return;
       }
       if (!res.ok) throw new Error('Failed to fetch shift summary');
-      setSummary(await res.json());
+      setSummary(dropLocallySettled(await res.json()));
     } catch (err: any) {
       toast.error(err.message || 'Error fetching shift summary');
     } finally {
@@ -595,7 +622,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
                   <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#FF5722] animate-spin" />
-                  <span className="text-xs font-medium">Calculating totals…</span>
+                  <span className="text-xs font-medium">{loadingNote ?? 'Calculating totals…'}</span>
                 </div>
               ) : noOpenShift ? (
                 <div className="text-center py-10 px-4">
