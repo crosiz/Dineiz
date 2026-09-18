@@ -15,10 +15,11 @@ import { useViews, type OrderView } from '@/lib/core/views';
 import { markReady, sendToKitchen } from '@/lib/core/commands';
 import { toast } from 'sonner';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { TicketCard, TicketIconButton, type TicketAction, type TicketLine } from '@/components/orders/TicketCard';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { API_URL } from '@/lib/api';
-import { Armchair, ChevronDown, CircleUser, Clock, Columns3, LayoutGrid, ListFilter, Loader2, MessageSquare, Plus, Printer, QrCode, Rows3, Search, User, X, Zap } from 'lucide-react';
+import { Armchair, ChevronDown, CircleUser, Clock, Columns3, LayoutGrid, ListFilter, Loader2, MessageSquare, Plus, Printer, QrCode, Rows3, Search, Trash2, User, X, Zap } from 'lucide-react';
 
 /**
  * Collapse identical lines for display: "1x Seekh Kabab" × 4 → "4x Seekh Kabab".
@@ -284,7 +285,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
   // For history mode: show a spinner only on the very first load (no IDB data yet)
   // Live mode never blocks — the view store is always already populated.
-  const isLoading = dataMode === 'history' && isFetching && orders.length === 0;
+  // Live orders come from the view store, which replays the local event log on
+  // start; until it has, "no orders" would be a lie.
+  const viewsReady = useViews((st) => st.isReady);
+  const isLoading = dataMode === 'history' ? (isFetching && orders.length === 0) : !viewsReady;
 
   const heldOrders = useLiveQuery(() => {
     const db = getDB();
@@ -303,6 +307,17 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       WHATSAPP: nonCompleted.filter((o: any) => o.source === 'WHATSAPP').length,
     };
   }, [orders, heldOrders, dataMode]);
+
+  const statusCounts = useMemo(() => {
+    const live = (orders ?? []).filter((o: any) => o.status !== 'COMPLETED');
+    return {
+      ALL: live.length + heldOrders.length,
+      PENDING: live.filter((o: any) => o.status === 'PENDING').length,
+      IN_KITCHEN: live.filter((o: any) => o.status === 'IN_KITCHEN').length,
+      READY: live.filter((o: any) => o.status === 'READY').length,
+      HELD: heldOrders.length,
+    };
+  }, [orders, heldOrders]);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -786,173 +801,132 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       );
     }
 
-    return (
-      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-line shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-line-strong hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="flex justify-between items-start gap-3 mb-4">
-            {/* The order number is the one thing someone reads this card for, and
-                it was wrapping mid-token — "#2-1809-" / "001" — because it shared
-                a line with the table chip inside a 108px box. It gets its own
-                line and never breaks; the table chip sits under it. */}
-            <div className="min-w-0">
-              <span className="block text-2xl font-black text-ink tracking-tight whitespace-nowrap tabular-nums">
-                #{order.tokenNumber || order.orderNumber || order.id.slice(-4)}
-              </span>
-              {order.tableLabel && (
-                <span className={`inline-block mt-1 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-sm' : 'text-xs text-ink-3 bg-canvas border-line'}`}>
-                  {order.tableLabel}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              {dataMode === 'history' ? (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  Reprint
-                </button>
-              ) : (
-                <>
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mb-4 mt-[-4px]">
-            <span className="text-xs font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase tracking-wider">{typeLabel}</span>
-            {order.assignedWaiterName && (
-              <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                <User className="w-[12px] h-[12px]" />
-                {order.assignedWaiterName}
-              </div>
-            )}
-          </div>
-          
-          <div className="space-y-2.5 mb-6 flex-1">
-            {parsedItems.slice(0, 4).map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between text-sm leading-tight">
-                <span className="text-ink-2 font-medium truncate pr-2">
-                  <span className="text-ink-3 mr-1.5 font-bold">{item.quantity || item.qty}x</span>
-                  {(item as any).name || (item as any).itemName || (item as any).item?.name}
-                </span>
-              </div>
-            ))}
-            {parsedItems.length > 4 && (
-              <div className="text-[11px] text-ink-3 font-bold tracking-wide pt-1">
-                + {parsedItems.length - 4} MORE ITEMS
-              </div>
-            )}
-            {parsedItems.length === 0 && (
-              <div className="text-sm text-ink-2 font-medium py-1">{order.itemCount || 0} Items included in this order</div>
-            )}
-          </div>
-          
-          <div className="flex justify-between items-end pt-4 border-t border-line">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase text-ink-3 font-bold tracking-wider mb-0.5">Total Amount</span>
-              <span className="text-lg font-black text-ink tracking-tight">{formatPKR(totalAmount)}</span>
-            </div>
-            {dataMode === 'history' && (
-              <span className="text-xs font-bold text-ink-3 bg-sunken border border-line px-2 py-1 rounded uppercase tracking-wider">
-                {order.status}
-              </span>
-            )}
-          </div>
-        </div>
-        
-        {dataMode === 'live' && (
-          <div className="flex border-t border-line bg-canvas">
-            {!!order.heldAt && (
-              <button
-                onClick={(e) => deleteHeldOrder(order.id, e)}
-                className="w-1/3 py-3.5 text-sm font-bold transition-colors flex justify-center items-center text-red-600 hover:bg-red-50 border-r border-line"
-              >
-                Delete
-              </button>
-            )}
-            {!order.heldAt && (
-              <button
-                onClick={(e) => handlePrintBill(order, e)}
-                disabled={printingId === order.id}
-                title="Print Bill"
-                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line disabled:opacity-50"
-              >
-                {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
-              </button>
-            )}
-            {isWhatsApp && order.customerPhone && (
-              <a
-                href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                title="Message Customer"
-                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line"
-              >
-                <MessageSquare className="w-[18px] h-[18px]" />
-              </a>
-            )}
-            <button
-              disabled={isUpdatingThis || (isInKitchen && useKDS)}
-              onClick={onActionClick}
-              className={`flex-1 py-3.5 text-sm font-bold transition-colors flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'text-ink hover:bg-hover'}`}
-            >
-              {!!order.heldAt ? 'Resume Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
-            </button>
-          </div>
+    // Grid: the shared ticket card (components/orders/TicketCard.tsx).
+    const ticketLines: TicketLine[] = parsedItems.map((item: any) => {
+      const opts = item.options ?? {};
+      const modifiers = [opts.variation?.name, ...(Array.isArray(opts.addOns) ? opts.addOns.map((a: any) => a?.name) : [])]
+        .filter(Boolean)
+        .join(', ');
+      return {
+        qty: Number(item.quantity || item.qty || 1),
+        name: item.name || item.itemName || item.item?.name || 'Item',
+        note: item.notes || item.note || null,
+        modifiers: modifiers || null,
+      };
+    });
+
+    const primary: TicketAction | null = dataMode !== 'live' ? null
+      : order.heldAt ? { label: 'Resume', tone: 'brand', onClick: onActionClick }
+      : isPending && isQR ? { label: 'Confirm order', tone: 'brand', onClick: onActionClick, busy: isUpdatingThis }
+      : isPending ? (useKDS
+          ? { label: 'Send to kitchen', tone: 'brand', onClick: onActionClick, busy: isUpdatingThis }
+          : { label: 'Mark ready', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis })
+      : isInKitchen && useKDS ? { label: 'Cooking', tone: 'quiet', onClick: onActionClick, disabled: true }
+      : isInKitchen ? { label: 'Mark ready', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis }
+      : isReady ? { label: 'Collect payment', tone: 'brand', onClick: onActionClick }
+      : { label: 'View', tone: 'ink', onClick: onActionClick };
+
+    const flags = (isQR || isWhatsApp || hasPaidOnline) ? (
+      <span className="flex items-center gap-1 shrink-0">
+        {isQR && <span className="h-5 px-1.5 inline-flex items-center gap-1 rounded bg-special/10 text-special text-[10.5px] font-semibold"><QrCode className="w-3 h-3" />QR</span>}
+        {isWhatsApp && <span className="h-5 px-1.5 inline-flex items-center gap-1 rounded bg-ok/10 text-ok text-[10.5px] font-semibold"><MessageSquare className="w-3 h-3" />WhatsApp</span>}
+        {hasPaidOnline && <span className="h-5 px-1.5 inline-flex items-center rounded bg-ok/10 text-ok text-[10.5px] font-semibold">Paid online</span>}
+      </span>
+    ) : null;
+
+    const secondary = dataMode === 'history' ? (
+      <TicketIconButton title="Reprint receipt" onClick={(e) => handlePrintBill(order, e)} disabled={printingId === order.id}>
+        {printingId === order.id ? <Loader2 className="animate-spin w-4 h-4" /> : <Printer className="w-4 h-4" />}
+      </TicketIconButton>
+    ) : (
+      <>
+        {!!order.heldAt ? (
+          <TicketIconButton title="Delete held order" tone="danger" onClick={(e) => deleteHeldOrder(order.id, e)}>
+            <Trash2 className="w-4 h-4" />
+          </TicketIconButton>
+        ) : (
+          <TicketIconButton title="Print bill" onClick={(e) => handlePrintBill(order, e)} disabled={printingId === order.id}>
+            {printingId === order.id ? <Loader2 className="animate-spin w-4 h-4" /> : <Printer className="w-4 h-4" />}
+          </TicketIconButton>
         )}
-      </div>
+        {isWhatsApp && order.customerPhone && (
+          <TicketIconButton
+            title="Message customer"
+            onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`, '_blank', 'noopener'); }}
+          >
+            <MessageSquare className="w-4 h-4" />
+          </TicketIconButton>
+        )}
+      </>
+    );
+
+    return (
+      <TicketCard
+        key={order.id}
+        orderNumber={String(order.tokenNumber || order.orderNumber || order.id.slice(-4))}
+        type={order.type}
+        tableLabel={order.tableLabel}
+        status={order.heldAt ? 'HELD' : order.status}
+        createdAt={dataMode === 'live' ? timeRef : null}
+        lines={ticketLines}
+        totalItems={ticketLines.reduce((s, l) => s + l.qty, 0) || order.itemCount || 0}
+        total={Number(totalAmount)}
+        meta={[
+          order.assignedWaiterName && `Waiter ${order.assignedWaiterName.split(' ')[0]}`,
+          order.guestCount ? `${order.guestCount} guest${order.guestCount === 1 ? '' : 's'}` : null,
+          order.customerName,
+        ]}
+        flags={flags}
+        primary={primary}
+        secondary={secondary}
+        onOpen={openOrder}
+        dimmed={dataMode === 'history'}
+      />
     );
   };
 
   return (
     <main className="flex-1 bg-canvas overflow-y-auto no-scrollbar font-body-md pb-24 text-ink">
-      {/* Background sync pill — only visible while network is fetching over cached data */}
-      {isStale && (
-        <div className="fixed top-4 right-4 z-[100] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur border border-line shadow-sm text-[11px] font-bold text-ink-3 pointer-events-none">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-          Syncing
-        </div>
-      )}
-      {/* Sub-header Toolbar */}
-      <div className="px-8 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-line">
-        
-        {/* Left: Filter Buttons / Status Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-          {dataMode === 'live' ? (
-            ['ALL', 'PENDING', 'IN_KITCHEN', 'READY', 'HELD'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab as any)}
-                className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
-                  filter === tab
-                    ? 'bg-brand text-white border-brand shadow-sm'
-                    : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
-                }`}
-              >
-                {tab === 'ALL' ? 'All Live' : tab.replace('_', ' ')}
-              </button>
-            ))
-          ) : (
-            ['ALL', 'COMPLETED', 'CANCELLED'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setFilter(tab as any)}
-                className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
-                  filter === tab
-                    ? 'bg-brand text-white border-brand shadow-sm'
-                    : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
-                }`}
-              >
-                {tab === 'ALL' ? 'All History' : tab}
-              </button>
-            ))
-          )}
+      {/* Toolbar */}
+      <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface">
+
+        {/* Status filter: one segmented control, each tab with its count, so
+            "how many are ready?" is answered without tapping anything. */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <div className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-sunken border border-line">
+            {(dataMode === 'live'
+              ? ([
+                  ['ALL', 'All', statusCounts.ALL],
+                  ['PENDING', 'Pending', statusCounts.PENDING],
+                  ['IN_KITCHEN', 'In kitchen', statusCounts.IN_KITCHEN],
+                  ['READY', 'Ready', statusCounts.READY],
+                  ['HELD', 'On hold', statusCounts.HELD],
+                ] as const)
+              : ([
+                  ['ALL', 'All', null],
+                  ['COMPLETED', 'Paid', null],
+                  ['CANCELLED', 'Cancelled', null],
+                ] as const)
+            ).map(([tab, label, n]) => {
+              const active = filter === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setFilter(tab as any)}
+                  className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                    active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
+                  }`}
+                >
+                  {label}
+                  {n !== null && n > 0 && (
+                    <span className={`min-w-5 h-5 px-1.5 rounded-full grid place-items-center text-[11px] tabular-nums ${active ? 'bg-ink text-white' : 'bg-line text-ink-2'}`}>
+                      {n}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
           {dataMode === 'live' && counts.WHATSAPP > 0 && (
             <button
               onClick={() => setSourceFilter(sourceFilter === 'WHATSAPP' ? 'ALL' : 'WHATSAPP')}
@@ -970,7 +944,15 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
 
         {/* Right: Search + Sort + View Mode */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-2 ml-auto">
+          {/* Refreshing over cached data. Inline, not a fixed pill: the pill sat
+              at top-right and covered the header clock and avatar. */}
+          {isStale && (
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-3 pr-1" aria-live="polite">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Updating
+            </span>
+          )}
           {dataMode === 'history' && (
             <div className="relative">
               <input
@@ -978,9 +960,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 placeholder="Search ticket #, customer..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="bg-white border border-line-strong focus:border-brand rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-ink placeholder:text-ink-4 outline-none shadow-sm"
+                className="h-10 w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[13px] font-medium text-ink placeholder:text-ink-4 outline-none"
               />
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-4 w-[16px] h-[16px]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 w-4 h-4" />
             </div>
           )}
 
@@ -989,28 +971,45 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
-              className="bg-white border border-line-strong rounded-xl px-3 py-2 text-xs font-bold text-ink outline-none appearance-none pr-8 shadow-sm cursor-pointer"
+              className="h-10 bg-surface border border-line rounded-xl pl-3 pr-8 text-[13px] font-semibold text-ink outline-none appearance-none cursor-pointer hover:border-line-strong"
             >
-              <option value="oldest">Oldest First</option>
-              <option value="newest">Newest First</option>
-              <option value="table">By Table</option>
+              <option value="oldest">Oldest first</option>
+              <option value="newest">Newest first</option>
+              <option value="table">By table</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none w-[18px] h-[18px]" />
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none w-4 h-4" />
           </div>
           
-          <div className="hidden sm:flex items-center bg-sunken border border-line-strong p-1 rounded-xl">
-            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
+          <div className="hidden sm:inline-flex items-center gap-0.5 bg-sunken border border-line p-1 rounded-xl">
+            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Grid View" aria-label="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="List View" aria-label="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Kanban View" aria-label="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
           </div>
         </div>
       </div>
 
         {/* Order Cards Area */}
-        <div className="px-8 mt-2">
-          {/* History-only first-load spinner — live always shows cached data instantly */}
-          {isLoading && <div className="text-ink-4 text-center py-10 font-medium">Loading order history...</div>}
-          {!isLoading && filteredOrders.length === 0 && <div className="text-ink-4 text-center py-10 font-medium">No orders found.</div>}
+        <div className="px-4 sm:px-6 pt-5">
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-[196px] rounded-xl border border-line bg-surface animate-pulse" />
+              ))}
+            </div>
+          )}
+          {!isLoading && filteredOrders.length === 0 && (
+            <div className="py-20 flex flex-col items-center text-center">
+              <div className="w-12 h-12 rounded-xl bg-sunken border border-line grid place-items-center text-ink-3 mb-3">
+                <Search className="w-5 h-5" />
+              </div>
+              <p className="text-[15px] font-semibold text-ink">
+                {dataMode === 'history' ? 'No orders in this period' : filter === 'ALL' ? 'No live orders' : 'Nothing here right now'}
+              </p>
+              <p className="text-[13px] text-ink-3 mt-1">
+                {dataMode === 'history' ? 'Try a different date or filter.' : 'New orders appear here the moment they are punched.'}
+              </p>
+            </div>
+          )}
 
           {!isLoading && filteredOrders.length > 0 && (viewMode === 'list' || viewMode === 'grid') && !groupByType && (
             viewMode === 'list' ? (
@@ -1018,28 +1017,27 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 {filteredOrders.map((order: any) => renderCard(order, 'list'))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filteredOrders.map((order: any) => renderCard(order, 'grid'))}
               </div>
             )
           )}
 
           {!isLoading && filteredOrders.length > 0 && (viewMode === 'list' || viewMode === 'grid') && groupByType && (
-            <div className="flex flex-col gap-9">
+            <div className="flex flex-col gap-7">
               {dineInOrders.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-[#2A5DB0]" />
-                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Dine-In</h3>
-                    <span className="text-[12px] font-bold text-ink-4">{dineInOrders.length} table{dineInOrders.length === 1 ? '' : 's'}</span>
-                    <div className="h-px flex-1 bg-hover" />
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 rounded-full bg-info" />
+                    <h3 className="text-[14px] font-semibold text-ink">Dine-in</h3>
+                    <span className="text-[13px] text-ink-3 tabular-nums">{dineInOrders.length}</span>
                   </div>
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3">
                       {dineInOrders.map((order: any) => renderCard(order, 'list'))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {dineInOrders.map((order: any) => renderCard(order, 'grid'))}
                     </div>
                   )}
@@ -1048,18 +1046,17 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
               {otherOrders.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2.5 mb-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <span className="w-2 h-2 rounded-full bg-brand" />
-                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Takeaway &amp; Delivery</h3>
-                    <span className="text-[12px] font-bold text-ink-4">{otherOrders.length} waiting</span>
-                    <div className="h-px flex-1 bg-hover" />
+                    <h3 className="text-[14px] font-semibold text-ink">Takeaway &amp; delivery</h3>
+                    <span className="text-[13px] text-ink-3 tabular-nums">{otherOrders.length}</span>
                   </div>
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3">
                       {otherOrders.map((order: any) => renderCard(order, 'list'))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {otherOrders.map((order: any) => renderCard(order, 'grid'))}
                     </div>
                   )}
