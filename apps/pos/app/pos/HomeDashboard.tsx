@@ -9,7 +9,11 @@ import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useShiftStats } from '@/hooks/useShiftStats';
 import { useViews } from '@/lib/core/views';
-import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { OrderTypeBadge } from '@/components/OrderStatusBadge';
+import { TicketCard, type TicketLine } from '@/components/orders/TicketCard';
+import { formatElapsed, minutesSince } from '@/lib/time';
+import { TABLE_TONE } from '@/lib/table-tone';
+import type { ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
 import { kickOutbox } from '@/lib/core/outbox';
@@ -18,12 +22,65 @@ import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
 import { isViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
-import { AlertCircle, Armchair, ArrowRight, Banknote, CheckCircle2, Clock, CloudOff, Pause, ReceiptText, Search, ShoppingBag, Utensils, X } from 'lucide-react';
+import { AlertCircle, Armchair, ArrowRight, Banknote, CheckCircle2, ChevronRight, Clock, CloudOff, Pause, ReceiptText, Search, ShoppingBag, Utensils, X, type LucideIcon } from 'lucide-react';
 
 // How long a ticket can sit in PENDING/IN_KITCHEN before it's worth
 // surfacing on Home — matches the "rush" framing already used for KDS
 // (kds/page.tsx's default rushThreshold).
 const AGING_TICKET_MINUTES = 20;
+
+// An order's live lines, identical ones merged, for the compact ticket.
+function viewLines(order: any): TicketLine[] {
+  const merged = new Map<string, TicketLine>();
+  for (const it of order?.items ?? []) {
+    if (it?.voided) continue;
+    const name = it?.itemName ?? it?.name ?? 'Item';
+    const key = [name, it?.variationName ?? '', it?.note ?? ''].join('|');
+    const qty = Number(it?.qty ?? it?.quantity ?? 1);
+    const existing = merged.get(key);
+    if (existing) existing.qty += qty;
+    else merged.set(key, { qty, name, note: it?.note ?? null, modifiers: it?.variationName ?? null });
+  }
+  return Array.from(merged.values());
+}
+
+const ATTENTION_TONE = {
+  warn: 'bg-warn/15 text-warn',
+  danger: 'bg-danger/10 text-danger',
+  info: 'bg-info/10 text-info',
+  brand: 'bg-brand/10 text-brand',
+} as const;
+
+function AttentionRow({
+  tone, Icon, title, subtitle, onClick, action,
+}: {
+  tone: keyof typeof ATTENTION_TONE;
+  Icon: LucideIcon;
+  title: string;
+  subtitle: ReactNode;
+  onClick?: () => void;
+  action?: ReactNode;
+}) {
+  const body = (
+    <>
+      <span className={`w-9 h-9 rounded-lg grid place-items-center shrink-0 ${ATTENTION_TONE[tone]}`}>
+        <Icon className="w-[18px] h-[18px]" strokeWidth={2.25} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold text-ink truncate">{title}</span>
+        <span className="block text-[12.5px] text-ink-3 mt-0.5">{subtitle}</span>
+      </span>
+      {action ?? (onClick && <ChevronRight className="w-4 h-4 text-ink-4 shrink-0" />)}
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-sunken transition-colors">
+      {body}
+    </button>
+  ) : (
+    <div className="px-4 py-3 flex items-center gap-3">{body}</div>
+  );
+}
 
 const ACTIVE_STATUSES = ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'];
 
@@ -307,360 +364,317 @@ export default function HomeDashboard() {
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto lg:overflow-hidden no-scrollbar">
         {/* Left Column (60%) */}
         <div className="lg:col-span-7 p-4 sm:p-8 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
-          {/* Hero Actions Grid (4 Cards 2x2 Layout) */}
+          {/* Quick actions. Compact tiles: the four things a cashier starts
+              from, without two thirds of the screen given to icons. */}
           <section>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
               {[
                 {
-                  label: 'New Order',
-                  sublabel: 'Table service & floor plan',
+                  label: 'New order',
+                  sublabel: 'Pick a table',
                   Icon: Utensils,
                   usePrimary: true,
                   onClick: () => guardOrderEntry(() => router.push('/pos/tables')),
                 },
                 {
-                  label: 'Takeaway Order',
-                  sublabel: 'Quick pick-up & counter order',
+                  label: 'Takeaway',
+                  sublabel: 'Counter & pick-up',
                   Icon: ShoppingBag,
                   usePrimary: false,
                   onClick: () => guardOrderEntry(() => router.push('/pos/order?type=takeaway')),
                 },
                 {
-                  label: 'Active Orders',
-                  sublabel: 'View kitchen & live orders',
+                  label: 'Tickets',
+                  sublabel: activeOrders.length > 0 ? `${activeOrders.length} live` : 'Nothing live',
                   Icon: ReceiptText,
                   usePrimary: false,
                   onClick: () => router.push('/pos/tickets'),
                 },
                 {
-                  label: 'Held Orders',
-                  sublabel: heldOrdersCount > 0 ? `${heldOrdersCount} held order${heldOrdersCount > 1 ? 's' : ''}` : 'No held orders',
+                  label: 'On hold',
+                  sublabel: heldOrdersCount > 0 ? `${heldOrdersCount} waiting` : 'None held',
                   Icon: Pause,
                   usePrimary: false,
                   onClick: () => router.push('/pos/tickets?filter=held'),
                 },
               ].map((action, idx) => (
-                <div
+                <button
                   key={idx}
+                  type="button"
                   onClick={action.onClick}
-                  className={`hero-card h-[180px] rounded-2xl flex flex-col justify-between p-6 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.98] ${
+                  className={`h-[104px] rounded-xl p-4 flex flex-col justify-between text-left transition-colors active:scale-[0.99] ${
                     action.usePrimary
-                      ? 'bg-brand text-white shadow-xl shadow-orange-500/30 border-none'
-                      : 'bg-white border border-line hover:border-line-strong shadow-sm text-ink'
+                      ? 'bg-brand text-on-brand hover:bg-brand-strong'
+                      : 'bg-surface border border-line hover:border-line-strong text-ink'
                   }`}
                 >
-                  <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      action.usePrimary
-                        ? 'bg-white/20 border border-white/30 text-white'
-                        : 'bg-amber-50 border border-amber-200 text-brand'
+                  <span
+                    className={`w-9 h-9 rounded-lg grid place-items-center ${
+                      action.usePrimary ? 'bg-white/15 text-on-brand' : 'bg-sunken text-ink-2'
                     }`}
                   >
-                    <action.Icon className="w-7 h-7" />
-                  </div>
-                  <div>
-                    <div className={`clash-display text-2xl font-bold ${action.usePrimary ? 'text-white' : 'text-ink'}`}>
+                    <action.Icon className="w-[18px] h-[18px]" strokeWidth={2.25} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-[15px] font-semibold leading-tight ${action.usePrimary ? 'text-on-brand' : 'text-ink'}`}>
                       {action.label}
-                    </div>
-                    <div className={`text-sm font-semibold ${action.usePrimary ? 'text-white/95' : 'text-ink-3'}`}>
+                    </span>
+                    <span className={`block text-[12px] mt-0.5 truncate ${action.usePrimary ? 'text-white/85' : 'text-ink-3'}`}>
                       {action.sublabel}
-                    </div>
-                  </div>
-                </div>
+                    </span>
+                  </span>
+                </button>
               ))}
             </div>
           </section>
 
-          {/* Active Orders Strip */}
+          {/* Active orders: the same ticket as the Tickets screen, compact. */}
           <section>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="clash-display text-2xl text-ink">Active Orders</h3>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-[17px] font-semibold text-ink">
+                Active orders
+                {activeOrders.length > 0 && <span className="ml-2 text-[14px] font-medium text-ink-3 tabular-nums">{activeOrders.length}</span>}
+              </h2>
               <button
                 onClick={() => router.push('/pos/tickets')}
-                className="text-brand font-bold text-sm flex items-center gap-1 hover:underline"
+                className="text-[13px] font-semibold text-brand hover:text-brand-strong flex items-center gap-1"
               >
-                View All <ArrowRight className="w-[14px] h-[14px]" />
+                View all <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-              {activeOrders.length === 0 && homeSearch === '' ? (
-                <div className="text-ink-3 italic p-4">No active orders</div>
-              ) : (
-                (() => {
-                  const filtered = homeSearch
-                    ? activeOrders.filter(
-                        (o) =>
-                          (o.orderNumber || '').toLowerCase().includes(homeSearch.toLowerCase()) ||
-                          (o.tableLabel || '').toLowerCase().includes(homeSearch.toLowerCase()) ||
-                          (o.type || '').toLowerCase().includes(homeSearch.toLowerCase())
-                      )
-                    : activeOrders;
+            {(() => {
+              const q = homeSearch.trim().toLowerCase();
+              const filtered = q
+                ? activeOrders.filter(
+                    (o) =>
+                      (o.orderNumber || '').toLowerCase().includes(q) ||
+                      (o.tableLabel || '').toLowerCase().includes(q) ||
+                      (o.type || '').toLowerCase().includes(q),
+                  )
+                : activeOrders;
 
-                  if (filtered.length === 0 && homeSearch !== '') {
-                    return <div className="text-ink-3 italic p-4">No orders match your search</div>;
-                  }
+              if (filtered.length === 0) {
+                return (
+                  <div className="h-[120px] rounded-xl border border-dashed border-line-strong grid place-items-center text-center px-6">
+                    <p className="text-[13px] text-ink-3">
+                      {q ? 'No active orders match that search.' : 'No active orders. New ones appear here as they are punched.'}
+                    </p>
+                  </div>
+                );
+              }
 
-                  return filtered.map((order: any) => {
-                    const itemCount = Array.isArray(order.items)
-                      ? order.items.reduce((acc: number, i: any) => acc + (i.qty ?? i.quantity ?? 1), 0)
-                      : (order.itemCount || order.itemsCount || 1);
-                    const amount = order.netAmount ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0;
-                    const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';
-                    // Same left-accent language Tickets already uses for
-                    // service type (see TicketsDashboard's "Dine-In" /
-                    // "Takeaway & Delivery" section dots) rather than
-                    // inventing a new colour scheme just for this card.
-                    const accentColor = order.type === 'DINE_IN' ? '#2A5DB0' : 'var(--pos-primary,#F59E0B)';
-
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => openOrderDetails(order)}
-                        style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
-                        className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-line-strong transition-all border border-line flex flex-col gap-2.5"
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <span className="text-ink font-bold clash-display text-lg leading-none">#{order.tokenNumber || order.orderNumber}</span>
-                          <StatusBadge status={order.status} />
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
-                          {/* The label already IS the table's name ("T-4"), so
-                              prefixing it printed "T-T-4". A branch is free to
-                              call its tables anything — "Patio 2", "VIP" — and a
-                              hardcoded prefix is wrong for all of them. */}
-                          {order.tableLabel && (
-                            <span className="text-[10px] font-bold text-ink-2 bg-canvas border border-line px-1.5 py-0.5 rounded">{order.tableLabel}</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-ink-3 font-medium truncate">{itemCount} item{itemCount === 1 ? '' : 's'}</div>
-                        <div className="flex justify-between items-end pt-1 mt-auto border-t border-line">
-                          <span className="text-ink font-bold clash-display">{formatPKR(Math.round(amount))}</span>
-                          {order.createdAt && <TicketTimer createdAt={order.createdAt} />}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()
-              )}
-            </div>
+              return (
+                <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
+                  {filtered.map((order: any) => (
+                    <TicketCard
+                      key={order.id}
+                      compact
+                      orderNumber={String(order.tokenNumber || order.orderNumber)}
+                      type={order.type}
+                      tableLabel={order.tableLabel}
+                      status={order.status}
+                      createdAt={order.createdAt}
+                      lines={viewLines(order)}
+                      total={Math.round(order.netAmount ?? order.totalAmount ?? 0)}
+                      onOpen={() => openOrderDetails(order)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </section>
 
-          {/* Needs Attention — real, actionable signal derived from data this
-              screen already loads, in place of the old "Alerts" section
-              (which called a GET-only endpoint's DELETE, rendered fields
-              that endpoint never returned, and showed manager-facing
-              ingredient stock to a cashier — see HomeDashboard notes above). */}
-          <section className="flex flex-col gap-2" id="needs-attention-section">
-            <h3 className="clash-display text-2xl mb-1 text-ink">Needs Attention</h3>
-            {needsAttentionCount === 0 ? (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700">
-                <CheckCircle2 className="w-[20px] h-[20px]" />
-                <p className="font-bold">All clear — nothing waiting on you.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {agingTickets.map((order: any) => {
-                  const minutes = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
-                  return (
-                    <div
-                      key={`aging-${order.id}`}
-                      onClick={() => openOrderDetails(order)}
-                      className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-amber-300 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <Clock className="text-amber-600 w-[20px] h-[20px]" />
-                        <div>
-                          <p className="font-bold text-ink">Order #{order.tokenNumber || order.orderNumber} has been waiting {minutes}m</p>
-                          <p className="text-xs text-ink-3">{order.tableLabel ? `Table ${order.tableLabel}` : order.type} · still {order.status === 'PENDING' ? 'not sent to kitchen' : 'in the kitchen'}</p>
-                        </div>
-                      </div>
-                      <span className="text-amber-700 font-bold text-xs uppercase tracking-widest px-2">View</span>
-                    </div>
-                  );
-                })}
-
-                {billRequestedTables.map((t: any) => (
-                  <div
-                    key={`bill-${t.id}`}
-                    onClick={() => router.push('/pos/tables')}
-                    className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:border-rose-300 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <Banknote className="text-rose-600 w-[20px] h-[20px]" />
-                      <div>
-                        <p className="font-bold text-ink">Table {t.label} is waiting for the bill</p>
-                        <p className="text-xs text-ink-3">Customer requested payment</p>
-                      </div>
-                    </div>
-                    <span className="text-rose-700 font-bold text-xs uppercase tracking-widest px-2">Go to Table</span>
+          {/* Needs attention: one list, one row per thing to act on. It was a
+              stack of full-width amber/rose/sky banners, each repeating
+              "Order #… has been waiting 267m" with a bare VIEW link. */}
+          <section id="needs-attention-section">
+            <h2 className="text-[17px] font-semibold text-ink mb-3">
+              Needs attention
+              {needsAttentionCount > 0 && <span className="ml-2 text-[14px] font-medium text-ink-3 tabular-nums">{needsAttentionCount}</span>}
+            </h2>
+            <div className="bg-surface border border-line rounded-xl divide-y divide-line overflow-hidden">
+              {needsAttentionCount === 0 && (
+                <div className="px-4 py-3.5 flex items-center gap-3">
+                  <span className="w-9 h-9 rounded-lg grid place-items-center bg-ok/10 text-ok shrink-0">
+                    <CheckCircle2 className="w-[18px] h-[18px]" />
+                  </span>
+                  <div>
+                    <p className="text-[14px] font-semibold text-ink">All clear</p>
+                    <p className="text-[12.5px] text-ink-3">Nothing is waiting on you.</p>
                   </div>
-                ))}
+                </div>
+              )}
 
-                {unsyncedCount > 0 && (
-                  <div className={`p-4 rounded-xl flex items-center justify-between shadow-sm border ${
-                    stuckCount > 0 ? 'bg-rose-50 border-rose-200' : 'bg-sky-50 border-sky-200'
-                  }`}>
-                    <div className="flex items-center gap-4">
-                      {stuckCount > 0
-                        ? <AlertCircle className="w-5 h-5 text-rose-600" />
-                        : <CloudOff className="w-5 h-5 text-sky-600" />}
-                      <div>
-                        <p className="font-bold text-ink">
-                          {stuckCount > 0
-                            ? `${stuckCount} change${stuckCount > 1 ? 's' : ''} the server rejected — needs a manager`
-                            : `${unsyncedCount} change${unsyncedCount > 1 ? 's' : ''} not yet synced`}
-                        </p>
-                        <p className="text-xs text-ink-3">
-                          {stuckCount > 0 ? 'Review in Settings → Sync & Data' : 'Will sync automatically in the background'}
-                        </p>
-                      </div>
-                    </div>
+              {unsyncedCount > 0 && (
+                <AttentionRow
+                  tone={stuckCount > 0 ? 'danger' : 'info'}
+                  Icon={stuckCount > 0 ? AlertCircle : CloudOff}
+                  title={stuckCount > 0
+                    ? `${stuckCount} change${stuckCount > 1 ? 's' : ''} the server rejected`
+                    : `${unsyncedCount} change${unsyncedCount > 1 ? 's' : ''} waiting to sync`}
+                  subtitle={stuckCount > 0 ? 'A manager can review them in Settings → Sync & data' : 'They send automatically when the server is reachable'}
+                  action={
                     <button
                       onClick={retrySync}
                       disabled={isRetryingSync}
-                      className="bg-sky-600 text-white px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm disabled:opacity-50"
+                      className="h-8 px-3 rounded-lg border border-line text-[12.5px] font-semibold text-ink-2 hover:bg-sunken hover:text-ink disabled:opacity-50"
                     >
-                      {isRetryingSync ? 'Syncing…' : 'Retry Now'}
+                      {isRetryingSync ? 'Syncing…' : 'Sync now'}
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  }
+                />
+              )}
+
+              {billRequestedTables.map((t: any) => (
+                <AttentionRow
+                  key={`bill-${t.id}`}
+                  tone="brand"
+                  Icon={Banknote}
+                  title={`${t.label} wants the bill`}
+                  subtitle="Collect payment at the table"
+                  onClick={() => router.push('/pos/tables')}
+                />
+              ))}
+
+              {agingTickets.slice(0, 5).map((order: any) => (
+                <AttentionRow
+                  key={`aging-${order.id}`}
+                  tone={minutesSince(order.createdAt) >= 45 ? 'danger' : 'warn'}
+                  Icon={Clock}
+                  title={`#${order.tokenNumber || order.orderNumber} · ${formatElapsed(order.createdAt)} ${order.status === 'PENDING' ? 'unsent' : 'in the kitchen'}`}
+                  subtitle={
+                    <span className="inline-flex items-center gap-2">
+                      <OrderTypeBadge type={order.type} tableLabel={order.tableLabel} size="sm" />
+                      {order.status === 'PENDING' ? 'Not sent to the kitchen yet' : 'Check with the kitchen'}
+                    </span>
+                  }
+                  onClick={() => openOrderDetails(order)}
+                />
+              ))}
+              {agingTickets.length > 5 && (
+                <button
+                  onClick={() => router.push('/pos/tickets')}
+                  className="w-full px-4 py-3 text-left text-[13px] font-semibold text-brand hover:bg-sunken"
+                >
+                  {agingTickets.length - 5} more waiting orders
+                </button>
+              )}
+            </div>
           </section>
         </div>
 
-        {/* Right Column (40%) */}
-        <div className="lg:col-span-5 bg-canvas border-t lg:border-t-0 lg:border-l border-line p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
-          {/* Shift Info Card */}
-          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h4 className="text-ink-3 text-xs font-bold uppercase tracking-wider mb-1">Your Shift</h4>
-                <div className="flex items-center gap-2">
-                  <span className="clash-display text-2xl font-bold text-ink">
+        {/* Right column: this shift, then the floor. */}
+        <div className="lg:col-span-5 bg-canvas border-t lg:border-t-0 lg:border-l border-line p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-4">
+          {/* Shift and its numbers, as one card. */}
+          <section className="bg-surface border border-line rounded-xl">
+            <div className="p-5 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-ink-3">Your shift</p>
+                <div className="mt-1 flex items-center gap-2 min-w-0">
+                  <h3 className="text-[18px] font-semibold text-ink truncate">
                     {isMounted ? session?.cashierName || 'Operator' : 'Operator'}
-                  </span>
+                  </h3>
                   {activeShift && (
                     <span
-                      className={`px-2 py-0.5 text-[10px] font-black uppercase rounded-full flex items-center gap-1.5 ${
-                        shiftStatus === 'CONFIRMED'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                      className={`h-5 px-2 rounded-full inline-flex items-center gap-1.5 text-[11px] font-semibold shrink-0 ${
+                        shiftStatus === 'CONFIRMED' ? 'bg-ok/10 text-ok' : 'bg-sunken text-ink-2'
                       }`}
+                      title={shiftStatus === 'CONFIRMED' ? 'Open on the server' : 'Open on this terminal; the server confirms when it syncs'}
                     >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          shiftStatus === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-slate-400'
-                        }`}
-                      />
-                      {shiftStatus === 'CONFIRMED' ? 'Active' : 'Local'}
+                      <span className={`w-1.5 h-1.5 rounded-full ${shiftStatus === 'CONFIRMED' ? 'bg-ok' : 'bg-ink-4'}`} />
+                      {shiftStatus === 'CONFIRMED' ? 'Open' : 'On this terminal'}
                     </span>
                   )}
                 </div>
               </div>
+              <div className="text-right shrink-0">
+                <p className="text-[12px] font-medium text-ink-3">On shift</p>
+                <p className="mt-1 text-[18px] font-semibold text-ink tabular-nums">{activeShift ? shiftElapsed : '—'}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-brand">
-              <Clock className="w-[20px] h-[20px]" />
-              <span className="clash-display text-xl font-bold tracking-wide">Elapsed: {shiftElapsed}</span>
-            </div>
+            <dl className="grid grid-cols-3 border-t border-line divide-x divide-line">
+              {[
+                ['Orders paid', String(perf.ordersServed)],
+                ['Sales', formatPKR(Math.round(perf.totalValue))],
+                ['Avg. order', formatPKR(Math.round(perf.averagePerOrder))],
+              ].map(([label, value]) => (
+                <div key={label} className="px-4 py-3.5 min-w-0">
+                  <dt className="text-[12px] text-ink-3 truncate">{label}</dt>
+                  <dd className="mt-0.5 text-[16px] font-semibold text-ink tabular-nums truncate">{value}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
 
-          {/* Today at a Glance */}
-          <section>
-            <h4 className="clash-display text-2xl mb-4 text-ink">Today's Performance</h4>
-            <div className="flex flex-col gap-3">
-              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-ink-3 font-semibold">Orders served</span>
-                <div className="flex flex-col items-end">
-                  <span className="clash-display text-[36px] font-bold text-ink leading-none">{perf.ordersServed}</span>
-                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
-                </div>
-              </div>
-              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-ink-3 font-semibold">Total value</span>
-                <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-ink">{formatPKR(Math.round(perf.totalValue))}</span>
-                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'This shift' : 'No shift open'}</span>
-                </div>
-              </div>
-              <div className="bg-white border border-line p-4 flex justify-between items-center rounded-xl shadow-sm">
-                <span className="text-ink-3 font-semibold">Average per order</span>
-                <div className="flex flex-col items-end">
-                  <span className="clash-display text-2xl font-bold text-ink">{formatPKR(Math.round(perf.averagePerOrder))}</span>
-                  <span className="text-xs text-ink-4 font-medium mt-1">{activeShift ? 'Per order this shift' : 'No shift open'}</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Table Status Mini Map (Original UI) */}
-          <section className="flex-1 flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="clash-display text-2xl text-ink">Table Overview</h4>
-              <button onClick={() => router.push('/pos/tables')} className="text-brand text-sm font-bold border-b border-brand hover:text-brand-strong">
-                View Full Floor
+          {/* Tables: every table as a small tile in its status colour, with
+              the counts above. Tapping a table starts an order on it. */}
+          <section className="bg-surface border border-line rounded-xl flex flex-col">
+            <div className="px-5 pt-4 flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-ink">Tables</h3>
+              <button onClick={() => router.push('/pos/tables')} className="text-[13px] font-semibold text-brand hover:text-brand-strong flex items-center gap-1">
+                Floor plan <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="flex-1 bg-white border border-line rounded-2xl p-4 flex flex-col relative overflow-hidden shadow-sm">
-              {(() => {
-                const tablesByFloor = tables.reduce((acc, t) => {
-                  const f = t.floorNumber || 1;
-                  if (!acc[f]) acc[f] = [];
-                  acc[f].push(t);
-                  return acc;
-                }, {} as Record<number, any[]>);
-
-                const floorNumbers = Object.keys(tablesByFloor)
-                  .map(Number)
-                  .sort((a, b) => a - b);
-
-                return (
-                  <div
-                    id="home-table-carousel"
-                    className="flex-1 overflow-x-auto overflow-y-hidden no-scrollbar w-full flex snap-x snap-mandatory"
-                    style={{ scrollBehavior: 'smooth', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-                  >
-                    {floorNumbers.length === 0 ? (
-                      <div className="w-full flex flex-col items-center justify-center text-ink-3 gap-2 my-auto">
-                        <Armchair className="w-[30px] h-[30px]" />
-                        <span className="text-sm font-medium">No floor plan data loaded</span>
-                      </div>
-                    ) : (
-                      floorNumbers.map((fNum) => (
-                        <div key={fNum} className="min-w-full flex-shrink-0 snap-center flex flex-col items-center justify-start w-full pt-1">
-                          {floorNumbers.length > 1 && (
-                            <h5 className="text-ink-3 text-xs font-bold uppercase tracking-wider mb-2 text-center w-full shrink-0">
-                              Floor {fNum}
-                            </h5>
-                          )}
-                          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-x-1 gap-y-2 justify-items-center w-full px-2 pt-1 pb-6">
-                            {tablesByFloor[fNum].map((t: any) => (
-                              <div
+            {tables.length === 0 ? (
+              <div className="px-5 py-10 flex flex-col items-center text-ink-3 gap-2">
+                <Armchair className="w-6 h-6" />
+                <span className="text-[13px]">No floor plan loaded</span>
+              </div>
+            ) : (
+              <>
+                <div className="px-5 pt-2 pb-3 flex flex-wrap gap-x-4 gap-y-1">
+                  {(['FREE', 'OCCUPIED', 'BILL_REQUESTED', 'RESERVED', 'DIRTY'] as const).map((st) => {
+                    const n = tables.filter((t: any) => t.status === st).length;
+                    if (!n) return null;
+                    return (
+                      <span key={st} className="inline-flex items-center gap-1.5 text-[12px] text-ink-3">
+                        <span className={`w-2 h-2 rounded-full ${TABLE_TONE[st].dot}`} />
+                        <span className="tabular-nums font-semibold text-ink-2">{n}</span> {TABLE_TONE[st].label}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="px-5 pb-5 flex flex-col gap-4">
+                  {Object.entries(
+                    tables.reduce((acc: Record<number, any[]>, t: any) => {
+                      const f = t.floorNumber || 1;
+                      (acc[f] ||= []).push(t);
+                      return acc;
+                    }, {}),
+                  )
+                    .sort(([a], [b]) => Number(a) - Number(b))
+                    .map(([floor, list], _i, all) => (
+                      <div key={floor}>
+                        {all.length > 1 && <p className="text-[12px] font-medium text-ink-3 mb-2">Floor {floor}</p>}
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(68px,1fr))] gap-2">
+                          {(list as any[]).map((t) => {
+                            const tone = TABLE_TONE[t.status as keyof typeof TABLE_TONE] ?? TABLE_TONE.FREE;
+                            const order = t.activeOrderId ? ordersMap[t.activeOrderId] : null;
+                            return (
+                              <button
                                 key={t.id}
+                                type="button"
                                 onClick={() =>
                                   guardOrderEntry(() =>
-                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`)
+                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`),
                                   )
                                 }
-                                className="flex flex-col items-center gap-1.5 cursor-pointer transition-transform hover:scale-110 p-1.5"
+                                className={`h-[58px] rounded-lg border px-2 flex flex-col items-center justify-center transition-colors ${tone.tile}`}
+                                title={`${t.label} · ${tone.label}`}
                               >
-                                <div
-                                  className={`size-10 rounded-full ${
-                                    t.status !== 'FREE' ? 'bg-amber-500 ring-amber-200' : 'bg-emerald-500 ring-emerald-200'
-                                  } ring-4 shadow-sm`}
-                                />
-                                <span className="text-xs text-ink font-bold text-center">{t.label}</span>
-                              </div>
-                            ))}
-                          </div>
+                                <span className="text-[13px] font-semibold leading-none">{t.label}</span>
+                                <span className="mt-1 text-[11px] leading-none opacity-80 tabular-nums">
+                                  {order?.createdAt ? formatElapsed(order.createdAt) : `${t.capacity ?? 4} seats`}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
-                      ))
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
           </section>
         </div>
       </main>
