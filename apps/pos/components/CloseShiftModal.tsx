@@ -12,6 +12,7 @@ import {
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { isShiftPendingOpen, resolveShiftId } from '@/lib/offline-shift';
 import { localShiftSummary } from '@/lib/local-shift-summary';
+import { OrderTypeBadge } from '@/components/OrderStatusBadge';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
@@ -400,10 +401,62 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92dvh] animate-slide-up">
+  // ── Render ────────────────────────────────────────────────────────────────
+  // One frame for all four states (syncing, sync incomplete, closed, count),
+  // on the same shell and type scale as components/ui/Dialog.tsx. It used to
+  // be 140-odd raw palette classes (slate/amber/orange/emerald/sky/rose), an
+  // orange "Expected in drawer" slab, 10px uppercase labels and 11px buttons.
 
+  const frameHeader = (
+    Icon: typeof Clock,
+    tone: string,
+    title: string,
+    description?: React.ReactNode,
+    closable = false,
+  ) => (
+    <header className="px-6 pt-5 pb-4 flex items-start gap-3.5 shrink-0">
+      <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${tone}`}>
+        <Icon className="w-5 h-5" strokeWidth={2.1} />
+      </span>
+      <div className="min-w-0 flex-1 pt-0.5">
+        <h2 className="text-[17px] font-semibold text-ink leading-snug">{title}</h2>
+        {description && <div className="mt-1 text-[13.5px] leading-relaxed text-ink-3">{description}</div>}
+      </div>
+      {closable && (
+        <button
+          onClick={onClose}
+          aria-label="Cancel"
+          className="-mr-2 -mt-1 w-9 h-9 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+        >
+          <X className="w-[18px] h-[18px]" />
+        </button>
+      )}
+    </header>
+  );
+
+  const btn = {
+    primary: 'h-11 px-4 rounded-xl bg-brand text-on-brand text-[14px] font-semibold hover:bg-brand-strong disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2',
+    ink: 'h-11 px-4 rounded-xl bg-ink text-white text-[14px] font-semibold hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2',
+    secondary: 'h-11 px-4 rounded-xl bg-surface border border-line-strong text-ink text-[14px] font-semibold hover:bg-sunken disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2',
+  };
+
+  const varianceTone = variance === null
+    ? 'text-ink-3'
+    : Math.round(variance) === 0 ? 'text-ok' : variance > 0 ? 'text-info' : 'text-danger';
+  const varianceText = variance === null
+    ? 'Not counted'
+    : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? 'Over' : 'Short'} ${formatPKR(Math.abs(variance))}`;
+
+  const countMissing = cashCountRequired && closingCash === '';
+
+  return (
+    <div className="fixed inset-0 z-[200] grid place-items-center p-4">
+      <div className="absolute inset-0 bg-ink/45 backdrop-blur-[2px] animate-[overlay-in_140ms_ease-out]" aria-hidden />
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative w-full max-w-[520px] max-h-[calc(100dvh-32px)] flex flex-col bg-surface rounded-2xl border border-line shadow-[0_24px_64px_rgba(15,23,42,0.18)] animate-[dialog-in_180ms_cubic-bezier(0.16,1,0.3,1)]"
+      >
         {syncPhase !== 'none' ? (
           // ── Sync step (spec Part 6) ──────────────────────────────────────
           (() => {
@@ -413,358 +466,263 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             const rate = syncElapsed > 0 ? done / syncElapsed : 0;
             const etaSec = rate > 0 ? Math.ceil(syncNow.total / rate) : null;
             const row = (label: string, b: number, n: number) => (
-              <div className="flex items-center justify-between text-xs py-1">
-                <span className="text-slate-600 font-medium">{label}</span>
+              <div className="flex items-center justify-between py-2 text-[13px]">
+                <span className="text-ink-2">{label}</span>
                 <span className="flex items-center gap-2">
-                  <span className="tabular-nums font-semibold text-slate-900">{Math.max(0, b - n)} of {b}</span>
+                  <span className="tabular-nums font-semibold text-ink">{Math.max(0, b - n)} of {b}</span>
                   {n === 0
-                    ? <Check size={13} className="text-emerald-600" />
-                    : <RefreshCw size={12} className="text-amber-500 animate-spin" style={{ animationDuration: '1.4s' }} />}
+                    ? <Check className="w-4 h-4 text-ok" />
+                    : <RefreshCw className="w-3.5 h-3.5 text-ink-3 animate-spin" style={{ animationDuration: '1.4s' }} />}
                 </span>
               </div>
             );
-            return (
-              <div className="p-6">
-                {syncPhase === 'syncing' ? (
-                  <>
-                    <div className="flex items-center gap-2.5 mb-4">
-                      <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-                        <RefreshCw size={17} className="animate-spin" style={{ animationDuration: '1.5s' }} />
-                      </div>
-                      <h2 className="text-base font-bold text-slate-900">Syncing your shift</h2>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-1.5">
+
+            if (syncPhase === 'syncing') {
+              return (
+                <>
+                  {frameHeader(RefreshCw, 'bg-info/10 text-info', 'Sending your shift to the server', 'Every order and payment goes through before the shift closes.')}
+                  <div className="px-6 pb-5">
+                    <div className="w-full h-2 rounded-full bg-sunken overflow-hidden">
                       <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="text-[11px] text-slate-500 font-medium tabular-nums mb-4">{done} of {base.total}</p>
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 mb-4">
+                    <p className="mt-2 text-[12.5px] text-ink-3 tabular-nums">
+                      {done} of {base.total} sent · {syncElapsed}s{etaSec !== null && syncNow.total > 0 ? ` · about ${etaSec}s left` : ''}
+                    </p>
+                    <div className="mt-4 px-4 rounded-xl border border-line divide-y divide-line">
                       {row('Payments', base.payments, syncNow.payments)}
                       {row('Orders', base.orders, syncNow.orders)}
                       {row('Other', base.other, syncNow.other)}
                     </div>
-                    <p className="text-[11px] text-slate-400 font-medium mb-4 tabular-nums">
-                      Elapsed {syncElapsed}s{etaSec !== null && syncNow.total > 0 ? ` · Estimated ${etaSec}s remaining` : ''}
-                    </p>
-                    {allowCloseWithUnsynced && (
+                  </div>
+                  {allowCloseWithUnsynced && (
+                    <footer className="px-6 py-4 border-t border-line">
                       <button
                         onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
                         disabled={isSubmitting}
-                        className="w-full h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                        className={`${btn.secondary} w-full`}
                       >
-                        Close in Background
+                        Close now, finish sending in the background
                       </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
-                        <CloudOff size={17} />
-                      </div>
-                      <h2 className="text-base font-bold text-slate-900">
-                        {serverUnreachable ? "Can't reach the server" : 'Sync incomplete'}
-                      </h2>
-                    </div>
-                    {serverUnreachable ? (
-                      <p className="text-xs text-slate-600 leading-relaxed mb-5">
-                        <strong className="text-slate-900 tabular-nums">{syncNow.total} change{syncNow.total === 1 ? '' : 's'}</strong> haven&apos;t
-                        reached the server yet. They&apos;re saved on this device and sync
-                        automatically once the connection is back — no need to wait here.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="text-xs text-slate-600 leading-relaxed mb-1">
-                          <strong className="text-slate-900 tabular-nums">{syncNow.total} item{syncNow.total === 1 ? '' : 's'}</strong> could not sync.
-                        </p>
-                        <p className="text-xs text-slate-500 leading-relaxed mb-5">
-                          Financial data is safe on this device and will sync automatically.
-                        </p>
-                      </>
-                    )}
-                    <div className={`flex gap-2.5 ${serverUnreachable ? 'flex-col-reverse' : ''}`}>
-                      <button
-                        onClick={beginSyncWait}
-                        disabled={isSubmitting}
-                        className={`h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5 ${allowCloseWithUnsynced && !serverUnreachable ? 'flex-1' : 'w-full'}`}
-                      >
-                        <RefreshCw size={13} /> {serverUnreachable ? 'Try the connection again' : 'Keep Trying'}
-                      </button>
-                      {allowCloseWithUnsynced && (
-                        <button
-                          onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
-                          disabled={isSubmitting}
-                          className={`h-10 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 disabled:opacity-50 transition-colors ${serverUnreachable ? 'w-full' : 'flex-1'}`}
-                        >
-                          {serverUnreachable ? 'Close shift · finish sync later' : 'Close Anyway'}
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-400 text-center mt-3">
-                      {!allowCloseWithUnsynced
-                        ? 'Your administrator requires the queue to clear before this shift can close.'
-                        : serverUnreachable
-                          ? (closeWithUnsyncedRequiresPin
-                              ? 'Needs a manager PIN. The shift closes now and finishes syncing on its own.'
-                              : 'The shift closes now and finishes syncing on its own.')
-                          : (closeWithUnsyncedRequiresPin
-                              ? 'Close Anyway needs a manager PIN and flags this shift for review.'
-                              : 'Closing now flags this shift for review; it keeps syncing in the background.')}
-                    </p>
-                  </>
+                    </footer>
+                  )}
+                </>
+              );
+            }
+
+            return (
+              <>
+                {frameHeader(
+                  CloudOff,
+                  serverUnreachable ? 'bg-warn/15 text-warn' : 'bg-danger/10 text-danger',
+                  serverUnreachable ? 'Can’t reach the server' : 'Some changes didn’t send',
+                  serverUnreachable ? (
+                    <>
+                      <strong className="text-ink font-semibold tabular-nums">{syncNow.total} change{syncNow.total === 1 ? '' : 's'}</strong>{' '}
+                      {syncNow.total === 1 ? 'is' : 'are'} saved on this terminal and will send by themselves when the connection is back.
+                    </>
+                  ) : (
+                    <>
+                      <strong className="text-ink font-semibold tabular-nums">{syncNow.total} item{syncNow.total === 1 ? '' : 's'}</strong> could not send.
+                      {' '}They’re safe on this terminal and keep retrying.
+                    </>
+                  ),
                 )}
-              </div>
+                <div className="px-6 pb-5">
+                  <p className="text-[12.5px] text-ink-3 leading-relaxed">
+                    {!allowCloseWithUnsynced
+                      ? 'Your administrator requires everything to send before a shift can close.'
+                      : closeWithUnsyncedRequiresPin
+                        ? 'Closing now needs a manager PIN. The shift is flagged for review and finishes sending on its own.'
+                        : 'Closing now flags the shift for review; it finishes sending on its own.'}
+                  </p>
+                </div>
+                <footer className="px-6 py-4 border-t border-line flex gap-2.5">
+                  <button onClick={beginSyncWait} disabled={isSubmitting} className={`${btn.secondary} flex-1`}>
+                    <RefreshCw className="w-4 h-4" /> Try again
+                  </button>
+                  {allowCloseWithUnsynced && (
+                    <button
+                      onClick={() => (closeWithUnsyncedRequiresPin ? setShowCloseAnywayPin(true) : doClose(true))}
+                      disabled={isSubmitting}
+                      className={`${btn.ink} flex-1`}
+                    >
+                      Close anyway
+                    </button>
+                  )}
+                </footer>
+              </>
             );
           })()
         ) : isSuccess ? (
           // ── Closed ────────────────────────────────────────────────────────
-          <div className="p-8 text-center flex flex-col items-center">
-            {/* A light pastel chip + line icon is the generic "success" motif
-                every dashboard template reaches for — same size and shape
-                ManagerOverrideModal uses for its own PIN icon a tier down.
-                This is the one moment in the whole shift a cashier actually
-                pauses to see, so it gets the bolder, solid-fill treatment
-                that screen already established for "this matters", not a
-                smaller echo of it. */}
-            <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white mb-5 shadow-lg shadow-emerald-600/25">
-              <CheckCircle2 size={32} strokeWidth={2.25} />
-            </div>
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Shift Closed</h2>
-
-            <div className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 my-5 text-left">
-              <div className="flex justify-between text-xs py-1">
-                <span className="text-slate-500 font-medium">Expected in drawer</span>
-                <span className="font-bold text-slate-900 tabular-nums">{formatPKR(expectedCash)}</span>
-              </div>
-              <div className="flex justify-between text-xs py-1">
-                <span className="text-slate-500 font-medium">You counted</span>
-                <span className="font-bold text-slate-900 tabular-nums">{formatPKR(counted)}</span>
-              </div>
-              <div className="flex justify-between text-xs pt-2 mt-1 border-t border-slate-200">
-                <span className="font-bold text-slate-900">Variance</span>
-                <span className={`font-bold tabular-nums ${
-                  variance === null ? 'text-slate-400' : Math.round(variance) === 0 ? 'text-emerald-600' : variance > 0 ? 'text-sky-700' : 'text-rose-600'
-                }`}>
-                  {variance === null ? 'Not counted' : Math.round(variance) === 0 ? 'Balanced' : `${variance > 0 ? '+' : '−'}${formatPKR(Math.abs(variance))}`}
-                </span>
-              </div>
+          <>
+            <div className="px-6 pt-7 pb-2 flex flex-col items-center text-center">
+              <span className="w-14 h-14 rounded-full bg-ok/10 text-ok grid place-items-center mb-3">
+                <CheckCircle2 className="w-7 h-7" strokeWidth={2.25} />
+              </span>
+              <h2 className="text-[18px] font-semibold text-ink">Shift closed</h2>
+              <p className="mt-1 text-[13.5px] text-ink-3">Thanks — you’re all done for this shift.</p>
             </div>
 
-            {/* Report status — a real status line, not decoration. The PDF is
-                never generated automatically; this only ever shows something
-                once the cashier has actually tapped Generate Report below. */}
-            <div className="w-full mb-5 min-h-[20px] flex items-center justify-center gap-2 text-xs">
-              {reportState === 'working' && (
-                <>
-                  <Loader2 size={14} className="animate-spin text-slate-500" />
-                  <span className="text-slate-500 font-medium">Generating your shift report…</span>
-                </>
-              )}
-              {reportState === 'saved' && (
-                <>
-                  <CheckCheck size={14} className="text-emerald-600" />
-                  <span className="text-slate-600 font-medium truncate max-w-[320px]">Saved {savedFilename}</span>
-                </>
-              )}
-              {reportState === 'failed' && (
-                <span className="text-rose-600 font-medium">Report could not be generated — try again below.</span>
-              )}
+            <div className="px-6 py-4">
+              <dl className="rounded-xl border border-line divide-y divide-line text-[13.5px]">
+                <div className="flex justify-between px-4 py-2.5">
+                  <dt className="text-ink-3">Expected in drawer</dt>
+                  <dd className="font-semibold text-ink tabular-nums">{formatPKR(expectedCash)}</dd>
+                </div>
+                <div className="flex justify-between px-4 py-2.5">
+                  <dt className="text-ink-3">You counted</dt>
+                  <dd className="font-semibold text-ink tabular-nums">{variance === null ? '—' : formatPKR(counted)}</dd>
+                </div>
+                <div className="flex justify-between px-4 py-2.5">
+                  <dt className="font-semibold text-ink">Difference</dt>
+                  <dd className={`font-semibold tabular-nums ${varianceTone}`}>{varianceText}</dd>
+                </div>
+              </dl>
+
+              <p className="mt-3 min-h-5 flex items-center justify-center gap-2 text-[12.5px]">
+                {reportState === 'working' && (<><Loader2 className="w-3.5 h-3.5 animate-spin text-ink-3" /><span className="text-ink-3">Generating the shift report…</span></>)}
+                {reportState === 'saved' && (<><CheckCheck className="w-3.5 h-3.5 text-ok" /><span className="text-ink-2 truncate max-w-[360px]">Saved {savedFilename}</span></>)}
+                {reportState === 'failed' && <span className="text-danger">The report couldn’t be generated. Try again below.</span>}
+              </p>
             </div>
 
-            <div className="flex flex-col gap-2.5 w-full">
-              <button
-                onClick={() => shiftId && printShiftReport(shiftId, token).catch(e => toast.error(e.message))}
-                className="w-full h-11 bg-brand text-white rounded-xl font-semibold text-xs hover:bg-orange-600 transition-colors flex justify-center items-center gap-2 shadow-xs"
-              >
-                <Printer size={15} />
-                Print Report
-              </button>
-              <button
-                onClick={saveReport}
-                disabled={reportState === 'working'}
-                className="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 disabled:opacity-50 transition-colors flex justify-center items-center gap-2"
-              >
-                {reportState === 'saved' ? <Download size={15} /> : <Receipt size={15} />}
-                {reportState === 'saved' ? 'Download Again' : reportState === 'failed' ? 'Try Again' : 'Generate Report'}
-              </button>
-              <button
-                onClick={() => router.push('/login')}
-                className="w-full h-10 mt-1 text-slate-500 font-semibold text-xs hover:text-slate-900 transition-colors"
-              >
+            <footer className="px-6 py-4 border-t border-line flex flex-col gap-2">
+              <div className="flex gap-2.5">
+                <button onClick={saveReport} disabled={reportState === 'working'} className={`${btn.secondary} flex-1`}>
+                  {reportState === 'saved' ? <Download className="w-4 h-4" /> : <Receipt className="w-4 h-4" />}
+                  {reportState === 'saved' ? 'Download again' : reportState === 'failed' ? 'Try again' : 'Save report'}
+                </button>
+                <button
+                  onClick={() => shiftId && printShiftReport(shiftId, token).catch(e => toast.error(e.message))}
+                  className={`${btn.secondary} flex-1`}
+                >
+                  <Printer className="w-4 h-4" /> Print report
+                </button>
+              </div>
+              <button onClick={() => router.push('/login')} className={`${btn.primary} w-full`}>
                 Done
               </button>
-            </div>
-          </div>
+            </footer>
+          </>
         ) : (
+          // ── Count and close ──────────────────────────────────────────────
           <>
-            {/* Header */}
-            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-brand">
-                  <Clock size={18} />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 leading-tight">Close Shift</h2>
-                  <p className="text-xs text-slate-500 font-medium">Count the drawer and reconcile</p>
-                </div>
-              </div>
+            {frameHeader(Clock, 'bg-sunken text-ink-2', 'Close shift', 'Count the cash in the drawer, then close.', true)}
 
-              <button
-                onClick={onClose}
-                aria-label="Cancel"
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors"
-              >
-                <X size={15} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-white">
+            <div className="px-6 pb-5 overflow-y-auto min-h-0 flex-1">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-500">
-                  <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-[#FF5722] animate-spin" />
-                  <span className="text-xs font-medium">{loadingNote ?? 'Calculating totals…'}</span>
+                <div className="py-14 flex flex-col items-center gap-3 text-ink-3">
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                  <span className="text-[13px]">{loadingNote ?? 'Working out the totals…'}</span>
                 </div>
               ) : noOpenShift ? (
-                <div className="text-center py-10 px-4">
-                  <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto mb-3">
-                    <Clock size={20} />
-                  </div>
-                  <p className="text-slate-900 font-bold text-sm mb-1">This shift is already closed</p>
-                  <p className="text-slate-500 text-xs leading-relaxed max-w-[300px] mx-auto mb-5">
-                    It was closed automatically after being left open too long. Everything it recorded is
-                    saved. Open a fresh shift to keep serving.
+                <div className="py-8 text-center">
+                  <p className="text-[15px] font-semibold text-ink">This shift is already closed</p>
+                  <p className="mt-1 mx-auto max-w-[320px] text-[13.5px] text-ink-3 leading-relaxed">
+                    It closed automatically after being left open too long. Everything it recorded is saved.
                   </p>
-                  <div className="flex gap-2 justify-center">
-                    <button
-                      onClick={onClose}
-                      className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors"
-                    >
-                      Close
-                    </button>
-                    <button
-                      onClick={() => { onClose(); router.push('/pos/shift/open'); }}
-                      className="h-10 px-4 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
-                    >
-                      Open a New Shift
-                    </button>
-                  </div>
                 </div>
               ) : !summary ? (
-                <div className="text-center py-12">
-                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto mb-3">
-                    <AlertCircle size={20} />
-                  </div>
-                  <p className="text-rose-600 font-bold text-xs">Couldn&apos;t load the shift summary.</p>
-                  <p className="text-slate-400 text-[11px] mt-1">Check your connection and try reopening this dialog.</p>
+                <div className="py-10 text-center">
+                  <span className="w-11 h-11 rounded-xl bg-danger/10 text-danger grid place-items-center mx-auto mb-3">
+                    <AlertCircle className="w-5 h-5" />
+                  </span>
+                  <p className="text-[14px] font-semibold text-ink">Couldn’t load this shift’s totals</p>
+                  <p className="mt-1 text-[13px] text-ink-3">Close this and try again.</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-5">
-
+                <div className="flex flex-col gap-4">
                   {summary.local && (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-line bg-sunken px-3.5 py-2.5 text-[12px] leading-snug text-ink-2">
-                      <CloudOff size={15} className="mt-0.5 shrink-0 text-ink-3" />
-                      <span>
-                        No connection, so these figures are from this terminal only. You can still close the shift;
-                        the server rechecks the totals when it syncs.
-                      </span>
+                    <div className="flex items-start gap-2.5 rounded-xl border border-line bg-sunken px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-2">
+                      <CloudOff className="w-4 h-4 mt-0.5 shrink-0 text-ink-3" />
+                      <span>No connection, so these figures are from this terminal only. You can still close; the server rechecks them when it syncs.</span>
                     </div>
                   )}
 
-                  {/* Shift at a glance. Net Sales is paid orders only — the
-                      same basis as the drawer — so the two can't look like
-                      they disagree. Anything still open is its own line below. */}
-                  <div className="grid grid-cols-2 gap-2.5">
+                  {/* The shift at a glance. Sales are paid orders only — the
+                      same basis as the drawer — so the two never disagree. */}
+                  <dl className="grid grid-cols-2 sm:grid-cols-4 rounded-xl border border-line divide-x divide-line overflow-hidden [&>div:nth-child(3)]:border-l-0 sm:[&>div:nth-child(3)]:border-l">
                     {[
-                      { Icon: Timer, label: 'Duration', value: formatDuration(summary.openedAt) },
-                      { Icon: Receipt, label: 'Orders Paid', value: String(summary.totalOrders) },
-                      { Icon: Banknote, label: 'Net Sales', value: formatPKR(summary.totalSales) },
-                      { Icon: Coffee, label: 'Breaks', value: `${summary.breakCount ?? 0} · ${summary.totalBreakMinutes ?? 0}m` },
-                    ].map(({ Icon, label, value }) => (
-                      <div key={label} className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                          <Icon size={12} />
-                          {label}
-                        </p>
-                        <p className="text-sm font-bold text-slate-900 tabular-nums">{value}</p>
+                      ['On shift', formatDuration(summary.openedAt)],
+                      ['Orders paid', String(summary.totalOrders ?? 0)],
+                      ['Sales', formatPKR(summary.totalSales ?? 0)],
+                      ['Breaks', `${summary.breakCount ?? 0} · ${summary.totalBreakMinutes ?? 0}m`],
+                    ].map(([label, value]) => (
+                      <div key={label} className="px-3.5 py-3 min-w-0">
+                        <dt className="text-[12px] text-ink-3 truncate">{label}</dt>
+                        <dd className="mt-0.5 text-[15px] font-semibold text-ink tabular-nums truncate">{value}</dd>
                       </div>
                     ))}
-                  </div>
+                  </dl>
 
-                  {/* Still-open orders on this shift. Their value is deliberately
-                      NOT in Net Sales — nobody has paid for them — so saying so
-                      here is what stops the two numbers looking contradictory. */}
+                  {/* Still open on this shift: not in sales or the drawer until paid. */}
                   {(summary.unpaidOrders ?? 0) > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle size={15} className="text-amber-600 shrink-0 mt-0.5" />
-                        <p className="text-[12px] text-amber-900 leading-relaxed">
-                          <strong>{summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open</strong>
-                          {' '}({formatPKR(summary.unpaidValue ?? 0)}). Not counted in net sales or the drawer —
-                          settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} below before closing.
-                        </p>
-                      </div>
+                    <section className="rounded-xl border border-warn/40 bg-warn/5">
+                      <p className="px-4 pt-3 pb-2 text-[13px] text-ink-2 leading-relaxed">
+                        <strong className="font-semibold text-ink">
+                          {summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open
+                        </strong>{' '}
+                        ({formatPKR(summary.unpaidValue ?? 0)}). Settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} before closing.
+                      </p>
                       {Array.isArray(summary.unpaidOrdersList) && summary.unpaidOrdersList.length > 0 && (
-                        <div className="mt-2.5 space-y-1.5">
+                        <ul className="mx-2 mb-2 rounded-lg border border-line bg-surface divide-y divide-line">
                           {(summary.unpaidOrdersList as UnpaidOrderRow[]).map((o) => (
-                            <div key={o.id} className="flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border border-amber-200/70 text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="font-bold text-slate-900 font-mono">#{o.orderNumber}</span>
-                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase shrink-0">
-                                  {o.tableLabel || 'Takeaway'}
-                                </span>
+                            <li key={o.id} className="px-3 py-2.5 flex items-center gap-3">
+                              <div className="min-w-0 flex-1 flex items-center gap-2">
+                                <span className="text-[13.5px] font-semibold text-ink tabular-nums whitespace-nowrap">#{o.orderNumber}</span>
+                                <OrderTypeBadge type={o.tableLabel ? 'DINE_IN' : 'TAKEAWAY'} tableLabel={o.tableLabel} size="sm" />
                               </div>
-                              <div className="flex items-center gap-2.5 shrink-0">
-                                <span className="font-bold text-slate-900 font-mono">{formatPKR(o.netAmount)}</span>
-                                <button
-                                  onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
-                                  className="text-[11px] font-semibold text-brand hover:underline"
-                                >
-                                  Settle
-                                </button>
-                                <button
-                                  onClick={() => cancelUnpaidOrder(o.id)}
-                                  disabled={busyOrderId === o.id}
-                                  className="text-[11px] font-semibold text-rose-600 hover:underline disabled:opacity-50"
-                                >
-                                  {busyOrderId === o.id ? '…' : 'Cancel'}
-                                </button>
-                              </div>
-                            </div>
+                              <span className="text-[13px] text-ink-2 tabular-nums">{formatPKR(o.netAmount)}</span>
+                              <button
+                                onClick={() => cancelUnpaidOrder(o.id)}
+                                disabled={busyOrderId === o.id}
+                                className="h-8 px-2.5 rounded-md border border-line text-[12.5px] font-semibold text-danger hover:bg-danger/10 disabled:opacity-50"
+                              >
+                                {busyOrderId === o.id ? 'Working…' : 'Cancel'}
+                              </button>
+                              <button
+                                onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
+                                className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12.5px] font-semibold hover:bg-brand-strong"
+                              >
+                                Settle
+                              </button>
+                            </li>
                           ))}
-                        </div>
+                        </ul>
                       )}
-                    </div>
+                    </section>
                   )}
 
-                  {/* What the drawer should hold */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-orange-800 uppercase tracking-wider mb-2.5">Expected in Drawer</p>
-                    <div className="space-y-1 text-xs text-orange-900/80 font-medium">
-                      <div className="flex justify-between"><span>Opening float</span><span className="tabular-nums">{formatPKR(summary.openingFloat)}</span></div>
-                      <div className="flex justify-between"><span>Cash sales</span><span className="tabular-nums">{formatPKR(summary.totalCash)}</span></div>
-                      {summary.cashIn > 0 && <div className="flex justify-between"><span>Cash in</span><span className="tabular-nums">+{formatPKR(summary.cashIn)}</span></div>}
-                      {summary.cashOut > 0 && <div className="flex justify-between"><span>Cash out</span><span className="tabular-nums">−{formatPKR(summary.cashOut)}</span></div>}
-                    </div>
-                    <div className="flex justify-between items-baseline pt-2.5 mt-2.5 border-t border-orange-300/60">
-                      <span className="text-xs font-bold text-orange-900">Total</span>
-                      <span className="text-lg font-bold text-orange-900 tabular-nums">{formatPKR(expectedCash)}</span>
-                    </div>
-                  </div>
+                  {/* What the drawer should hold. */}
+                  <section>
+                    <h3 className="text-[13px] font-semibold text-ink-2 mb-2">Expected in the drawer</h3>
+                    <dl className="rounded-xl border border-line divide-y divide-line text-[13.5px]">
+                      <div className="flex justify-between px-4 py-2.5"><dt className="text-ink-3">Opening float</dt><dd className="text-ink-2 tabular-nums">{formatPKR(summary.openingFloat)}</dd></div>
+                      <div className="flex justify-between px-4 py-2.5"><dt className="text-ink-3">Cash sales</dt><dd className="text-ink-2 tabular-nums">{formatPKR(summary.totalCash)}</dd></div>
+                      {summary.cashIn > 0 && <div className="flex justify-between px-4 py-2.5"><dt className="text-ink-3">Cash in</dt><dd className="text-ink-2 tabular-nums">+ {formatPKR(summary.cashIn)}</dd></div>}
+                      {summary.cashOut > 0 && <div className="flex justify-between px-4 py-2.5"><dt className="text-ink-3">Cash out</dt><dd className="text-ink-2 tabular-nums">− {formatPKR(summary.cashOut)}</dd></div>}
+                      <div className="flex justify-between items-baseline px-4 py-3 bg-sunken/60">
+                        <dt className="font-semibold text-ink">Expected</dt>
+                        <dd className="text-[17px] font-bold text-ink tabular-nums">{formatPKR(expectedCash)}</dd>
+                      </div>
+                    </dl>
+                  </section>
 
-                  {/* Count */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <label className="text-[10px] font-bold text-slate-900 uppercase tracking-wider">Cash in Drawer</label>
-                      <div className="flex bg-slate-100 rounded-lg p-0.5">
+                  {/* The count. */}
+                  <section>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-[13px] font-semibold text-ink-2">Cash in the drawer</h3>
+                      <div className="inline-flex p-0.5 rounded-lg bg-sunken border border-line">
                         {([
-                          { key: 'total', label: 'Enter total' },
-                          { key: 'denominations', label: 'Count notes' },
-                        ] as const).map(m => (
+                          { key: 'total', label: 'Total' },
+                          { key: 'denominations', label: 'By note' },
+                        ] as const).map((m) => (
                           <button
                             key={m.key}
                             onClick={() => setCountMode(m.key)}
-                            className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition-colors ${
-                              countMode === m.key ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                            className={`h-7 px-3 rounded-md text-[12.5px] font-semibold transition-colors ${
+                              countMode === m.key ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
                             }`}
                           >
                             {m.label}
@@ -774,8 +732,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     </div>
 
                     {countMode === 'total' ? (
-                      <div className="h-14 border-2 border-slate-200 focus-within:border-brand rounded-xl bg-white flex items-center gap-3 px-4 transition-colors">
-                        <span className="text-xs font-bold text-brand">PKR</span>
+                      <label className="h-14 px-4 flex items-center gap-3 rounded-xl border border-line-strong focus-within:border-ink bg-surface transition-colors">
+                        <span className="text-[13px] font-semibold text-ink-3">PKR</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -785,17 +743,17 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                             const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
                             setClosingCash(d === '' ? '' : Number(d));
                           }}
-                          className="w-full bg-transparent border-0 shadow-none focus:shadow-none focus-visible:shadow-none focus:ring-0 text-right text-xl font-bold text-slate-900 tabular-nums placeholder:text-slate-300 outline-none"
+                          className="w-full bg-transparent border-0 outline-none text-right text-[22px] font-bold text-ink tabular-nums placeholder:text-ink-4"
                           placeholder="0"
                           autoFocus
                         />
-                      </div>
+                      </label>
                     ) : (
-                      <div className="border border-slate-200 rounded-xl overflow-hidden">
-                        {DENOMINATIONS.map((d, i) => (
-                          <div key={d} className={`flex items-center gap-3 px-3.5 py-1.5 ${i > 0 ? 'border-t border-slate-100' : ''}`}>
-                            <span className="w-[60px] text-xs font-bold text-slate-900 tabular-nums">{d.toLocaleString()}</span>
-                            <span className="text-slate-300 text-xs">×</span>
+                      <div className="rounded-xl border border-line divide-y divide-line overflow-hidden">
+                        {DENOMINATIONS.map((d) => (
+                          <div key={d} className="px-4 py-2 flex items-center gap-3">
+                            <span className="w-16 text-[13.5px] font-semibold text-ink tabular-nums">{d.toLocaleString('en-US')}</span>
+                            <span className="text-ink-4 text-[13px]">×</span>
                             <input
                               type="number"
                               inputMode="numeric"
@@ -803,76 +761,69 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                               value={counts[d] ?? ''}
                               onChange={(e) => {
                                 const v = e.target.value === '' ? 0 : Math.max(0, Number(e.target.value));
-                                setCounts(c => ({ ...c, [d]: v }));
+                                setCounts((c) => ({ ...c, [d]: v }));
                               }}
                               placeholder="0"
-                              className="w-14 border border-slate-200 rounded-lg px-2 py-1 text-[16px] font-bold text-center text-slate-900 outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-16 h-9 rounded-lg border border-line-strong text-center text-[15px] font-semibold text-ink outline-none focus:border-ink [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
-                            <span className="flex-1 text-right text-xs font-bold text-slate-600 tabular-nums">
+                            <span className="flex-1 text-right text-[13px] text-ink-2 tabular-nums">
                               {(counts[d] || 0) > 0 ? formatPKR(d * counts[d]) : '—'}
                             </span>
                           </div>
                         ))}
-                        <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-50 border-t border-slate-200">
-                          <span className="text-[10px] font-bold text-slate-900 uppercase tracking-wider">Counted</span>
-                          <span className="text-base font-bold text-slate-900 tabular-nums">{formatPKR(denominationTotal)}</span>
+                        <div className="px-4 py-3 flex items-baseline justify-between bg-sunken/60">
+                          <span className="font-semibold text-ink text-[13.5px]">Counted</span>
+                          <span className="text-[17px] font-bold text-ink tabular-nums">{formatPKR(denominationTotal)}</span>
                         </div>
                       </div>
                     )}
 
-                    {/* Variance */}
-                    <div className="mt-3 min-h-[22px]">
-                      {closingCash !== '' && variance !== null && (
-                        <div className={`flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold ${
-                          Math.round(variance) === 0
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : variance > 0
-                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}>
-                          {Math.round(variance) === 0 ? <Check size={14} /> : variance > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                          <span>
-                            {Math.round(variance) === 0
-                              ? 'Drawer balances'
-                              : variance > 0
-                                ? `Over by ${formatPKR(Math.abs(variance))}`
-                                : `Short by ${formatPKR(Math.abs(variance))}`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    {closingCash !== '' && variance !== null && (
+                      <p className={`mt-2.5 flex items-center gap-2 text-[13.5px] font-semibold ${varianceTone}`}>
+                        {Math.round(variance) === 0 ? <Check className="w-4 h-4" /> : variance > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                        {Math.round(variance) === 0
+                          ? 'The drawer balances'
+                          : `${variance > 0 ? 'Over' : 'Short'} by ${formatPKR(Math.abs(variance))}`}
+                      </p>
+                    )}
+                  </section>
 
-                  {/* Notes */}
-                  <div>
-                    <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-2">
-                      <FileEdit size={12} />
-                      Notes <span className="text-slate-500 font-medium normal-case">(optional)</span>
+                  <section>
+                    <label className="block text-[13px] font-semibold text-ink-2 mb-2" htmlFor="close-notes">
+                      Notes <span className="font-normal text-ink-4">(optional)</span>
                     </label>
                     <textarea
+                      id="close-notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Explain any variance, refunds or payouts…"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 text-xs outline-none focus:border-brand transition-colors resize-none h-20 placeholder:text-slate-400"
+                      placeholder="Explain any difference, refunds or payouts"
+                      className="w-full h-20 rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-4 outline-none focus:border-ink resize-none"
                     />
-                  </div>
+                  </section>
                 </div>
               )}
             </div>
 
-            {/* Footer — nothing to submit when there's no open shift to close */}
-            {!noOpenShift && (
-              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                <button
-                  onClick={handleSubmit}
-                  disabled={isLoading || isSubmitting || !summary || (cashCountRequired && closingCash === '')}
-                  className="w-full h-11 rounded-xl bg-brand hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center gap-2 transition-colors shadow-xs"
-                >
-                  {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCheck size={15} />}
-                  Close Shift &amp; Save Report
-                </button>
-              </div>
-            )}
+            <footer className="px-6 py-4 border-t border-line flex gap-2.5 shrink-0">
+              {noOpenShift ? (
+                <>
+                  <button onClick={onClose} className={`${btn.secondary} flex-1`}>Close</button>
+                  <button onClick={() => { onClose(); router.push('/pos/shift/open'); }} className={`${btn.primary} flex-1`}>Open a new shift</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={onClose} className={`${btn.secondary} flex-1`}>Cancel</button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isLoading || isSubmitting || !summary || countMissing}
+                    className={`${btn.primary} flex-[1.4]`}
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {countMissing ? 'Enter the cash counted' : 'Close shift'}
+                  </button>
+                </>
+              )}
+            </footer>
           </>
         )}
       </div>

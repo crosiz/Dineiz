@@ -7,6 +7,7 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import { ReceiptView, type ReceiptData } from '@/components/ReceiptView';
+import { OrderTypeBadge } from '@/components/OrderStatusBadge';
 import { formatPKR } from '@/lib/utils';
 import { API_URL } from '@/lib/api';
 import { resolveTaxConfig, isCardMethod, roundMoney } from '@/lib/pricing';
@@ -477,14 +478,21 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
+  const orderLabel = `#${orderNumber || orderId.slice(-6)}`;
+  const changeText = finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0
+    ? `Give ${formatPKR(Math.round(finalPaymentInfo.change))} change`
+    : 'The order is complete.';
+
   if (showSuccess && receiptSnapshot) {
     return (
-      <div className="fixed inset-0 bg-canvas flex flex-col items-center z-[60] animate-in fade-in duration-300 overflow-y-auto py-8 px-4">
-        <div className="w-20 h-20 bg-[#E9F7F0] border-2 border-ok rounded-full flex items-center justify-center mb-4 shrink-0 animate-in zoom-in-95 duration-500">
-          <Check className="text-ok font-bold w-[40px] h-[40px]" />
-        </div>
-        <h2 className="text-2xl font-bold text-ink mb-1">Payment Successful</h2>
-        <p className="text-ink-3 mb-6">{finalPaymentInfo?.method === 'CASH' && finalPaymentInfo.change > 0 ? `Give ${finalPaymentInfo.change.toFixed(0)} change` : 'Order completed'}</p>
+      <div className="fixed inset-0 bg-canvas flex flex-col items-center z-[60] overflow-y-auto py-10 px-4 animate-[overlay-in_160ms_ease-out]">
+        <span className="w-14 h-14 rounded-full bg-ok/10 text-ok grid place-items-center mb-3 shrink-0">
+          <Check className="w-7 h-7" strokeWidth={2.5} />
+        </span>
+        <h2 className="text-[20px] font-semibold text-ink">Payment received</h2>
+        <p className={`mt-1 mb-6 text-[15px] ${finalPaymentInfo?.method === 'CASH' && (finalPaymentInfo?.change ?? 0) > 0 ? 'font-semibold text-ink' : 'text-ink-3'}`}>
+          {changeText}
+        </p>
 
         <ReceiptView data={receiptSnapshot} />
 
@@ -493,26 +501,26 @@ export default function PaymentModal({
             <button
               onClick={() => handlePrintReceipt(finalPaymentInfo?.method || receiptSnapshot.paymentMethod, finalPaymentInfo?.tendered || 0, finalPaymentInfo?.change || 0)}
               disabled={isPrinting}
-              className="flex-1 h-[52px] rounded-xl border border-line-strong bg-white text-ink font-bold flex items-center justify-center gap-2 hover:bg-sunken transition-all disabled:opacity-50"
+              className="flex-1 h-12 rounded-xl border border-line-strong bg-surface text-ink text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-sunken disabled:opacity-50"
             >
-              {isPrinting ? <Loader2 className="animate-spin w-[20px] h-[20px]" /> : <Printer className="w-[20px] h-[20px]" />}
-              {isPrinting ? 'Printing…' : 'Print Receipt'}
+              {isPrinting ? <Loader2 className="animate-spin w-4 h-4" /> : <Printer className="w-4 h-4" />}
+              {isPrinting ? 'Printing…' : 'Print receipt'}
             </button>
             {customerPhone && (
               <a
                 href={`https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(receiptSnapshot.total).toLocaleString()}.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-[52px] rounded-xl bg-[#0F7A55] text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 transition-all"
+                className="flex-1 h-12 rounded-xl border border-line-strong bg-surface text-ink text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-sunken"
               >
-                <MessageSquare className="w-[20px] h-[20px]" />
-                Message Customer
+                <MessageSquare className="w-4 h-4 text-ok" />
+                Message
               </a>
             )}
           </div>
           <button
             onClick={handleDone}
-            className="w-full h-[52px] rounded-xl bg-brand text-white font-bold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.98] transition-all shadow-md"
+            className="w-full h-12 rounded-xl bg-brand text-on-brand text-[15px] font-semibold hover:bg-brand-strong"
           >
             Done
           </button>
@@ -521,342 +529,356 @@ export default function PaymentModal({
     );
   }
 
-  // z-[110]: OrderDetailsModal renders this as its own child at that same
-  // z-[100] in one of its call sites — "worked" only because this happens
-  // to be a later DOM sibling, no real stacking guarantee. 110 matches the
-  // tier that parent already uses for its other nested overlays.
+  const unconfigured = UNCONFIGURED_METHODS.includes(activeMethod);
+  const confirmDisabled =
+    totalWithTip <= 0 || isProcessing || unconfigured ||
+    (activeMethod === 'CASH' && !isCashValid) ||
+    (activeMethod === 'SPLIT' && !isSplitValid);
+  // The button says what it will do, or what's missing — never just "Confirm".
+  const confirmLabel = isProcessing
+    ? 'Processing…'
+    : unconfigured
+      ? 'Not connected'
+      : activeMethod === 'CASH'
+        ? (isCashValid
+            ? `Collect ${formatPKR(totalWithTip)}${changeDue > 0 ? ` · change ${formatPKR(Math.round(changeDue))}` : ''}`
+            : `Enter at least ${formatPKR(totalWithTip)}`)
+        : activeMethod === 'SPLIT'
+          ? (isSplitValid ? `Collect ${formatPKR(totalWithTip)}` : 'Split must add up to the total')
+          : `Charge ${formatPKR(totalWithTip)} to card`;
+
+  const quick = [500, 1000, 2000, 5000];
+  const keyCls = 'h-14 rounded-xl bg-sunken border border-line text-ink text-[20px] font-semibold tabular-nums hover:bg-hover active:scale-[0.97] transition';
+  const segCls = (active: boolean) =>
+    `h-10 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+      active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
+    }`;
+
+  // z-[110]: OrderDetailsModal renders this above its own z-[100] layer.
   return (
-    <div className="fixed inset-0 bg-black/60 z-[110] flex flex-col justify-end">
-      {/* Click outside to close */}
-      <div className="absolute inset-0 z-0" onClick={onClose}></div>
+    <div className="fixed inset-0 z-[110] flex items-end md:items-center justify-center md:p-4">
+      <div className="absolute inset-0 bg-ink/45 backdrop-blur-[2px] animate-[overlay-in_140ms_ease-out]" onClick={onClose} aria-hidden />
 
-      {/* MAIN CHECKOUT OVERLAY */}
-      <div className="relative h-[95dvh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-ink overflow-hidden border-t border-line">
-
-        {/* Drag Handle & Header */}
-        <div className="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0 relative z-10 bg-canvas border-b border-line">
-          <div className="w-12 h-1.5 bg-hover rounded-full mb-4"></div>
-          <div className="w-full flex justify-between items-start">
-            <div className="flex flex-col">
-              <h1 className="font-headline-md text-[22px] leading-tight text-ink font-bold">Checkout</h1>
-              <p className="text-body-sm text-ink-3 font-medium mt-0.5">
-                {tableLabel ? `Table ${tableLabel}` : 'Takeaway'} · #{orderId.slice(-6)}
-              </p>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Charge order ${orderLabel}`}
+        className="relative w-full md:max-w-[1000px] h-[95dvh] md:h-[min(780px,calc(100dvh-32px))] flex flex-col md:flex-row bg-surface rounded-t-2xl md:rounded-2xl border border-line shadow-[0_24px_64px_rgba(15,23,42,0.2)] overflow-hidden animate-[dialog-in_200ms_cubic-bezier(0.16,1,0.3,1)]"
+      >
+        {/* ── The bill ─────────────────────────────────────────────────── */}
+        <aside className="md:w-[360px] shrink-0 flex flex-col bg-canvas border-b md:border-b-0 md:border-r border-line max-h-[42%] md:max-h-none">
+          <header className="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-[18px] font-semibold text-ink">Charge</h1>
+              <div className="mt-1 flex items-center gap-2 text-[13px] text-ink-3">
+                <span className="tabular-nums whitespace-nowrap">{orderLabel}</span>
+                <OrderTypeBadge type={tableLabel ? 'DINE_IN' : (useCartStore.getState().orderType || 'TAKEAWAY')} tableLabel={tableLabel} size="sm" />
+              </div>
             </div>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-sunken text-ink-3 hover:bg-hover hover:text-ink transition-all" onClick={onClose}>
-              <X className="w-[20px] h-[20px]" />
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="md:hidden w-9 h-9 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+            >
+              <X className="w-[18px] h-[18px]" />
             </button>
-          </div>
-        </div>
+          </header>
 
-        {/* Content Body — flex-col on mobile (order summary above payment
-            methods, one shared scroll) / flex-row from md up (the two panels
-            side by side, each scrolling internally). This used to be a
-            permanent row: below md the left panel's w-full basis already
-            filled the row while the right panel — payment methods, the cash
-            numpad, everything needed to actually take the money — was squeezed
-            to ~0 width and clipped by this container's overflow-hidden. */}
-        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden relative z-10 bg-white">
-          {/* Left Panel: Order Summary & Totals */}
-          <div className="w-full md:w-[400px] flex flex-col px-6 py-6 md:overflow-y-auto custom-scrollbar border-r border-line bg-canvas">
-            
-            {/* Loyalty Block */}
+          <ul className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 divide-y divide-line">
+            {displayItems.map((c: any, i: number) => {
+              const mods = [
+                c.selectedVariation?.name || c.options?.variation?.name,
+                ...(c.selectedAddOns || c.options?.addOns || []).map((a: any) => `+ ${a.name}`),
+              ].filter(Boolean).join(' · ');
+              return (
+                <li key={i} className="py-2.5 flex gap-3">
+                  <span className="w-6 shrink-0 text-right text-[13.5px] font-semibold text-ink tabular-nums">{c.quantity}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13.5px] text-ink truncate">{c.name || c.item?.name || c.itemName || 'Item'}</p>
+                    {mods && <p className="text-[12px] text-ink-3 truncate">{mods}</p>}
+                  </div>
+                  <span className="text-[13.5px] text-ink-2 tabular-nums shrink-0">{formatPKR(c.subtotal || (c.unitPrice * c.quantity) || 0)}</span>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="px-5 pt-3 pb-5 border-t border-line bg-canvas">
             {loyaltyProfile && loyaltySettings && loyaltySettings.isActive && (
-              <div className="mb-4 bg-brand/5 border border-brand/20 rounded-xl p-4 flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold text-brand text-sm">Loyalty Points</h4>
-                  <p className="text-xs text-brand/80 font-medium">Available: {loyaltyProfile.loyaltyPoints}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-gray-700">Use Points</span>
-                  <button 
-                    onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
-                    className={`w-12 h-6 rounded-full relative transition-colors ${useLoyaltyPoints ? 'bg-brand' : 'bg-gray-300'}`}
-                  >
-                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${useLoyaltyPoints ? 'translate-x-6' : ''}`}></div>
-                  </button>
-                </div>
-              </div>
+              <label className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 cursor-pointer">
+                <span className="min-w-0">
+                  <span className="block text-[13.5px] font-semibold text-ink">Use loyalty points</span>
+                  <span className="block text-[12px] text-ink-3 tabular-nums">{loyaltyProfile.loyaltyPoints} available</span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useLoyaltyPoints}
+                  onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                  className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${useLoyaltyPoints ? 'bg-brand' : 'bg-line-strong'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${useLoyaltyPoints ? 'translate-x-5' : ''}`} />
+                </button>
+              </label>
             )}
-
-            {/* Order Items Summary */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Order Summary</h2>
-              </div>
-              <ul className="space-y-4">
-                {displayItems.map((c: any, i: number) => (
-                  <li key={i} className="flex justify-between items-start">
-                    <div className="flex gap-3">
-                      <span className="font-bold text-brand min-w-[20px]">{c.quantity}×</span>
-                      <div>
-                        <p className="font-bold text-sm text-ink">{c.name || c.item?.name || c.itemName || 'Item'}</p>
-                        {(c.selectedVariation || c.options?.variation || c.selectedAddOns?.length > 0 || c.options?.addOns?.length > 0) && (
-                          <p className="text-xs text-ink-3 italic mt-0.5">
-                            {c.selectedVariation?.name || c.options?.variation?.name}
-                            {((c.selectedAddOns?.length > 0 || c.options?.addOns?.length > 0) && (c.selectedVariation || c.options?.variation)) ? ', ' : ''}
-                            {(c.selectedAddOns || c.options?.addOns || []).map((a: any) => a.name).join(', ')}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <span className="font-bold text-sm text-ink whitespace-nowrap ml-2">
-                      {formatPKR(c.subtotal || (c.unitPrice * c.quantity) || 0)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Totals Block */}
-            <div className="mt-auto space-y-3 pt-6 border-t border-line">
-              <div className="flex justify-between text-body-md font-medium">
-                <span className="text-ink-3">Subtotal</span>
-                <span className="text-ink font-semibold">{formatPKR(subtotal)}</span>
-              </div>
+            <dl className="space-y-1.5 text-[13.5px]">
+              <div className="flex justify-between"><dt className="text-ink-3">Subtotal</dt><dd className="text-ink-2 tabular-nums">{formatPKR(subtotal)}</dd></div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-red-500 font-medium">
-                  <span>Discount</span>
-                  <span>−{formatPKR(discountAmount)}</span>
-                </div>
+                <div className="flex justify-between text-ok"><dt>Discount</dt><dd className="tabular-nums">− {formatPKR(discountAmount)}</dd></div>
               )}
               {loyaltyDiscount > 0 && (
-                <div className="flex justify-between text-sm text-brand font-bold">
-                  <span>Loyalty Discount (-{redeemedPoints} pts)</span>
-                  <span>−{formatPKR(loyaltyDiscount)}</span>
-                </div>
+                <div className="flex justify-between text-ok"><dt>Loyalty ({redeemedPoints} pts)</dt><dd className="tabular-nums">− {formatPKR(loyaltyDiscount)}</dd></div>
               )}
-              <div className="flex justify-between text-sm font-medium">
-                <span className="text-ink-3">{taxLabel}</span>
-                <span className="text-ink font-semibold">{formatPKR(taxAmount)}</span>
-              </div>
+              <div className="flex justify-between"><dt className="text-ink-3">{taxLabel}</dt><dd className="text-ink-2 tabular-nums">{formatPKR(taxAmount)}</dd></div>
               {tipAmount > 0 && (
-                <div className="flex justify-between text-body-md font-medium text-emerald-600">
-                  <span className="text-ink-3">Tip</span>
-                  <span className="font-semibold">+{formatPKR(tipAmount)}</span>
-                </div>
+                <div className="flex justify-between"><dt className="text-ink-3">Tip</dt><dd className="text-ink-2 tabular-nums">+ {formatPKR(tipAmount)}</dd></div>
               )}
-              <div className="flex justify-between items-end pt-4 border-t border-line">
-                <span className="font-headline-sm text-lg font-bold text-ink">Total Due</span>
-                <span className="font-clash text-[32px] text-brand leading-none font-bold">{formatPKR(totalWithTip)}</span>
+              <div className="flex justify-between items-baseline pt-2.5 mt-1 border-t border-line">
+                <dt className="text-[15px] font-semibold text-ink">Total due</dt>
+                <dd className="text-[26px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(totalWithTip)}</dd>
               </div>
-            </div>
-
-            {/* Tip Selector */}
-            <div className="mt-8 pb-8">
-              <h2 className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 mb-4 font-bold">Add Tip</h2>
-              {showCustomTip ? (
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
-                    <input
-                      type="number"
-                      value={customTip}
-                      onChange={e => setCustomTip(e.target.value)}
-                      placeholder="0"
-                      className="w-full pl-14 pr-4 py-3 bg-white border border-line-strong rounded-xl outline-none focus:border-brand text-ink font-bold"
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    onClick={() => { setShowCustomTip(false); setCustomTip(''); setTipPercent(0); }}
-                    className="py-3 px-6 min-w-[80px] border border-rose-200 bg-rose-50 rounded-xl font-bold hover:bg-rose-100 text-rose-600 transition-all text-sm shadow-sm"
-                  >
-                    Clear
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {[0, 10, 15, 20].map(pct => (
-                    <button
-                      key={pct}
-                      onClick={() => setTipPercent(pct)}
-                      className={`py-3 px-2 border rounded-xl font-bold transition-all shadow-sm ${tipPercent === pct && !showCustomTip ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-white hover:border-brand text-ink hover:bg-amber-50'}`}
-                    >
-                      {pct === 0 ? 'None' : `${pct}%`}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => { setShowCustomTip(true); setTipPercent(0); }}
-                    className="py-3 px-2 border border-line-strong bg-white rounded-xl font-bold hover:border-brand transition-all text-xs col-span-4 text-ink hover:bg-amber-50 shadow-sm"
-                  >
-                    Custom Amount
-                  </button>
-                </div>
-              )}
-            </div>
+            </dl>
           </div>
+        </aside>
 
-          {/* Right Panel: Payment Methods & Numpad */}
-          <div className="flex-1 bg-white flex flex-col p-6 md:overflow-y-auto custom-scrollbar">
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
+        {/* ── Taking the money ─────────────────────────────────────────── */}
+        <section className="flex-1 min-w-0 min-h-0 flex flex-col">
+          <div className="px-5 md:px-6 pt-5 flex items-center gap-3">
+            <div className="flex-1 grid grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
               {[
                 { method: 'CASH' as PaymentMethod, Icon: Banknote, label: 'Cash' },
                 { method: 'CARD' as PaymentMethod, Icon: CreditCard, label: 'Card' },
+                { method: 'SPLIT' as PaymentMethod, Icon: Split, label: 'Split' },
                 { method: 'JAZZCASH' as PaymentMethod, Icon: QrCode, label: 'JazzCash' },
                 { method: 'EASYPAISA' as PaymentMethod, Icon: QrCode, label: 'EasyPaisa' },
-                { method: 'SPLIT' as PaymentMethod, Icon: Split, label: 'Split' },
               ].map(({ method, Icon, label }) => {
-                const isUnconfigured = UNCONFIGURED_METHODS.includes(method);
+                const locked = UNCONFIGURED_METHODS.includes(method);
                 return (
                   <button
                     key={method}
                     onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
-                    title={isUnconfigured ? `${label} isn't connected yet` : undefined}
-                    className={`relative flex flex-col items-center justify-center gap-2 p-3 rounded-2xl transition-all group border shadow-sm ${activeMethod === method ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-canvas hover:border-brand hover:bg-sunken text-ink'} ${isUnconfigured ? 'opacity-60' : ''}`}
+                    title={locked ? `${label} isn't connected yet` : undefined}
+                    className={`${segCls(activeMethod === method)} ${locked ? 'opacity-55' : ''}`}
                   >
-                    {isUnconfigured && (
-                      <Lock className="absolute top-1.5 right-1.5 w-[13px] h-[13px] text-ink-4" />
-                    )}
-                    <Icon className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                    <span className="font-bold text-xs">{label}</span>
+                    {locked ? <Lock className="w-3.5 h-3.5" /> : <Icon className="w-4 h-4" />}
+                    <span className="truncate">{label}</span>
                   </button>
                 );
               })}
             </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="hidden md:grid w-10 h-10 place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {/* Cash Panel */}
-            {(activeMethod === 'CASH') && (
-              <div className="flex-1 flex flex-col md:flex-row gap-8 mt-4">
-                <div className="flex-1 flex flex-col justify-center gap-8">
-                  <div className="space-y-2">
-                    <label className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Cash Received</label>
-                    <div className="text-[56px] font-clash font-bold leading-tight border-b-2 border-line py-2 text-ink">
-                      <span className="text-ink-4">PKR</span> <span>{amountEntered || '0'}</span>
+          {/* Tip */}
+          <div className="px-5 md:px-6 pt-3 flex items-center gap-3">
+            <span className="text-[13px] font-medium text-ink-3 w-8 shrink-0">Tip</span>
+            {showCustomTip ? (
+              <div className="flex-1 flex items-center gap-2">
+                <label className="flex-1 h-10 px-3 flex items-center gap-2 rounded-lg border border-line-strong focus-within:border-ink bg-surface">
+                  <span className="text-[12.5px] font-semibold text-ink-3">PKR</span>
+                  <input
+                    type="number"
+                    value={customTip}
+                    onChange={(e) => setCustomTip(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-transparent outline-none text-[15px] font-semibold text-ink tabular-nums"
+                    autoFocus
+                  />
+                </label>
+                <button
+                  onClick={() => { setShowCustomTip(false); setCustomTip(''); setTipPercent(0); }}
+                  className="h-10 px-3 rounded-lg text-[13px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 grid grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
+                {[0, 10, 15, 20].map((pct) => (
+                  <button key={pct} onClick={() => setTipPercent(pct)} className={segCls(tipPercent === pct)}>
+                    {pct === 0 ? 'None' : `${pct}%`}
+                  </button>
+                ))}
+                <button onClick={() => { setShowCustomTip(true); setTipPercent(0); }} className={segCls(false)}>
+                  Custom
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-5">
+            {activeMethod === 'CASH' && (
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1 min-w-0 flex flex-col gap-4">
+                  {/* Stacked, not side by side: beside the keypad at tablet width
+                      two 28px amounts didn't fit and "Received" truncated. */}
+                  <div className="rounded-xl border border-line divide-y divide-line">
+                    <div className="px-4 py-3 flex items-baseline justify-between gap-3">
+                      <p className="text-[13px] text-ink-3">Received</p>
+                      <p className="text-[26px] font-bold text-ink tabular-nums tracking-tight whitespace-nowrap">
+                        {formatPKR(Number(amountEntered || 0))}
+                      </p>
+                    </div>
+                    <div className="px-4 py-3 flex items-baseline justify-between gap-3">
+                      <p className="text-[13px] text-ink-3">Change</p>
+                      <p className={`text-[26px] font-bold tabular-nums tracking-tight whitespace-nowrap ${isCashValid ? 'text-ok' : 'text-ink-4'}`}>
+                        {isCashValid ? formatPKR(Math.round(changeDue)) : '—'}
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="font-headline-sm text-xs tracking-widest uppercase text-ink-3 font-bold">Change to Return</label>
-                    <div className={`text-[48px] font-clash font-bold leading-tight ${cashNum >= totalWithTip ? 'text-emerald-600' : 'text-ink-4'}`}>
-                      <span className="opacity-70 text-3xl">PKR</span> {Math.round(changeDue).toLocaleString('en-US')}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-3 mt-4">
-                    <button onClick={() => setAmountEntered('')} className="px-6 py-3 bg-rose-50 border border-rose-200 text-rose-600 font-bold rounded-full hover:bg-rose-100 active:scale-95 transition-all shadow-sm">
-                      Clear
-                    </button>
-                    <button onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())} className="px-6 py-3 bg-amber-50 border border-brand text-brand font-bold rounded-full hover:bg-amber-100 active:scale-95 transition-all shadow-sm">
+                  {!isCashValid && cashNum > 0 && (
+                    <p className="-mt-1.5 text-[13px] text-ink-3">
+                      {formatPKR(Math.ceil(totalWithTip - cashNum))} more to cover the total.
+                    </p>
+                  )}
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())}
+                      className="h-11 rounded-lg border border-ink text-ink text-[13.5px] font-semibold hover:bg-sunken"
+                    >
                       Exact
                     </button>
-                    {[500, 1000, 2000, 5000].map(amt => (
-                      <button key={amt} onClick={() => setAmountEntered(prev => (Number(prev || 0) + amt).toString())} className="px-6 py-3 bg-sunken border border-line-strong text-ink font-bold rounded-full hover:bg-hover active:scale-95 transition-all shadow-sm">
-                        +{amt}
+                    {quick.map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setAmountEntered((prev) => (Number(prev || 0) + amt).toString())}
+                        className="h-11 rounded-lg border border-line-strong text-ink-2 text-[13.5px] font-semibold tabular-nums hover:bg-sunken hover:text-ink"
+                      >
+                        + {amt.toLocaleString('en-US')}
                       </button>
                     ))}
+                    <button
+                      onClick={() => setAmountEntered('')}
+                      className="h-11 rounded-lg text-[13.5px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink"
+                    >
+                      Clear
+                    </button>
                   </div>
                 </div>
 
-                <div className="w-full md:w-[320px] grid grid-cols-3 gap-3 p-4 bg-canvas rounded-[32px] shrink-0 h-fit border border-line-strong shadow-sm">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'backspace'].map((key, idx) => {
-                    if (key === 'backspace') {
-                      return (
-                        <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-line-strong rounded-2xl shadow-sm flex items-center justify-center active:scale-95 transition-transform duration-100 text-ink hover:bg-sunken">
-                          <Delete className="w-[20px] h-[20px]" />
-                        </button>
-                      );
-                    }
-                    return (
-                      <button key={idx} onClick={() => handleNumpad(key)} className="h-16 bg-white border border-line-strong rounded-2xl shadow-sm text-2xl font-bold active:scale-95 transition-transform duration-100 text-ink hover:bg-sunken">
-                        {key}
+                <div className="lg:w-[300px] shrink-0 grid grid-cols-3 gap-2 content-start">
+                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'backspace'].map((key) =>
+                    key === 'backspace' ? (
+                      <button key={key} onClick={() => handleNumpad('backspace')} className={`${keyCls} grid place-items-center text-ink-2`} aria-label="Delete">
+                        <Delete className="w-5 h-5" />
                       </button>
-                    );
-                  })}
+                    ) : key === '00' ? (
+                      <button key={key} onClick={() => setAmountEntered((prev) => (prev ? `${prev}00` : prev))} className={keyCls}>00</button>
+                    ) : (
+                      <button key={key} onClick={() => handleNumpad(key)} className={keyCls}>{key}</button>
+                    ),
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Card Panel */}
-            {(activeMethod === 'CARD') && (
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="w-32 h-32 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center mb-6 shadow-sm">
-                  <CreditCard className="text-brand w-[60px] h-[60px]" />
-                </div>
-                <h3 className="text-2xl font-bold font-clash text-ink">Card Payment</h3>
-                <p className="text-ink-3 font-medium mt-2">Amount Due: {formatPKR(totalWithTip)}</p>
-                <input type="text" value={authCode} onChange={(e) => setAuthCode(e.target.value)} placeholder="Authorization Code" className="w-72 px-4 py-3 bg-canvas border border-line-strong rounded-xl mt-6 outline-none focus:border-brand text-ink font-bold" />
+            {activeMethod === 'CARD' && (
+              <div className="h-full min-h-[260px] flex flex-col items-center justify-center text-center">
+                <span className="w-14 h-14 rounded-2xl bg-sunken text-ink-2 grid place-items-center mb-4">
+                  <CreditCard className="w-7 h-7" />
+                </span>
+                <p className="text-[15px] text-ink-3">Take on the card machine</p>
+                <p className="mt-0.5 text-[28px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(totalWithTip)}</p>
+                <label className="mt-5 w-full max-w-[320px] text-left">
+                  <span className="block text-[13px] font-medium text-ink-2 mb-1.5">Authorization code</span>
+                  <input
+                    type="text"
+                    value={authCode}
+                    onChange={(e) => setAuthCode(e.target.value)}
+                    placeholder="From the card slip"
+                    className="w-full h-12 px-3.5 rounded-xl border border-line-strong focus:border-ink bg-surface outline-none text-[15px] font-semibold text-ink placeholder:text-ink-4 placeholder:font-normal tracking-wide"
+                  />
+                </label>
               </div>
             )}
 
-            {/* JazzCash & EasyPaisa — gateway isn't configured yet; be
-                honest about it instead of showing a QR that goes nowhere. */}
-            {(activeMethod === 'JAZZCASH' || activeMethod === 'EASYPAISA') && (
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-                <div className="w-32 h-32 rounded-full border-2 border-line bg-canvas flex items-center justify-center mb-6">
-                  <Lock className="text-ink-4 w-[60px] h-[60px]" />
-                </div>
-                <h3 className="text-2xl font-bold font-clash text-ink">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} Isn't Connected</h3>
-                <p className="text-ink-3 font-medium mt-2 max-w-sm">
-                  This payment gateway hasn't been configured for this branch yet. Ask a manager to set it up, or take payment as Cash or Card instead.
+            {unconfigured && (
+              <div className="h-full min-h-[260px] flex flex-col items-center justify-center text-center px-6">
+                <span className="w-14 h-14 rounded-2xl bg-sunken text-ink-3 grid place-items-center mb-4">
+                  <Lock className="w-6 h-6" />
+                </span>
+                <p className="text-[16px] font-semibold text-ink">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} isn’t connected yet</p>
+                <p className="mt-1.5 max-w-sm text-[13.5px] text-ink-3 leading-relaxed">
+                  A manager can set it up for this branch. Until then, take this payment as cash or card.
                 </p>
               </div>
             )}
 
-            {/* Split Panel */}
-            {(activeMethod === 'SPLIT') && (
-              <div className="flex-1 flex flex-col gap-6 mt-6 max-w-lg">
-                <h3 className="font-bold text-lg text-ink">Split Payment — Total: {formatPKR(totalWithTip)}</h3>
-                <div className="flex gap-4 items-center">
-                  <select value={splitMethod1} onChange={(e) => setSplitMethod1(e.target.value as any)} className="px-4 py-3 bg-canvas border border-line-strong rounded-xl flex-1 outline-none text-ink font-semibold">
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Card</option>
-                  </select>
-                  <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
-                    <input type="number" value={splitAmount1} onChange={(e) => setSplitAmount1(e.target.value)} className="w-full pl-14 pr-4 py-3 bg-canvas border border-line-strong rounded-xl outline-none text-ink font-bold" />
+            {activeMethod === 'SPLIT' && (
+              <div className="max-w-[520px] flex flex-col gap-3">
+                <p className="text-[13.5px] text-ink-3">Split {formatPKR(totalWithTip)} across two payments.</p>
+                {[
+                  { m: splitMethod1, setM: setSplitMethod1, value: splitAmount1, editable: true },
+                  { m: splitMethod2, setM: setSplitMethod2, value: String(Math.round(splitNum2)), editable: false },
+                ].map((row, i) => (
+                  <div key={i} className="flex items-center gap-2.5">
+                    <div className="grid grid-cols-2 gap-0.5 p-1 rounded-xl bg-sunken border border-line w-[168px] shrink-0">
+                      {(['CASH', 'CARD'] as const).map((m) => (
+                        <button key={m} onClick={() => row.setM(m)} className={segCls(row.m === m)}>
+                          {m === 'CASH' ? 'Cash' : 'Card'}
+                        </button>
+                      ))}
+                    </div>
+                    <label className={`flex-1 h-12 px-3.5 flex items-center gap-2 rounded-xl border ${row.editable ? 'border-line-strong focus-within:border-ink bg-surface' : 'border-line bg-sunken'}`}>
+                      <span className="text-[12.5px] font-semibold text-ink-3">PKR</span>
+                      {row.editable ? (
+                        <input
+                          type="number"
+                          value={splitAmount1}
+                          onChange={(e) => setSplitAmount1(e.target.value)}
+                          placeholder="0"
+                          className="w-full bg-transparent outline-none text-[16px] font-semibold text-ink tabular-nums"
+                        />
+                      ) : (
+                        <span className="text-[16px] font-semibold text-ink-2 tabular-nums">{Number(row.value).toLocaleString('en-US')}</span>
+                      )}
+                    </label>
                   </div>
-                </div>
-                <div className="flex gap-4 items-center">
-                  <select value={splitMethod2} onChange={(e) => setSplitMethod2(e.target.value as any)} className="px-4 py-3 bg-canvas border border-line-strong rounded-xl flex-1 outline-none text-ink font-semibold">
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Card</option>
-                  </select>
-                  <div className="flex items-center gap-2 flex-1 relative">
-                    <span className="absolute left-4 font-bold text-ink-3">PKR</span>
-                    <input type="text" readOnly value={Math.round(splitNum2).toLocaleString('en-US')} className="w-full pl-14 pr-4 py-3 bg-canvas border border-line-strong rounded-xl outline-none text-ink font-bold opacity-70" />
-                  </div>
-                </div>
+                ))}
                 {splitNum1 > 0 && !isSplitValid && (
-                  <p className="text-rose-600 text-sm font-bold">Split amounts must add up to {formatPKR(totalWithTip)}</p>
+                  <p className="text-[13px] font-medium text-danger">The two amounts must add up to {formatPKR(totalWithTip)}.</p>
                 )}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Sticky Bottom Bar */}
-        <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-line bg-canvas">
-          {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
-            <p className="text-amber-600 text-[12px] font-semibold text-center">
-              Billing this order&apos;s full total (PKR {Math.round(orderTotal).toLocaleString()}). The server confirms the final amount.
-            </p>
-          )}
-          {totalWithTip <= 0 && (
-            <p className="text-rose-600 text-sm font-bold text-center">
-              This order’s total couldn’t be read. Reopen it from Tickets, or cancel it — payment can’t be collected for PKR 0.
-            </p>
-          )}
-          <div className="flex gap-4">
-            <button
-              onClick={handleConfirm}
-              disabled={totalWithTip <= 0 || isProcessing || UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)}
-              className={`flex-1 h-[60px] bg-brand text-white rounded-2xl flex items-center justify-center gap-3 font-headline-sm text-lg font-bold transition-all active:scale-[0.98] shadow-md disabled:opacity-50 disabled:active:scale-100 ${(UNCONFIGURED_METHODS.includes(activeMethod) || (activeMethod === 'CASH' && !isCashValid) || (activeMethod === 'SPLIT' && !isSplitValid)) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-            >
-              {isProcessing ? (
-                <Loader2 className="animate-spin w-[20px] h-[20px]" />
-              ) : (
-                <CheckCircle2 className="w-[20px] h-[20px]" />
-              )}
-              {isProcessing ? 'Processing...' : 'Confirm Payment'}
-            </button>
-            <button
-              onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
-              className="w-[60px] h-[60px] flex items-center justify-center rounded-2xl border border-line-strong bg-white transition-all text-ink hover:bg-sunken shadow-sm"
-            >
-              <Printer className="w-[20px] h-[20px]" />
-            </button>
-          </div>
-        </div>
+          <footer className="px-5 md:px-6 py-4 border-t border-line flex flex-col gap-2.5 shrink-0">
+            {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
+              <p className="text-[12.5px] text-ink-3 text-center">
+                Billing the order’s full total ({formatPKR(Math.round(orderTotal))}); the server confirms the final amount.
+              </p>
+            )}
+            {totalWithTip <= 0 && (
+              <p className="text-[13px] font-medium text-danger text-center">
+                This order’s total couldn’t be read. Reopen it from Tickets or cancel it; payment can’t be taken for PKR 0.
+              </p>
+            )}
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
+                title="Print the bill"
+                aria-label="Print the bill"
+                className="w-12 h-12 grid place-items-center rounded-xl border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink shrink-0"
+              >
+                <Printer className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={confirmDisabled}
+                className="flex-1 h-12 rounded-xl bg-brand text-on-brand text-[15px] font-semibold flex items-center justify-center gap-2 transition-colors enabled:hover:bg-brand-strong disabled:bg-sunken disabled:text-ink-3 disabled:cursor-not-allowed tabular-nums"
+              >
+                {isProcessing && <Loader2 className="animate-spin w-4 h-4" />}
+                {confirmLabel}
+              </button>
+            </div>
+          </footer>
+        </section>
       </div>
     </div>
   );
