@@ -192,12 +192,42 @@ export async function getShift(tenantId: string, id: string) {
   return { ...shift, waiterStats, managerOverrides };
 }
 
-export async function openShift(tenantId: string, userId: string, data: { branchId: string; openingFloat: number }) {
+// How far back an offline-opened shift may date its opening. Past this the
+// terminal's clock, not the shift, is the likelier story.
+const MAX_OFFLINE_OPEN_AGE_MS = 24 * 60 * 60 * 1000;
+
+export async function openShift(
+  tenantId: string,
+  userId: string,
+  data: { branchId: string; openingFloat: number; clientShiftId?: string; openedAt?: string },
+) {
+  // Replay of a shift this terminal opened offline: the first attempt may have
+  // landed and its answer been lost, so the same id again is not an error.
+  if (data.clientShiftId) {
+    const same = await prisma.shift.findUnique({
+      where: { id: data.clientShiftId },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    if (same) {
+      if (same.tenantId !== tenantId || same.branchId !== data.branchId || same.userId !== userId) {
+        return { conflict: true, shiftId: null as string | null, idTaken: true };
+      }
+      return { conflict: false, shift: same, replayed: true };
+    }
+  }
+
   const existing = await prisma.shift.findFirst({ where: { branchId: data.branchId, userId, tenantId, status: 'OPEN' } });
   if (existing) return { conflict: true, shiftId: existing.id };
 
+  const now = Date.now();
+  const requested = data.openedAt ? new Date(data.openedAt).getTime() : NaN;
+  const openedAt = new Date(Number.isFinite(requested) ? Math.min(now, Math.max(now - MAX_OFFLINE_OPEN_AGE_MS, requested)) : now);
+
   const shift = await prisma.shift.create({
-    data: { tenantId, branchId: data.branchId, userId, openingFloat: data.openingFloat, status: 'OPEN' },
+    data: {
+      ...(data.clientShiftId ? { id: data.clientShiftId } : {}),
+      tenantId, branchId: data.branchId, userId, openingFloat: data.openingFloat, status: 'OPEN', openedAt,
+    },
     include: { user: { select: { id: true, name: true } } },
   });
   // Write OPENED activity record

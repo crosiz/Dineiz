@@ -1,3 +1,5 @@
+import { isShiftPendingOpen } from '@/lib/offline-shift';
+
 export interface PosSession {
   userId: string;
   name: string;
@@ -65,6 +67,10 @@ export async function resolveActiveShiftId(apiUrl: string): Promise<string | nul
   const local = getPosShift();
   const token = getToken();
   if (!token) return local?.shiftId ?? null;
+  // Opened offline and not registered yet: the server truthfully says
+  // nothing is open, and taking that at its word would delete the shift
+  // this terminal is actually running (lib/offline-shift.ts).
+  if (isShiftPendingOpen(local?.shiftId)) return local!.shiftId;
 
   try {
     const res = await fetch(`${apiUrl}/api/shifts/current`, {

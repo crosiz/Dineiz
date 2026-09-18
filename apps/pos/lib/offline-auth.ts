@@ -159,6 +159,11 @@ export function forgetLogin(userId: string): void {
   write(local(), LOGINS_KEY, logins);
 }
 
+/** The last server token this terminal holds for someone, if any. */
+export function savedTokenFor(userId: string): string | null {
+  return readLogins()[userId]?.token ?? null;
+}
+
 export function canSignInOffline(userId: string, branchId: string): boolean {
   return isFresh(readLogins()[userId], branchId);
 }

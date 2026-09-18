@@ -46,8 +46,9 @@ export async function handleOpenShift(request: FastifyRequest, reply: FastifyRep
   if (!tenantId) return reply.status(403).send({ error: 'Forbidden: your account is not assigned to a tenant.' });
   try {
     const result = await openShift(tenantId, request.user!.id, parsed.data);
+    if (result.conflict && 'idTaken' in result) return reply.status(409).send({ error: 'That shift id belongs to another shift', idTaken: true });
     if (result.conflict) return reply.status(409).send({ error: 'A shift is already open for this branch', shiftId: result.shiftId });
-    return reply.status(201).send(result.shift);
+    return reply.status('replayed' in result && result.replayed ? 200 : 201).send(result.shift);
   } catch (err: any) {
     request.log.error({ err }, 'Failed to open shift');
     return reply.status(500).send({ error: 'Failed to open shift', details: process.env.NODE_ENV !== 'production' ? err?.message : undefined });

@@ -10,6 +10,7 @@ import { API_URL } from '@/lib/api';
 import { computeTotals, resolveTaxConfig } from '@/lib/pricing';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getPosSession } from '@/lib/pos-session';
+import { resolveShiftId } from '@/lib/offline-shift';
 
 export interface OrderViewItem {
   lineId: string;
@@ -221,7 +222,9 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
         items: [],
         subtotal: 0, taxAmount: 0, discountAmount: 0, discountReason: null, netAmount: 0,
         paymentMethod: null, payments: null, redeemedPointsAmount: null, cashReceived: 0, change: 0,
-        shiftId: e.shiftId,
+        // Through the alias: a shift opened offline may have joined one the
+        // server already had (lib/offline-shift.ts).
+        shiftId: resolveShiftId(e.shiftId),
         cashierId: e.actorId,
         cashierName: e.actorName,
         customerId: null,
@@ -408,7 +411,7 @@ function reduce(state: ViewStore, e: PosEvent): Partial<ViewStore> {
     case 'ORDER_ADOPTED': {
       // Orphan pulled into a new shift (spec Part 2). Locally, re-home it so
       // it shows on the adopting cashier's shift-scoped board straight away.
-      patchOrder({ shiftId: e.payload.intoShiftId ?? e.shiftId });
+      patchOrder({ shiftId: e.payload.intoShiftId ?? resolveShiftId(e.shiftId) });
       touch(orders[e.aggregateId]?.tableId);
       break;
     }

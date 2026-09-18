@@ -8,6 +8,10 @@ import { getToken, getPosSession, clearPosSession, setPosShift } from '@/lib/pos
 import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { newOfflineShiftId, queueShiftOpen } from '@/lib/offline-shift';
+
+// Past this with no answer, the shift opens on this terminal instead.
+const OPEN_TIMEOUT_MS = 8000;
 
 const DENOMS = [5000, 1000, 500, 100, 50, 20, 10];
 const QUICK = [2000, 5000, 10000];
@@ -53,6 +57,21 @@ export default function ShiftOpenGate() {
   // When the breakdown is open it is the source of truth for the amount.
   const amount = countByNote ? noteTotal : float === '' ? 0 : float;
 
+  const openOffline = (amount: number) => {
+    const s = getPosSession();
+    if (!s?.branchId || !s.userId) throw new Error('Sign in again to open a shift.');
+    const shiftId = newOfflineShiftId();
+    const openedAt = new Date().toISOString();
+    queueShiftOpen({ shiftId, branchId: s.branchId, userId: s.userId, openingFloat: amount, openedAt });
+    useCartStore.setState({ session: { ...session, shiftId } });
+    setPosShift({ shiftId, openedAt, openingFloat: amount });
+    localStorage.removeItem('pos_view_mode');
+    toast.success('Shift started offline. It will reach the server when the connection returns.', { duration: 5000 });
+    // A full load, not a client-side push: offline, the push would first try
+    // the server for the next screen's data, fail, and only then fall back.
+    setTimeout(() => window.location.assign('/pos/home'), 600);
+  };
+
   const handleStartShift = async () => {
     if (submitting) return;
     if (amount < 0) {
@@ -61,11 +80,31 @@ export default function ShiftOpenGate() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/api/shifts/open`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ branchId: session?.branchId, openingFloat: amount }),
-      });
+      // No connection, no answer in time, or a server that can't do it right
+      // now: open the shift on this terminal instead (lib/offline-shift.ts).
+      // A timed-out request may still have opened one server-side; that's
+      // fine, the registration then finds it and this terminal joins it.
+      let res: Response | null = null;
+      if (navigator.onLine !== false) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), OPEN_TIMEOUT_MS);
+        try {
+          res = await fetch(`${API_URL}/api/shifts/open`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+            body: JSON.stringify({ branchId: session?.branchId || getPosSession()?.branchId, openingFloat: amount }),
+            signal: controller.signal,
+          });
+        } catch {
+          res = null;
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+      if (!res || res.status >= 500) {
+        openOffline(amount);
+        return;
+      }
 
       // A shift is already open for this branch/cashier — adopt it rather than
       // erroring. Pull its real openedAt / float from the server so the home
@@ -116,11 +155,7 @@ export default function ShiftOpenGate() {
       router.replace('/pos/home');
     } catch (err: any) {
       console.error('Failed to open shift:', err);
-      // fetch() rejects with a TypeError only when the request never got an
-      // answer. The shift's id comes from the server and every order points at
-      // it, so this one step can't happen offline; say that plainly.
-      const noConnection = err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false);
-      toast.error(noConnection ? 'No connection. A new shift can only be started while online.' : (err?.message || 'Error opening shift'));
+      toast.error(err?.message || 'Error opening shift');
       setSubmitting(false);
     }
     // On success we navigate away — leave `submitting` true so the button

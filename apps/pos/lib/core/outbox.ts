@@ -7,6 +7,7 @@ import { getToken, getPosSession } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL, isApiConfigured, API_NOT_CONFIGURED } from '@/lib/api';
 import { getTerminalId } from './event-log';
+import { clearPendingShiftOpen, isShiftPendingOpen, readPendingShiftOpen, recordShiftAlias, resolveShiftId } from '@/lib/offline-shift';
 import { getBrandingConfig } from '@/lib/branding-store';
 
 // ─── The outbox: ships local events to the server (spec Part 5) ────────────
@@ -363,6 +364,11 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
           // most ~200ms, or immediate once it lands) re-runs this the moment an
           // item exists, and the create ships whole, atomically, in one request.
           const hasLiveItems = order.items.some((i: any) => !i.voided);
+          // Taken under a shift opened offline that the server hasn't been
+          // told about yet: Order.shiftId is a foreign key, so the create
+          // would be rejected and poison the order. It waits;
+          // registerPendingShiftOpen runs at the start of every drain.
+          if (isShiftPendingOpen(order.shiftId)) continue;
           if (hasLiveItems) {
             const bodyEventIds = events
               .filter((e) => e.type === 'ORDER_CREATED' || e.type === 'ITEM_ADDED')
@@ -556,7 +562,7 @@ function createOrderBody(order: any) {
     cashierId: session.userId,
     orderNumber: order.orderNumber,
     clientId: order.id,
-    shiftId: order.shiftId || null,
+    shiftId: resolveShiftId(order.shiftId) || null,
     items: order.items.filter((it: any) => !it.voided).map((it: any) => ({
       itemId: it.itemId,
       quantity: it.qty,
@@ -1102,6 +1108,7 @@ async function drain(): Promise<void> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return;
   draining = true;
   try {
+    await registerPendingShiftOpen();
     const chains = await deriveTaskChains();
     if (chains.size === 0) return;
 
@@ -1559,10 +1566,127 @@ async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
   return false;
 }
 
+// ─── Shifts opened offline (lib/offline-shift.ts) ─────────────────────────
+
+let shiftOpenErrorShown = false;
+
+/**
+ * Tell the server about a shift this terminal opened with no connection,
+ * under the id the terminal gave it. Runs at the start of every drain, before
+ * any order for that shift can be derived into a task.
+ */
+async function registerPendingShiftOpen(): Promise<void> {
+  const p = readPendingShiftOpen();
+  if (!p) return;
+
+  // The shift belongs to whoever opened it. If someone else is signed in now,
+  // their token would register it under their name; use the opener's saved
+  // one, or wait until the opener is back.
+  const session = getPosSession();
+  let token: string | null = null;
+  if (session?.userId === p.userId) {
+    token = getToken();
+  } else {
+    const { savedTokenFor } = await import('@/lib/offline-auth');
+    token = savedTokenFor(p.userId);
+  }
+  if (!token) return;
+
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(`${API_URL}/api/shifts/open`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        branchId: p.branchId,
+        openingFloat: p.openingFloat,
+        clientShiftId: p.shiftId,
+        openedAt: p.openedAt,
+      }),
+    });
+  } catch {
+    return; // still unreachable: next drain
+  }
+
+  if (res.ok) {
+    clearPendingShiftOpen();
+    toast.success('The shift you opened offline is now on the server.');
+    return;
+  }
+
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.idTaken) {
+      // Practically impossible (20 random characters), but if it happens the
+      // shift needs another name; orders reach it through the alias.
+      const { newOfflineShiftId, queueShiftOpen } = await import('@/lib/offline-shift');
+      const fresh = newOfflineShiftId();
+      recordShiftAlias(p.shiftId, fresh);
+      queueShiftOpen({ ...p, shiftId: fresh });
+      return;
+    }
+    if (body?.shiftId) {
+      await adoptServerShift(p.shiftId, body.shiftId);
+      clearPendingShiftOpen();
+      toast.info('A shift was already open for you on the server, so this terminal joined it.', { duration: 8000 });
+      return;
+    }
+  }
+
+  // Token being refreshed, rate limited, or the server struggling: try again.
+  if (res.status === 401 || res.status === 429 || res.status >= 500) return;
+
+  // Any other refusal won't fix itself. Say so once; the orders stay safe on
+  // this terminal rather than being sent against a shift the server rejected.
+  if (!shiftOpenErrorShown) {
+    shiftOpenErrorShown = true;
+    const body = await res.json().catch(() => ({}));
+    toast.error(`The shift opened offline couldn't be registered: ${body?.error ?? `HTTP ${res.status}`}. Its orders are kept on this terminal; ask a manager.`, { duration: 15000 });
+  }
+}
+
+/**
+ * The server already had a shift open for this cashier, so the one opened
+ * offline joins it: alias the id, and move everything on this terminal that
+ * holds the old one.
+ */
+async function adoptServerShift(localId: string, serverId: string): Promise<void> {
+  recordShiftAlias(localId, serverId);
+
+  const { getPosShift, setPosShift } = await import('@/lib/pos-session');
+  const current = getPosShift();
+  if (current?.shiftId === localId) setPosShift({ ...current, shiftId: serverId });
+
+  const { useCartStore } = await import('@/lib/store');
+  const session = useCartStore.getState().session;
+  if (session.shiftId === localId) useCartStore.setState({ session: { ...session, shiftId: serverId } });
+
+  try {
+    if (localStorage.getItem(PENDING_SYNC_SHIFT_KEY) === localId) localStorage.setItem(PENDING_SYNC_SHIFT_KEY, serverId);
+  } catch { /* ignore */ }
+
+  // SHORT order numbers count per shift; carry the count over so the next
+  // order doesn't restart at 001 and collide with one already taken.
+  const from = await edb.meta.get(`orderSeq:${localId}`);
+  if (from) {
+    const to = await edb.meta.get(`orderSeq:${serverId}`);
+    await edb.meta.put({ key: `orderSeq:${serverId}`, value: Math.max(Number(from.value) || 0, Number(to?.value) || 0) });
+  }
+
+  const orders = useViews.getState().orders;
+  const patched: typeof orders = {};
+  for (const [id, o] of Object.entries(orders)) patched[id] = o.shiftId === localId ? { ...o, shiftId: serverId } : o;
+  useViews.getState()._setSnapshot({ orders: patched });
+}
+
 async function finalisePendingSyncShiftIfDrained(): Promise<void> {
-  let shiftId: string | null = null;
-  try { shiftId = localStorage.getItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
-  if (!shiftId) return;
+  let localShiftId: string | null = null;
+  try { localShiftId = localStorage.getItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
+  if (!localShiftId) return;
+  // A shift opened AND closed offline: the server has to learn it exists
+  // before a close for it can mean anything.
+  if (readPendingShiftOpen()) return;
+  const shiftId = resolveShiftId(localShiftId);
 
   const remaining = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).count();
   if (remaining > 0) return;

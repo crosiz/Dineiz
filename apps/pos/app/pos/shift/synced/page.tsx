@@ -11,6 +11,7 @@ import {
 } from '@/lib/core/outbox';
 import { shiftSyncCompleted } from '@/lib/core/commands';
 import { API_URL } from '@/lib/api';
+import { readPendingShiftOpen, resolveShiftId } from '@/lib/offline-shift';
 
 
 /**
@@ -44,7 +45,7 @@ export default function ShiftSyncedPage() {
     if (finishingRef.current || !shiftId) return;
     finishingRef.current = true;
     try {
-      await fetch(`${API_URL}/api/shifts/${shiftId}/sync-complete`, {
+      await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}/sync-complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({}),
@@ -63,7 +64,9 @@ export default function ShiftSyncedPage() {
       if (!baseRef.current) baseRef.current = c;
       setSummary(s);
       setCat(c);
-      if (s.count === 0 && !done) void finalise();
+      // A shift opened offline has to reach the server before it can be
+      // marked synced, even when it took no orders (lib/offline-shift.ts).
+      if (s.count === 0 && !done && !readPendingShiftOpen()) void finalise();
     };
     void tick();
     const h = setInterval(tick, 1500);

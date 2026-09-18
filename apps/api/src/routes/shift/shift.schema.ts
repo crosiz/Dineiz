@@ -3,6 +3,13 @@ import { z } from 'zod';
 export const OpenShiftSchema = z.object({
   branchId: z.string().min(1),
   openingFloat: z.number().min(0).default(0),
+  // A terminal that opened the shift with no connection names it itself, and
+  // every order it took meanwhile already points at that id. Registering it
+  // under the same id is what lets those orders sync without being rewritten.
+  // Prefixed so an offline-opened shift is recognisable in the data.
+  clientShiftId: z.string().regex(/^shf_[A-Za-z0-9_-]{16,40}$/).optional(),
+  // When it was actually opened (clamped server-side).
+  openedAt: z.string().datetime().optional(),
 });
 
 export const CashEntrySchema = z.object({

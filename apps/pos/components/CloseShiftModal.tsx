@@ -10,6 +10,7 @@ import {
   type SyncCategoryProgress,
 } from '@/lib/core/outbox';
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
+import { isShiftPendingOpen, resolveShiftId } from '@/lib/offline-shift';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
@@ -227,8 +228,13 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       // network blip left the cashier stuck in this modal with no way out.
       let closedOnServer = false;
       let serverError: string | null = null;
-      try {
-        const res = await fetch(`${API_URL}/api/shifts/${shiftId}/close`, {
+      // A shift opened offline that the server hasn't been told about yet
+      // would only 404 here. Close it on the terminal; the outbox registers
+      // the open first and then replays this close (lib/offline-shift.ts).
+      if (isShiftPendingOpen(shiftId)) {
+        serverError = 'offline';
+      } else try {
+        const res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}/close`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(payload),
