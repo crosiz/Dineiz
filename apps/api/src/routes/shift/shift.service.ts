@@ -287,6 +287,12 @@ export interface CloseShiftInput {
    */
   pendingSync?: boolean;
   pendingSyncCount?: number;
+  /**
+   * When the cashier actually closed. A terminal that closed with no
+   * connection replays the close later; stamping it with the server's clock
+   * then would add the whole outage to the shift. Clamped to [openedAt, now].
+   */
+  closedAt?: string;
 }
 
 export async function closeShift(tenantId: string, id: string, data: CloseShiftInput) {
@@ -358,7 +364,11 @@ export async function closeShift(tenantId: string, id: string, data: CloseShiftI
   const counted = data.closingCash;
   const cashVariance = counted === null ? null : parseFloat((counted - expectedCash).toFixed(2));
   const denominations = data.denominations ?? [];
-  const closedAt = new Date();
+  const nowMs = Date.now();
+  const requestedClose = data.closedAt ? new Date(data.closedAt).getTime() : NaN;
+  const closedAt = new Date(
+    Number.isFinite(requestedClose) ? Math.min(nowMs, Math.max(shift.openedAt.getTime(), requestedClose)) : nowMs,
+  );
 
   // Read outside the transaction. Everything inside an interactive transaction
   // races Prisma's 5s timeout, and on a remote Postgres each round trip is

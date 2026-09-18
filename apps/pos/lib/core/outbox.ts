@@ -1182,10 +1182,14 @@ async function drain(): Promise<void> {
     }
   } finally {
     draining = false;
+    // Spec Part 6 — if a shift was closed with events still queued and the
+    // queue is now empty, tell the server to finalise it (PENDING_SYNC → CLOSED).
+    // In `finally` because the commonest case is exactly the one that took
+    // the early `return` above: nothing left to ship. Sitting after the block,
+    // it never ran then, so a shift closed offline with its orders already
+    // synced never had its close replayed and stayed OPEN on the server.
+    await finalisePendingSyncShiftIfDrained().catch(() => {});
   }
-  // Spec Part 6 — if a shift was closed with events still queued and the
-  // queue is now empty, tell the server to finalise it (PENDING_SYNC → CLOSED).
-  await finalisePendingSyncShiftIfDrained().catch(() => {});
 }
 
 function bundleLane(tasks: OutboxTask[]): SyncLane {
@@ -1655,7 +1659,21 @@ async function adoptServerShift(localId: string, serverId: string): Promise<void
 
   const { getPosShift, setPosShift } = await import('@/lib/pos-session');
   const current = getPosShift();
-  if (current?.shiftId === localId) setPosShift({ ...current, shiftId: serverId });
+  if (current?.shiftId === localId) {
+    // The joined shift's own opening time and float are the true ones: the
+    // home screen's elapsed timer and the drawer expectation run off them.
+    let openedAt = current.openedAt;
+    let openingFloat = current.openingFloat;
+    try {
+      const res = await fetchWithTimeout(`${API_URL}/api/shifts/${serverId}`, { headers: authHeaders() });
+      if (res.ok) {
+        const s = await res.json();
+        openedAt = s.openedAt ?? openedAt;
+        openingFloat = s.openingFloat ?? openingFloat;
+      }
+    } catch { /* keep this terminal's values */ }
+    setPosShift({ shiftId: serverId, openedAt, openingFloat });
+  }
 
   const { useCartStore } = await import('@/lib/store');
   const session = useCartStore.getState().session;
@@ -1679,7 +1697,22 @@ async function adoptServerShift(localId: string, serverId: string): Promise<void
   useViews.getState()._setSnapshot({ orders: patched });
 }
 
+// One at a time: every drain ends here, and drains overlap (a kick lands while
+// the previous finalise is still waiting on the network). Without this each
+// one replayed the close and toasted "finished syncing" again.
+let finalising = false;
+
 async function finalisePendingSyncShiftIfDrained(): Promise<void> {
+  if (finalising) return;
+  finalising = true;
+  try {
+    await finalisePendingSyncShift();
+  } finally {
+    finalising = false;
+  }
+}
+
+async function finalisePendingSyncShift(): Promise<void> {
   let localShiftId: string | null = null;
   try { localShiftId = localStorage.getItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
   if (!localShiftId) return;

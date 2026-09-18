@@ -11,6 +11,7 @@ import {
 } from '@/lib/core/outbox';
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { isShiftPendingOpen, resolveShiftId } from '@/lib/offline-shift';
+import { localShiftSummary } from '@/lib/local-shift-summary';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
@@ -118,9 +119,24 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // No server to ask (offline, or a shift opened offline that it hasn't
+      // heard of yet): work the summary out from this terminal's orders so the
+      // shift can still be closed. The close is queued and the server
+      // recomputes the totals when it arrives.
+      let res: Response | null = null;
+      if (!isShiftPendingOpen(resolvedId)) {
+        try {
+          res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(resolvedId)}/summary`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        } catch {
+          res = null;
+        }
+      }
+      if (!res || res.status >= 500) {
+        setSummary(localShiftSummary(resolvedId));
+        return;
+      }
       if (!res.ok) throw new Error('Failed to fetch shift summary');
       setSummary(await res.json());
     } catch (err: any) {
@@ -175,7 +191,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // Balanced" whenever cash counting was optional and skipped.
   const variance = closingCash === '' ? null : counted - expectedCash;
 
-  const formatDuration = (openedAtStr: string) => {
+  const formatDuration = (openedAtStr: string | null) => {
+    if (!openedAtStr) return '—';
     const ms = Date.now() - new Date(openedAtStr).getTime();
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
@@ -215,6 +232,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         notes: notes.trim() ? notes : undefined,
         ...(denominations.length > 0 ? { denominations } : {}),
         ...(pendingSync ? { pendingSync: true, pendingSyncCount: cat?.total ?? 0 } : {}),
+        // The moment the cashier closed. Replayed later if this POST doesn't
+        // land (offline), and the server should record then, not the replay.
+        closedAt: new Date().toISOString(),
       };
       if (overridePin && overrideReason) {
         payload.overridePin = overridePin;
@@ -612,6 +632,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 </div>
               ) : (
                 <div className="flex flex-col gap-5">
+
+                  {summary.local && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-line bg-sunken px-3.5 py-2.5 text-[12px] leading-snug text-ink-2">
+                      <CloudOff size={15} className="mt-0.5 shrink-0 text-ink-3" />
+                      <span>
+                        No connection, so these figures are from this terminal only. You can still close the shift;
+                        the server rechecks the totals when it syncs.
+                      </span>
+                    </div>
+                  )}
 
                   {/* Shift at a glance. Net Sales is paid orders only — the
                       same basis as the drawer — so the two can't look like

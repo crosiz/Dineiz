@@ -64,9 +64,15 @@ export default function ShiftSyncedPage() {
       if (!baseRef.current) baseRef.current = c;
       setSummary(s);
       setCat(c);
-      // A shift opened offline has to reach the server before it can be
-      // marked synced, even when it took no orders (lib/offline-shift.ts).
-      if (s.count === 0 && !done && !readPendingShiftOpen()) void finalise();
+      // A close that never reached the server (closed offline), or a shift
+      // the server has not heard of yet (opened offline), is the outbox's to
+      // finish: it registers the shift, replays the close, then finalises.
+      // Declaring the shift synced before that happened told the cashier
+      // "fully synced" while the server still had it OPEN.
+      let closeQueued = !!readPendingShiftOpen();
+      try { closeQueued = closeQueued || !!localStorage.getItem('pos_pending_shift_close'); } catch { /* ignore */ }
+      if (closeQueued) kickOutbox();
+      if (s.count === 0 && !done && !closeQueued) void finalise();
     };
     void tick();
     const h = setInterval(tick, 1500);
