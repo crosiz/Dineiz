@@ -4,6 +4,7 @@ import './globals.css';
 import QueryProvider from './providers/QueryProvider';
 import { ClientAppProvider } from '@/components/ClientAppProvider';
 import { SocketProvider } from '@/contexts/SocketContext';
+import { ServiceWorkerRegistrar } from '@/components/ServiceWorkerRegistrar';
 import '@/lib/fetch-interceptor';
 import { Toaster } from 'sonner';
 
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Dineiz POS',
   },
 };
@@ -40,7 +41,7 @@ const inter = Inter({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -64,6 +65,7 @@ export default function RootLayout({
           <SocketProvider>
             <ClientAppProvider>
               <Toaster position="top-center" richColors theme="dark" />
+              <ServiceWorkerRegistrar />
               {children}
             </ClientAppProvider>
           </SocketProvider>

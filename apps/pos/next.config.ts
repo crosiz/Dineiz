@@ -1,23 +1,11 @@
 import type { NextConfig } from 'next';
 
-// PWA configuration is managed at runtime via next-pwa
-// next-pwa does not have official TS types — use require()
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-//
-// Kept disabled in dev intentionally: next-pwa injects itself via next.config's
-// webpack() hook, which `next dev --turbopack` never invokes, so it cannot
-// regenerate public/sw.js in dev regardless of this flag. Enabling it here would
-// only risk registering a stale sw.js left over from a previous `next build` and
-// serving cached assets instead of live dev output. Offline order storage/sync
-// does not depend on this service worker — see lib/sync.ts and
-// lib/syncRegistration.ts for the SW-independent mechanism used in all envs.
-const withPWA = require('next-pwa')({
-  dest: 'public',
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development',
-});
-
+// The service worker is not a Next plugin. `pnpm build` runs
+// scripts/generate-sw.mjs after `next build`, which writes public/sw.js from
+// scripts/sw.template.js with this build's asset list baked in, and
+// components/ServiceWorkerRegistrar.tsx registers it in production only.
+// (next-pwa used to do this through the webpack hook, which Turbopack never
+// calls, and its generated files were committed and went stale.)
 const nextConfig: NextConfig = {
   transpilePackages: ['@dineiz/ui', '@dineiz/schemas', '@dineiz/db'],
   typescript: {
@@ -28,4 +16,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

@@ -2,11 +2,11 @@
   "name": "Dineiz POS",
   "short_name": "DineizPOS",
   "description": "Point of Sale terminal for Dineiz restaurants",
-  "start_url": "/",
+  "start_url": "/pos/home",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
-  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -20,5 +20,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "scope": "/",
+  "id": "/"
 }

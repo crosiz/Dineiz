@@ -9,6 +9,7 @@ import {
 import { API_URL } from '@/lib/api';
 import { computeTotals, resolveTaxConfig } from '@/lib/pricing';
 import { useBrandingStore } from '@/lib/branding-store';
+import { getPosSession } from '@/lib/pos-session';
 
 export interface OrderViewItem {
   lineId: string;
@@ -671,6 +672,16 @@ function recalc(orders: Record<string, OrderView>, orderId: string) {
 // ─── REBUILD: replay all events on cold start ───────────────────────────────
 
 export async function rebuildViews(): Promise<void> {
+  // The floor plan is reference data fetched from the server. A tablet that
+  // cold-starts with no network used to come up with an empty Tables screen:
+  // the only persisted copy lived in the 'snapshot', which is taken only on a
+  // manual compact. The last floor plan seen is now kept on its own (see
+  // persistFloorPlan) and restored first; a snapshot, when there is one, still
+  // wins because it is at least as new.
+  const floor = await edb.views.get(FLOOR_PLAN_KEY);
+  if (floor?.value?.branchId && floor.value.branchId === currentBranchId()) {
+    useViews.getState()._setSnapshot({ tables: floor.value.tables });
+  }
   const snapshot = await edb.views.get('snapshot');
   if (snapshot) {
     useViews.getState()._setSnapshot(snapshot.value);
@@ -699,7 +710,31 @@ export async function rebuildViews(): Promise<void> {
     useViews.getState()._setSnapshot({ orders: patched });
   }
 
+  // Restored tables carry whatever status they had when saved; derive it
+  // from the orders this terminal actually has now.
+  if (Object.keys(useViews.getState().tables).length > 0) reconcileTables();
+
   useViews.getState()._markReady();
+}
+
+// ─── FLOOR PLAN CACHE: tables survive a cold start with no network ─────────
+
+const FLOOR_PLAN_KEY = 'floorPlan';
+
+function currentBranchId(): string | null {
+  try {
+    return getPosSession()?.branchId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function persistFloorPlan(branchId: string, tables: Record<string, TableView>): Promise<void> {
+  try {
+    await edb.views.put({ key: FLOOR_PLAN_KEY, value: { branchId, tables }, version: 0 });
+  } catch {
+    // Storage full or unavailable. The live copy in memory is unaffected.
+  }
 }
 
 // ─── SNAPSHOT: compact the log so replay stays fast ─────────────────────────
@@ -905,6 +940,7 @@ async function doSeedTablesFromServer(branchId: string): Promise<void> {
     // Re-derive every table from the orders currently in the store so status
     // reflects local reality straight away.
     reconcileTables();
+    void persistFloorPlan(branchId, useViews.getState().tables);
   } catch {
     // Best-effort — table view just stays whatever it already was
   }
