@@ -743,10 +743,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                             const d = e.target.value.replace(/[^\d]/g, '').slice(0, 9);
                             setClosingCash(d === '' ? '' : Number(d));
                           }}
-                          className="w-full bg-transparent border-0 outline-none text-right text-[22px] font-bold text-ink tabular-nums placeholder:text-ink-4"
+                          className="w-full bg-transparent border-0 outline-none focus:shadow-none text-right text-[22px] font-bold text-ink tabular-nums placeholder:text-ink-4"
                           placeholder="0"
-                          autoFocus
-                        />
+                                                  />
                       </label>
                     ) : (
                       <div className="rounded-xl border border-line divide-y divide-line overflow-hidden">
@@ -764,7 +763,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                                 setCounts((c) => ({ ...c, [d]: v }));
                               }}
                               placeholder="0"
-                              className="w-16 h-9 rounded-lg border border-line-strong text-center text-[15px] font-semibold text-ink outline-none focus:border-ink [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              className="w-16 h-9 rounded-lg border border-line-strong text-center text-[15px] font-semibold text-ink outline-none focus:border-ink focus:shadow-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <span className="flex-1 text-right text-[13px] text-ink-2 tabular-nums">
                               {(counts[d] || 0) > 0 ? formatPKR(d * counts[d]) : '—'}
@@ -797,7 +796,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="Explain any difference, refunds or payouts"
-                      className="w-full h-20 rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-4 outline-none focus:border-ink resize-none"
+                      className="w-full h-20 rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-[14px] text-ink placeholder:text-ink-4 outline-none focus:border-ink focus:shadow-none resize-none"
                     />
                   </section>
                 </div>

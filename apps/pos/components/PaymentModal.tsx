@@ -687,7 +687,7 @@ export default function PaymentModal({
                     value={customTip}
                     onChange={(e) => setCustomTip(e.target.value)}
                     placeholder="0"
-                    className="w-full bg-transparent outline-none text-[15px] font-semibold text-ink tabular-nums"
+                    className="w-full bg-transparent outline-none focus:shadow-none text-[15px] font-semibold text-ink tabular-nums"
                     autoFocus
                   />
                 </label>
@@ -792,7 +792,7 @@ export default function PaymentModal({
                     value={authCode}
                     onChange={(e) => setAuthCode(e.target.value)}
                     placeholder="From the card slip"
-                    className="w-full h-12 px-3.5 rounded-xl border border-line-strong focus:border-ink bg-surface outline-none text-[15px] font-semibold text-ink placeholder:text-ink-4 placeholder:font-normal tracking-wide"
+                    className="w-full h-12 px-3.5 rounded-xl border border-line-strong focus:border-ink focus:shadow-none bg-surface outline-none text-[15px] font-semibold text-ink placeholder:text-ink-4 placeholder:font-normal tracking-wide"
                   />
                 </label>
               </div>
@@ -833,7 +833,7 @@ export default function PaymentModal({
                           value={splitAmount1}
                           onChange={(e) => setSplitAmount1(e.target.value)}
                           placeholder="0"
-                          className="w-full bg-transparent outline-none text-[16px] font-semibold text-ink tabular-nums"
+                          className="w-full bg-transparent outline-none focus:shadow-none text-[16px] font-semibold text-ink tabular-nums"
                         />
                       ) : (
                         <span className="text-[16px] font-semibold text-ink-2 tabular-nums">{Number(row.value).toLocaleString('en-US')}</span>

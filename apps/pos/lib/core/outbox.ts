@@ -1492,9 +1492,17 @@ export function forceSyncNow(): void {
 export async function flushOutbox(timeoutMs = 8000): Promise<number> {
   forceSyncNow();
   const deadline = Date.now() + timeoutMs;
+  // Stop as soon as nothing is moving: with the API down every send fails
+  // fast, and waiting out the full timeout just parks the cashier on a
+  // spinner. The caller's own sync step deals with what's left.
+  const STALL_MS = 3000;
+  let lastLeft = Infinity;
+  let lastProgressAt = Date.now();
   for (;;) {
     const left = (await getUnsyncedSummary()).count;
-    if (left === 0 || Date.now() >= deadline) return left;
+    if (left === 0 || Date.now() >= deadline || circuitOpen) return left;
+    if (left < lastLeft) { lastLeft = left; lastProgressAt = Date.now(); }
+    else if (Date.now() - lastProgressAt >= STALL_MS) return left;
     await new Promise((r) => setTimeout(r, 400));
   }
 }
