@@ -254,10 +254,17 @@ async function build() {
       fastify.log.error('Health check: database unreachable — ' + e.message);
     }
 
+    // Bounded: Redis cannot fail this check, so a slow ping has no reason to
+    // hold the response. It used to add seconds whenever Redis was sluggish,
+    // which pushed the whole check past the POS probe's timeout and kept the
+    // breaker open against an API that was serving requests fine.
     let redisOk = false;
     try {
       const { redis } = await import('./lib/redis.js');
-      await redis.ping();
+      await Promise.race([
+        redis.ping(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('ping timed out after 500ms')), 500)),
+      ]);
       redisOk = true;
     } catch (e: any) {
       fastify.log.error('Health check: redis unreachable — ' + e.message);

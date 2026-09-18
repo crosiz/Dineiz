@@ -60,6 +60,7 @@ function syncCfg(): { requestTimeoutMs: number; maxLifetimeMs: number; maxBatchS
 const CIRCUIT_TRIP_THRESHOLD = 3;
 const CIRCUIT_PROBE_INTERVAL_MS = 15000;
 const CIRCUIT_CLOSE_THRESHOLD = 2;
+const PROBE_TIMEOUT_MS = 5000;
 
 const WATCHDOG_INTERVAL_MS = 60_000;
 const BLOCKED_REEVAL_INTERVAL_MS = 30_000;
@@ -94,6 +95,11 @@ interface OutboxTask {
   // bill request, so only bodyEventIds may be confirmed when this task
   // succeeds. See deriveTaskChains and confirmShippedEvents.
   bodyEventIds?: string[];
+  // CREATE_ORDER only: this attempt wrote the create marker (see
+  // beginCreateAttempt), so it is the one entitled to withdraw it.
+  ownsCreateMarker?: boolean;
+  // CREATE_ORDER only: the order's line ids when its body was built.
+  bodyLineIds?: string[];
 }
 
 // ─── Module state ────────────────────────────────────────────────────────
@@ -152,7 +158,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs?: numb
     // classify it as retryable (it always was, but only by accident of falling
     // through to the generic non-permanent branch).
     if (timedOut || err?.name === 'AbortError') {
-      throw new TaskError(`The server did not respond within ${Math.round(timeoutMs / 1000)}s`, false);
+      throw new TaskError(`The server did not respond within ${Math.round(timeoutMs / 1000)}s`, false, { timedOut: true });
     }
     throw err;
   } finally {
@@ -167,11 +173,15 @@ class TaskError extends Error {
   permanent: boolean;
   authExpired: boolean;
   graceRetries: number; // extra retries before POISON even for a "permanent" error
-  constructor(message: string, permanent: boolean, opts: { authExpired?: boolean; graceRetries?: number } = {}) {
+  // The request went out and no answer came back: the server may or may not
+  // have acted on it. Every other failure is a definite "it did not happen".
+  timedOut: boolean;
+  constructor(message: string, permanent: boolean, opts: { authExpired?: boolean; graceRetries?: number; timedOut?: boolean } = {}) {
     super(message);
     this.permanent = permanent;
     this.authExpired = opts.authExpired ?? false;
     this.graceRetries = opts.graceRetries ?? 0;
+    this.timedOut = opts.timedOut ?? false;
   }
 }
 
@@ -263,6 +273,8 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
 
   const chains = new Map<string, OutboxTask[]>();
   const orders = useViews.getState().orders;
+  const createMarkers = await loadCreateMarkers();
+  const markersToClear: string[] = [];
 
   // State writes this derivation implies. They used to be fired without
   // `await` from inside the loop, so the chain could be handed back before
@@ -364,7 +376,28 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
           }
         }
       } else {
-        const itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');
+        let itemEvents = events.filter((e) => e.type === 'ITEM_ADDED');
+
+        // The order has a server id but its ORDER_CREATED is still pending:
+        // a create reached the server and its answer never reached us (it
+        // timed out, or the page died mid-request), and the id arrived some
+        // other way, usually the live-orders pull matching the order number.
+        // That create already carried the lines recorded when it went out.
+        // Shipping them again as ADD_ITEMS put every item on the ticket twice,
+        // which is what an offline punch followed by a slow reconnect did.
+        // They are confirmed here; only lines added after that create still
+        // ship. With no marker there is no way to tell, and a missing line is
+        // safer than a doubled one, so everything pending counts as carried.
+        if (events.some((e) => e.type === 'ORDER_CREATED')) {
+          const sent = createMarkers.get(aggregateId);
+          const wasCarried = (e: PosEvent) => !sent || sent.has(e.payload?.lineId);
+          const carried = itemEvents.filter(wasCarried);
+          if (carried.length) {
+            toConfirm.push(...carried.map((e) => e.id));
+            itemEvents = itemEvents.filter((e) => !wasCarried(e));
+          }
+          if (createMarkers.has(aggregateId)) markersToClear.push(aggregateId);
+        }
         const statusEvents = events.filter((e) =>
           ['ORDER_MARKED_READY', 'ORDER_SERVED', 'ORDER_CANCELLED', 'ORDER_VOIDED', 'ORDER_WALKED_OUT'].includes(e.type),
         );
@@ -440,8 +473,54 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
   // so the next cycle can never re-derive an event this one already retired.
   if (toSupersede.length) await markSuperseded(toSupersede);
   if (toConfirm.length) await markConfirmed(toConfirm);
+  if (markersToClear.length) await edb.meta.bulkDelete(markersToClear.map(createMarkerKey));
 
   return chains;
+}
+
+// ─── Creates whose answer never arrived ───────────────────────────────────
+//
+// Before each create goes out, the line ids its body was built from are
+// written to meta. A definite failure removes the marker again; a timeout, or the
+// page dying mid-request, leaves it standing, because the server may have
+// created the order. An earlier standing marker is never overwritten: the
+// server keys creates on the order id, so if one got through, the FIRST one to
+// get through is the order it has, and a retry only replays that answer.
+
+const CREATE_MARKER_PREFIX = 'createAttempt:';
+const createMarkerKey = (aggregateId: string) => `${CREATE_MARKER_PREFIX}${aggregateId}`;
+
+async function loadCreateMarkers(): Promise<Map<string, Set<string>>> {
+  const rows = await edb.meta.where('key').startsWith(CREATE_MARKER_PREFIX).toArray();
+  return new Map(rows.map((r) => [r.key.slice(CREATE_MARKER_PREFIX.length), new Set<string>(r.value)]));
+}
+
+// Every line on the order when the body was built, voided ones included: a
+// line voided before the create never needs shipping on its own either.
+function linesOf(order: any): string[] {
+  return (order?.items ?? []).map((it: any) => it.lineId).filter(Boolean);
+}
+
+async function beginCreateAttempt(task: OutboxTask): Promise<void> {
+  if (task.kind !== 'CREATE_ORDER') return;
+  const key = createMarkerKey(task.aggregateId);
+  if (await edb.meta.get(key)) {
+    task.ownsCreateMarker = false;
+    return;
+  }
+  await edb.meta.put({ key, value: task.bodyLineIds ?? [] });
+  task.ownsCreateMarker = true;
+}
+
+// The server certainly did not create the order on this attempt.
+async function abandonCreateAttempt(task: OutboxTask): Promise<void> {
+  if (task.kind !== 'CREATE_ORDER' || !task.ownsCreateMarker) return;
+  task.ownsCreateMarker = false;
+  await edb.meta.delete(createMarkerKey(task.aggregateId));
+}
+
+async function settleCreateAttempt(task: OutboxTask, err: unknown): Promise<void> {
+  if (!(err instanceof TaskError && err.timedOut)) await abandonCreateAttempt(task);
 }
 
 function statusForEvent(e: PosEvent): string {
@@ -558,6 +637,7 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
   switch (task.kind) {
     case 'CREATE_ORDER':
       if (!order) return null;
+      task.bodyLineIds = linesOf(order);
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: task.aggregateId, idempotencyKey: task.aggregateId, body: createOrderBody(order) };
     case 'ADD_ITEMS': {
       if (!order) return null;
@@ -606,8 +686,20 @@ async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
 
   if (task.kind === 'CREATE_ORDER') {
     if (!order) return true;
-    const res = await fetchWithTimeout(`${API_URL}/api/orders`, { method: 'POST', headers: authHeaders(task.aggregateId), body: JSON.stringify(createOrderBody(order)) });
-    if (!res.ok) throw classifyHttpError(res.status);
+    const body = JSON.stringify(createOrderBody(order));
+    task.bodyLineIds = linesOf(order);
+    await beginCreateAttempt(task);
+    let res: Response;
+    try {
+      res = await fetchWithTimeout(`${API_URL}/api/orders`, { method: 'POST', headers: authHeaders(task.aggregateId), body });
+    } catch (err) {
+      await settleCreateAttempt(task, err);
+      throw err;
+    }
+    if (!res.ok) {
+      await abandonCreateAttempt(task);
+      throw classifyHttpError(res.status);
+    }
     const created = await res.json();
     reconcileServerId(task.aggregateId, created.id);
     return true;
@@ -680,10 +772,25 @@ async function markConfirmed(eventIds: string | string[]): Promise<void> {
 // and must go back to QUEUED here, not be confirmed alongside the create,
 // so the next cycle ships them for real once hasServerId is set.
 async function confirmShippedEvents(task: OutboxTask): Promise<void> {
-  const toConfirm = task.kind === 'CREATE_ORDER' && task.bodyEventIds ? task.bodyEventIds : task.eventIds;
+  let toConfirm = task.kind === 'CREATE_ORDER' && task.bodyEventIds ? task.bodyEventIds : task.eventIds;
+  if (task.kind === 'CREATE_ORDER') {
+    // A success here can be the server replaying an EARLIER attempt's create
+    // (same idempotency key) that timed out on our side. That order holds
+    // only the lines that attempt carried; anything added since must still
+    // ship as ADD_ITEMS, so it goes back to the queue with the rest.
+    const key = createMarkerKey(task.aggregateId);
+    const marker = await edb.meta.get(key);
+    if (marker) {
+      const sent = new Set<string>(marker.value);
+      const events = (await edb.events.bulkGet(toConfirm)).filter(Boolean) as PosEvent[];
+      toConfirm = events.filter((e) => e.type !== 'ITEM_ADDED' || sent.has(e.payload?.lineId)).map((e) => e.id);
+      await edb.meta.delete(key);
+    }
+  }
   await markConfirmed(toConfirm);
   if (toConfirm !== task.eventIds) {
-    const leftover = task.eventIds.filter((id) => !toConfirm.includes(id));
+    const confirmed = new Set(toConfirm);
+    const leftover = task.eventIds.filter((id) => !confirmed.has(id));
     if (leftover.length) await edb.events.where('id').anyOf(leftover).modify({ syncState: 'QUEUED' });
   }
 }
@@ -818,7 +925,10 @@ function tripCircuit(): void {
 
 async function probeHealth(): Promise<void> {
   try {
-    const res = await fetchWithTimeout(`${API_URL}/health`, { method: 'HEAD' }, 2000);
+    // 5s, not 2s: /health runs a real database query, and a Neon cold start
+    // alone can take longer than 2s. Too tight a budget and every probe fails
+    // against an API that is up, so the breaker never closes on its own.
+    const res = await fetchWithTimeout(`${API_URL}/health`, { method: 'HEAD' }, PROBE_TIMEOUT_MS);
     if (res.ok) {
       consecutiveProbeSuccesses++;
       if (consecutiveProbeSuccesses >= CIRCUIT_CLOSE_THRESHOLD) {
@@ -903,6 +1013,7 @@ async function runCriticalTaskInner(task: OutboxTask): Promise<void> {
 async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
   const byOpId = new Map(tasks.map((t) => [t.eventIds.join(','), t]));
   for (const t of tasks) await markInflight(t.eventIds);
+  for (const t of tasks) await beginCreateAttempt(t);
   const t0 = performance.now();
   let res: Response;
   try {
@@ -918,6 +1029,7 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
   } catch (err) {
     // network/timeout — every task in the batch degrades and retries
     const te = err instanceof TaskError ? err : new TaskError((err as Error)?.message ?? 'Batch request failed', false);
+    for (const t of tasks) await settleCreateAttempt(t, te);
     for (const t of tasks) await markFailed(t.eventIds, te);
     noteFailure(te);
     throw te;
@@ -927,11 +1039,13 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
   if (res.status === 404) {
     batchEndpointAvailable = false;
     console.warn('[outbox] /api/pos/events/batch not available — falling back to REST');
+    for (const t of tasks) await abandonCreateAttempt(t);
     for (const t of tasks) await edb.events.where('id').anyOf(t.eventIds).modify({ syncState: 'QUEUED' });
     return;
   }
   if (!res.ok) {
     const te = classifyHttpError(res.status);
+    for (const t of tasks) await abandonCreateAttempt(t);
     for (const t of tasks) await markFailed(t.eventIds, te);
     noteFailure(te);
     throw te;
@@ -954,8 +1068,10 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
     } else if (r.status === 424) {
       // "skipped — earlier op failed" — put it back to QUEUED for next cycle.
       failedAggs.add(task.aggregateId);
+      await abandonCreateAttempt(task);
       await edb.events.where('id').anyOf(task.eventIds).modify({ syncState: 'QUEUED' });
     } else {
+      await abandonCreateAttempt(task);
       const te = new TaskError(r.error ?? `HTTP ${r.status}`, !!r.permanent, {
         authExpired: r.status === 401,
         graceRetries: r.status === 409 ? 1 : 0,
