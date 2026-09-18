@@ -15,6 +15,12 @@
       "port": 3001
     },
     {
+      "name": "pos-dev-3004",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm", "--filter", "pos", "exec", "next", "dev", "--turbopack", "--port", "3004"],
+      "port": 3004
+    },
+    {
       "name": "pos-prod",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["pnpm", "--filter", "pos", "exec", "next", "start", "--port", "3004"],
