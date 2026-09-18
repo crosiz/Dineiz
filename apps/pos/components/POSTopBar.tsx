@@ -97,46 +97,12 @@ export function POSTopBar() {
     } catch { /* offline — the list stays as-is, override is still available */ }
   };
 
-  const handleCloseShiftClick = async () => {
+  const handleCloseShiftClick = () => {
     setIsDropdownOpen(false);
-
-    if (!session.branchId || !session.shiftId) {
-      setIsCloseShiftOpen(true);
-      return;
-    }
-
-    // Open immediately — CloseShiftModal has its own "Calculating totals…"
-    // loading state, so the cashier sees feedback the instant they tap
-    // instead of a frozen menu while this validation call is in flight
-    // (previously this fetch had to resolve, cold Neon connection and all,
-    // before the modal appeared at all). The can-close check still runs, in
-    // the background — if it turns out the shift is blocked, swap to the
-    // blocker modal instead.
+    // The close dialog owns sync, verification and blockers in one flow.
+    // A second racing request must not replace it with a stale warning.
     setIsCloseShiftOpen(true);
-
-    try {
-      const token = localStorage.getItem('pos_token');
-      // Every other POS call falls back to :3001; this one said :8080, so on a
-      // dev machine without NEXT_PUBLIC_API_URL set the close-shift guard
-      // silently failed its check.
-      const res = await fetch(`${API_URL}/api/shifts/can-close?shiftId=${session.shiftId}&branchId=${session.branchId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!res.ok) throw new Error('Validation check failed');
-      const data = await res.json();
-
-      if (!data.canClose) {
-        setIsCloseShiftOpen(false);
-        setBlockers(data.blockers || []);
-        setIsBlockerOpen(true);
-      }
-    } catch (e) {
-      console.warn('Shift close validation error', e);
-      toast.error('Could not validate shift status. Please try again.');
-    }
   };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => { });
@@ -250,18 +216,23 @@ export function POSTopBar() {
         }).catch(() => { /* saved locally is enough */ });
       }
     } catch {
-      /* local storage unavailable — fall through, the cart is still cleared */
+      throw new Error('The order could not be saved on this device. Your cart has been kept.');
     }
   };
 
   const holdCartThenSignOut = async () => {
     setHoldBusy(true);
-    await holdCurrentCart();
-    useCartStore.getState().clearCart();
-    setHoldBusy(false);
-    setShowCartWarning(false);
-    toast.success('Order held. Find it in Tickets → On Hold');
-    await continueSignOut();
+    try {
+      await holdCurrentCart();
+      useCartStore.getState().clearCart();
+      setShowCartWarning(false);
+      toast.success('Order held. Find it in Tickets → On Hold');
+      await continueSignOut();
+    } catch (error: any) {
+      toast.error(error.message || 'Could not hold the order. Your cart is unchanged.');
+    } finally {
+      setHoldBusy(false);
+    }
   };
 
   const discardCartThenSignOut = async () => {
@@ -348,7 +319,7 @@ export function POSTopBar() {
             order-type selector and the avatar cluster. A real max-width is
             what forces the title/breadcrumb block below to actually need
             its own truncate/scroll. */}
-        <div className="flex items-center gap-2 sm:gap-3.5 text-ink min-w-0 max-w-[45%] sm:max-w-[40%]">
+        <div className="flex items-center gap-2 sm:gap-3.5 text-ink min-w-0 shrink-0 max-w-[40%]">
           {config.showBackButton && config.backPath && (
             <button
               onClick={() => {
@@ -360,7 +331,8 @@ export function POSTopBar() {
                   router.push(config.backPath!);
                 }
               }}
-              className="px-2.5 py-1.5 rounded-xl bg-sunken border border-line-strong text-ink-2 font-medium text-[13px] flex items-center gap-1.5 hover:text-ink hover:bg-hover transition-all active:scale-95 shadow-sm shrink-0"
+              aria-label="Go back"
+              className="min-w-11 h-11 px-2.5 rounded-lg text-ink-2 font-medium text-[13px] flex items-center justify-center gap-1.5 hover:bg-hover shrink-0"
             >
               <ArrowLeft size={15} />
               <span className="hidden sm:inline">Back</span>
@@ -368,15 +340,16 @@ export function POSTopBar() {
           )}
 
           <DineizLogo
+            className="hidden lg:inline-flex"
             size="md"
             variant="light"
             onClick={() => router.push('/pos/home')}
           />
 
           {(config.pageTitle || config.breadcrumb) && (
-            <div className="hidden sm:flex items-center gap-3 pl-2 border-l border-line min-w-0 shrink">
+            <div className="flex items-center gap-3 lg:pl-2 lg:border-l border-line min-w-0 shrink">
               <div className="min-w-0 shrink">
-                {config.pageTitle && <h2 className="clash-display text-lg font-bold leading-tight tracking-[-0.015em] text-ink truncate">{config.pageTitle}</h2>}
+                {config.pageTitle && <h2 className="text-sm sm:text-base font-semibold leading-tight text-ink truncate">{config.pageTitle}</h2>}
                 {config.breadcrumb && <div className="text-[10px] text-ink-3 uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
               </div>
             </div>
@@ -392,7 +365,7 @@ export function POSTopBar() {
             empty, halving how much room pages without a centerSlot (most of
             them) actually had for rightActions + the avatar cluster. */}
         {config.centerSlot && (
-          <div className="flex-1 flex justify-center px-1 sm:px-4 min-w-0 overflow-hidden">
+          <div className="hidden lg:flex flex-1 justify-center px-4 min-w-0 overflow-hidden">
             {config.centerSlot}
           </div>
         )}

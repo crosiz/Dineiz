@@ -7,7 +7,7 @@ import { useMenu, groupByCategory } from '@/hooks/useMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VariationPicker, DiscountModal } from './components';
 import type { CachedMenuItem } from '@/lib/db';
-import { MenuItemCard, type ViewMode } from '@/components/MenuItemCard';
+import { MenuItemCard } from '@/components/MenuItemCard';
 import { toast } from 'sonner';
 import { getDB } from '@/lib/db';
 import { v4 as uuid } from 'uuid';
@@ -22,7 +22,6 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
-import { ScrollRail } from '@/components/ScrollRail';
 import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
@@ -257,8 +256,6 @@ function OrderEntryPageContent() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-
   const [cartWidthPercent, setCartWidthPercent] = useState(42);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -291,21 +288,6 @@ function OrderEntryPageContent() {
       window.removeEventListener('pointerup', handlePointerUp);
     };
   }, [isResizing, cartWidthPercent]);
-
-  useEffect(() => {
-    // 'pos_menu_layout', NOT 'pos_view_mode'. That key belongs to lib/view-mode.ts
-    // (signed-in-without-shift), and the two features were sharing it: opening a
-    // shift calls removeItem('pos_view_mode'), silently wiping the cashier's menu
-    // layout, and choosing 'Continue Without Shift' wrote '1' into it, which then
-    // loaded back here as a layout name that doesn't exist.
-    const saved = localStorage.getItem('pos_menu_layout') as ViewMode | null;
-    if (saved === 'grid' || saved === 'list') setViewMode(saved);
-  }, []);
-
-  const handleViewChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    localStorage.setItem('pos_menu_layout', mode);
-  };
 
   const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
@@ -555,23 +537,16 @@ function OrderEntryPageContent() {
     return items;
   }, [menuItems, activeCategoryId, debouncedSearch]);
 
-  // Two layouts. There were five, three of them reachable from a toggle above
-  // the grid — a decision a cashier has to make mid-service that changes nothing
-  // about the job. Grid for browsing by sight, list for a long menu you know by
-  // name.
-  // Both layouts are dense now that the card is text-first (see MenuItemCard's
-  // header — 1 of 36 items in the seeded tenant has a photo, so an image-shaped
-  // card meant two items visible on a phone out of thirty-six). Grid is the
-  // fat-finger tablet layout; list packs more in and aligns the price column.
-  const gridColsClass = viewMode === 'list'
-    ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5'
-    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
+  // One menu layout keeps a known item in the same place at every terminal.
+  // Cashiers can filter or search; they should not need to decide how the menu
+  // itself is drawn before they can start an order.
+  const gridColsClass = 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
 
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
   const handleItemTap = (item: CachedMenuItem) => {
     if (!item.isAvailable) return;
-    if (item.variations && item.variations.length > 0) {
+    if (item.variations?.length || item.addOns?.length) {
       setSelectedItem(item);
     } else {
       addItem({
@@ -1179,72 +1154,43 @@ function OrderEntryPageContent() {
               {orderTypeButtons}
             </div>
           </div>
-          {/* Category bar. ScrollRail, not a bare overflow-x div: with eleven
-              categories on a 1280px screen, 568px of this strip — everything
-              from Pizza onward — had no way to be reached with a mouse. */}
-          <ScrollRail
-            aria-label="Menu categories"
-            className="shrink-0 h-[52px] bg-surface border-b border-line px-3"
-          >
-            {/* min-w so a two-letter label still reads as a pill rather than
-                rendering as a circle next to its wider neighbours. */}
-            <button
-              onClick={() => setActiveCategoryId(null)}
-              className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
-            >
-              All
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
+          {/* A category rail plus a search row plus a view switch made the
+              menu feel like settings before the cashier could see food. This
+              one compact toolbar is the entire browse surface. */}
+          <div className="shrink-0 p-3 border-b border-line bg-surface flex gap-2 items-center">
+            <label className="relative shrink-0">
+              <span className="sr-only">Menu category</span>
+              <select
+                value={activeCategoryId ?? ''}
+                onChange={(e) => setActiveCategoryId(e.target.value || null)}
+                className="h-11 max-w-[132px] appearance-none rounded-xl border border-line-strong bg-canvas pl-3 pr-8 text-[13px] font-semibold text-ink outline-none focus:border-brand"
               >
-                {cat.name}
-              </button>
-            ))}
-          </ScrollRail>
-
-          {/* Search Bar & View Toggle */}
-          <div className="p-3 border-b border-line bg-canvas flex gap-2 items-center">
-            {/* min-w-0 on both this wrapper and the <input> — flex items
-                default to min-width:auto (their content's natural size, and
-                a bare <input> has its own non-trivial intrinsic minimum),
-                which silently overrode flex-1's ability to shrink and pushed
-                this row ~80px past a 360px viewport, clipped by the section's
-                overflow-hidden with no visible sign anything was cut off. */}
-            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-line-strong rounded-xl px-4 h-11 transition-colors focus-within:border-brand shadow-sm">
+                <option value="">All items</option>
+                {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+              <GalleryVerticalEnd className="pointer-events-none absolute right-2.5 top-1/2 w-4 h-4 -translate-y-1/2 text-ink-3" />
+            </label>
+            <div className="flex-1 min-w-0 flex items-center gap-2 bg-canvas border border-line-strong rounded-xl px-3 h-11 transition-colors focus-within:border-brand">
               <Search className="text-ink-4 shrink-0 w-[18px] h-[18px]" />
               <input
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search menu items..."
+                placeholder="Search menu"
+                aria-label="Search menu"
                 className="bg-transparent border-none outline-none text-[16px] text-ink flex-1 min-w-0 placeholder:text-ink-4"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
+                <button aria-label="Clear search" onClick={() => setSearchQuery('')} className="w-11 h-11 -mr-2 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
                   <X className="w-[18px] h-[18px]" />
                 </button>
               )}
             </div>
-
-            {/* One toggle, two states — not a three-way segmented control for
-                five layouts that all showed the same four facts. */}
-            <button
-              onClick={() => handleViewChange(viewMode === 'grid' ? 'list' : 'grid')}
-              title={viewMode === 'grid' ? 'Switch to list' : 'Switch to grid'}
-              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-              className="shrink-0 grid place-items-center w-11 h-11 rounded-xl border border-line-strong bg-surface text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
-            >
-              {viewMode === 'grid' ? <Rows3 className="w-[18px] h-[18px]" /> : <LayoutGrid className="w-[18px] h-[18px]" />}
-            </button>
+            <span className="hidden md:block shrink-0 text-[12px] font-medium tabular-nums text-ink-3">{filteredItems.length} items</span>
           </div>
 
-          {/* Menu Grid — "All" groups items under a category divider per
-              section (a flat, undifferentiated grid of the whole menu was
-              genuinely hard to scan mid-service); picking one category
-              already narrows the grid to just that category, so a divider
-              there would just repeat the category chip above it. */}
+          {/* A flat, stable grid is faster to scan than repeatedly restarting
+              at category headers. The filter above provides the same narrowing
+              without wasting vertical space. */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24 lg:pb-3">
             {menuLoading ? (
               // Mirrors the real tile, at the real height — a skeleton that
@@ -1257,38 +1203,6 @@ function OrderEntryPageContent() {
                   </div>
                 ))}
               </div>
-            ) : !activeCategoryId ? (
-              <div className="flex flex-col gap-7">
-                {categories.map(cat => {
-                  const catItems = filteredItems.filter(i => i.categoryId === cat.id);
-                  if (catItems.length === 0) return null;
-                  return (
-                    <section key={cat.id}>
-                      <div className="flex items-center gap-2.5 mb-3">
-                        <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">{cat.name}</h3>
-                        <span className="text-[12px] font-bold text-ink-4">{catItems.length}</span>
-                        <div className="h-px flex-1 bg-hover" />
-                      </div>
-                      <div className={`grid content-start ${gridColsClass}`}>
-                        {catItems.map(item => (
-                          <MenuItemCard
-                            key={item.id}
-                            item={item}
-                            cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
-                            onTap={handleItemTap}
-                            viewMode={viewMode}
-                            onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
-                            isTogglingAvailable={togglingItemId === item.id}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  );
-                })}
-                {filteredItems.length === 0 && (
-                  <div className="text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
-                )}
-              </div>
             ) : (
               <div className={`grid content-start ${gridColsClass}`}>
                 {filteredItems.map(item => (
@@ -1297,7 +1211,6 @@ function OrderEntryPageContent() {
                     item={item}
                     cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
                     onTap={handleItemTap}
-                    viewMode={viewMode}
                     onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
                     isTogglingAvailable={togglingItemId === item.id}
                   />
@@ -1775,7 +1688,7 @@ function OrderEntryPageContent() {
 
 import { Suspense } from 'react';
 import { API_URL } from '@/lib/api';
-import { Armchair, Banknote, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
+import { Armchair, Banknote, GalleryVerticalEnd, Info, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);

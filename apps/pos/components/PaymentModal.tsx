@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { Modal } from '@/components/ui/Modal';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
@@ -526,24 +527,18 @@ export default function PaymentModal({
   // to be a later DOM sibling, no real stacking guarantee. 110 matches the
   // tier that parent already uses for its other nested overlays.
   return (
-    <div className="fixed inset-0 bg-black/60 z-[110] flex flex-col justify-end">
-      {/* Click outside to close */}
-      <div className="absolute inset-0 z-0" onClick={onClose}></div>
-
-      {/* MAIN CHECKOUT OVERLAY */}
-      <div className="relative h-[95dvh] bg-white rounded-t-3xl shadow-2xl flex flex-col slide-up z-10 font-body-md text-ink overflow-hidden border-t border-line">
-
+    <Modal isOpen={isOpen} onClose={isProcessing ? undefined : onClose} label="Checkout" sheetOnMobile zIndex={600} className="max-w-[1000px] h-[92dvh]">
         {/* Drag Handle & Header */}
         <div className="w-full flex flex-col items-center pt-3 pb-4 px-6 shrink-0 relative z-10 bg-canvas border-b border-line">
-          <div className="w-12 h-1.5 bg-hover rounded-full mb-4"></div>
+          
           <div className="w-full flex justify-between items-start">
             <div className="flex flex-col">
               <h1 className="font-headline-md text-[22px] leading-tight text-ink font-bold">Checkout</h1>
               <p className="text-body-sm text-ink-3 font-medium mt-0.5">
-                {tableLabel ? `Table ${tableLabel}` : 'Takeaway'} · #{orderId.slice(-6)}
+                {tableLabel ? `Table ${tableLabel}` : (orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway')} · #{orderId.slice(-6)}
               </p>
             </div>
-            <button className="w-10 h-10 flex items-center justify-center rounded-full bg-sunken text-ink-3 hover:bg-hover hover:text-ink transition-all" onClick={onClose}>
+            <button aria-label="Close checkout" disabled={isProcessing} className="w-11 h-11 flex items-center justify-center rounded-full bg-sunken text-ink-3 hover:bg-hover hover:text-ink transition-all" onClick={onClose}>
               <X className="w-[20px] h-[20px]" />
             </button>
           </div>
@@ -824,7 +819,7 @@ export default function PaymentModal({
         </div>
 
         {/* Sticky Bottom Bar */}
-        <div className="px-6 py-6 shrink-0 flex flex-col gap-4 relative z-10 border-t border-line bg-canvas">
+        <div className="px-4 py-3 shrink-0 flex flex-col gap-4 relative z-10 border-t border-line bg-canvas">
           {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
             <p className="text-amber-600 text-[12px] font-semibold text-center">
               Billing this order&apos;s full total (PKR {Math.round(orderTotal).toLocaleString()}). The server confirms the final amount.
@@ -857,7 +852,6 @@ export default function PaymentModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

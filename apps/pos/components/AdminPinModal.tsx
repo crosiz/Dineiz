@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { Modal } from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation'
 import { getPosSession, getToken } from '@/lib/pos-session'
 import { API_URL } from '@/lib/api';
@@ -40,6 +41,7 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
           'Authorization': `Bearer ${getToken()}`,
         },
         body: JSON.stringify({ pin: enteredPin, branchId: session.branchId }),
+        signal: AbortSignal.timeout(8000),
       })
 
       if (res.ok) {
@@ -78,20 +80,8 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
   const NUMPAD = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'DEL', '0', 'GO']
 
   return (
-    <div
-      className="fixed inset-0 z-[var(--z-modal-nested)] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      {/* w-[360px] with no min-w — this modal is opened from flows that can
-          already have another dialog on screen (e.g. Force Sign Out during
-          "Finishing Sync…"), and used to also overflow every viewport under
-          ~400px: min-w-[360px] beat max-w-[90vw] in CSS's conflict
-          resolution, so it rendered at a fixed 360px even inside a narrower,
-          padded viewport. z-[var(--z-modal-nested)] (400) instead of the
-          base modal tier (200) so it always wins over whatever opened it. */}
-      <div
-        className={`w-[360px] max-w-[90vw] bg-white rounded-[24px] border border-line shadow-[0_30px_80px_rgba(15,23,42,0.25)] p-8 animate-slide-up ${shake ? 'shake' : ''}`}
-      >
+    <Modal isOpen onClose={onClose} label="Manager access" zIndex={10000} className="max-w-[360px]">
+      <div className={`p-5 sm:p-6 overflow-y-auto ${shake ? 'shake' : ''}`}>
         {/* Lock icon */}
         <div className="text-center mb-2">
           <div className="w-13 h-13 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center mx-auto mb-3">
@@ -162,6 +152,6 @@ export function AdminPinModal({ onClose, onSuccess }: AdminPinModalProps) {
           90% { transform: translateX(3px); }
         }
       `}} />
-    </div>
+    </Modal>
   )
 }

@@ -211,34 +211,30 @@ export default function ClientTableMap() {
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
 
 
-  // Status Legend Component for POSTopBar. hidden below sm: at phone width
-  // POSTopBar's rightActions slot has only ~40-95px free once the always-
-  // visible avatar/sync cluster takes its share, and this pill wants ~360px
-  // unwrapped — rather than a barely-discoverable horizontal-scroll sliver,
-  // it's dropped in favor of the table colors on the canvas itself (which
-  // this legend is only a supplementary key for; tapping a table also shows
-  // its status by name).
+  // Status legend uses the same restrained dots as the plan. A floor map is
+  // already colour-dense, so the legend clarifies meaning without competing
+  // with a table's label.
   const legendElement = useMemo(
     () => (
-      <div className="hidden sm:flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
+      <div className="hidden lg:flex items-center gap-3 text-[11px] font-semibold text-ink-3">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" />
+          <span className="w-2 h-2 rounded-full bg-ok" />
           <span>Free</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-danger" />
           <span>Occupied</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-xs" />
+          <span className="w-2 h-2 rounded-full bg-info" />
           <span>Billed</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-xs" />
+          <span className="w-2 h-2 rounded-full bg-special" />
           <span>Reserved</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs" />
+          <span className="w-2 h-2 rounded-full bg-warn" />
           <span>Dirty</span>
         </div>
       </div>
@@ -1089,7 +1085,7 @@ export default function ClientTableMap() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
+    <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden relative">
       {/* Main Floor Canvas Container. height:100% (not the old hardcoded
           calc(100vh - 72px - 64px)) — this root now fills POSLayout's
           already-correctly-sized flex-1 content slot via h-full above, so
@@ -1109,8 +1105,8 @@ export default function ClientTableMap() {
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: 'var(--pos-bg-base)',
-          backgroundImage: 'radial-gradient(var(--pos-border-strong) 1.2px, transparent 1.2px)',
-          backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px`,
+          backgroundImage: 'radial-gradient(var(--pos-border) 1px, transparent 1px)',
+          backgroundSize: `${24 * view.zoom}px ${24 * view.zoom}px`,
           backgroundPosition: `${view.x}px ${view.y}px`,
           // Without this the browser's own pan/zoom fights every gesture the
           // handlers are trying to interpret — the single biggest reason the
@@ -1119,19 +1115,19 @@ export default function ClientTableMap() {
         }}
         className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
-        {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
-            3-4 floors instead of running off the edge of a narrow screen. */}
+        {/* Floor selector stays attached to the canvas, not to a decorative
+            glass panel, so it remains quiet while the map itself is primary. */}
         {floors.length > 1 && (
-          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-auto z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
-            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5 shrink-0" />
+          <div className="absolute top-4 left-4 z-40 flex items-center gap-1 rounded-xl bg-surface border border-line p-1.5 shadow-sm max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
+            <Layers className="w-4 h-4 text-ink-3 ml-1 mr-0.5 shrink-0" />
             {floors.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFloor(f)}
                 className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all shrink-0 ${
                   activeFloor === f
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-brand text-white shadow-sm'
+                    : 'text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
                 Floor {f}
@@ -1200,33 +1196,32 @@ export default function ClientTableMap() {
           ))}
         </div>
 
-        {/* Floating Glassmorphism Zoom Controls */}
-        <div className="absolute bottom-6 right-6 z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
+        <div className="absolute bottom-4 right-4 z-40 flex items-center gap-1 bg-surface border border-line p-1.5 rounded-xl shadow-sm">
           <button
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs font-bold text-slate-700 w-12 text-center">
+          <span className="text-[11px] font-semibold text-ink-2 w-11 text-center tabular-nums">
             {Math.round(view.zoom * 100)}%
           </span>
           <button
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
-          <div className="h-4 w-px bg-slate-200 my-auto" />
+          <div className="h-4 w-px bg-line my-auto" />
           <button
             type="button"
             onClick={handleResetZoom}
             title="Reset View"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

@@ -168,6 +168,7 @@ export async function apiFetch(path: string, init: ApiRequestInit = {}): Promise
   const timer = setTimeout(() => controller.abort(), timeoutMs ?? DEFAULT_TIMEOUT_MS);
   // Honour a caller's own signal as well as our timeout — whichever fires first.
   const onCallerAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
   signal?.addEventListener('abort', onCallerAbort);
 
   try {

@@ -1220,14 +1220,9 @@ async function shipBundleViaRest(tasks: OutboxTask[]): Promise<void> {
 async function runWatchdog(): Promise<void> {
   const now = Date.now();
 
-  // 24h max lifetime → ABANDONED + dead-letter.
+  // An outage (or a device-clock jump) is not permission to abandon sales.
+  // Keep transient failures durable and retryable until acknowledged.
   const nonTerminal = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).toArray();
-  const maxLifetimeMs = syncCfg().maxLifetimeMs;
-  const stale = nonTerminal.filter((e) => now - new Date(e.clientTime).getTime() > maxLifetimeMs);
-  if (stale.length) {
-    console.error(`[outbox] watchdog: ${stale.length} event(s) exceeded 24h — ABANDONED`);
-    await markAbandoned(stale);
-  }
 
   // A request that somehow never settled — INFLIGHT far longer than the 8s
   // timeout allows. Requeue so it retries instead of hanging forever.
@@ -1436,6 +1431,24 @@ export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
   };
 }
 
+/** Never report a shift as synced merely because failed events left the retry queue. */
+export async function getShiftSyncStatus(shiftId: string) {
+  const events = await edb.events.where('syncState')
+    .anyOf([...NON_TERMINAL_STATES, 'POISONED', 'ABANDONED'])
+    .and(e => resolveShiftId(e.shiftId) === resolveShiftId(shiftId)).toArray();
+  const pending = events.filter(e => NON_TERMINAL_STATES.includes(e.syncState)).length;
+  return {
+    pending,
+    rejected: events.length - pending,
+    total: events.length,
+    payments: events.filter(e => e.type === 'PAYMENT_COLLECTED').map(e => ({
+      orderId: e.aggregateId,
+      rejected: e.syncState === 'POISONED' || e.syncState === 'ABANDONED',
+      error: e.lastError,
+    })),
+  };
+}
+
 /** Full diagnostic dump for the Sync Status panel / Export Diagnostics. */
 export async function getSyncDiagnostics() {
   const all = await edb.events.toArray();
@@ -1541,7 +1554,9 @@ export function markShiftPendingSync(shiftId: string, unsentClosePayload?: unkno
     if (unsentClosePayload !== undefined) {
       localStorage.setItem(PENDING_SHIFT_CLOSE_KEY, JSON.stringify(unsentClosePayload));
     }
-  } catch { /* ignore */ }
+  } catch {
+    throw new Error('Cannot save the shift close on this device. Keep the shift open and try again.');
+  }
 }
 
 /** Replay a close POST that never landed. Returns false if it still hasn't. */
@@ -1558,7 +1573,7 @@ async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
     });
     // 4xx here means the server already has it closed, or is refusing for a
     // reason replaying won't fix — either way stop retrying forever.
-    if (res.ok || (res.status >= 400 && res.status < 500)) {
+    if (res.ok) {
       try { localStorage.removeItem(PENDING_SHIFT_CLOSE_KEY); } catch { /* ignore */ }
       return true;
     }
@@ -1688,8 +1703,8 @@ async function finalisePendingSyncShiftIfDrained(): Promise<void> {
   if (readPendingShiftOpen()) return;
   const shiftId = resolveShiftId(localShiftId);
 
-  const remaining = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).count();
-  if (remaining > 0) return;
+  const remaining = await getShiftSyncStatus(shiftId);
+  if (remaining.pending > 0 || remaining.rejected > 0) return;
 
   // The close itself may never have reached the server (closed offline).
   // Replay it first — sync-complete is meaningless on a shift the server
@@ -1705,7 +1720,7 @@ async function finalisePendingSyncShiftIfDrained(): Promise<void> {
       // has every one of this shift's orders/payments.
       body: JSON.stringify({}),
     });
-    if (res.ok || res.status === 400 /* already closed / not pending */) {
+    if (res.ok) {
       try { localStorage.removeItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
       if (poisonedOrAbandoned === 0) {
         try {

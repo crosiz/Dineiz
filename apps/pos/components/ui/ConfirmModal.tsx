@@ -1,4 +1,5 @@
 import React from 'react';
+import { Modal } from '@/components/ui/Modal';
 import { AlertTriangle, Info, HelpCircle } from 'lucide-react';
 
 interface ConfirmModalProps {
@@ -45,34 +46,30 @@ export function ConfirmModal({
   // near the top: this can be invoked from inside any other modal) look
   // wrong to anyone reading the class list.
   return (
-    <div className="fixed inset-0 flex items-center justify-center pointer-events-auto" style={{ zIndex: 9999 }}>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" onClick={onCancel} />
-
-      {/* Modal */}
-      <div className="relative w-[360px] max-w-[90vw] bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 overflow-hidden animate-in zoom-in-95 duration-150">
-        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center mb-3.5 ${iconBg}`}>
+    <Modal isOpen={isOpen} onClose={onCancel} label={title} zIndex={9999} className="max-w-[380px]">
+      <div className="p-6 overflow-y-auto">
+        <div className={`w-10 min-h-11 rounded-xl border flex items-center justify-center mb-3.5 ${iconBg}`}>
           {renderIcon()}
         </div>
         <h2 className="text-base font-bold text-slate-900 mb-1">{title}</h2>
-        <p className="text-xs text-slate-500 leading-relaxed mb-6">{message}</p>
+        <p className="text-sm text-slate-600 leading-relaxed mb-6">{message}</p>
 
         <div className="flex gap-2.5">
           <button
             onClick={onCancel}
-            className="flex-1 h-10 bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
+            className="flex-1 min-h-11 bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 hover:bg-slate-100 active:scale-95 transition-all"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 h-10 font-semibold text-xs rounded-xl active:scale-95 transition-all ${btnColorClass}`}
+            className={`flex-1 min-h-11 font-semibold text-xs rounded-xl active:scale-95 transition-all ${btnColorClass}`}
           >
             {confirmText}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 

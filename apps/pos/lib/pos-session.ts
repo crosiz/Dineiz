@@ -75,6 +75,7 @@ export async function resolveActiveShiftId(apiUrl: string): Promise<string | nul
   try {
     const res = await fetch(`${apiUrl}/api/shifts/current`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return local?.shiftId ?? null;
 

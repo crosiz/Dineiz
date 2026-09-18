@@ -10,6 +10,7 @@ import { formatPKR } from '@/lib/utils';
 import { useShiftStats } from '@/hooks/useShiftStats';
 import { useViews } from '@/lib/core/views';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { OrderTypeBadge } from '@/components/OrderTypeBadge';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { getDB } from '@/lib/db';
 import { kickOutbox } from '@/lib/core/outbox';
@@ -307,9 +308,10 @@ export default function HomeDashboard() {
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto lg:overflow-hidden no-scrollbar">
         {/* Left Column (60%) */}
         <div className="lg:col-span-7 p-4 sm:p-8 lg:overflow-y-auto no-scrollbar flex flex-col gap-6 sm:gap-8">
-          {/* Hero Actions Grid (4 Cards 2x2 Layout) */}
+          {/* Four short, stable routes. These are commands, not marketing
+              tiles; keeping them compact lets active work stay above the fold. */}
           <section>
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 {
                   label: 'New Order',
@@ -343,26 +345,26 @@ export default function HomeDashboard() {
                 <div
                   key={idx}
                   onClick={action.onClick}
-                  className={`hero-card h-[180px] rounded-2xl flex flex-col justify-between p-6 cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.98] ${
+                  className={`hero-card min-h-[124px] rounded-xl flex flex-col justify-between p-4 cursor-pointer transition-colors hover:border-line-strong active:scale-[0.99] ${
                     action.usePrimary
-                      ? 'bg-brand text-white shadow-xl shadow-orange-500/30 border-none'
-                      : 'bg-white border border-line hover:border-line-strong shadow-sm text-ink'
+                      ? 'bg-brand text-white shadow-sm border border-brand'
+                      : 'bg-white border border-line text-ink'
                   }`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center ${
                       action.usePrimary
-                        ? 'bg-white/20 border border-white/30 text-white'
-                        : 'bg-amber-50 border border-amber-200 text-brand'
+                        ? 'bg-white/15 text-white'
+                        : 'bg-brand-soft text-brand-strong'
                     }`}
                   >
-                    <action.Icon className="w-7 h-7" />
+                    <action.Icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className={`clash-display text-2xl font-bold ${action.usePrimary ? 'text-white' : 'text-ink'}`}>
+                    <div className={`text-[15px] font-semibold ${action.usePrimary ? 'text-white' : 'text-ink'}`}>
                       {action.label}
                     </div>
-                    <div className={`text-sm font-semibold ${action.usePrimary ? 'text-white/95' : 'text-ink-3'}`}>
+                    <div className={`mt-0.5 text-[12px] ${action.usePrimary ? 'text-white/85' : 'text-ink-3'}`}>
                       {action.sublabel}
                     </div>
                   </div>
@@ -374,7 +376,7 @@ export default function HomeDashboard() {
           {/* Active Orders Strip */}
           <section>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="clash-display text-2xl text-ink">Active Orders</h3>
+              <h3 className="text-[16px] font-semibold text-ink">Active orders</h3>
               <button
                 onClick={() => router.push('/pos/tickets')}
                 className="text-brand font-bold text-sm flex items-center gap-1 hover:underline"
@@ -405,26 +407,18 @@ export default function HomeDashboard() {
                       ? order.items.reduce((acc: number, i: any) => acc + (i.qty ?? i.quantity ?? 1), 0)
                       : (order.itemCount || order.itemsCount || 1);
                     const amount = order.netAmount ?? order.totalAmount ?? order.total ?? order.subtotal ?? 0;
-                    const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';
-                    // Same left-accent language Tickets already uses for
-                    // service type (see TicketsDashboard's "Dine-In" /
-                    // "Takeaway & Delivery" section dots) rather than
-                    // inventing a new colour scheme just for this card.
-                    const accentColor = order.type === 'DINE_IN' ? '#2A5DB0' : 'var(--pos-primary,#F59E0B)';
-
                     return (
                       <div
                         key={order.id}
                         onClick={() => openOrderDetails(order)}
-                        style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
-                        className="active-order-chip shrink-0 w-[210px] p-4 bg-white rounded-2xl cursor-pointer shadow-sm hover:shadow-md hover:border-line-strong transition-all border border-line flex flex-col gap-2.5"
+                        className="active-order-chip shrink-0 w-[228px] p-4 bg-white rounded-xl cursor-pointer hover:border-line-strong transition-colors border border-line flex flex-col gap-2.5"
                       >
                         <div className="flex justify-between items-start gap-2">
-                          <span className="text-ink font-bold clash-display text-lg leading-none">#{order.tokenNumber || order.orderNumber}</span>
+                          <span className="text-ink font-semibold text-[16px] leading-none tabular-nums">#{order.tokenNumber || order.orderNumber}</span>
                           <StatusBadge status={order.status} />
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
+                          <OrderTypeBadge type={order.type} compact />
                           {/* The label already IS the table's name ("T-4"), so
                               prefixing it printed "T-T-4". A branch is free to
                               call its tables anything — "Patio 2", "VIP" — and a
@@ -452,7 +446,7 @@ export default function HomeDashboard() {
               that endpoint never returned, and showed manager-facing
               ingredient stock to a cashier — see HomeDashboard notes above). */}
           <section className="flex flex-col gap-2" id="needs-attention-section">
-            <h3 className="clash-display text-2xl mb-1 text-ink">Needs Attention</h3>
+            <h3 className="text-[16px] font-semibold mb-1 text-ink">Needs attention</h3>
             {needsAttentionCount === 0 ? (
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3 text-emerald-700">
                 <CheckCircle2 className="w-[20px] h-[20px]" />

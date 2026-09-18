@@ -4,6 +4,8 @@ import { AlertTriangle, Receipt, Users, ArrowRight, ShieldCheck } from 'lucide-r
 import { toast } from 'sonner';
 import { ManagerOverrideModal } from './ManagerOverrideModal';
 import { cancelOrder } from '@/lib/core/commands';
+import { Modal } from '@/components/ui/Modal';
+import { formatPKR } from '@/lib/utils';
 
 interface ShiftCloseBlockerModalProps {
   isOpen: boolean;
@@ -56,18 +58,13 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
   }
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs transition-opacity" onClick={onClose} />
-      
-      <div
-        className="relative z-10 w-full max-w-[460px] max-h-[calc(100dvh-32px)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
-      >
+    <Modal isOpen={isOpen} onClose={onClose} labelledBy="shift-close-blocker-title" className="max-w-[460px] max-h-[calc(100dvh-16px)] sm:max-h-[calc(100dvh-32px)] flex flex-col">
         <div className="p-6 pb-4 flex flex-col items-center text-center">
           <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 mb-3">
             <AlertTriangle size={22} />
           </div>
-          <h2 className="text-lg font-bold text-slate-900 leading-tight mb-1">Shift Cannot Be Closed</h2>
-          <p className="text-xs text-slate-500 font-medium">Unresolved items require attention before closing this shift.</p>
+          <h2 id="shift-close-blocker-title" className="text-lg font-semibold text-ink leading-tight mb-1">Finish these orders first</h2>
+          <p className="text-xs text-ink-3">The server still considers these orders open. Settle, cancel, or use a manager override.</p>
         </div>
 
         <div className="px-6 pb-5 max-h-[48dvh] overflow-y-auto space-y-2.5 custom-scrollbar shrink-0">
@@ -94,7 +91,7 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
                       {blocker.orders.map((o: any) => {
                         const done = resolved.has(o.id);
                         return (
-                          <div key={o.id} className={`flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border text-xs ${done ? 'border-slate-200 opacity-50' : 'border-slate-200'}`}>
+                            <div key={o.id} className={`flex items-center justify-between gap-2 bg-white px-3 py-2 rounded-lg border text-xs ${done ? 'border-line opacity-50' : 'border-line'}`}>
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="font-bold text-slate-900 font-mono">#{o.orderNumber || o.id.slice(-4)}</span>
                               <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-semibold text-slate-600 uppercase shrink-0">
@@ -102,7 +99,7 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
                               </span>
                             </div>
                             <div className="flex items-center gap-2.5 shrink-0">
-                              <span className="font-bold text-slate-900 font-mono">PKR {o.totalAmount?.toLocaleString()}</span>
+                              <span className="font-bold text-ink tabular-nums">{formatPKR(o.totalAmount ?? 0)}</span>
                               {done ? (
                                 <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cancelled</span>
                               ) : (
@@ -151,8 +148,7 @@ export function ShiftCloseBlockerModal({ isOpen, onClose, blockers, onForceClose
             Request Manager Override
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

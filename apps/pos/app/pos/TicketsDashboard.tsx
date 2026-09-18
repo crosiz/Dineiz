@@ -12,11 +12,12 @@ import { getToken, getPosSession } from '@/lib/pos-session';
 import { formatPKR } from '@/lib/utils';
 import { useSWROrders } from '@/hooks/useSWROrders';
 import { useViews, type OrderView } from '@/lib/core/views';
-import { markReady, sendToKitchen } from '@/lib/core/commands';
+import { markReady, sendToKitchen, requestBill } from '@/lib/core/commands';
 import { toast } from 'sonner';
 import { StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { OrderTypeBadge } from '@/components/OrderTypeBadge';
 import { API_URL } from '@/lib/api';
 import { Armchair, ChevronDown, CircleUser, Clock, Columns3, LayoutGrid, ListFilter, Loader2, MessageSquare, Plus, Printer, QrCode, Rows3, Search, User, X, Zap } from 'lucide-react';
 
@@ -103,39 +104,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     .catch(() => {});
   }, [session?.branchId]);
   
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('grid');
+  // Ticket operations work best as a stable queue. A card grid and kanban
+  // board made 50+ orders taller, reordered the same ticket between views and
+  // hid key data behind visual chrome. Keep those legacy render branches for
+  // compatibility, but this screen now always opens in its scan-friendly list.
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-    const saved = localStorage.getItem('pos_viewMode');
-    if (saved === 'grid' || saved === 'list' || saved === 'kanban') {
-      setViewMode(saved);
-    }
-  }, []);
-
-  // The view-mode switcher below is `hidden sm:flex` — Kanban's fixed-width
-  // horizontal-scroll columns aren't a workable layout on a phone, so the
-  // switcher simply doesn't offer it there. Without this guard, a terminal
-  // that had Kanban selected on a tablet (view mode persists via
-  // localStorage) would open straight into it on a phone with no visible way
-  // back to Grid/List, since the only control that could change it is the
-  // one that's hidden. Forces back to Grid whenever the viewport narrows
-  // past sm, whatever's saved.
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
-    const enforce = () => {
-      if (mq.matches) setViewMode((m) => (m === 'kanban' ? 'grid' : m));
-    };
-    enforce();
-    mq.addEventListener('change', enforce);
-    return () => mq.removeEventListener('change', enforce);
-  }, []);
-
-  const handleSetViewMode = (mode: 'grid' | 'list' | 'kanban') => {
-    setViewMode(mode);
-    localStorage.setItem('pos_viewMode', mode);
-  };
 
   const [dataMode, setDataMode] = useState<'live' | 'history'>('live');
 
@@ -474,11 +447,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       // status, so a bill printed from here left the table looking untouched
       // on the floor plan even though the bill had gone out.
       if (order.type === 'DINE_IN' && order.tableId) {
-        fetch(`${API_URL}/api/tables/${order.tableId}/status`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ status: 'BILL_REQUESTED' }),
-        }).catch(() => {});
+        await requestBill(order.id);
       }
     } catch (err: any) {
       console.warn('Failed to print bill', err);
@@ -488,7 +457,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   };
 
-  const renderCard = (order: any, layout: 'grid' | 'list' | 'kanban') => {
+  const renderCard = (order: any) => {
     const isReady = order.status === 'READY';
     const isPending = order.status === 'PENDING';
     const isInKitchen = order.status === 'IN_KITCHEN';
@@ -504,7 +473,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     
     let rawItems: any[] = [];
     if (order.cart) {
-      rawItems = typeof order.cart === 'string' ? JSON.parse(order.cart) : (order.cart || []);
+      try { rawItems = typeof order.cart === 'string' ? JSON.parse(order.cart) : (order.cart || []); } catch { rawItems = []; }
     } else if (typeof order.items === 'string') {
       try { rawItems = JSON.parse(order.items); } catch(e) {}
     } else {
@@ -529,6 +498,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     const totalAmount = order.heldAt ? calculatedTotal.toFixed(0) : Number(order.netAmount || order.totalAmount || order.total || order.subtotal || 0).toFixed(0);
     const timeRef = order.createdAt || order.dateTime || order.heldAt;
+    const itemSummary = parsedItems.length === 0
+      ? `${order.itemCount || 0} items`
+      : `${parsedItems.slice(0, 2).map((i: any) => `${i.quantity || i.qty}× ${i.name || i.itemName || i.item?.name || 'Item'}`).join(' · ')}${parsedItems.length > 2 ? ` · +${parsedItems.length - 2} more` : ''}`;
 
     const onActionClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -536,7 +508,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       if (isPending) {
         // If no KDS: go directly to READY (cashier manually marks food ready)
         // If KDS active: go to IN_KITCHEN so KDS screen picks it up
-        const nextStatus = useKDS ? 'IN_KITCHEN' : 'READY';
+        const nextStatus = 'IN_KITCHEN';
         updateOrderStatus(order.id, nextStatus);
       } else if (isReady) {
         const typeStr = order.type ? order.type.toLowerCase().replace('_', '-') : 'dine-in';
@@ -567,346 +539,50 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       setDetailsOrder(order);
     };
 
-    if (layout === 'list') {
-      return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-line p-4 rounded-xl transition-all shadow-sm min-w-0 cursor-pointer hover:border-line-strong ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : ''}`}>
-          <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
-            <div className="w-16 shrink-0">
-              <span className="text-xl font-bold text-ink">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-            </div>
-            {order.tableLabel && (
-              <div className="shrink-0 hidden sm:block">
-                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>
-              </div>
-            )}
-            {order.assignedWaiterName && (
-              <div className="shrink-0 hidden sm:block">
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-bold">
-                  <User className="w-[12px] h-[12px]" />
-                  {order.assignedWaiterName}
-                </div>
-              </div>
-            )}
-            <div className="w-20 shrink-0 hidden sm:block">
-              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase">{typeLabel}</span>
-            </div>
-            <div className="flex-1 truncate text-ink-2 text-sm min-w-0 font-medium">
-              {parsedItems.length > 0 ? parsedItems.map((i:any) => `${i.quantity || i.qty}x ${i.name || i.itemName || i.item?.name}`).join(', ') : `${order.itemCount || 0} items`}
-            </div>
-            <div className="w-24 text-right shrink-0">
-              <span className="text-ink font-bold text-sm">{formatPKR(totalAmount)}</span>
-            </div>
-            <div className="flex justify-end shrink-0 gap-2">
-              {dataMode === 'history' ? (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  Reprint
-                </button>
-              ) : (
-                <>
-                  {hasPaidOnline && (
-                    <div className="px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-green-50 text-green-700 border-green-200">
-                      PAID ONLINE
-                    </div>
-                  )}
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
-            </div>
-          </div>
-          {dataMode === 'live' && (
-            <div className="w-full sm:w-auto mt-2 sm:mt-0 shrink-0 flex gap-2">
-              {!!order.heldAt && (
-                <button
-                  onClick={(e) => deleteHeldOrder(order.id, e)}
-                  className="px-4 py-2 rounded-lg font-semibold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                >
-                  Delete
-                </button>
-              )}
-              {!order.heldAt && (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Print Bill"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
-                  <span className="hidden md:inline">Bill</span>
-                </button>
-              )}
-              {isWhatsApp && order.customerPhone && (
-                <a
-                  href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  title="Message Customer"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5"
-                >
-                  <MessageSquare className="w-[18px] h-[18px]" />
-                  <span className="hidden md:inline">Message</span>
-                </a>
-              )}
-              <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-sunken border border-line-strong text-ink hover:bg-hover'}`}>
-                {!!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (layout === 'kanban') {
-      return (
-        <div key={order.id} onClick={openOrder} className="flex flex-col py-3 border-b border-line group shrink-0 w-full cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all">
-          <div className="flex justify-between items-start mb-2 w-full gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg font-bold text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>}
-              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
-              {order.assignedWaiterName && (
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <User className="w-[10px] h-[10px]" />
-                  {order.assignedWaiterName.split(' ')[0]}
-                </div>
-              )}
-              {isQR && (
-                <div className="flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <QrCode className="w-[10px] h-[10px]" />
-                  QR
-                </div>
-              )}
-              {isWhatsApp && (
-                <div className="flex items-center gap-1 bg-[#25D366]/10 text-[#128C7E] border border-[#25D366]/30 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <MessageSquare className="w-[10px] h-[10px]" />
-                  WhatsApp
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-1 shrink-0">
-              {dataMode === 'history' ? (
-                <div className="px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide bg-sunken text-ink-3 border-line">
-                  {order.status}
-                </div>
-              ) : (
-                <>
-                  {hasPaidOnline && (
-                    <div className="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wide bg-green-50 text-green-700 border-green-200">
-                      PAID ONLINE
-                    </div>
-                  )}
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
-            </div>
-          </div>
-          
-          <div className="mb-2 w-full">
-            {parsedItems.map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between items-start text-[11px] leading-relaxed py-0.5 w-full gap-2">
-                <div className="flex gap-2 flex-1 min-w-0">
-                  <span className="text-ink-3 font-bold shrink-0">{item.quantity || item.qty}x</span>
-                  <span className="text-ink-2 font-medium truncate">
-                    {(item as any).name || (item as any).itemName || (item as any).item?.name}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {parsedItems.length === 0 && (
-              <div className="text-xs text-ink-3 font-medium py-1">{order.itemCount || 0} Items</div>
-            )}
-          </div>
-          
-          {dataMode === 'live' && (
-            <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
-              <div className="flex gap-2">
-                {!!order.heldAt && (
-                  <button
-                    onClick={(e) => deleteHeldOrder(order.id, e)}
-                    className="text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100"
-                  >
-                    Delete
-                  </button>
-                )}
-                {!order.heldAt && (
-                  <button
-                    onClick={(e) => handlePrintBill(order, e)}
-                    disabled={printingId === order.id}
-                    title="Print Bill"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
-                  >
-                    {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  </button>
-                )}
-                {isWhatsApp && order.customerPhone && (
-                  <a
-                    href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Message Customer"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
-                  >
-                    <MessageSquare className="w-[14px] h-[14px]" />
-                  </a>
-                )}
-                <button
-                  disabled={isUpdatingThis || (isInKitchen && useKDS)}
-                  onClick={onActionClick}
-                  className={`text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md ${isReady ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : isPending ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : (isInKitchen && useKDS) ? 'bg-blue-50 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-white border border-line-strong text-ink-2 hover:text-ink hover:bg-sunken'}`}
-                >
-                  {!!order.heldAt ? 'Resume' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In KDS...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect' : 'View Order'}
-                </button>
-              </div>
-            </div>
-          )}
-          {dataMode === 'history' && (
-            <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
-              <button
-                onClick={(e) => handlePrintBill(order, e)}
-                disabled={printingId === order.id}
-                title="Reprint Receipt"
-                className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
-              >
-                {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
+    const quantity = parsedItems.reduce((sum, item) => sum + Number(item.quantity || item.qty || 1), 0);
     return (
-      <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-line shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-line-strong hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
-        <div className="p-5 flex-1 flex flex-col">
-          <div className="flex justify-between items-start gap-3 mb-4">
-            {/* The order number is the one thing someone reads this card for, and
-                it was wrapping mid-token — "#2-1809-" / "001" — because it shared
-                a line with the table chip inside a 108px box. It gets its own
-                line and never breaks; the table chip sits under it. */}
+      <article key={order.id} data-testid="ticket-card" className="rounded-xl border border-line bg-surface overflow-hidden">
+        <button onClick={openOrder} className="w-full text-left p-4 focus-visible:ring-inset hover:bg-sunken/60 transition-colors">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <span className="block text-2xl font-black text-ink tracking-tight whitespace-nowrap tabular-nums">
-                #{order.tokenNumber || order.orderNumber || order.id.slice(-4)}
-              </span>
-              {order.tableLabel && (
-                <span className={`inline-block mt-1 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-sm' : 'text-xs text-ink-3 bg-canvas border-line'}`}>
-                  {order.tableLabel}
-                </span>
-              )}
+              <h3 className="text-base font-semibold text-ink break-words">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</h3>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                <OrderTypeBadge type={order.type || order.orderType} />
+                {order.tableLabel && <span className="font-medium text-ink">Table {order.tableLabel}</span>}
+                {order.assignedWaiterName && <span>{order.assignedWaiterName}</span>}
+                {isQR && <span>QR order</span>}
+                {isWhatsApp && <span>WhatsApp</span>}
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              {dataMode === 'history' ? (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  Reprint
-                </button>
-              ) : (
-                <>
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
+            <div className="shrink-0 flex flex-col items-end gap-2">
+              <StatusBadge status={order.heldAt ? 'HELD' : order.status} />
+              {dataMode === 'live' && <TicketTimer createdAt={timeRef} />}
             </div>
           </div>
-          <div className="flex items-center gap-2 mb-4 mt-[-4px]">
-            <span className="text-xs font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase tracking-wider">{typeLabel}</span>
-            {order.assignedWaiterName && (
-              <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                <User className="w-[12px] h-[12px]" />
-                {order.assignedWaiterName}
-              </div>
-            )}
+          <p className="mt-3 text-sm text-ink-2 line-clamp-2 leading-6">{itemSummary}</p>
+          <div className="mt-3 flex items-center justify-between gap-2 text-sm">
+            <span className="text-ink-3">{quantity || order.itemCount || 0} items · View details</span>
+            <span className="font-semibold text-ink tabular-nums">{formatPKR(totalAmount)}</span>
           </div>
-          
-          <div className="space-y-2.5 mb-6 flex-1">
-            {parsedItems.slice(0, 4).map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between text-sm leading-tight">
-                <span className="text-ink-2 font-medium truncate pr-2">
-                  <span className="text-ink-3 mr-1.5 font-bold">{item.quantity || item.qty}x</span>
-                  {(item as any).name || (item as any).itemName || (item as any).item?.name}
-                </span>
-              </div>
-            ))}
-            {parsedItems.length > 4 && (
-              <div className="text-[11px] text-ink-3 font-bold tracking-wide pt-1">
-                + {parsedItems.length - 4} MORE ITEMS
-              </div>
-            )}
-            {parsedItems.length === 0 && (
-              <div className="text-sm text-ink-2 font-medium py-1">{order.itemCount || 0} Items included in this order</div>
-            )}
-          </div>
-          
-          <div className="flex justify-between items-end pt-4 border-t border-line">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase text-ink-3 font-bold tracking-wider mb-0.5">Total Amount</span>
-              <span className="text-lg font-black text-ink tracking-tight">{formatPKR(totalAmount)}</span>
-            </div>
-            {dataMode === 'history' && (
-              <span className="text-xs font-bold text-ink-3 bg-sunken border border-line px-2 py-1 rounded uppercase tracking-wider">
-                {order.status}
-              </span>
-            )}
-          </div>
-        </div>
-        
-        {dataMode === 'live' && (
-          <div className="flex border-t border-line bg-canvas">
-            {!!order.heldAt && (
-              <button
-                onClick={(e) => deleteHeldOrder(order.id, e)}
-                className="w-1/3 py-3.5 text-sm font-bold transition-colors flex justify-center items-center text-red-600 hover:bg-red-50 border-r border-line"
-              >
-                Delete
-              </button>
-            )}
-            {!order.heldAt && (
-              <button
-                onClick={(e) => handlePrintBill(order, e)}
-                disabled={printingId === order.id}
-                title="Print Bill"
-                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line disabled:opacity-50"
-              >
-                {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
-              </button>
-            )}
-            {isWhatsApp && order.customerPhone && (
-              <a
-                href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                title="Message Customer"
-                className="w-14 py-3.5 flex justify-center items-center text-ink-2 hover:bg-hover hover:text-ink transition-colors border-r border-line"
-              >
-                <MessageSquare className="w-[18px] h-[18px]" />
-              </a>
-            )}
-            <button
-              disabled={isUpdatingThis || (isInKitchen && useKDS)}
-              onClick={onActionClick}
-              className={`flex-1 py-3.5 text-sm font-bold transition-colors flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'text-ink hover:bg-hover'}`}
-            >
-              {!!order.heldAt ? 'Resume Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
+          {hasPaidOnline && <p className="mt-2 text-xs font-medium text-ok">Paid online</p>}
+        </button>
+        <div className="flex items-center gap-2 border-t border-line bg-sunken/40 px-3 py-2">
+          {order.heldAt ? (
+            <button onClick={(e) => deleteHeldOrder(order.id, e)} className="min-h-11 px-3 rounded-lg text-sm font-medium text-danger hover:bg-danger/10">Delete draft</button>
+          ) : (
+            <button onClick={(e) => handlePrintBill(order, e)} disabled={printingId === order.id} className="min-h-11 px-3 rounded-lg text-sm font-medium text-ink-2 flex items-center gap-2 hover:bg-hover disabled:opacity-50">
+              {printingId === order.id ? <Loader2 size={16} className="animate-spin" /> : <Printer size={16} />}
+              {dataMode === 'history' ? 'Reprint' : 'Print bill'}
             </button>
-          </div>
-        )}
-      </div>
+          )}
+          {dataMode === 'live' && (
+            <button disabled={!!isUpdatingThis || (isInKitchen && useKDS)} onClick={order.heldAt ? openOrder : onActionClick}
+              className="ml-auto min-h-11 rounded-lg px-4 text-sm font-semibold bg-brand text-white hover:brightness-95 disabled:bg-sunken disabled:text-ink-3">
+              {isUpdatingThis ? 'Saving…' : order.heldAt ? 'Resume order' : isPending ? 'Send to kitchen' : isInKitchen && useKDS ? 'Preparing in kitchen' : isInKitchen ? 'Mark ready' : isReady ? 'Collect payment' : 'View order'}
+            </button>
+          )}
+        </div>
+      </article>
     );
   };
 
@@ -920,7 +596,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
       )}
       {/* Sub-header Toolbar */}
-      <div className="px-8 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-line">
+      <div className="px-3 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-4 border-b border-line">
         
         {/* Left: Filter Buttons / Status Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
@@ -929,13 +605,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               <button
                 key={tab}
                 onClick={() => setFilter(tab as any)}
-                className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
+                className={`min-h-11 px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap border ${
                   filter === tab
                     ? 'bg-brand text-white border-brand shadow-sm'
                     : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
-                {tab === 'ALL' ? 'All Live' : tab.replace('_', ' ')}
+                {({ ALL: 'All orders', PENDING: 'New', IN_KITCHEN: 'Preparing', READY: 'Ready', HELD: 'On hold' } as Record<string, string>)[tab]}
               </button>
             ))
           ) : (
@@ -943,7 +619,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               <button
                 key={tab}
                 onClick={() => setFilter(tab as any)}
-                className={`px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
+                className={`min-h-11 px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap border ${
                   filter === tab
                     ? 'bg-brand text-white border-brand shadow-sm'
                     : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
@@ -956,7 +632,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           {dataMode === 'live' && counts.WHATSAPP > 0 && (
             <button
               onClick={() => setSourceFilter(sourceFilter === 'WHATSAPP' ? 'ALL' : 'WHATSAPP')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-bold text-xs uppercase tracking-wider transition-all whitespace-nowrap border ${
+              className={`flex items-center gap-1.5 min-h-11 px-4 py-2 rounded-lg font-semibold text-sm transition-all whitespace-nowrap border ${
                 sourceFilter === 'WHATSAPP'
                   ? 'bg-[#25D366] text-white border-[#25D366] shadow-sm'
                   : 'bg-white border-line text-ink-3 hover:text-ink hover:bg-sunken'
@@ -970,7 +646,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
 
         {/* Right: Search + Sort + View Mode */}
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex flex-wrap items-center gap-3">
           {dataMode === 'history' && (
             <div className="relative">
               <input
@@ -987,9 +663,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           {/* Sort Dropdown */}
           <div className="relative">
             <select
+              aria-label="Sort tickets"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
-              className="bg-white border border-line-strong rounded-xl px-3 py-2 text-xs font-bold text-ink outline-none appearance-none pr-8 shadow-sm cursor-pointer"
+              className="bg-white border border-line-strong rounded-lg min-h-11 px-3 py-2 text-sm font-medium text-ink outline-none appearance-none pr-8 shadow-sm cursor-pointer"
             >
               <option value="oldest">Oldest First</option>
               <option value="newest">Newest First</option>
@@ -998,144 +675,22 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 pointer-events-none w-[18px] h-[18px]" />
           </div>
           
-          <div className="hidden sm:flex items-center bg-sunken border border-line-strong p-1 rounded-xl">
-            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-6 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`} title="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
-          </div>
         </div>
       </div>
 
         {/* Order Cards Area */}
-        <div className="px-8 mt-2">
+        <div className="px-3 sm:px-6 mt-4">
           {/* History-only first-load spinner — live always shows cached data instantly */}
           {isLoading && <div className="text-ink-4 text-center py-10 font-medium">Loading order history...</div>}
           {!isLoading && filteredOrders.length === 0 && <div className="text-ink-4 text-center py-10 font-medium">No orders found.</div>}
 
-          {!isLoading && filteredOrders.length > 0 && (viewMode === 'list' || viewMode === 'grid') && !groupByType && (
-            viewMode === 'list' ? (
-              <div className="flex flex-col gap-3">
-                {filteredOrders.map((order: any) => renderCard(order, 'list'))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredOrders.map((order: any) => renderCard(order, 'grid'))}
-              </div>
-            )
-          )}
-
-          {!isLoading && filteredOrders.length > 0 && (viewMode === 'list' || viewMode === 'grid') && groupByType && (
-            <div className="flex flex-col gap-9">
-              {dineInOrders.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-[#2A5DB0]" />
-                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Dine-In</h3>
-                    <span className="text-[12px] font-bold text-ink-4">{dineInOrders.length} table{dineInOrders.length === 1 ? '' : 's'}</span>
-                    <div className="h-px flex-1 bg-hover" />
-                  </div>
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3">
-                      {dineInOrders.map((order: any) => renderCard(order, 'list'))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                      {dineInOrders.map((order: any) => renderCard(order, 'grid'))}
-                    </div>
-                  )}
-                </section>
-              )}
-
-              {otherOrders.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-2.5 mb-4">
-                    <span className="w-2 h-2 rounded-full bg-brand" />
-                    <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Takeaway &amp; Delivery</h3>
-                    <span className="text-[12px] font-bold text-ink-4">{otherOrders.length} waiting</span>
-                    <div className="h-px flex-1 bg-hover" />
-                  </div>
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col gap-3">
-                      {otherOrders.map((order: any) => renderCard(order, 'list'))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                      {otherOrders.map((order: any) => renderCard(order, 'grid'))}
-                    </div>
-                  )}
-                </section>
-              )}
-            </div>
-          )}
-
-          {!isLoading && filteredOrders.length > 0 && viewMode === 'kanban' && (
-            <div className="flex gap-8 overflow-x-auto pb-4 hide-scrollbar min-h-[calc(100vh-280px)]">
-              {dataMode === 'history' ? (
-                // Single Column for History in Kanban mode
-                <div className="flex flex-col min-w-[320px] max-w-[400px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-200 shrink-0">
-                    <h3 className="font-bold text-slate-500 text-xs uppercase tracking-widest">Order History</h3>
-                    <span className="text-slate-500 text-xs font-bold">{filteredOrders.length}</span>
-                  </div>
-                  <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
-                    {filteredOrders.map((order: any) => renderCard(order, 'kanban'))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Pending Column */}
-                  <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-yellow-500/20 shrink-0">
-                      <h3 className="font-bold text-yellow-500 text-xs uppercase tracking-widest flex items-center gap-2">
-                        Pending
-                      </h3>
-                      <span className="text-yellow-500 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'PENDING').length}</span>
-                    </div>
-                    <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
-                      {filteredOrders.filter((o: any) => o.status === 'PENDING').map((order: any) => renderCard(order, 'kanban'))}
-                    </div>
-                  </div>
-                  
-                  {/* In Kitchen Column */}
-                  <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-blue-500/20 shrink-0">
-                      <h3 className="font-bold text-blue-400 text-xs uppercase tracking-widest flex items-center gap-2">
-                        In Kitchen
-                      </h3>
-                      <span className="text-blue-400 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'IN_KITCHEN').length}</span>
-                    </div>
-                    <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
-                      {filteredOrders.filter((o: any) => o.status === 'IN_KITCHEN').map((order: any) => renderCard(order, 'kanban'))}
-                    </div>
-                  </div>
-
-                  {/* Ready Column */}
-                  <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-green-500/20 shrink-0">
-                      <h3 className="font-bold text-green-500 text-xs uppercase tracking-widest flex items-center gap-2">
-                        Ready
-                      </h3>
-                      <span className="text-green-500 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'READY').length}</span>
-                    </div>
-                    <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
-                      {filteredOrders.filter((o: any) => o.status === 'READY').map((order: any) => renderCard(order, 'kanban'))}
-                    </div>
-                  </div>
-                </>
-              )}
+          {!isLoading && filteredOrders.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
+              {filteredOrders.map((order: any) => renderCard(order))}
             </div>
           )}
         </div>
       
-      {dataMode === 'live' && (
-        <button
-          onClick={() => router.push('/pos/tables')}
-          className="fixed right-6 bottom-24 w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all z-50"
-        >
-          <Plus className="w-[32px] h-[32px]" />
-        </button>
-      )}
-
       {/* Advanced Filter Modal (Minimalist Redesign) */}
       {filterModalOpen && (
         <div className="fixed top-0 left-0 w-[100vw] h-[100vh] z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" style={{ position: 'fixed', margin: 0 }} onClick={() => setFilterModalOpen(false)}>
