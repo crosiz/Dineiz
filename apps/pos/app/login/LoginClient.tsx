@@ -5,11 +5,32 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { DineizLogo } from '@/components/ui/DineizLogo';
-import { getPosBreak, clearPosBreak } from '@/lib/pos-session';
+import { getPosBreak, clearPosBreak, getPosShift } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
-import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, type LucideIcon } from 'lucide-react';
+import {
+  canSignInOffline, checkPinOffline, clearServerReauth, queueBreakEnd, queueServerReauth, readRoster, rememberLogin, saveRoster,
+  type OfflineUser,
+} from '@/lib/offline-auth';
+import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, WifiOff, type LucideIcon } from 'lucide-react';
 
 const PIN_LENGTH = 4;
+
+// Long enough for a cold API, short enough that a connection which is up but
+// passing nothing (café wifi with no internet) doesn't strand the cashier on a
+// spinner: past this, the login falls back to this terminal's offline check.
+const LOGIN_TIMEOUT_MS = 8000;
+const STAFF_TIMEOUT_MS = 6000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 const NUMPAD_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'backspace', '0', 'confirm'];
 
 interface Props {
@@ -46,6 +67,13 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [hasActiveShift, setHasActiveShift] = useState(false);
   const [isShiftLoading, setIsShiftLoading] = useState(true);
+  // The API couldn't be reached and the staff list came from this terminal's
+  // copy. Sign-in then goes through the offline check.
+  const [offline, setOffline] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  // Replaces "Incorrect PIN" when the problem is something else, e.g. no
+  // connection and no saved sign-in for this person.
+  const [pinNote, setPinNote] = useState<string | null>(null);
 
   const availableRoles = useMemo(() => {
     const roles = new Set(staffList.map((s) => s.role));
@@ -138,29 +166,44 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
     const fetchStaff = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/pos/staff?branchId=${activeBranchId}`, { credentials: 'include' });
+        const res = await fetchWithTimeout(`${API_URL}/api/pos/staff?branchId=${activeBranchId}`, { credentials: 'include' }, STAFF_TIMEOUT_MS);
         if (res.ok) {
           const data = await res.json();
-          if (data.staff) setStaffList(data.staff);
+          if (data.staff) {
+            setStaffList(data.staff);
+            saveRoster(activeBranchId, data.branchName ?? '', data.staff);
+          }
           if (data.branchName) setActiveBranchName(data.branchName);
-        } else {
-          setActiveBranchName('Branch Not Found');
+          setOffline(false);
+          return;
         }
+        if (res.status === 404) {
+          setActiveBranchName('Branch Not Found');
+          return;
+        }
+        throw new Error(`HTTP ${res.status}`);
       } catch (e) {
-        console.error('Failed to load staff', e);
-        setActiveBranchName('Connection Error');
+        console.warn('Staff list unavailable, using this terminal’s copy', e);
+        setOffline(true);
+        const cached = readRoster(activeBranchId);
+        if (cached) {
+          setStaffList(cached.staff);
+          if (cached.branchName) setActiveBranchName(cached.branchName);
+        }
       }
     };
 
     const fetchShiftStatus = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/pos/shifts/active?branchId=${activeBranchId}`, { credentials: 'include' });
+        const res = await fetchWithTimeout(`${API_URL}/api/pos/shifts/active?branchId=${activeBranchId}`, { credentials: 'include' }, STAFF_TIMEOUT_MS);
         if (res.ok) {
           const data = await res.json();
           setHasActiveShift(!!data.hasActiveShift);
         }
       } catch (e) {
-        console.error('Failed to fetch shift status', e);
+        // Offline: this terminal's own record of its open shift is the best
+        // answer there is, and it is what the POS itself will go by.
+        setHasActiveShift(!!getPosShift());
       } finally {
         setIsShiftLoading(false);
       }
@@ -168,7 +211,15 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
     void fetchStaff();
     void fetchShiftStatus();
-  }, [activeBranchId]);
+  }, [activeBranchId, reloadKey]);
+
+  // Back online: reload the live staff list so newly added staff appear and
+  // sign-in goes to the server again.
+  useEffect(() => {
+    const onOnline = () => setReloadKey((k) => k + 1);
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   // Clock & Greeting
   useEffect(() => {
@@ -221,6 +272,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
     (key: string) => {
       if (pinStatus === 'loading' || pinStatus === 'success' || lockoutTimer > 0) return;
 
+      setPinNote(null);
+
       if (key === 'backspace') {
         setPin((p) => p.slice(0, -1));
         setPinStatus('idle');
@@ -268,12 +321,26 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
     try {
       const hashedPin = await hashPinClient(pinToSubmit);
 
-      const res = await fetch(`${API_URL}/api/pos/auth/pin-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ staffId: selectedStaff.id, hashedPin, branchId: activeBranchId }),
-      });
+      // No network, a request that goes nowhere, or a server that can't check
+      // the PIN right now (5xx): all mean "ask this terminal instead".
+      let res: Response | null = null;
+      if (navigator.onLine !== false) {
+        try {
+          res = await fetchWithTimeout(`${API_URL}/api/pos/auth/pin-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ staffId: selectedStaff.id, hashedPin, branchId: activeBranchId }),
+          }, LOGIN_TIMEOUT_MS);
+        } catch {
+          res = null;
+        }
+      }
+
+      if (!res || res.status >= 500) {
+        await signInOffline(pinToSubmit, hashedPin);
+        return;
+      }
 
       if (!res.ok) {
         if (res.status === 429) {
@@ -298,162 +365,31 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         }
       }
 
+      setOffline(false);
+      clearServerReauth();
       const data = await res.json();
       const user = data.user;
-      const branding = data.branding;
-      const activeShift = data.activeShift;
 
-      // Update Session — must include the token itself: this Zustand store is
-      // a long-lived in-memory singleton, so several call sites read
-      // session.token directly (not the localStorage-backed getToken()
-      // helper). Omitting it here meant every one of those requests silently
-      // sent no Authorization header (401) until the next full page reload
-      // re-hydrated the store from localStorage.
-      setSession({
-        cashierId: user.id,
-        cashierName: user.name,
-        tenantId: user.tenantId,
-        branchId: user.branchId,
-        branchName: activeBranchName,
-        shiftId: activeShift?.id || undefined,
-        role: user.role,
-        token: data.token,
-      });
-
-      const posSession = {
-        userId: user.id,
+      // Save this PIN's offline verifier so this person can sign in here
+      // without a connection later. Not awaited: it's a fraction of a second of hashing the
+      // cashier shouldn't wait on, and the navigation below is client-side, so
+      // it finishes in the background.
+      void rememberLogin(pinToSubmit, {
+        id: user.id,
         name: user.name,
         role: user.role,
-        branchId: user.branchId,
-        branchName: activeBranchName,
         tenantId: user.tenantId,
-        avatarColor: user.avatarColor || '#F59E0B',
+        branchId: user.branchId,
+        avatarColor: user.avatarColor ?? null,
+      }, data.token).catch(() => {});
+
+      await completeSignIn({
+        user,
         token: data.token,
-        expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
-      };
-
-      localStorage.setItem('pos_session', JSON.stringify(posSession));
-      localStorage.setItem('pos_token', data.token);
-      if (branding) {
-        localStorage.setItem('pos_branding', JSON.stringify(branding));
-        if (branding.primaryColor) {
-          document.documentElement.style.setProperty('--pos-primary', branding.primaryColor);
-        }
-        // Seed pos_tenant_settings from the login response too, so the POS
-        // config/Kitchen toggles (require-shift-opening, block-out-of-stock,
-        // auto-print, useKDS) are correct from a cashier's very first
-        // session instead of only arriving later via a live admin edit.
-        if (branding.pos || branding.kitchen) {
-          try {
-            const existingStr = localStorage.getItem('pos_tenant_settings');
-            const existing = existingStr ? JSON.parse(existingStr) : {};
-            localStorage.setItem('pos_tenant_settings', JSON.stringify({
-              ...existing,
-              pos: { ...existing.pos, ...branding.pos },
-              kitchen: { ...existing.kitchen, ...branding.kitchen },
-            }));
-          } catch {}
-        }
-      }
-
-      setPinStatus('success');
-      setWrongAttempts(0);
-      localStorage.removeItem('pos_wrong_attempts');
-      localStorage.removeItem('pos_lockout_until');
-
-      // Store or verify pos_shift
-      if (activeShift) {
-        localStorage.setItem('pos_shift', JSON.stringify({
-          shiftId: activeShift.id,
-          openedAt: activeShift.openedAt,
-          openingFloat: activeShift.openingFloat
-        }));
-      } else {
-        const storedShiftStr = localStorage.getItem('pos_shift');
-        if (storedShiftStr) {
-          try {
-            const shiftObj = JSON.parse(storedShiftStr);
-            if (shiftObj.shiftId) {
-              const shiftRes = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}`, {
-                headers: { 'Authorization': `Bearer ${data.token}` }
-              });
-              if (shiftRes.ok) {
-                const shiftData = await shiftRes.json();
-                if (shiftData.status !== 'OPEN') {
-                  localStorage.removeItem('pos_shift');
-                } else {
-                  setSession({ shiftId: shiftObj.shiftId });
-                }
-              } else {
-                localStorage.removeItem('pos_shift');
-              }
-            }
-          } catch (e) {
-            localStorage.removeItem('pos_shift');
-          }
-        }
-      }
-
-      // End break if returning from break mode
-      const posBreak = getPosBreak();
-      if (posBreak?.shiftId) {
-        try {
-          // A Content-Type: application/json header with no body is rejected
-          // by Fastify before the route runs — same bug as break/start (see
-          // POSTopBar.tsx). It made every break-end call fail silently, which
-          // left the ShiftBreak row open forever (durationMinutes null),
-          // still counted as "on break" until the shift itself closed.
-          const breakRes = await fetch(`${API_URL}/api/shifts/${posBreak.shiftId}/break/end`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${data.token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({}),
-          });
-          if (breakRes.ok) {
-            const breakData = await breakRes.json();
-            const mins = breakData.durationMinutes ?? 0;
-            toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
-            // Local audit-trail record — only once the server has confirmed
-            // it. Recording this unconditionally (including when the server
-            // rejected the call) left a break "confirmed" in the local log
-            // forever with no way to tell it apart from a real one — SHIFT
-            // events auto-confirm on append and never retry through the
-            // outbox.
-            const { endBreak } = await import('@/lib/core/commands');
-            endBreak(posBreak.shiftId).catch(() => {});
-          } else {
-            const body = await breakRes.json().catch(() => ({}));
-            toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
-          }
-        } catch {
-          toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
-        } finally {
-          clearPosBreak();
-        }
-      }
-
-      if (user.role === 'KITCHEN_STAFF') {
-        router.push('/pos/kds');
-      } else if (user.role === 'WAITER') {
-        try {
-          const tableRes = await fetch(`${API_URL}/api/tables/assigned?userId=${user.id}&branchId=${user.branchId}`, {
-             headers: { Authorization: `Bearer ${data.token}` }
-          });
-          if (tableRes.ok) {
-            const assignedData = await tableRes.json();
-            localStorage.setItem('pos_assigned_tables', JSON.stringify(assignedData.assignedTableIds || []));
-          }
-        } catch(e) {
-          console.error('Failed to fetch assigned tables', e);
-        }
-        router.push('/pos/tables');
-      } else {
-        // Straight to /pos/home — not /pos. `/pos` is a render-time
-        // redirect(), and reaching it through this client-side push desyncs
-        // hydration under Turbopack + React 19 ("Rendered more hooks" in
-        // Next's Router, blank screen right after a successful PIN).
-        router.push('/pos/home');
-      }
-
+        branding: data.branding,
+        activeShift: data.activeShift,
+        offline: false,
+      });
     } catch (error: any) {
       setPinStatus('error');
       setPin('');
@@ -463,6 +399,216 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       if (error.message !== 'Lockout') {
         setTimeout(() => setPinStatus('idle'), 600);
       }
+    }
+  }
+
+  // The server couldn't be asked, so check the PIN against this terminal's
+  // saved verifier (lib/offline-auth.ts). Throws like the online path does, so
+  // the shake and lockout handling in submitPin's catch apply unchanged.
+  async function signInOffline(pinToSubmit: string, hashedPin: string) {
+    if (!selectedStaff) return;
+    setOffline(true);
+    const check = await checkPinOffline(selectedStaff.id, activeBranchId, pinToSubmit);
+
+    if (!check.ok) {
+      if (check.reason === 'unknown') {
+        setPinNote(`No connection. ${selectedStaff.name.split(' ')[0]} needs to sign in once on this terminal while online.`);
+        throw new Error('No offline sign-in');
+      }
+      if (check.reason === 'locked') {
+        setLockoutTimer(check.lockedForSeconds ?? 60);
+        setWrongAttempts(0);
+        throw new Error('Lockout');
+      }
+      setWrongAttempts(5 - (check.attemptsLeft ?? 0));
+      throw new Error('Invalid PIN');
+    }
+
+    queueServerReauth({ staffId: check.user.id, branchId: activeBranchId, hashedPin, name: check.user.name });
+    await completeSignIn({ user: check.user, token: check.token, offline: true });
+  }
+
+  async function completeSignIn({ user, token, branding, activeShift, offline: signedInOffline }: {
+    user: OfflineUser;
+    token: string;
+    branding?: any;
+    activeShift?: { id: string; openedAt: string; openingFloat: number } | null;
+    offline: boolean;
+  }) {
+    // Update Session — must include the token itself: this Zustand store is
+    // a long-lived in-memory singleton, so several call sites read
+    // session.token directly (not the localStorage-backed getToken()
+    // helper). Omitting it here meant every one of those requests silently
+    // sent no Authorization header (401) until the next full page reload
+    // re-hydrated the store from localStorage.
+    setSession({
+      cashierId: user.id,
+      cashierName: user.name,
+      tenantId: user.tenantId,
+      branchId: user.branchId,
+      branchName: activeBranchName,
+      shiftId: activeShift?.id || undefined,
+      role: user.role,
+      token,
+    });
+
+    const posSession = {
+      userId: user.id,
+      name: user.name,
+      role: user.role,
+      branchId: user.branchId,
+      branchName: activeBranchName,
+      tenantId: user.tenantId,
+      avatarColor: user.avatarColor || '#F59E0B',
+      token,
+      expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+      // Cleared once the server has re-checked the PIN (lib/offline-auth.ts).
+      ...(signedInOffline ? { signedInOffline: true } : {}),
+    };
+
+    localStorage.setItem('pos_session', JSON.stringify(posSession));
+    localStorage.setItem('pos_token', token);
+    if (branding) {
+      localStorage.setItem('pos_branding', JSON.stringify(branding));
+      if (branding.primaryColor) {
+        document.documentElement.style.setProperty('--pos-primary', branding.primaryColor);
+      }
+      // Seed pos_tenant_settings from the login response too, so the POS
+      // config/Kitchen toggles (require-shift-opening, block-out-of-stock,
+      // auto-print, useKDS) are correct from a cashier's very first
+      // session instead of only arriving later via a live admin edit.
+      if (branding.pos || branding.kitchen) {
+        try {
+          const existingStr = localStorage.getItem('pos_tenant_settings');
+          const existing = existingStr ? JSON.parse(existingStr) : {};
+          localStorage.setItem('pos_tenant_settings', JSON.stringify({
+            ...existing,
+            pos: { ...existing.pos, ...branding.pos },
+            kitchen: { ...existing.kitchen, ...branding.kitchen },
+          }));
+        } catch {}
+      }
+    }
+
+    setPinStatus('success');
+    setWrongAttempts(0);
+    localStorage.removeItem('pos_wrong_attempts');
+    localStorage.removeItem('pos_lockout_until');
+
+    // Store or verify pos_shift
+    if (activeShift) {
+      localStorage.setItem('pos_shift', JSON.stringify({
+        shiftId: activeShift.id,
+        openedAt: activeShift.openedAt,
+        openingFloat: activeShift.openingFloat
+      }));
+    } else if (signedInOffline) {
+      // Nothing to verify against: this terminal's open shift is the shift.
+      const stored = getPosShift();
+      if (stored?.shiftId) setSession({ shiftId: stored.shiftId });
+    } else {
+      const storedShiftStr = localStorage.getItem('pos_shift');
+      if (storedShiftStr) {
+        try {
+          const shiftObj = JSON.parse(storedShiftStr);
+          if (shiftObj.shiftId) {
+            const shiftRes = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (shiftRes.ok) {
+              const shiftData = await shiftRes.json();
+              if (shiftData.status !== 'OPEN') {
+                localStorage.removeItem('pos_shift');
+              } else {
+                setSession({ shiftId: shiftObj.shiftId });
+              }
+            } else {
+              localStorage.removeItem('pos_shift');
+            }
+          }
+        } catch (e) {
+          localStorage.removeItem('pos_shift');
+        }
+      }
+    }
+
+    // End break if returning from break mode
+    const posBreak = getPosBreak();
+    if (posBreak?.shiftId && signedInOffline) {
+      // Recorded with the time they actually came back, once there is a
+      // connection to record it on.
+      queueBreakEnd(posBreak.shiftId, new Date().toISOString());
+      clearPosBreak();
+      toast.success('Welcome back! Your break end will be recorded when the connection returns.', { duration: 4000 });
+    } else if (posBreak?.shiftId) {
+      try {
+        // A Content-Type: application/json header with no body is rejected
+        // by Fastify before the route runs — same bug as break/start (see
+        // POSTopBar.tsx). It made every break-end call fail silently, which
+        // left the ShiftBreak row open forever (durationMinutes null),
+        // still counted as "on break" until the shift itself closed.
+        const breakRes = await fetch(`${API_URL}/api/shifts/${posBreak.shiftId}/break/end`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (breakRes.ok) {
+          const breakData = await breakRes.json();
+          const mins = breakData.durationMinutes ?? 0;
+          toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
+          // Local audit-trail record — only once the server has confirmed
+          // it. Recording this unconditionally (including when the server
+          // rejected the call) left a break "confirmed" in the local log
+          // forever with no way to tell it apart from a real one — SHIFT
+          // events auto-confirm on append and never retry through the
+          // outbox.
+          const { endBreak } = await import('@/lib/core/commands');
+          endBreak(posBreak.shiftId).catch(() => {});
+        } else {
+          const body = await breakRes.json().catch(() => ({}));
+          toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
+        }
+      } catch {
+        toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
+      } finally {
+        clearPosBreak();
+      }
+    } else if (signedInOffline) {
+      toast.success('Signed in offline. Orders will sync when the connection returns.', { duration: 4000 });
+    }
+
+    let destination = '/pos/home';
+    if (user.role === 'KITCHEN_STAFF') {
+      destination = '/pos/kds';
+    } else if (user.role === 'WAITER') {
+      destination = '/pos/tables';
+      if (!signedInOffline) {
+        try {
+          const tableRes = await fetch(`${API_URL}/api/tables/assigned?userId=${user.id}&branchId=${user.branchId}`, {
+             headers: { Authorization: `Bearer ${token}` }
+          });
+          if (tableRes.ok) {
+            const assignedData = await tableRes.json();
+            localStorage.setItem('pos_assigned_tables', JSON.stringify(assignedData.assignedTableIds || []));
+          }
+        } catch(e) {
+          console.error('Failed to fetch assigned tables', e);
+        }
+      }
+    }
+
+    if (signedInOffline) {
+      // A client-side push would first try to fetch the next screen's data
+      // from the server, fail, and only then fall back to a full load. Go
+      // straight to the full load; the service worker serves it. The toast
+      // above gets a moment on screen first.
+      setTimeout(() => window.location.assign(destination), 600);
+    } else {
+      // Straight to /pos/home — not /pos. `/pos` is a render-time
+      // redirect(), and reaching it through this client-side push desyncs
+      // hydration under Turbopack + React 19 ("Rendered more hooks" in
+      // Next's Router, blank screen right after a successful PIN).
+      router.push(destination);
     }
   }
 
@@ -602,6 +748,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   </div>
                 )
               )}
+              {offline && <OfflineChip className="ml-2" />}
             </div>
             {activeBranchId && (
               <div className="text-right text-[12px] text-ink-3 leading-relaxed font-medium font-mono" title={activeBranchId}>
@@ -619,19 +766,22 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       <div className="lg:hidden shrink-0 bg-canvas border-b border-line px-4 pt-safe">
         <div className="flex items-center justify-between pt-3">
           <DineizLogo size="sm" variant="light" showBadge={false} />
-          {!isShiftLoading && (
-            hasActiveShift ? (
-              <div className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Shift Active</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">No Shift</span>
-              </div>
-            )
-          )}
+          <div className="flex items-center gap-1.5">
+            {offline && <OfflineChip compact />}
+            {!isShiftLoading && (
+              hasActiveShift ? (
+                <div className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Shift Active</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">No Shift</span>
+                </div>
+              )
+            )}
+          </div>
         </div>
         <button
           onClick={promptBranchChange}
@@ -660,11 +810,16 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           <header className="text-center space-y-2 mb-10">
             <h3 className="font-clash font-bold text-2xl text-ink">Select your role</h3>
             <p className="text-ink-3">Identify yourself to begin the shift</p>
+            {offline && staffList.length > 0 && <OfflineNote />}
           </header>
 
           <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
             {availableRoles.length === 0 && (
-              <div className="text-center text-ink-3 py-8">No roles configured for this branch.</div>
+              <div className="text-center text-ink-3 py-8">
+                {offline
+                  ? 'No connection. This terminal needs to be online once to load its staff.'
+                  : 'No roles configured for this branch.'}
+              </div>
             )}
 
             {availableRoles.map((role) => (
@@ -696,6 +851,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             <div>
               <h3 className="font-clash font-bold text-2xl text-ink">Select User</h3>
               <p className="text-ink-3">Choose your profile</p>
+              {offline && <OfflineNote />}
             </div>
           </header>
 
@@ -704,26 +860,44 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
               <div className="text-center text-ink-3 py-8">No staff found for this role.</div>
             )}
 
-            {staffList.filter(s => s.role === selectedRole || (selectedRole === 'MANAGER' && s.role === 'BRANCH_MANAGER')).map((staff) => (
-              <button
-                key={staff.id}
-                className="role-card group flex items-center justify-between h-[56px] px-6 bg-canvas border border-line rounded-xl hover:bg-sunken transition-all hover:border-brand relative overflow-hidden shrink-0 shadow-sm"
-                onClick={() => setSelectedStaff(staff)}
-              >
-                <div className="flex items-center gap-4">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                    style={{ backgroundColor: staff.avatarColor || 'var(--pos-primary, #F59E0B)' }}
-                  >
-                    {staff.name.charAt(0).toUpperCase()}
+            {staffList.filter(s => s.role === selectedRole || (selectedRole === 'MANAGER' && s.role === 'BRANCH_MANAGER')).map((staff) => {
+              // Offline, only someone with a saved sign-in on this terminal
+              // can get in. Saying so on the tile beats letting them type a
+              // PIN that can't work.
+              const needsConnection = offline && !canSignInOffline(staff.id, activeBranchId);
+              return (
+                <button
+                  key={staff.id}
+                  className={`role-card group flex items-center justify-between h-[56px] px-6 bg-canvas border border-line rounded-xl transition-all relative overflow-hidden shrink-0 shadow-sm ${needsConnection ? 'cursor-default' : 'hover:bg-sunken hover:border-brand'}`}
+                  aria-disabled={needsConnection}
+                  onClick={() => {
+                    if (needsConnection) {
+                      toast.info(`${staff.name.split(' ')[0]} hasn't signed in on this terminal recently, so the first sign-in needs a connection.`);
+                      return;
+                    }
+                    setSelectedStaff(staff);
+                  }}
+                >
+                  <div className={`flex items-center gap-4 min-w-0 ${needsConnection ? 'opacity-50' : ''}`}>
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
+                      style={{ backgroundColor: staff.avatarColor || 'var(--pos-primary, #F59E0B)' }}
+                    >
+                      {staff.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-bold text-ink truncate">{staff.name}</span>
                   </div>
-                  <span className="font-bold text-ink group-hover:text-ink transition-colors">{staff.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <ChevronRight className="text-ink-3 transition-transform group-hover:translate-x-1 group-hover:text-brand w-[20px] h-[20px]" />
-                </div>
-              </button>
-            ))}
+                  {needsConnection ? (
+                    <span className="flex items-center gap-1.5 text-[12px] font-semibold text-ink-3 shrink-0">
+                      <WifiOff className="w-3.5 h-3.5" />
+                      Needs connection
+                    </span>
+                  ) : (
+                    <ChevronRight className="text-ink-3 transition-transform group-hover:translate-x-1 group-hover:text-brand w-[20px] h-[20px] shrink-0" />
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -755,9 +929,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   <p className="text-ink-3 mt-1 font-medium text-sm">
                     {lockoutTimer > 0
                       ? <span className="text-rose-600 font-bold">Locked out for {lockoutTimer}s</span>
-                      : pinStatus === 'error'
-                        ? <span className="text-rose-600 font-bold">Incorrect PIN</span>
-                        : "Enter your security PIN"}
+                      : pinNote
+                        ? <span className="text-rose-600 font-bold">{pinNote}</span>
+                        : pinStatus === 'error'
+                          ? <span className="text-rose-600 font-bold">Incorrect PIN</span>
+                          : "Enter your security PIN"}
                   </p>
                 </div>
               </header>
@@ -845,7 +1021,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
         {/* Decorative Icons */}
         <div className="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none text-ink-3">
-          <Wifi className="w-[36px] h-[36px]" />
+          {offline ? <WifiOff className="w-[36px] h-[36px]" /> : <Wifi className="w-[36px] h-[36px]" />}
           <BatteryCharging className="w-[36px] h-[36px]" />
         </div>
 
@@ -859,5 +1035,27 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         `}} />
       </section>
     </main>
+  );
+}
+
+function OfflineChip({ compact = false, className = '' }: { compact?: boolean; className?: string }) {
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 bg-sunken border border-line-strong rounded-full ${compact ? 'px-2.5 py-1' : 'px-3 py-1'} ${className}`}
+      title="No connection to the server"
+    >
+      <WifiOff className={`text-ink-2 ${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
+      <span className={`font-bold text-ink-2 uppercase tracking-wider ${compact ? 'text-[10px]' : 'text-[12px]'}`}>Offline</span>
+    </div>
+  );
+}
+
+// Says what still works, in the words a cashier would use.
+function OfflineNote() {
+  return (
+    <p className="mx-auto mt-3 max-w-[320px] flex items-start justify-center gap-2 text-[13px] leading-snug text-ink-2 bg-sunken border border-line rounded-xl px-3 py-2 text-left">
+      <WifiOff className="w-4 h-4 mt-0.5 shrink-0 text-ink-3" />
+      <span>No connection. Anyone who has signed in on this terminal this week can still sign in.</span>
+    </p>
   );
 }

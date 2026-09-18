@@ -116,7 +116,11 @@ export default function ShiftOpenGate() {
       router.replace('/pos/home');
     } catch (err: any) {
       console.error('Failed to open shift:', err);
-      toast.error(err?.message || 'Error opening shift');
+      // fetch() rejects with a TypeError only when the request never got an
+      // answer. The shift's id comes from the server and every order points at
+      // it, so this one step can't happen offline; say that plainly.
+      const noConnection = err instanceof TypeError || (typeof navigator !== 'undefined' && navigator.onLine === false);
+      toast.error(noConnection ? 'No connection. A new shift can only be started while online.' : (err?.message || 'Error opening shift'));
       setSubmitting(false);
     }
     // On success we navigate away — leave `submitting` true so the button

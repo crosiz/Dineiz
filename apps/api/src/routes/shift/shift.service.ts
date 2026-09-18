@@ -832,7 +832,12 @@ export async function startBreak(tenantId: string, shiftId: string, userId: stri
   return { breakId: shiftBreak.id, startedAt: shiftBreak.startedAt };
 }
 
-export async function endBreak(tenantId: string, shiftId: string, userId: string) {
+// `requestedEndedAt`: when the cashier actually came back. A terminal that
+// signs back in with no connection reports the break end later, once it
+// reconnects; stamping it with the server's clock then would bill the whole
+// outage as break time. Clamped to [break start, now] so a wrong or hostile
+// tablet clock can't produce a negative or future break.
+export async function endBreak(tenantId: string, shiftId: string, userId: string, requestedEndedAt?: Date) {
   const shift = await prisma.shift.findFirst({
     where: { id: shiftId, tenantId },
     select: { id: true, branchId: true, user: { select: { name: true } } },
@@ -842,7 +847,13 @@ export async function endBreak(tenantId: string, shiftId: string, userId: string
   const openBreak = await prisma.shiftBreak.findFirst({ where: { shiftId, endedAt: null }, orderBy: { startedAt: 'desc' } });
   if (!openBreak) return { error: 'No active break found', alreadyEnded: true };
 
-  const endedAt = new Date();
+  const now = Date.now();
+  const requested = requestedEndedAt?.getTime();
+  const endedAt = new Date(
+    requested !== undefined && Number.isFinite(requested)
+      ? Math.min(now, Math.max(openBreak.startedAt.getTime(), requested))
+      : now,
+  );
   const durationMinutes = Math.round((endedAt.getTime() - openBreak.startedAt.getTime()) / 60_000);
 
   const updated = await prisma.shiftBreak.update({

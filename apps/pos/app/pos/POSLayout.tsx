@@ -25,6 +25,7 @@ import { useTerminalSettings } from '@/lib/terminal-settings';
 import { ViewModeBanner } from '@/components/ViewModeBanner';
 import { allowsViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
+import { resumeOfflineFollowUps } from '@/lib/offline-auth';
 
 // Spec Part 2 — a cashier's / waiter's live board is scoped to their own
 // open shift; a branch manager / admin sees the whole branch. The server
@@ -173,6 +174,11 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   const { setBranding } = useBrandingStore();
   const [stockAlert, setStockAlert] = useState<StockAlertPayload | null>(null);
   const [orphans, setOrphans] = useState<OrphanOrder[]>([]);
+
+  // After an offline sign-in: re-check the PIN with the server for a fresh
+  // token, and report a break that ended offline. Offline, every screen change
+  // is a full page load, so this picks the work back up on each one.
+  useEffect(() => { resumeOfflineFollowUps(); }, []);
   // Set true on this terminal's first successful connect; a later 'connect'
   // (Socket.IO auto-reconnecting after a drop) then reads as a genuine
   // reconnect, not just an initial-mount connect the mount effect already

@@ -169,7 +169,9 @@ export async function handleStartBreak(request: FastifyRequest, reply: FastifyRe
 
 export async function handleEndBreak(request: FastifyRequest, reply: FastifyReply) {
   const { id } = request.params as { id: string };
-  const result = await endBreak(request.user!.tenantId!, id, request.user!.id);
+  const raw = (request.body as { endedAt?: unknown } | undefined)?.endedAt;
+  const endedAt = typeof raw === 'string' ? new Date(raw) : undefined;
+  const result = await endBreak(request.user!.tenantId!, id, request.user!.id, endedAt);
   if ('error' in result && result.error === 'Shift not found') return reply.status(404).send(result);
   return result;
 }
