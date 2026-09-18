@@ -20,6 +20,45 @@ import { OrderDetailsModal } from './OrderDetailsModal';
 import { API_URL } from '@/lib/api';
 import { Armchair, ChevronDown, CircleUser, Clock, Columns3, LayoutGrid, ListFilter, Loader2, MessageSquare, Plus, Printer, QrCode, Rows3, Search, User, X, Zap } from 'lucide-react';
 
+/**
+ * Collapse identical lines for display: "1x Seekh Kabab" × 4 → "4x Seekh Kabab".
+ *
+ * An order gains a separate line for every add — the first punch, then each
+ * add-to-table round — which is correct for the KOT and the bill (the kitchen
+ * needs to know what was ordered when, and a void applies to one line). It is
+ * not what you want on a summary card: four identical rows ate the four visible
+ * slots and pushed everything else behind "+ N MORE ITEMS".
+ *
+ * Lines are only merged when the name AND unit price AND options AND note all
+ * match — a half-price line, or one with "no chilli", stays separate because it
+ * is genuinely a different thing.
+ */
+function mergeDisplayLines(items: any[]): any[] {
+  if (!Array.isArray(items) || items.length < 2) return items ?? [];
+  const out: any[] = [];
+  const byKey = new Map<string, any>();
+
+  for (const item of items) {
+    const name = item?.name ?? item?.itemName ?? item?.item?.name ?? '';
+    const unit = item?.unitPrice ?? item?.price ?? 0;
+    const qty = item?.quantity ?? item?.qty ?? 1;
+    const key = JSON.stringify([name, unit, item?.options ?? null, item?.notes ?? item?.note ?? null]);
+
+    const existing = byKey.get(key);
+    if (!existing) {
+      const copy = { ...item, quantity: qty, qty };
+      byKey.set(key, copy);
+      out.push(copy);
+      continue;
+    }
+    existing.quantity += qty;
+    existing.qty = existing.quantity;
+    // Keep subtotal consistent so anything summing these still adds up.
+    if (typeof existing.subtotal === 'number') existing.subtotal = existing.quantity * unit;
+  }
+  return out;
+}
+
 interface Props {
   onViewChange?: (view: 'home' | 'menu' | 'tickets') => void;
 }
@@ -463,14 +502,25 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     const typeLabel = order.type === 'DINE_IN' ? 'DINE-IN' : order.type === 'TAKEAWAY' ? 'TAKEAWAY' : 'DELIVERY';
     
-    let parsedItems: any[] = [];
+    let rawItems: any[] = [];
     if (order.cart) {
-      parsedItems = typeof order.cart === 'string' ? JSON.parse(order.cart) : (order.cart || []);
+      rawItems = typeof order.cart === 'string' ? JSON.parse(order.cart) : (order.cart || []);
     } else if (typeof order.items === 'string') {
-      try { parsedItems = JSON.parse(order.items); } catch(e) {}
+      try { rawItems = JSON.parse(order.items); } catch(e) {}
     } else {
-      parsedItems = order.items || [];
+      rawItems = order.items || [];
     }
+
+    // Identical lines are merged for DISPLAY.
+    //
+    // An order picks up a separate line every time something is added — a first
+    // punch, then an add-to-table round, then another — so four Seekh Kababs
+    // arrive as four ITEM_ADDED events and rendered as "1x Seekh Kabab" four
+    // times over. On a card that shows four lines before "+ 10 MORE ITEMS",
+    // that filled the whole card with one dish and hid everything else. The
+    // underlying lines are untouched (the KOT and the bill still need them
+    // separately); this is only what the card shows.
+    const parsedItems = mergeDisplayLines(rawItems);
 
     let calculatedTotal = 0;
     if (order.heldAt && parsedItems.length > 0) {
@@ -526,7 +576,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </div>
             {order.tableLabel && (
               <div className="shrink-0 hidden sm:block">
-                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-ink-3 bg-canvas border-line'}`}>T-{order.tableLabel}</span>
+                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>
               </div>
             )}
             {order.assignedWaiterName && (
@@ -619,7 +669,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           <div className="flex justify-between items-start mb-2 w-full gap-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-lg font-bold text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-ink-3 bg-canvas border-line'}`}>T-{order.tableLabel}</span>}
+              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>}
               <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
               {order.assignedWaiterName && (
                 <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
@@ -739,10 +789,20 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     return (
       <div key={order.id} onClick={openOrder} className={`flex flex-col bg-white border border-line shadow-sm rounded-2xl overflow-hidden transition-all group h-full cursor-pointer hover:border-line-strong hover:shadow-md ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-90' : ''}`}>
         <div className="p-5 flex-1 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <span className="text-2xl font-black text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`ml-2 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-base' : 'text-sm text-ink-3 bg-canvas border-line'}`}>Table {order.tableLabel}</span>}
+          <div className="flex justify-between items-start gap-3 mb-4">
+            {/* The order number is the one thing someone reads this card for, and
+                it was wrapping mid-token — "#2-1809-" / "001" — because it shared
+                a line with the table chip inside a 108px box. It gets its own
+                line and never breaks; the table chip sits under it. */}
+            <div className="min-w-0">
+              <span className="block text-2xl font-black text-ink tracking-tight whitespace-nowrap tabular-nums">
+                #{order.tokenNumber || order.orderNumber || order.id.slice(-4)}
+              </span>
+              {order.tableLabel && (
+                <span className={`inline-block mt-1 font-bold border px-2 py-0.5 rounded ${isReady ? 'text-green-700 bg-green-50 border-green-200 text-sm' : 'text-xs text-ink-3 bg-canvas border-line'}`}>
+                  {order.tableLabel}
+                </span>
+              )}
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
               {dataMode === 'history' ? (

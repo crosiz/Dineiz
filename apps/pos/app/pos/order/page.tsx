@@ -22,6 +22,7 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
+import { ScrollRail } from '@/components/ScrollRail';
 import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
 
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem, removeItem }: any) {
@@ -1038,6 +1039,14 @@ function OrderEntryPageContent() {
   const needsTable = orderType === 'DINE_IN' && !selectedTableId;
   const canSubmitOrder = !!orderType && !needsTable;
 
+  // Nothing on this order at all — neither already sent nor waiting to be.
+  const orderEmpty = cart.length === 0 && existingItems.length === 0;
+
+  const actionBtnCls =
+    'h-11 border border-line-strong bg-surface text-ink rounded-lg text-[12px] font-bold ' +
+    'flex items-center justify-center gap-1 shadow-sm transition-colors ' +
+    'enabled:hover:bg-sunken disabled:opacity-40 disabled:cursor-not-allowed';
+
   // Dine-in/Takeaway/Delivery — shared by both places it renders (see
   // centerSlot below). At ~286px unwrapped, this doesn't fit POSTopBar's
   // center slot on a phone or tablet portrait (the header's left+right
@@ -1170,28 +1179,31 @@ function OrderEntryPageContent() {
               {orderTypeButtons}
             </div>
           </div>
-          {/* Category Bar */}
-          <div className="relative shrink-0">
-            <div className="h-[52px] bg-white border-b border-line flex items-center px-4 gap-2 overflow-x-auto no-scrollbar relative z-10">
+          {/* Category bar. ScrollRail, not a bare overflow-x div: with eleven
+              categories on a 1280px screen, 568px of this strip — everything
+              from Pizza onward — had no way to be reached with a mouse. */}
+          <ScrollRail
+            aria-label="Menu categories"
+            className="shrink-0 h-[52px] bg-surface border-b border-line px-3"
+          >
+            {/* min-w so a two-letter label still reads as a pill rather than
+                rendering as a circle next to its wider neighbours. */}
+            <button
+              onClick={() => setActiveCategoryId(null)}
+              className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
+            >
+              All
+            </button>
+            {categories.map(cat => (
               <button
-                onClick={() => setActiveCategoryId(null)}
-                className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
+                key={cat.id}
+                onClick={() => setActiveCategoryId(cat.id)}
+                className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
               >
-                All
+                {cat.name}
               </button>
-              {categories.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryId(cat.id)}
-                  className={`px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-            </div>
-            {/* Fade right edge */}
-            <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-canvas to-transparent pointer-events-none z-20" />
-          </div>
+            ))}
+          </ScrollRail>
 
           {/* Search Bar & View Toggle */}
           <div className="p-3 border-b border-line bg-canvas flex gap-2 items-center">
@@ -1600,20 +1612,43 @@ function OrderEntryPageContent() {
 
             {/* Actions */}
             <div className="space-y-2 pt-4">
+              {/* All four were live on an empty order, so Discount and Note
+                  opened a dialog about nothing and Clear silently did nothing.
+                  Hold was the clearest tell: the identical HOLD in the top bar
+                  disables itself when the cart is empty and this one didn't, so
+                  the same action disagreed with itself depending on which copy
+                  you reached for.
+
+                  Discount and Note stay available while EDITING a sent order
+                  (cart empty, existingItems not) — they apply to the order.
+                  Clear and Hold act on the cart, so they follow the cart. */}
               <div className="grid grid-cols-4 gap-2">
-                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={() => setDiscountModalOpen(true)}>
+                <button
+                  disabled={orderEmpty}
+                  className={actionBtnCls}
+                  onClick={() => setDiscountModalOpen(true)}
+                >
                   <Percent className="w-[14px] h-[14px]" /> Discount
                 </button>
-                <button className={`h-11 border rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 transition-colors shadow-sm ${showKitchenNote || orderNote ? 'border-brand bg-amber-50 text-brand' : 'border-line-strong bg-white text-ink hover:bg-sunken'}`} onClick={() => setShowKitchenNote(!showKitchenNote)}>
+                <button
+                  disabled={orderEmpty}
+                  className={`${actionBtnCls} ${showKitchenNote || orderNote ? 'border-brand! bg-brand-soft! text-brand!' : ''}`}
+                  onClick={() => setShowKitchenNote(!showKitchenNote)}
+                >
                   <NotebookPen className="w-[14px] h-[14px]" /> Note
                 </button>
-                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={() => {
-                  if (cart.length === 0) return;
-                  setConfirmClearOpen(true);
-                }}>
+                <button
+                  disabled={cart.length === 0}
+                  className={actionBtnCls}
+                  onClick={() => setConfirmClearOpen(true)}
+                >
                   <Trash2 className="w-[14px] h-[14px]" /> Clear
                 </button>
-                <button className="h-11 border border-line-strong bg-white text-ink rounded-lg text-[12px] font-bold flex items-center justify-center gap-1 hover:bg-sunken transition-colors shadow-sm" onClick={holdOrder}>
+                <button
+                  disabled={cart.length === 0}
+                  className={actionBtnCls}
+                  onClick={holdOrder}
+                >
                   <PauseCircle className="w-[14px] h-[14px]" /> Hold
                 </button>
               </div>

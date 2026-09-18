@@ -425,8 +425,12 @@ export default function HomeDashboard() {
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase tracking-wider">{typeLabel}</span>
+                          {/* The label already IS the table's name ("T-4"), so
+                              prefixing it printed "T-T-4". A branch is free to
+                              call its tables anything — "Patio 2", "VIP" — and a
+                              hardcoded prefix is wrong for all of them. */}
                           {order.tableLabel && (
-                            <span className="text-[10px] font-bold text-ink-2 bg-canvas border border-line px-1.5 py-0.5 rounded">T-{order.tableLabel}</span>
+                            <span className="text-[10px] font-bold text-ink-2 bg-canvas border border-line px-1.5 py-0.5 rounded">{order.tableLabel}</span>
                           )}
                         </div>
                         <div className="text-xs text-ink-3 font-medium truncate">{itemCount} item{itemCount === 1 ? '' : 's'}</div>
