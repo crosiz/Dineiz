@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation';
 import { AssignWaiterSheet } from './AssignWaiterSheet';
 import { PremiumTable, getTableDimensions, CHAIR_PAD } from '@/components/PremiumTable';
+import { TABLE_TONE } from '@/lib/table-tone';
 import PaymentModal from '@/components/PaymentModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useSocket } from '@/contexts/SocketContext';
@@ -219,31 +220,25 @@ export default function ClientTableMap() {
   // this legend is only a supplementary key for; tapping a table also shows
   // its status by name).
   const legendElement = useMemo(
-    () => (
-      <div className="hidden sm:flex items-center gap-3.5 text-xs font-semibold text-slate-600 bg-slate-100/80 px-3 py-1.5 rounded-full border border-slate-200">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs" />
-          <span>Free</span>
+    () => {
+      const counts: Record<string, number> = {};
+      for (const t of tables) {
+        const st = String(t.status || 'FREE').toUpperCase();
+        counts[st] = (counts[st] || 0) + 1;
+      }
+      return (
+        <div className="hidden sm:flex items-center gap-3.5 h-9 px-3 rounded-lg border border-line bg-surface text-[12.5px] text-ink-3">
+          {(['FREE', 'OCCUPIED', 'BILL_REQUESTED', 'RESERVED', 'DIRTY'] as const).map((st) => (
+            <span key={st} className="flex items-center gap-1.5 whitespace-nowrap">
+              <span className={`w-2 h-2 rounded-full ${TABLE_TONE[st].dot}`} />
+              <span className="font-semibold text-ink-2 tabular-nums">{counts[st] || 0}</span>
+              <span>{TABLE_TONE[st].label.charAt(0).toUpperCase() + TABLE_TONE[st].label.slice(1)}</span>
+            </span>
+          ))}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-xs animate-pulse" />
-          <span>Occupied</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-xs" />
-          <span>Billed</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-xs" />
-          <span>Reserved</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-xs" />
-          <span>Dirty</span>
-        </div>
-      </div>
-    ),
-    []
+      );
+    },
+    [tables]
   );
 
   // Configure TopBar explicitly without duplicate titles or clutter
@@ -1109,8 +1104,8 @@ export default function ClientTableMap() {
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: 'var(--pos-bg-base)',
-          backgroundImage: 'radial-gradient(var(--pos-border-strong) 1.2px, transparent 1.2px)',
-          backgroundSize: `${20 * view.zoom}px ${20 * view.zoom}px`,
+          backgroundImage: 'radial-gradient(var(--pos-border) 1px, transparent 1px)',
+          backgroundSize: `${24 * view.zoom}px ${24 * view.zoom}px`,
           backgroundPosition: `${view.x}px ${view.y}px`,
           // Without this the browser's own pan/zoom fights every gesture the
           // handlers are trying to interpret — the single biggest reason the
@@ -1122,16 +1117,16 @@ export default function ClientTableMap() {
         {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
             3-4 floors instead of running off the edge of a narrow screen. */}
         {floors.length > 1 && (
-          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-auto z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
-            <Layers className="w-4 h-4 text-amber-600 ml-1 mr-0.5 shrink-0" />
+          <div className="absolute top-4 sm:top-5 left-4 sm:left-5 right-4 sm:right-auto z-40 flex items-center gap-0.5 bg-surface border border-line p-1 rounded-xl shadow-[0_2px_8px_rgba(15,23,42,0.06)] max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
+            <Layers className="w-4 h-4 text-ink-3 ml-1.5 mr-1 shrink-0" />
             {floors.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFloor(f)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all shrink-0 ${
+                className={`h-8 px-3 text-[13px] font-semibold rounded-lg transition-colors shrink-0 ${
                   activeFloor === f
-                    ? 'bg-amber-500 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-ink text-white'
+                    : 'text-ink-3 hover:text-ink hover:bg-sunken'
                 }`}
               >
                 Floor {f}
@@ -1183,7 +1178,7 @@ export default function ClientTableMap() {
               {/* Waiter Avatar Indicator directly on the floor map table */}
               {table.assignedWaiterName && table.status !== 'FREE' && table.status !== 'AVAILABLE' && (
                 <div 
-                  className="absolute -bottom-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-md border-[1.5px] border-white z-10"
+                  className="absolute bottom-3 left-3 w-6 h-6 rounded-full grid place-items-center text-white text-[10px] font-semibold border-2 border-surface z-20"
                   style={{ backgroundColor: table.assignedWaiterColor || '#3b82f6' }}
                   title={`Waiter: ${table.assignedWaiterName}`}
                 >
@@ -1201,32 +1196,32 @@ export default function ClientTableMap() {
         </div>
 
         {/* Floating Glassmorphism Zoom Controls */}
-        <div className="absolute bottom-6 right-6 z-40 flex items-center gap-1.5 bg-white/90 border border-slate-200 p-1.5 rounded-2xl shadow-xl backdrop-blur-md">
+        <div className="absolute bottom-5 right-5 z-40 flex items-center gap-0.5 bg-surface border border-line p-1 rounded-xl shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
           <button
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
-          <span className="text-xs font-bold text-slate-700 w-12 text-center">
+          <span className="text-[12.5px] font-semibold text-ink-2 w-12 text-center tabular-nums">
             {Math.round(view.zoom * 100)}%
           </span>
           <button
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
-          <div className="h-4 w-px bg-slate-200 my-auto" />
+          <div className="h-5 w-px bg-line mx-0.5" />
           <button
             type="button"
             onClick={handleResetZoom}
             title="Reset View"
-            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

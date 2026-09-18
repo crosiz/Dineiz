@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { formatElapsed } from '@/lib/time';
 
 export type TableStatus =
   | 'FREE'
@@ -29,50 +30,51 @@ export interface PremiumTableProps {
   style?: React.CSSProperties;
 }
 
-const STATUS_CONFIG: Record<
-  string,
-  {
-    border: string;
-    boxShadow: string;
-    pulseBoxShadow: string;
-    timerColor: string;
-  }
-> = {
+// One table on the floor plan.
+//
+// It was drawn with a glowing coloured outline (a 14-24px coloured box-shadow
+// per status), a white-to-grey gradient surface, grey dots for chairs, and a
+// red outline that pulsed forever on every occupied table — which on a busy
+// floor meant half the screen throbbing. Now: a flat surface in the status
+// colour (the same palette as Home's table grid, lib/table-tone.ts), short
+// seat bars around it, and the one number that matters on an occupied table,
+// how long it's been sat.
+
+const STATUS: Record<string, { surface: string; label: string; sub: string; seat: string; caption: (mins: string, cap: number) => string }> = {
   FREE: {
-    border: '2px solid rgba(16,185,129,0.65)',
-    boxShadow:
-      '0 0 0 1px rgba(16,185,129,0.15), 0 0 14px rgba(16,185,129,0.12), inset 0 1px 0 rgba(255,255,255,0.6)',
-    pulseBoxShadow: '',
-    timerColor: 'rgba(16,185,129,0.95)',
+    surface: 'bg-surface border-line-strong',
+    label: 'text-ink',
+    sub: 'text-ink-3',
+    seat: 'bg-line-strong',
+    caption: (_m, cap) => `${cap} seats`,
   },
   OCCUPIED: {
-    border: '2px solid rgba(239,68,68,0.75)',
-    boxShadow:
-      '0 0 0 1px rgba(239,68,68,0.2), 0 0 18px rgba(239,68,68,0.18), inset 0 1px 0 rgba(255,255,255,0.6)',
-    pulseBoxShadow:
-      '0 0 0 1px rgba(239,68,68,0.35), 0 0 24px rgba(239,68,68,0.22), inset 0 1px 0 rgba(255,255,255,0.6)',
-    timerColor: 'rgba(239,68,68,0.95)',
+    surface: 'bg-info/10 border-info/60',
+    label: 'text-info',
+    sub: 'text-info/80',
+    seat: 'bg-info/40',
+    caption: (m, cap) => m || `${cap} seats`,
   },
   BILL_REQUESTED: {
-    border: '2px solid rgba(59,130,246,0.75)',
-    boxShadow:
-      '0 0 0 1px rgba(59,130,246,0.2), 0 0 16px rgba(59,130,246,0.15), inset 0 1px 0 rgba(255,255,255,0.6)',
-    pulseBoxShadow: '',
-    timerColor: 'rgba(59,130,246,0.95)',
+    surface: 'bg-brand/10 border-brand/70',
+    label: 'text-brand-strong',
+    sub: 'text-brand-strong/80',
+    seat: 'bg-brand/40',
+    caption: (m) => (m ? `Bill · ${m}` : 'Bill'),
   },
   RESERVED: {
-    border: '2px solid rgba(139,92,246,0.7)',
-    boxShadow:
-      '0 0 0 1px rgba(139,92,246,0.18), 0 0 14px rgba(139,92,246,0.12), inset 0 1px 0 rgba(255,255,255,0.6)',
-    pulseBoxShadow: '',
-    timerColor: 'rgba(139,92,246,0.95)',
+    surface: 'bg-special/10 border-special/60',
+    label: 'text-special',
+    sub: 'text-special/80',
+    seat: 'bg-special/35',
+    caption: () => 'Reserved',
   },
   DIRTY: {
-    border: '2px solid rgba(245,158,11,0.7)',
-    boxShadow:
-      '0 0 0 1px rgba(245,158,11,0.18), 0 0 14px rgba(245,158,11,0.12), inset 0 1px 0 rgba(255,255,255,0.6)',
-    pulseBoxShadow: '',
-    timerColor: 'rgba(245,158,11,0.95)',
+    surface: 'bg-sunken border-line-strong border-dashed',
+    label: 'text-ink-3',
+    sub: 'text-ink-3',
+    seat: 'bg-line',
+    caption: () => 'To clean',
   },
 };
 
@@ -84,7 +86,6 @@ function normalizeStatus(status?: string): string {
   if (s === 'OCCUPIED') return 'OCCUPIED';
   if (s === 'RESERVED') return 'RESERVED';
   if (s === 'DIRTY') return 'DIRTY';
-  if (STATUS_CONFIG[s]) return s;
   return 'FREE';
 }
 
@@ -92,10 +93,7 @@ function normalizeStatus(status?: string): string {
  * A table's drawn size, and the padding its chair decoration needs around it.
  *
  * Exported because the floor plan has to know the real extent of what it's
- * laying out in order to fit a floor to the viewport. It used to guess with a
- * flat 110px margin around the raw (x, y) points, which is neither the table's
- * size nor its chair overhang — so a floor either overflowed the canvas or sat
- * in a sea of empty space depending on which tables it happened to contain.
+ * laying out in order to fit a floor to the viewport.
  *
  * (x, y) is the table's TOP-LEFT. The wrapper this component renders is
  * `CHAIR_PAD` larger on every side, and the caller offsets by that much.
@@ -109,7 +107,7 @@ export function getTableDimensions(shape?: string, capacity: number = 4) {
     return { width: 96, height: 96, borderRadius: '50%' };
   }
   if (normShape === 'long' || capacity >= 9) {
-    return { width: 180, height: 80, borderRadius: '10px' };
+    return { width: 180, height: 80, borderRadius: '12px' };
   }
   if (normShape === 'rectangle' || (capacity >= 5 && capacity <= 8)) {
     return { width: 130, height: 88, borderRadius: '12px' };
@@ -117,71 +115,56 @@ export function getTableDimensions(shape?: string, capacity: number = 4) {
   return { width: 88, height: 88, borderRadius: '12px' };
 }
 
-interface ChairPosition {
+interface Seat {
   x: number;
   y: number;
+  /** h = a seat above/below the table (wide), v = beside it (tall), d = round table */
+  o: 'h' | 'v' | 'd';
 }
 
-function calculateChairs(capacity: number, shape: string, w: number, h: number): ChairPosition[] {
-  const chairs: ChairPosition[] = [];
+const SEAT_LONG = 18;
+const SEAT_SHORT = 6;
+const SEAT_GAP = 5;
+
+function calculateSeats(capacity: number, shape: string, w: number, h: number): Seat[] {
+  const seats: Seat[] = [];
   const cap = Math.max(1, capacity);
   const isRound = shape.toLowerCase() === 'round' || shape.toLowerCase() === 'table_round';
+  const P = CHAIR_PAD;
 
   if (isRound) {
-    const cx = 20 + w / 2;
-    const cy = 20 + h / 2;
-    const radius = w / 2 + 13;
-
+    const cx = P + w / 2;
+    const cy = P + h / 2;
+    const radius = w / 2 + SEAT_GAP + 4;
     for (let i = 0; i < cap; i++) {
-      const angle = (2 * Math.PI / cap) * i - Math.PI / 2;
-      chairs.push({
-        x: Math.round(cx + radius * Math.cos(angle) - 5),
-        y: Math.round(cy + radius * Math.sin(angle) - 5),
-      });
+      const angle = ((2 * Math.PI) / cap) * i - Math.PI / 2;
+      seats.push({ x: Math.round(cx + radius * Math.cos(angle) - 4), y: Math.round(cy + radius * Math.sin(angle) - 4), o: 'd' });
     }
-    return chairs;
+    return seats;
   }
 
-  let topBottomCount: number;
-  let sideCount: number;
+  let topBottom: number;
+  let sides: number;
+  if (cap <= 2) { topBottom = 1; sides = 0; }
+  else if (cap <= 4) { topBottom = 1; sides = 1; }
+  else { sides = 1; topBottom = Math.floor((cap - 2) / 2); }
 
-  if (cap <= 2) {
-    topBottomCount = 1;
-    sideCount = 0;
-  } else if (cap <= 4) {
-    topBottomCount = 1;
-    sideCount = 1;
-  } else {
-    sideCount = 1;
-    topBottomCount = Math.floor((cap - 2) / 2);
+  const topY = P - SEAT_GAP - SEAT_SHORT;
+  const bottomY = P + h + SEAT_GAP;
+  const leftX = P - SEAT_GAP - SEAT_SHORT;
+  const rightX = P + w + SEAT_GAP;
+
+  for (let i = 0; i < topBottom; i++) {
+    const cx = P + (w * (i + 1)) / (topBottom + 1);
+    seats.push({ x: Math.round(cx - SEAT_LONG / 2), y: topY, o: 'h' });
+    seats.push({ x: Math.round(cx - SEAT_LONG / 2), y: bottomY, o: 'h' });
   }
-
-  const topY = 20 - 13;
-  const bottomY = 20 + h + 3;
-  const leftX = 20 - 13;
-  const rightX = 20 + w + 3;
-
-  for (let i = 0; i < topBottomCount; i++) {
-    const xFraction = (i + 1) / (topBottomCount + 1);
-    chairs.push({ x: Math.round(20 + w * xFraction - 5), y: topY });
+  for (let i = 0; i < sides; i++) {
+    const cy = P + (h * (i + 1)) / (sides + 1);
+    seats.push({ x: leftX, y: Math.round(cy - SEAT_LONG / 2), o: 'v' });
+    seats.push({ x: rightX, y: Math.round(cy - SEAT_LONG / 2), o: 'v' });
   }
-
-  for (let i = 0; i < sideCount; i++) {
-    const yFraction = (i + 1) / (sideCount + 1);
-    chairs.push({ x: rightX, y: Math.round(20 + h * yFraction - 5) });
-  }
-
-  for (let i = 0; i < topBottomCount; i++) {
-    const xFraction = (i + 1) / (topBottomCount + 1);
-    chairs.push({ x: Math.round(20 + w * xFraction - 5), y: bottomY });
-  }
-
-  for (let i = 0; i < sideCount; i++) {
-    const yFraction = (i + 1) / (sideCount + 1);
-    chairs.push({ x: leftX, y: Math.round(20 + h * yFraction - 5) });
-  }
-
-  return chairs;
+  return seats;
 }
 
 export function PremiumTable({
@@ -195,164 +178,56 @@ export function PremiumTable({
   className = '',
   style = {},
 }: PremiumTableProps) {
-  const normStatus = normalizeStatus(status);
-  const isOccupied = normStatus === 'OCCUPIED';
-  const isBillRequested = normStatus === 'BILL_REQUESTED';
-  const showTimer = isOccupied || isBillRequested;
-  const statusStyle = STATUS_CONFIG[normStatus] || STATUS_CONFIG.FREE;
+  const norm = normalizeStatus(status);
+  const tone = STATUS[norm];
+  const timed = norm === 'OCCUPIED' || norm === 'BILL_REQUESTED';
 
   const { width, height, borderRadius } = getTableDimensions(shape, capacity);
-  const wrapperWidth = width + 40;
-  const wrapperHeight = height + 40;
 
-  const [elapsedTime, setElapsedTime] = useState<string>('');
-
+  const [, tick] = useState(0);
   useEffect(() => {
-    if (!showTimer) {
-      setElapsedTime('');
-      return;
-    }
+    if (!timed || !occupiedSince) return;
+    const h = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(h);
+  }, [timed, occupiedSince]);
+  // Only a real timestamp: a table without one shows its seats, never a
+  // made-up duration.
+  const elapsed = timed && occupiedSince ? formatElapsed(occupiedSince as any) : '';
 
-    const computeTimer = () => {
-      if (!occupiedSince) {
-        // No real timestamp to compute from — show nothing rather than a
-        // fabricated duration (this used to hardcode "24m" for every table
-        // missing occupiedSince, which is actively misleading on a screen
-        // staff use to judge how long a table has been sitting).
-        setElapsedTime('');
-        return;
-      }
-      const startTime = typeof occupiedSince === 'string' ? new Date(occupiedSince).getTime() : new Date(occupiedSince).getTime();
-      const diffMs = Math.max(0, Date.now() - startTime);
-      const mins = Math.floor(diffMs / 60000);
-      if (mins < 60) {
-        setElapsedTime(`${mins}m`);
-      } else {
-        const hrs = Math.floor(mins / 60);
-        const remMins = mins % 60;
-        setElapsedTime(`${hrs}h ${remMins}m`);
-      }
-    };
-
-    computeTimer();
-    const interval = setInterval(computeTimer, 60000);
-    return () => clearInterval(interval);
-  }, [isOccupied, occupiedSince]);
-
-  const chairs = useMemo(
-    () => calculateChairs(capacity, shape, width, height),
-    [capacity, shape, width, height]
-  );
+  const seats = useMemo(() => calculateSeats(capacity, shape, width, height), [capacity, shape, width, height]);
 
   return (
     <div
       onClick={onClick}
-      style={{
-        width: `${wrapperWidth}px`,
-        height: `${wrapperHeight}px`,
-        position: 'relative',
-        userSelect: 'none',
-        ...style,
-      }}
-      className={`group cursor-pointer flex items-center justify-center ${className}`}
+      style={{ width: width + CHAIR_PAD * 2, height: height + CHAIR_PAD * 2, position: 'relative', userSelect: 'none', ...style }}
+      className={`group cursor-pointer ${className}`}
+      role="button"
+      aria-label={`${label}, ${norm.replace('_', ' ').toLowerCase()}`}
     >
-      <style jsx>{`
-        @keyframes occupiedPulse {
-          0%, 100% {
-            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2), 0 0 18px rgba(239, 68, 68, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-          }
-          50% {
-            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.35), 0 0 24px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-          }
-        }
-        .pulse-occupied {
-          animation: occupiedPulse 2s infinite ease-in-out;
-        }
-      `}</style>
-
-      {/* Perimeter Chairs */}
-      {chairs.map((chair, index) => (
-        <div
-          key={index}
+      {seats.map((s, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className={`absolute rounded-full ${tone.seat}`}
           style={{
-            position: 'absolute',
-            left: `${chair.x}px`,
-            top: `${chair.y}px`,
-            width: '10px',
-            height: '10px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(203, 213, 225, 0.8)',
-            border: '1px solid rgba(148, 163, 184, 0.6)',
-            pointerEvents: 'none',
+            left: s.x,
+            top: s.y,
+            width: s.o === 'h' ? SEAT_LONG : s.o === 'v' ? SEAT_SHORT : 8,
+            height: s.o === 'h' ? SEAT_SHORT : s.o === 'v' ? SEAT_LONG : 8,
           }}
         />
       ))}
 
-      {/* Light Table Surface */}
       <div
-        style={{
-          position: 'absolute',
-          left: '20px',
-          top: '20px',
-          width: `${width}px`,
-          height: `${height}px`,
-          borderRadius,
-          background: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)',
-          border: statusStyle.border,
-          boxShadow: statusStyle.boxShadow,
-          transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
-        }}
-        className={`flex flex-col items-center justify-center text-center p-1 relative z-10 ${
-          isOccupied ? 'pulse-occupied' : ''
-        } ${
-          isSelected
-            ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-slate-100 scale-[1.02]'
-            : ''
+        style={{ left: CHAIR_PAD, top: CHAIR_PAD, width, height, borderRadius }}
+        className={`absolute z-10 flex flex-col items-center justify-center text-center border-[1.5px] transition-[transform,box-shadow] duration-150 group-hover:shadow-[0_4px_14px_rgba(15,23,42,0.10)] ${tone.surface} ${
+          isSelected ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas' : ''
         }`}
       >
-        {/* Table Number */}
-        <span
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 700,
-            fontSize: '15px',
-            color: 'rgba(15, 23, 42, 0.95)',
-            letterSpacing: '-0.01em',
-            lineHeight: 1.1,
-          }}
-        >
-          {label}
+        <span className={`text-[15px] font-semibold leading-none tracking-tight ${tone.label}`}>{label}</span>
+        <span className={`mt-1.5 text-[11px] font-medium leading-none tabular-nums ${tone.sub}`}>
+          {tone.caption(elapsed, capacity)}
         </span>
-
-        {/* Seat Count */}
-        <span
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 400,
-            fontSize: '10px',
-            color: 'rgba(100, 116, 139, 0.85)',
-            marginTop: '2px',
-            lineHeight: 1,
-          }}
-        >
-          {capacity} seats
-        </span>
-
-        {/* Timer for OCCUPIED and BILL_REQUESTED Tables */}
-        {showTimer && elapsedTime && (
-          <span
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '10px',
-              color: statusStyle.timerColor,
-              marginTop: '2px',
-              lineHeight: 1,
-            }}
-          >
-            {elapsedTime}
-          </span>
-        )}
       </div>
     </div>
   );
