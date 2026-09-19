@@ -588,12 +588,19 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
   return { canClose: blockers.length === 0, blockers };
 }
 
-export async function addCashEntry(tenantId: string, id: string, data: { type: 'CASH_IN' | 'CASH_OUT'; amount: number; reason?: string }) {
+export async function addCashEntry(tenantId: string, id: string, data: { type: 'CASH_IN' | 'CASH_OUT'; amount: number; reason?: string; clientEntryId?: string }) {
+  // The client supplies an immutable operation id. A lost response must not
+  // double-record cash, including when the retry arrives after shift close.
+  if (data.clientEntryId) {
+    const existing = await prisma.shiftCashEntry.findFirst({ where: { id: data.clientEntryId, shiftId: id, shift: { tenantId } } });
+    if (existing) return existing;
+  }
   const shift = await prisma.shift.findFirst({ where: { id, tenantId, status: 'OPEN' } });
   if (!shift) return null;
-  const entry = await prisma.shiftCashEntry.create({ data: { shiftId: id, type: data.type, amount: data.amount, reason: data.reason } });
+  return prisma.$transaction(async tx => {
+  const entry = await tx.shiftCashEntry.create({ data: { ...(data.clientEntryId ? { id: data.clientEntryId } : {}), shiftId: id, type: data.type, amount: data.amount, reason: data.reason } });
   // Mirror to ShiftActivity for timeline
-  await prisma.shiftActivity.create({
+  await tx.shiftActivity.create({
     data: {
       shiftId: id,
       activityType: data.type === 'CASH_IN' ? 'CASH_IN' : 'CASH_OUT',
@@ -603,6 +610,13 @@ export async function addCashEntry(tenantId: string, id: string, data: { type: '
     },
   });
   return entry;
+  }).catch(async error => {
+    if (data.clientEntryId && error?.code === 'P2002') {
+      const existing = await prisma.shiftCashEntry.findFirst({ where: { id: data.clientEntryId, shiftId: id, shift: { tenantId } } });
+      if (existing) return existing;
+    }
+    throw error;
+  });
 }
 
 export async function getShiftSummary(tenantId: string, id: string) {
@@ -898,3 +912,27 @@ export async function endBreak(tenantId: string, shiftId: string, userId: string
 }
 
 export * from './shift-report.service';
+
+/** Idempotent offline break journal. A retry never creates a second break. */
+export async function replayBreak(tenantId: string, shiftId: string, userId: string, input: { clientBreakId: string; startedAt: string; endedAt?: string }) {
+  return prisma.$transaction(async tx => {
+    const shift = await tx.shift.findFirst({ where: { id: shiftId, tenantId, userId } });
+    if (!shift) return { error: 'Shift not found for this staff member' };
+    const existing = await tx.shiftBreak.findUnique({ where: { id: input.clientBreakId } });
+    if (existing && existing.shiftId !== shiftId) return { error: 'Break reference belongs to another shift' };
+    if (existing?.endedAt) return existing;
+    const ceiling = Math.min(Date.now(), shift.closedAt?.getTime() ?? Date.now());
+    const startedAt = existing?.startedAt ?? new Date(Math.min(ceiling, Math.max(shift.openedAt.getTime(), new Date(input.startedAt).getTime())));
+    const endedAt = input.endedAt ? new Date(Math.min(ceiling, Math.max(startedAt.getTime(), new Date(input.endedAt).getTime()))) : undefined;
+    if (!existing && shift.status !== 'OPEN' && !endedAt) return { error: 'Cannot start a break on a closed shift' };
+    const durationMinutes = endedAt ? Math.round((endedAt.getTime() - startedAt.getTime()) / 60000) : undefined;
+    const result = await tx.shiftBreak.upsert({
+      where: { id: input.clientBreakId },
+      create: { id: input.clientBreakId, shiftId, startedAt, endedAt, durationMinutes },
+      update: endedAt ? { endedAt, durationMinutes } : {},
+    });
+    if (!existing) await tx.shiftActivity.create({ data: { shiftId, activityType: 'BREAK_START', performedById: userId, notes: 'Break started', metadata: { breakId: result.id, startedAt: startedAt.toISOString(), source: 'TERMINAL' } } });
+    if (endedAt && !existing?.endedAt) await tx.shiftActivity.create({ data: { shiftId, activityType: 'BREAK_END', performedById: userId, notes: `Break ended — ${durationMinutes} minutes`, metadata: { breakId: result.id, endedAt: endedAt.toISOString(), source: 'TERMINAL' } } });
+    return result;
+  }, { isolationLevel: 'Serializable' });
+}

@@ -13,9 +13,14 @@ import { useTerminalSettings } from '@/lib/terminal-settings';
 import { usePrinter } from '@/hooks/usePrinter';
 import { useViews, resolveLocalOrderId } from '@/lib/core/views';
 import {
-  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, discardStuckEvent,
+  getUnsyncedSummary, getSyncDiagnostics, forceSyncNow, retryStuckEvent,
   type UnsyncedSummary,
 } from '@/lib/core/outbox';
+
+import { retrySavedBreak } from '@/lib/offline-break';
+import { retryCashMovement } from '@/lib/offline-cash';
+import { retryKitchenReady } from '@/lib/offline-kitchen';
+import { formatPKR } from '@/lib/utils';
 
 const APP_VERSION = '0.1.0';
 
@@ -52,7 +57,7 @@ const SECTION_ALIASES: Record<string, SectionId> = {
 
 function Row({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
-    <div className="flex items-start justify-between gap-6 py-3.5 border-b border-line last:border-0">
+    <div className="flex flex-wrap sm:flex-nowrap items-start justify-between gap-3 sm:gap-6 py-3.5 border-b border-line last:border-0">
       <div className="min-w-0 flex-1">
         <p className="text-[14px] font-medium text-ink">{label}</p>
         {/* Capped independently of the row: a hint set to the full row width
@@ -62,7 +67,7 @@ function Row({ label, children, hint }: { label: string; children: React.ReactNo
       {/* A fixed control column keeps every value on the same vertical line, so
           the eye tracks straight down the page instead of hunting for where the
           control ended up on each row. */}
-      <div className="shrink-0 min-w-[150px] flex justify-end items-center gap-2 pt-0.5 text-[14px] text-ink-2 text-right">{children}</div>
+      <div className="shrink-0 max-w-full sm:min-w-[150px] flex justify-end items-center gap-2 pt-0.5 text-[14px] text-ink-2 text-right">{children}</div>
     </div>
   );
 }
@@ -72,15 +77,16 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
     <button
       onClick={() => onChange(!on)}
       aria-pressed={on}
-      className={`w-11 h-6 rounded-full p-0.5 transition-colors shrink-0 ${on ? 'bg-brand' : 'bg-hover'}`}
+      aria-label="Toggle setting"
+      className="w-12 h-11 grid place-items-center shrink-0"
     >
-      <span className={`block w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-5' : ''}`} />
+      <span className={`block w-11 h-6 rounded-full p-0.5 ${on ? 'bg-brand' : 'bg-hover'}`}><span className={`block w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${on ? 'translate-x-5' : ''}`} /></span>
     </button>
   );
 }
 
-const selectCls = 'h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[140px]';
-const inputCls = 'h-10 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[160px]';
+const selectCls = 'h-11 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[140px]';
+const inputCls = 'h-11 rounded-lg border border-line bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand focus:shadow-none min-w-[160px]';
 
 export default function POSSettingsPage() {
   const router = useRouter();
@@ -419,7 +425,7 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
 
       {/* Live status — the dot colour and the "updated" clock both move on
           their own, so this reads as a running readout, not a static form. */}
-      <div className="flex items-center gap-2.5 rounded-xl border border-line bg-white px-4 py-3 mb-5">
+      <div className="flex flex-wrap items-center gap-2.5 rounded-xl border border-line bg-white px-4 py-3 mb-5">
         <span className={`w-2 h-2 rounded-full shrink-0 ${headline.d}`} />
         <span className={`text-[14px] font-bold ${headline.c}`}>{headline.t}</span>
         <span className="ml-auto text-[11px] text-ink-4 tabular-nums shrink-0">updated {agoStr}</span>
@@ -447,38 +453,37 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
       <button
         onClick={() => { forceSyncNow(); toast.message('Trying now…'); }}
         disabled={nothingToDo}
-        className="mt-4 h-10 px-4 rounded-xl bg-brand text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-sunken disabled:text-ink-4"
+        className="mt-4 h-11 px-4 rounded-xl bg-brand text-white font-semibold text-[13px] hover:bg-orange-600 transition-colors disabled:bg-sunken disabled:text-ink-4"
       >
         {nothingToDo ? 'Nothing waiting' : 'Sync now'}
       </button>
 
       {attention.length > 0 && (
         <>
-          <div className="flex items-center justify-between mt-5 mb-1">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4">Rejected payments</p>
-            <button
-              onClick={async () => {
-                for (const a of attention) await discardStuckEvent(a.id);
-                toast.success(`Dismissed ${attention.length} — the orders are back on the board`);
-              }}
-              className="text-[11px] font-semibold text-ink-3 hover:text-ink-2"
-            >
-              Dismiss all {attention.length}
-            </button>
-          </div>
-          <p className="text-[11px] text-ink-4 mb-2.5 leading-relaxed">
-            The server turned these down — the amount charged didn&apos;t match
-            the order. They won&apos;t go through by retrying. Dismiss to put the
-            order back on the board, then collect payment again.
+          <h3 className="mt-5 mb-2 text-sm font-semibold text-ink">Changes that need review</h3>
+          <p className="text-sm text-ink-3 mb-3 leading-relaxed">
+            These records are still saved on this terminal. A failed sync does not mean a payment was not collected.
+            Check the receipt and the server record before making any correction. Do not charge the customer again.
           </p>
           <div className="space-y-2">
             {attention.map((a) => (
-              <RejectedRow key={a.id} a={a} onDone={() => toast.success('Dismissed — the order is back on the board')} />
+              <RejectedRow key={a.id} a={a} onDone={() => toast.message('Retrying the saved change. No new payment was created.')} />
             ))}
           </div>
         </>
       )}
 
+      {(diag?.shiftOpens?.length > 0 || diag?.shiftCloses?.length > 0) && <p className="mt-4 p-3 border border-line rounded-xl text-sm text-ink-3">Shift handover waiting to sync: {diag?.shiftOpens?.length ?? 0} opening record(s), {diag?.shiftCloses?.length ?? 0} closing record(s). These send in order after the associated payments are confirmed.</p>}
+      {[...(diag?.cash ?? []).map((a: any) => ({ ...a, kind: 'cash' })), ...(diag?.kitchen ?? []).map((a: any) => ({ ...a, kind: 'kitchen' })), ...(diag?.breaks ?? []).map((a: any) => ({ ...a, kind: 'break' }))].map((a: any) => (
+        <div key={a.id} className="mt-3 p-4 rounded-xl border border-line bg-surface">
+          <p className="text-sm font-semibold text-ink">{a.kind === 'cash' ? `${a.type === 'CASH_IN' ? 'Cash in' : 'Cash out'} · ${formatPKR(a.amount)}` : a.kind === 'break' ? 'Staff break record' : 'Kitchen ready update'}</p>
+          <p className="text-sm text-ink-3 mt-1">{a.error || 'Saved on this device, waiting to send.'}</p>
+          {a.state === 'rejected' && <button className="min-h-11 mt-2 px-3 border border-line rounded-lg text-sm font-semibold" onClick={async () => {
+            try { if (a.kind === 'cash') await retryCashMovement(a.id); else if (a.kind === 'break') await retrySavedBreak(a.id); else await retryKitchenReady(a.id); toast.message('Retry requested'); }
+            catch (error) { toast.error(error instanceof Error ? error.message : 'Could not retry'); }
+          }}>Retry saved change</button>}
+        </div>
+      ))}
       <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-4 mt-7 mb-1">Storage</p>
       <Row label="Events held on this device" hint="Kept until the server confirms them.">
         <span className="text-[13px] text-ink-2 tabular-nums">{totalEvents}</span>
@@ -497,14 +502,14 @@ function SyncPanel({ summary, diag, online }: { summary: UnsyncedSummary | null;
             await snapshotViews();
             toast.success('Confirmed history compacted');
           }}
-          className="h-10 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken transition-colors"
+          className="h-11 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken transition-colors"
         >
           Free Up Space
         </button>
         <button
           onClick={exportDiag}
           disabled={busy}
-          className="h-10 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken disabled:opacity-50 transition-colors inline-flex items-center gap-2"
+          className="h-11 px-4 rounded-xl bg-white border border-line text-ink-2 font-semibold text-[13px] hover:bg-sunken disabled:opacity-50 transition-colors inline-flex items-center gap-2"
         >
           <Download size={14} /> {busy ? 'Preparing…' : 'Export Diagnostics'}
         </button>
@@ -536,17 +541,16 @@ function RejectedRow({ a, onDone }: { a: any; onDone: () => void }) {
   } else if (/dependency .* is (poisoned|abandoned)/i.test(a.lastError || '')) {
     reason = 'An earlier change on this order also failed to sync.';
   } else {
-    reason = a.lastError || 'The server rejected this payment.';
+    reason = a.lastError || 'The server did not accept this change.';
   }
 
   const when = a.at ? new Date(a.at) : null;
-  const canSettle = !!order && (order.status === 'PENDING' || order.status === 'IN_KITCHEN' || order.status === 'READY' || order.status === 'COMPLETED');
 
   return (
     <div className="bg-rose-50/70 border border-rose-200 rounded-xl px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
         <span className="text-[13px] font-bold text-ink">
-          {orderLabel ? `Order ${orderLabel}` : 'A payment'}
+          {orderLabel ? `Order ${orderLabel}` : 'Saved change'}
         </span>
         <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white text-rose-600 shrink-0">Rejected</span>
       </div>
@@ -556,24 +560,11 @@ function RejectedRow({ a, onDone }: { a: any; onDone: () => void }) {
           {when.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}, {when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
         </p>
       )}
-      <div className="mt-2.5 flex items-center gap-4">
-        {canSettle && (
-          <button
-            onClick={async () => {
-              await discardStuckEvent(a.id);
-              router.push(`/pos/order?orderId=${order!.serverId || order!.id}&checkout=true`);
-            }}
-            className="text-[11px] font-bold text-brand hover:underline"
-          >
-            Settle this order
-          </button>
-        )}
-        <button
-          onClick={async () => { await discardStuckEvent(a.id); onDone(); }}
-          className="text-[11px] font-semibold text-ink-3 hover:text-ink-2"
-        >
-          Dismiss
-        </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button className="min-h-11 px-3 rounded-lg border border-rose-200 text-sm font-semibold" onClick={async () => {
+          try { await retryStuckEvent(a.id); onDone(); } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not retry'); }
+        }}>Retry saved change</button>
+        <span className="text-xs text-ink-3 self-center">If it fails again, export diagnostics for your manager.</span>
       </div>
     </div>
   );

@@ -21,6 +21,7 @@
 import { nanoid } from 'nanoid';
 
 const PENDING_OPEN_KEY = 'pos_pending_shift_open';
+const OPEN_QUEUE_KEY = 'pos_shift_open_queue';
 const ALIASES_KEY = 'pos_shift_aliases';
 
 export interface PendingShiftOpen {
@@ -45,7 +46,7 @@ function write(key: string, value: unknown): void {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // Storage blocked: nothing sensible to fall back to.
+    throw new Error('This device could not save the shift. Free storage and try again before taking orders.');
   }
 }
 
@@ -53,24 +54,33 @@ export function newOfflineShiftId(): string {
   return `shf_${nanoid(20)}`;
 }
 
+export function pendingShiftOpens(): PendingShiftOpen[] {
+  if (typeof window === 'undefined') return [];
+  const queue = read<PendingShiftOpen[]>(OPEN_QUEUE_KEY);
+  if (Array.isArray(queue)) return queue;
+  const legacy = read<PendingShiftOpen>(PENDING_OPEN_KEY);
+  return legacy ? [legacy] : [];
+}
+function saveOpens(queue: PendingShiftOpen[]) {
+  write(OPEN_QUEUE_KEY, queue);
+  // Compatibility pointer for older clients and shift handoff screens.
+  write(PENDING_OPEN_KEY, queue[0] ?? null);
+}
 export function queueShiftOpen(p: PendingShiftOpen): void {
-  write(PENDING_OPEN_KEY, p);
+  const queue = pendingShiftOpens();
+  const index = queue.findIndex(q => resolveShiftId(q.shiftId) === resolveShiftId(p.shiftId));
+  if (index < 0) queue.push(p); else queue[index] = p;
+  saveOpens(queue);
 }
-
 export function readPendingShiftOpen(): PendingShiftOpen | null {
-  if (typeof window === 'undefined') return null;
-  return read<PendingShiftOpen>(PENDING_OPEN_KEY);
+  return pendingShiftOpens()[0] ?? null;
 }
-
 export function clearPendingShiftOpen(): void {
-  write(PENDING_OPEN_KEY, null);
+  saveOpens(pendingShiftOpens().slice(1));
 }
-
 /** True while this shift exists only on this terminal. */
 export function isShiftPendingOpen(shiftId: string | null | undefined): boolean {
-  if (!shiftId) return false;
-  const p = readPendingShiftOpen();
-  return !!p && resolveShiftId(p.shiftId) === resolveShiftId(shiftId);
+  return !!shiftId && pendingShiftOpens().some(p => resolveShiftId(p.shiftId) === resolveShiftId(shiftId));
 }
 
 /** The id the server knows this shift by. */

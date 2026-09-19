@@ -10,7 +10,7 @@ import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const nextDir = join(root, '.next');
+const nextDir = join(root, process.env.POS_BUILD_DIR || '.next');
 const publicDir = join(root, 'public');
 
 // Every screen the POS can open. Each one's HTML is cached so it can load with

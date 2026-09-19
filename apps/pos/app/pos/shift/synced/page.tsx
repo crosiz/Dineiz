@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { RefreshCw, CheckCircle2, CloudOff, LogOut } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import {
-  getUnsyncedSummary, getSyncCategoryProgress, kickOutbox,
+  getUnsyncedSummary, getSyncCategoryProgress, kickOutbox, getShiftSyncStatus,
   type UnsyncedSummary, type SyncCategoryProgress,
 } from '@/lib/core/outbox';
 import { shiftSyncCompleted } from '@/lib/core/commands';
@@ -45,14 +45,17 @@ export default function ShiftSyncedPage() {
     if (finishingRef.current || !shiftId) return;
     finishingRef.current = true;
     try {
-      await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}/sync-complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({}),
-      }).catch(() => {});
-      shiftSyncCompleted(shiftId).catch(() => {});
-    } finally {
+      // The outbox alone owns finalisation. Never declare success after a
+      // failed POST or merely because rejected events left the retry queue.
+      const res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok || (await res.json()).status !== 'CLOSED') { finishingRef.current = false; return; }
+      await shiftSyncCompleted(shiftId);
       setDone(true);
+    } catch {
+      finishingRef.current = false;
     }
   };
 
@@ -72,7 +75,8 @@ export default function ShiftSyncedPage() {
       let closeQueued = !!readPendingShiftOpen();
       try { closeQueued = closeQueued || !!localStorage.getItem('pos_pending_shift_close'); } catch { /* ignore */ }
       if (closeQueued) kickOutbox();
-      if (s.count === 0 && !done && !closeQueued) void finalise();
+      const shiftSync = shiftId ? await getShiftSyncStatus(shiftId) : null;
+      if (shiftSync?.total === 0 && !done && !closeQueued && !localStorage.getItem('pos_pending_sync_shift')) void finalise();
     };
     void tick();
     const h = setInterval(tick, 1500);

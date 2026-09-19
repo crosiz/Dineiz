@@ -13,6 +13,7 @@ export const OpenShiftSchema = z.object({
 });
 
 export const CashEntrySchema = z.object({
+  clientEntryId: z.string().uuid().optional(),
   type: z.enum(['CASH_IN', 'CASH_OUT']),
   amount: z.number().positive(),
   reason: z.string().optional(),

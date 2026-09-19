@@ -1,5 +1,7 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
+import { cachedRead } from '@/lib/cached-read';
 import { useState, useEffect, useRef } from 'react';
 import { X, Search, UserPlus, Star } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
@@ -24,6 +26,7 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [results, setResults] = useState<PickedCustomer[]>([]);
+  const [searchError, setSearchError] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
@@ -38,7 +41,7 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
       setShowCreate(false);
       setNewName('');
       setNewPhone('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setSearchError('');
     }
   }, [isOpen]);
 
@@ -52,14 +55,14 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
       setResults([]);
       return;
     }
+    let active = true;
     setIsSearching(true);
-    fetch(`${API_URL}/api/customers?search=${encodeURIComponent(debouncedSearch.trim())}&limit=20`, {
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-      .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((data) => setResults(Array.isArray(data.data) ? data.data : []))
-      .catch(() => setResults([]))
-      .finally(() => setIsSearching(false));
+    setSearchError('');
+    cachedRead<{ data: PickedCustomer[] }>(`/api/customers?search=${encodeURIComponent(debouncedSearch.trim())}&limit=20`)
+      .then(({ data, offline }) => { if (active) { setResults(Array.isArray(data.data) ? data.data : []); if (offline) setSearchError('Offline · Showing saved matches. Loyalty balances may have changed.'); } })
+      .catch(() => { if (active) { setResults([]); setSearchError('Search is unavailable. Reconnect to find customers not saved on this device.'); } })
+      .finally(() => { if (active) setIsSearching(false); });
+    return () => { active = false; };
   }, [debouncedSearch, isOpen]);
 
   if (!isOpen) return null;
@@ -69,9 +72,11 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
       toast.error('Enter a customer name');
       return;
     }
+    if (!navigator.onLine) { toast.error('Connect to register a new customer. You can continue this order without an account.'); return; }
     setIsCreating(true);
     try {
       const res = await fetch(`${API_URL}/api/customers`, {
+        signal: AbortSignal.timeout(8000),
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
         body: JSON.stringify({ name: newName.trim(), phone: newPhone.trim() || undefined }),
@@ -89,23 +94,16 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
   };
 
   return (
-    <>
-      {/* 500/501, not 9998/9999 — that pair was picked to "look high enough"
-          and happened to land on the exact values AssignWaiterSheet also
-          picked independently, and tied with ConfirmModal's real z-index
-          (9999), which is meant to out-rank every other sheet including
-          this one. */}
-      <div className="fixed inset-0 bg-black/40 z-[500]" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:m-auto sm:h-fit sm:max-w-[440px] bg-white rounded-t-2xl sm:rounded-2xl z-[501] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[85dvh]">
+    <Modal isOpen onClose={isCreating ? undefined : onClose} label={showCreate ? 'New customer' : 'Attach customer'} sheetOnMobile className="max-w-[440px]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
           <h2 className="text-[18px] font-bold text-ink">{showCreate ? 'New Customer' : 'Attach Customer'}</h2>
-          <button onClick={onClose} className="p-2 -mr-2 text-ink-4 hover:text-ink rounded-full hover:bg-sunken transition-colors">
+          <button aria-label="Close customer selection" onClick={onClose} className="min-w-11 min-h-11 p-2 -mr-2 text-ink-4 hover:text-ink rounded-full hover:bg-sunken transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {showCreate ? (
-          <div className="p-6 flex flex-col gap-4">
+          <div className="p-5 overflow-y-auto flex flex-col gap-4">
             <div>
               <label className="text-[11px] font-bold text-ink-3 uppercase tracking-wider mb-1.5 block">Name</label>
               <input
@@ -153,7 +151,8 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 min-h-[200px]">
+            {searchError && <p role="status" className="px-4 py-3 text-sm text-ink-3">{searchError}</p>}
+            <div className="flex-1 overflow-y-auto p-2 min-h-0">
               {!search.trim() ? (
                 <div className="py-12 px-6 flex flex-col items-center justify-center text-center text-ink-4">
                   <Search className="w-8 h-8 mb-3" />
@@ -163,7 +162,7 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
                 <div className="flex justify-center py-8">
                   <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : results.length === 0 ? (
+              ) : searchError && results.length === 0 ? null : results.length === 0 ? (
                 <div className="py-8 px-6 text-center text-[13px] text-ink-3">No customers found matching "{search}"</div>
               ) : (
                 <div className="space-y-1">
@@ -203,7 +202,6 @@ export function CustomerPickerSheet({ isOpen, onClose, onSelect }: CustomerPicke
             </div>
           </>
         )}
-      </div>
-    </>
+    </Modal>
   );
 }

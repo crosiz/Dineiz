@@ -7,9 +7,10 @@ import type { NextConfig } from 'next';
 // (next-pwa used to do this through the webpack hook, which Turbopack never
 // calls, and its generated files were committed and went stale.)
 const nextConfig: NextConfig = {
+  distDir: process.env.POS_BUILD_DIR || '.next',
   transpilePackages: ['@dineiz/ui', '@dineiz/schemas', '@dineiz/db'],
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,

@@ -1,5 +1,6 @@
 'use client'
 
+import { Modal } from '@/components/ui/Modal';
 import React, { useState } from 'react';
 import { getPosSession, getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
@@ -166,17 +167,7 @@ export function VoidItemBottomSheet({
 
   return (
     <>
-      {/* z-[110], not z-[100]: OrderDetailsModal renders this as its own
-          child at that same z-[100], which only "worked" because this
-          happens to be a later DOM sibling — no real stacking guarantee.
-          110 matches the tier OrderDetailsModal already uses for its other
-          nested overlay (the inline assign-waiter sheet). */}
-      <div className="fixed inset-0 z-[110] flex items-end justify-center pointer-events-auto sm:items-center">
-        {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-        {/* Modal/Sheet */}
-        <div className="relative w-full max-w-[500px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[90dvh] flex flex-col">
+      <Modal isOpen onClose={isSubmitting ? undefined : onClose} label="Remove sent item" sheetOnMobile className="max-w-[500px]">
           {/* flex-1 min-h-0 overflow-y-auto here, not on the whole card body
               — the Cancel/Remove buttons used to live inside this same
               scroll region and could scroll out of view on a short
@@ -198,7 +189,7 @@ export function VoidItemBottomSheet({
                 <button
                   onClick={() => setQuantityToVoid(Math.max(1, quantityToVoid - 1))}
                   disabled={quantityToVoid <= 1}
-                  className="w-10 h-10 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
+                  className="w-11 h-11 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
                 >
                   <Minus className="w-[20px] h-[20px]" />
                 </button>
@@ -206,7 +197,7 @@ export function VoidItemBottomSheet({
                 <button
                   onClick={() => setQuantityToVoid(Math.min(item.quantity, quantityToVoid + 1))}
                   disabled={quantityToVoid >= item.quantity}
-                  className="w-10 h-10 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
+                  className="w-11 h-11 rounded-xl border border-line-strong flex items-center justify-center text-ink disabled:opacity-50"
                 >
                   <Plus className="w-[20px] h-[20px]" />
                 </button>
@@ -217,7 +208,7 @@ export function VoidItemBottomSheet({
               <label className="block text-sm font-bold text-ink mb-3">Reason</label>
               <div className="space-y-3">
                 {reasons.map((r) => (
-                  <label key={r} className="flex items-center gap-3 cursor-pointer">
+                  <label key={r} className="flex min-h-11 items-center gap-3 cursor-pointer">
                     <input
                       type="radio"
                       name="voidReason"
@@ -229,7 +220,7 @@ export function VoidItemBottomSheet({
                     <span className="text-sm text-ink-2 font-medium">{r}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex min-h-11 items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     name="voidReason"
@@ -257,7 +248,7 @@ export function VoidItemBottomSheet({
           {/* Pinned footer — outside the scroll region above so these
               buttons are always reachable, not just whenever the content
               happens to fit. */}
-          <div className="flex gap-3 p-6 pt-4 shrink-0 border-t border-line">
+          <div className="flex flex-wrap gap-3 p-4 pt-4 shrink-0 border-t border-line">
               <button
                 onClick={onClose}
                 disabled={isSubmitting}
@@ -294,8 +285,7 @@ export function VoidItemBottomSheet({
                 </button>
               )}
           </div>
-        </div>
-      </div>
+      </Modal>
 
       {isPinModalOpen && (
         <AdminPinModal

@@ -1,5 +1,6 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
 import React, { useContext, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopBarStateContext } from '../contexts/TopBarContext';
@@ -19,7 +20,7 @@ import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModa
 import { SyncHealthDot } from '@/components/SyncHealthDot';
 import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, flushOutbox, isSettledLocally, type UnsyncedSummary } from '@/lib/core/outbox';
-import { startBreak } from '@/lib/core/commands';
+import { startSavedBreak } from '@/lib/offline-break';
 import { saveCartDraft, type CartDraft } from '@/lib/core/drafts';
 import { API_URL } from '@/lib/api';
 
@@ -376,12 +377,11 @@ export function POSTopBar() {
             </button>
           )}
 
-          <DineizLogo
-            className="hidden lg:inline-flex"
+          <div className="hidden lg:block shrink-0"><DineizLogo
             size="md"
             variant="light"
             onClick={() => router.push('/pos/home')}
-          />
+          /></div>
 
           {(config.pageTitle || config.breadcrumb) && (
             <div className="flex items-center gap-3 lg:pl-2 lg:border-l border-line min-w-0 shrink">
@@ -565,9 +565,8 @@ export function POSTopBar() {
 
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[360px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mb-4">
+<Modal isOpen label="Terminal action" className="max-w-[360px] p-5 overflow-y-auto">
+            <div className="w-10 h-11 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mb-4">
               <LogOut size={20} />
             </div>
             
@@ -579,26 +578,24 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={() => setShowSignOutConfirm(false)}
-                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSignOut}
-                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Sign Out
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Spec Part 11 — unfinished cart on sign-out. Hold It / Discard / Cancel. */}
       {showCartWarning && (
-        <div className="fixed inset-0 z-[205] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+<Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
+            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <ShoppingBag size={20} />
             </div>
 
@@ -616,7 +613,7 @@ export function POSTopBar() {
               <button
                 onClick={holdCartThenSignOut}
                 disabled={holdBusy}
-                className="w-full h-10 rounded-xl bg-brand hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
+                className="w-full h-11 rounded-xl bg-brand hover:brightness-105 text-white text-xs font-semibold shadow-xs transition-all disabled:opacity-60 flex items-center justify-center gap-1.5"
               >
                 {holdBusy ? <RefreshCw size={13} className="animate-spin" /> : <ShoppingBag size={13} />}
                 Hold It &amp; Sign Out
@@ -624,20 +621,19 @@ export function POSTopBar() {
               <div className="flex gap-2.5 w-full">
                 <button
                   onClick={() => setShowCartWarning(false)}
-                  className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                  className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={discardCartThenSignOut}
-                  className="flex-1 h-10 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
+                  className="flex-1 h-11 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
                 >
                   Discard &amp; Sign Out
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Blocks sign-out while unsynced events are still in flight. When
@@ -647,9 +643,8 @@ export function POSTopBar() {
           back in does, so that's offered directly instead of demanding a
           manager PIN for something that isn't actually an override. */}
       {signOutSyncing && unsyncedInfo?.blockedOnAuthOnly && (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+<Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
+            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <Clock size={20} />
             </div>
 
@@ -663,25 +658,23 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={cancelSignOutWait}
-                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
               >
                 Stay Signed In
               </button>
               <button
                 onClick={() => { setSignOutSyncing(false); finishSignOut(); }}
-                className="flex-1 h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Sign Out
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {signOutSyncing && unsyncedInfo && !unsyncedInfo.blockedOnAuthOnly && (
-        <div className="fixed inset-0 z-[210] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[380px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+<Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
+            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <RefreshCw size={20} className="animate-spin" style={{ animationDuration: '1.5s' }} />
             </div>
 
@@ -708,13 +701,13 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full mb-2">
               <button
                 onClick={cancelSignOutWait}
-                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
               >
                 Keep Working
               </button>
               <button
                 onClick={() => kickOutbox()}
-                className="flex-1 h-10 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
               >
                 <RefreshCw size={13} /> Retry Now
               </button>
@@ -722,12 +715,11 @@ export function POSTopBar() {
 
             <button
               onClick={() => setShowForcePin(true)}
-              className="w-full h-9 rounded-xl bg-transparent text-rose-600 hover:bg-rose-50 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+              className="w-full h-11 rounded-xl bg-transparent text-rose-600 hover:bg-rose-50 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
             >
               <ShieldAlert size={13} /> Force Sign Out (Manager PIN)
             </button>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {showForcePin && (
@@ -747,9 +739,8 @@ export function POSTopBar() {
 
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-[360px] bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-150">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+<Modal isOpen label="Terminal action" className="max-w-[360px] p-5 overflow-y-auto">
+            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
               <Coffee size={20} />
             </div>
             
@@ -761,7 +752,7 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={() => setShowTakeBreakConfirm(false)}
-                className="flex-1 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
               >
                 Cancel
               </button>
@@ -801,43 +792,24 @@ export function POSTopBar() {
                       notes: null,
                       reason: 'break',
                     };
-                    saveCartDraft(draft).catch(console.error);
+                    try { await saveCartDraft(draft); }
+                    catch { toast.error('Could not save your cart. Keep this screen open and try again.'); return; }
                   }
 
                   try {
-                    const res = await fetch(`${API_URL}/api/shifts/${shiftId}/break/start`, {
-                      method: 'POST',
-                      headers: { 'Authorization': `Bearer ${sessionObj?.token}`, 'Content-Type': 'application/json' },
-                      body: JSON.stringify({}),
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      setPosBreak({ breakId: data.breakId, shiftId, startedAt: data.startedAt });
-                      // Local audit-trail record — only once the server has
-                      // actually confirmed the break. This event is
-                      // auto-confirmed locally the moment it's appended
-                      // (SHIFT-lane events don't retry through the outbox),
-                      // so recording it unconditionally meant a break the
-                      // server explicitly rejected still showed up "confirmed
-                      // forever" in the local log, with nothing to ever
-                      // surface the mismatch.
-                      startBreak(shiftId).catch(console.error);
-                    } else {
-                      const body = await res.json().catch(() => ({}));
-                      toast.error(body?.error || "Couldn't start your break — it may not be recorded.");
-                    }
-                  } catch {
-                    toast.error("Couldn't reach the server — your break may not be recorded.");
+                    const saved = await startSavedBreak(shiftId);
+                    setPosBreak({ breakId: saved.id, shiftId, startedAt: saved.startedAt });
+                    router.push('/login?reason=break');
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Could not save your break. Try again.');
                   }
-                  router.push('/login?reason=break');
                 }}
-                className="flex-1 h-10 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Lock Screen
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Close Shift Modal */}

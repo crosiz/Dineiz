@@ -16,6 +16,8 @@ export interface PosShift {
   shiftId: string;
   openedAt: string;
   openingFloat: number;
+  userId?: string;
+  branchId?: string;
 }
 
 export const getPosSession = (): PosSession | null => {
@@ -38,7 +40,8 @@ export const getPosShift = (): PosShift | null => {
 
 export const setPosShift = (data: PosShift): void => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('pos_shift', JSON.stringify(data));
+  const session = getPosSession();
+  localStorage.setItem('pos_shift', JSON.stringify({ ...data, userId: data.userId ?? session?.userId, branchId: data.branchId ?? session?.branchId }));
   // Opening (or resuming) a shift leaves View Mode (spec Part 11).
   localStorage.removeItem('pos_view_mode');
 };
@@ -103,6 +106,10 @@ export async function resolveActiveShiftId(apiUrl: string): Promise<string | nul
 // explicitly as part of a successful close).
 export const clearPosSession = () => {
   if (typeof window === 'undefined') return;
+  const shift = getPosShift();
+  if (shift && !shift.userId) setPosShift(shift);
+  const activeBreak = getPosBreak();
+  if (activeBreak && !activeBreak.userId) setPosBreak(activeBreak);
   localStorage.removeItem('pos_session');
   localStorage.removeItem('pos_token');
   localStorage.removeItem('pos_branding');
@@ -123,6 +130,7 @@ export interface PosBreak {
   breakId: string;
   shiftId: string;
   startedAt: string; // ISO timestamp
+  userId?: string;
 }
 
 export const getPosBreak = (): PosBreak | null => {
@@ -136,7 +144,7 @@ export const getPosBreak = (): PosBreak | null => {
 
 export const setPosBreak = (data: PosBreak): void => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem('pos_break', JSON.stringify(data));
+  localStorage.setItem('pos_break', JSON.stringify({ ...data, userId: data.userId ?? getPosSession()?.userId }));
 };
 
 export const clearPosBreak = (): void => {

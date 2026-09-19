@@ -6,6 +6,8 @@ import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
 import { getToken } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
+import { formatPKR } from '@/lib/utils';
 import { CheckSquare, Circle, CircleDot, Square, X } from 'lucide-react';
 
 // ─── Variation Picker Bottom Sheet ──────────────────────────────
@@ -15,7 +17,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<Set<string>>(new Set());
 
   const handleAdd = () => {
-    const variation = item.variations?.find((v) => v.id === selectedVarId) || { id: 'default', name: 'Regular', price: 0 };
+    const variation = item.variations?.find((v) => v.id === selectedVarId);
     const selectedAddOns = item.addOns?.filter((a) => selectedAddOnIds.has(a.id)) || [];
     const addOnTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
 
@@ -23,7 +25,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
       itemId: item.id,
       name: item.name,
       basePrice: item.basePrice,
-      unitPrice: item.basePrice + (variation.price || 0) + addOnTotal,
+      unitPrice: item.basePrice + (variation?.price || 0) + addOnTotal,
       selectedVariation: variation,
       selectedAddOns: selectedAddOns,
       image: item.image,
@@ -36,21 +38,9 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
     + Array.from(selectedAddOnIds).reduce((sum, id) => sum + (item.addOns?.find(a => a.id === id)?.price || 0), 0);
 
   return (
-    <>
-      {/* Scrim Overlay */}
-      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50" onClick={onClose}></div>
-
-      {/* Bottom Sheet Container */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end h-screen pointer-events-none">
-        <div className="w-full h-fit max-h-[90vh] bg-white rounded-t-[24px] flex flex-col shadow-[0_-8px_40px_rgba(15,23,42,0.18)] border border-line border-b-0 max-w-[900px] mx-auto pointer-events-auto animate-in slide-in-from-bottom duration-300">
-
-          {/* Handle */}
-          <div className="w-full flex justify-center py-3 shrink-0 cursor-pointer" onClick={onClose}>
-            <div className="w-12 h-1.5 bg-hover rounded-full"></div>
-          </div>
-
+    <Modal isOpen onClose={onClose} label={`Options for ${item.name}`} sheetOnMobile className="max-w-[600px]">
           {/* Header */}
-          <header className="px-8 pb-6 flex items-center justify-between border-b border-line shrink-0">
+          <header className="px-4 sm:px-6 pb-6 flex items-center justify-between border-b border-line shrink-0">
             <div className="flex items-center gap-4">
               <div className="w-[56px] h-[56px] rounded-xl overflow-hidden border border-line bg-canvas shrink-0">
                 <img className="w-full h-full object-cover" src={item.image || "https://placehold.co/400x300/F1F5F9/64748B?text=No+Image"} alt={item.name} />
@@ -60,27 +50,27 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[11px] font-bold text-ink-3 uppercase tracking-wider">{item.categoryName || 'Mains'}</span>
                   <span className="w-1 h-1 bg-hover rounded-full"></span>
-                  <span className="text-[12px] font-bold text-brand">PKR {item.basePrice}</span>
+                  <span className="text-[12px] font-bold text-brand">{formatPKR(item.basePrice)}</span>
                 </div>
               </div>
             </div>
 
             <div className="bg-brand-soft px-4 py-2 rounded-xl border border-brand/30 flex items-center gap-3 shrink-0">
               <span className="text-[11px] font-bold text-brand-strong uppercase tracking-wider">Total</span>
-              <span className="text-[20px] font-black text-brand-strong tabular-nums">PKR {currentTotal}</span>
+              <span className="text-[20px] font-black text-brand-strong tabular-nums">{formatPKR(currentTotal)}</span>
             </div>
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto no-scrollbar px-8 py-6 space-y-7">
+          <main className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-6 py-6 space-y-7">
             {/* 1. Choose Size (Single Select) */}
-            <section>
+            {!!item.variations?.length && <section>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Choose Size</h3>
                 <span className="bg-brand/10 text-brand text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Required</span>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {item.variations.map((v) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {item.variations?.map((v) => (
                   <label
                     key={v.id}
                     className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedVarId === v.id ? 'border-2 border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
@@ -90,11 +80,11 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                       name="size"
                       checked={selectedVarId === v.id}
                       onChange={() => setSelectedVarId(v.id)}
-                      className="hidden"
+                      className="sr-only"
                     />
                     <div className="flex flex-col">
                       <span className="text-[16px] font-semibold text-ink">{v.name}</span>
-                      {v.price > 0 && <span className="text-[12px] font-bold text-brand">+ PKR {v.price}</span>}
+                      {v.price > 0 && <span className="text-[12px] font-bold text-brand">+ {formatPKR(v.price)}</span>}
                     </div>
                     {selectedVarId === v.id
                       ? <CircleDot className="w-6 h-6 text-brand" />
@@ -102,7 +92,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                   </label>
                 ))}
               </div>
-            </section>
+            </section>}
 
             {/* 2. Choose Add-ons (Multi Select) */}
             {item.addOns && item.addOns.length > 0 && (
@@ -111,7 +101,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                   <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Add Extras</h3>
                   <span className="bg-sunken text-ink-3 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Optional</span>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {item.addOns.map((a) => (
                     <label
                       key={a.id}
@@ -126,11 +116,11 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                           else newSet.delete(a.id);
                           setSelectedAddOnIds(newSet);
                         }}
-                        className="hidden"
+                        className="sr-only"
                       />
                       <div className="flex flex-col">
                         <span className="text-[16px] font-semibold text-ink">{a.name}</span>
-                        {a.price > 0 && <span className="text-[12px] font-bold text-brand">+ PKR {a.price}</span>}
+                        {a.price > 0 && <span className="text-[12px] font-bold text-brand">+ {formatPKR(a.price)}</span>}
                       </div>
                       {selectedAddOnIds.has(a.id)
                         ? <CheckSquare className="w-6 h-6 text-brand" />
@@ -143,20 +133,18 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
           </main>
 
           {/* Bottom Action Bar */}
-          <footer className="border-t border-line bg-white px-8 py-4 flex items-center justify-between shrink-0 gap-4">
+          <footer className="border-t border-line bg-white px-4 sm:px-6 py-4 flex items-center justify-between shrink-0 gap-4">
             <button className="px-6 py-4 rounded-xl border border-line text-ink-2 font-bold text-[15px] hover:bg-sunken transition-colors" onClick={onClose}>
               Cancel
             </button>
             <button
-              className="flex-1 px-8 py-4 bg-brand text-white rounded-xl font-bold text-[17px] hover:brightness-105 active:scale-[0.99] transition-all shadow-lg shadow-brand/25"
+              className="flex-1 px-4 sm:px-6 py-4 bg-brand text-white rounded-xl font-bold text-[17px] hover:brightness-105 active:scale-[0.99] transition-all shadow-lg shadow-brand/25"
               onClick={handleAdd}
             >
-              Add to Order &middot; PKR {currentTotal}
+              Add to Order &middot; {formatPKR(currentTotal)}
             </button>
           </footer>
-        </div>
-      </div>
-    </>
+    </Modal>
   );
 }
 
@@ -229,8 +217,8 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-md rounded-[24px] border border-line p-7 shadow-[0_30px_80px_rgba(15,23,42,0.25)] animate-in fade-in zoom-in-95 duration-200">
+    <Modal isOpen onClose={verifying ? undefined : onClose} label="Apply discount" className="max-w-md">
+      <div className="p-5 overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-xl font-bold text-ink">Apply Discount</h2>
           <button type="button" onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-ink-4 hover:bg-sunken hover:text-ink transition-colors">
@@ -311,6 +299,6 @@ export function DiscountModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

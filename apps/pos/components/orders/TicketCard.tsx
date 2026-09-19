@@ -45,6 +45,7 @@ export function TicketCard({
   onOpen,
   compact = false,
   dimmed = false,
+  layout = 'grid',
 }: {
   orderNumber: string;
   type: string | null | undefined;
@@ -66,6 +67,7 @@ export function TicketCard({
   /** Home's row: fewer lines, no action bar. */
   compact?: boolean;
   dimmed?: boolean;
+  layout?: 'grid' | 'list';
 }) {
   const maxLines = compact ? 2 : 5;
   // When there are more lines than fit, the last visible slot becomes the
@@ -81,9 +83,12 @@ export function TicketCard({
     <article
       data-testid="ticket-card"
       onClick={onOpen}
+      tabIndex={onOpen ? 0 : undefined}
+      aria-label={`Order ${orderNumber}`}
+      onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen?.(); } }}
       className={`group relative flex flex-col bg-surface border border-line rounded-xl overflow-hidden transition-[border-color,box-shadow] ${
         onOpen ? 'cursor-pointer hover:border-line-strong hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]' : ''
-      } ${dimmed ? 'opacity-70' : ''} ${compact ? 'w-[248px] shrink-0' : 'h-full'}`}
+      } ${dimmed ? 'opacity-70' : ''} ${compact ? 'w-[248px] shrink-0' : layout === 'list' ? 'sm:grid sm:grid-cols-[minmax(180px,1fr)_minmax(200px,2fr)]' : 'h-full'}`}
     >
       {/* Type accent: the one piece of colour that says what kind of order
           this is from across the room. */}
@@ -95,7 +100,7 @@ export function TicketCard({
           <StatusBadge status={status} />
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-3">
-          <h3 className={`font-bold text-ink tabular-nums whitespace-nowrap tracking-tight ${compact ? 'text-[15px]' : 'text-[17px]'}`}>
+          <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[15px]' : 'text-[17px]'}`}>
             #{orderNumber}
           </h3>
           {createdAt && <TicketTimer createdAt={createdAt} />}
@@ -136,7 +141,7 @@ export function TicketCard({
       </ul>
 
       <footer
-        className={`flex items-center gap-2 border-t border-line ${compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
+        className={`flex flex-wrap items-center gap-2 border-t border-line ${layout === 'list' ? 'sm:col-span-2' : ''} ${compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
         onClick={(e) => { if (primary || secondary) e.stopPropagation(); }}
       >
         <span className={`mr-auto font-bold text-ink tabular-nums ${compact ? 'text-[14px]' : 'text-[15px]'}`}>
@@ -148,7 +153,7 @@ export function TicketCard({
             type="button"
             onClick={primary.onClick}
             disabled={primary.disabled || primary.busy}
-            className={`h-9 px-3.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed ${
+            className={`min-h-11 px-3.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed ${
               primary.tone === 'brand'
                 ? 'bg-brand text-on-brand hover:bg-brand-strong disabled:opacity-60'
                 : primary.tone === 'ink'
@@ -185,7 +190,7 @@ export function TicketIconButton({
       aria-label={title}
       onClick={onClick}
       disabled={disabled}
-      className={`w-9 h-9 grid place-items-center rounded-lg border border-line transition-colors disabled:opacity-50 ${
+      className={`w-11 h-11 shrink-0 grid place-items-center rounded-lg border border-line transition-colors disabled:opacity-50 ${
         tone === 'danger' ? 'text-danger hover:bg-danger/10 hover:border-danger/30' : 'text-ink-2 hover:bg-sunken hover:text-ink'
       }`}
     >

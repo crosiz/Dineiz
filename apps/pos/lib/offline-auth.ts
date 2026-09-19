@@ -230,7 +230,7 @@ export function clearServerReauth(): void {
 
 /** A break that ended while offline: reported, with its real time, on reconnect. */
 export function queueBreakEnd(shiftId: string, endedAt: string): void {
-  write(local(), PENDING_BREAK_END_KEY, { shiftId, endedAt });
+  localStorage.setItem(PENDING_BREAK_END_KEY, JSON.stringify({ shiftId, endedAt }));
   resumeOfflineFollowUps();
 }
 
@@ -366,7 +366,7 @@ async function reportBreakEnd(b: PendingBreakEnd): Promise<'done' | 'retry'> {
   } catch {
     return 'retry';
   }
-  if (res.status >= 500 || res.status === 401 || res.status === 429) return 'retry';
+  if (!res.ok) return 'retry';
   write(local(), PENDING_BREAK_END_KEY, null);
   if (res.ok) {
     try {

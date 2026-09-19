@@ -1,5 +1,7 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
+import { formatPKR } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCartStore } from '@/lib/store';
@@ -23,6 +25,7 @@ import {
   User,
   Printer
 } from 'lucide-react';
+import { cachedRead } from '@/lib/cached-read';
 import { API_URL } from '@/lib/api';
 
 
@@ -41,11 +44,11 @@ export default function AdminPage() {
   const statsQuery = useQuery({
     queryKey: ['pos-admin-stats', branchId ?? null],
     enabled: !!branchId,
+    networkMode: 'always',
+    retry: false,
     refetchInterval: 30_000,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/analytics/today?branchId=${branchId}`, { credentials: 'include' });
-      if (!res.ok) throw new Error('stats');
-      const d = await res.json();
+      const { data: d } = await cachedRead<any>(`/api/analytics/today?branchId=${branchId}`);
       return { revenue: d.revenue || 0, orders: d.orders || 0 };
     },
   });
@@ -54,13 +57,11 @@ export default function AdminPage() {
   const shiftsQuery = useQuery<any[]>({
     queryKey: ['pos-admin-shifts', branchId ?? null],
     enabled: !!branchId,
+    networkMode: 'always',
+    retry: false,
     refetchInterval: 20_000,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/shifts/active`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('shifts');
-      const d = await res.json();
+      const { data: d } = await cachedRead<any[]>(`/api/shifts/active`);
       return Array.isArray(d) ? d.filter((s: any) => s.branchId === branchId) : [];
     },
   });
@@ -70,15 +71,13 @@ export default function AdminPage() {
   const openTablesQuery = useQuery({
     queryKey: ['pos-admin-open-tables', branchId ?? null],
     enabled: !!branchId,
+    networkMode: 'always',
+    retry: false,
     refetchInterval: 20_000,
     queryFn: async () => {
       const [tablesRes, statusesRes] = await Promise.all([
-        fetch(`${API_URL}/api/floor-plan/${branchId}/tables`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
-        fetch(`${API_URL}/api/floor-plan/${branchId}/table-orders`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then((r) => (r.ok ? r.json() : [])).catch(() => []),
+        cachedRead<any[]>(`/api/floor-plan/${branchId}/tables`).then(r => r.data),
+        cachedRead<any[]>(`/api/floor-plan/${branchId}/table-orders`).then(r => r.data),
       ]);
       const occupiedIds = new Set(Array.isArray(statusesRes) ? statusesRes.map((s: any) => s.tableId) : []);
       return Array.isArray(tablesRes)
@@ -277,7 +276,7 @@ export default function AdminPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-line p-5 grid grid-cols-2 gap-y-6 gap-x-4">
             <div>
               <p className="text-[12px] text-ink-3 font-semibold mb-1">Today's Revenue</p>
-              <p className="text-[24px] font-bold text-brand">PKR {stats.revenue.toLocaleString()}</p>
+              <p className="text-[24px] font-bold text-brand">{formatPKR(stats.revenue)}</p>
             </div>
             <div>
               <p className="text-[12px] text-ink-3 font-semibold mb-1">Total Orders</p>
@@ -491,8 +490,7 @@ export default function AdminPage() {
       {/* Force Close Shift modal — replaces the old native prompt() that only
           ever touched local state and never called the backend. */}
       {forceCloseTarget && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="w-full max-w-[400px] bg-white border border-line rounded-[24px] shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden animate-slide-up">
+        <Modal isOpen label="Force close shift" onClose={isForceClosing ? undefined : () => setForceCloseTarget(null)} className="max-w-[400px] overflow-y-auto">
             <div className="p-7">
               <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mb-4">
                 <ShieldAlert size={24} />
@@ -524,8 +522,7 @@ export default function AdminPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -533,15 +530,15 @@ export default function AdminPage() {
 
 function ActionRow({ icon, label, onClick }: { icon: React.ReactNode, label: string, onClick: () => void }) {
   return (
-    <div 
+    <button type="button"
       onClick={onClick}
-      className="p-4 flex items-center justify-between bg-white hover:bg-canvas active:bg-sunken transition-colors cursor-pointer select-none"
+      className="w-full text-left min-h-11 p-4 flex items-center justify-between bg-white hover:bg-canvas active:bg-sunken transition-colors cursor-pointer select-none"
     >
       <div className="flex items-center gap-3">
         {icon}
         <span className="font-bold text-[15px] text-ink">{label}</span>
       </div>
       <ChevronRight size={20} className="text-ink-4" />
-    </div>
+    </button>
   );
 }

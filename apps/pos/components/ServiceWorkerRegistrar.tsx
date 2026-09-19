@@ -66,7 +66,7 @@ export function ServiceWorkerRegistrar() {
     window.addEventListener('online', check);
 
     const onHidden = () => {
-      if (document.visibilityState === 'hidden') applyUpdate(regRef.current);
+      if (document.visibilityState === 'hidden' && safeRef.current) applyUpdate(regRef.current);
     };
     document.addEventListener('visibilitychange', onHidden);
 

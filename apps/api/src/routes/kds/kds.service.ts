@@ -13,6 +13,7 @@ export interface KdsOrderItem {
   addons: string[];
   isReady: boolean;
   stationId: string | null;
+  createdAt: string;
 }
 
 export interface KdsOrder {
@@ -66,9 +67,10 @@ const ORDER_INCLUDE = {
 function mapOrderItem(oi: any): KdsOrderItem {
   const opts = (oi.options as any) ?? {};
   const variation: string | null =
-    opts.variation ?? opts.variationName ?? null;
-  const addons: string[] = Array.isArray(opts.addons)
-    ? opts.addons.map((a: any) => (typeof a === 'string' ? a : a?.name ?? ''))
+    (typeof opts.variation === 'string' ? opts.variation : opts.variation?.name) ?? opts.variationName ?? null;
+  const rawAddons = opts.addOns ?? opts.addons;
+  const addons: string[] = Array.isArray(rawAddons)
+    ? rawAddons.map((a: any) => (typeof a === 'string' ? a : a?.name ?? ''))
     : [];
 
   return {
@@ -253,7 +255,7 @@ export async function getKdsDashboard(
 
 export async function markItemReady(tenantId: string, itemId: string) {
   const oi = await prisma.orderItem.update({
-    where: { id: itemId },
+    where: { id: itemId, order: { tenantId } },
     data: { kdsStatus: 'DONE' },
     include: { order: { select: { branchId: true, id: true } } },
   });
@@ -271,18 +273,20 @@ async function transitionOrder(tenantId: string, id: string, fromStatus: string 
     if (existing.status === toStatus) {
       return prisma.order.findUnique({ where: { id, tenantId }, include: ORDER_INCLUDE });
     }
-    // Allow bumping from PENDING straight to READY
-    if (toStatus === 'READY' && existing.status === 'PENDING') {
-      // Proceed
-    } else {
-      throw new Error(`Cannot transition from ${existing.status} to ${toStatus}`);
-    }
+    throw Object.assign(new Error(`Cannot transition from ${existing.status} to ${toStatus}`), { statusCode: 409 });
   }
 
-  const order = await prisma.order.update({
-    where: { id, tenantId },
-    data: { status: toStatus as any },
-    include: ORDER_INCLUDE,
+  const order = await prisma.$transaction(async tx => {
+    if (toStatus === 'COMPLETED') {
+      const payments = await tx.payment.aggregate({ where: { orderId: id, status: 'COMPLETED' }, _sum: { amount: true } });
+      if (Number(payments._sum.amount ?? 0) + 0.01 < Number(existing.netAmount)) {
+        throw Object.assign(new Error('Collect payment at the POS before completing this order.'), { statusCode: 409 });
+      }
+    }
+    const changed = await tx.order.updateMany({ where: { id, tenantId, status: existing.status }, data: { status: toStatus as any } });
+    if (!changed.count) throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+    await tx.auditLog.create({ data: { action: 'ORDER_STATUS_CHANGED', targetTenantId: tenantId, before: { orderId: id, status: existing.status }, after: { orderId: id, status: toStatus }, notes: 'Kitchen transition' } });
+    return tx.order.findUniqueOrThrow({ where: { id, tenantId }, include: ORDER_INCLUDE });
   });
   // Table status, cache invalidation, and — when this transition reaches
   // COMPLETED (deliverOrder below) — the inventory/loyalty/deal/Zapier/ERP
@@ -311,6 +315,11 @@ export async function bumpOrder(tenantId: string, fullId: string) {
   });
   if (!existing) throw new Error("Order not found");
 
+  // A delayed retry must never edit a paid/cancelled order.
+  if (['COMPLETED', 'CANCELLED'].includes(existing.status)) {
+    return prisma.order.findUniqueOrThrow({ where: { id: orderId, tenantId }, include: ORDER_INCLUDE });
+  }
+
   let itemsToUpdate = existing.items;
   
   const groups: Record<number, any[]> = {};
@@ -338,10 +347,17 @@ export async function bumpOrder(tenantId: string, fullId: string) {
   const allDone = allItems.length > 0 && allItems.every(i => i.kdsStatus === 'DONE');
 
   if (allDone && existing.status !== 'READY' && existing.status !== 'COMPLETED' && existing.status !== 'CANCELLED') {
-    const order = await prisma.order.update({
-      where: { id: orderId, tenantId },
-      data: { status: 'READY' },
-      include: ORDER_INCLUDE,
+    const order = await prisma.$transaction(async tx => {
+      // Keep every lifecycle step and its audit record, including older pending tickets.
+      const steps = existing.status === 'PENDING' ? ['IN_KITCHEN', 'READY'] as const : ['READY'] as const;
+      let from = existing.status;
+      for (const status of steps) {
+        const changed = await tx.order.updateMany({ where: { id: orderId, tenantId, status: from }, data: { status } });
+        if (!changed.count) throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+        await tx.auditLog.create({ data: { action: 'ORDER_STATUS_CHANGED', targetTenantId: tenantId, before: { orderId, status: from }, after: { orderId, status }, notes: 'Kitchen ready' } });
+        from = status;
+      }
+      return tx.order.findUniqueOrThrow({ where: { id: orderId, tenantId }, include: ORDER_INCLUDE });
     });
     await applyOrderStatusSideEffects(tenantId, order, existing.status, {});
     return order;

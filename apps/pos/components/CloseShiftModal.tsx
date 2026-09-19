@@ -7,7 +7,7 @@ import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
 import {
   getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox, flushOutbox, isSettledLocally,
-  type SyncCategoryProgress,
+  type SyncCategoryProgress, getShiftSyncStatus,
 } from '@/lib/core/outbox';
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { isShiftPendingOpen, resolveShiftId } from '@/lib/offline-shift';
@@ -22,6 +22,7 @@ import {
   RefreshCw, CloudOff,
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
 
 interface UnpaidOrderRow {
   id: string;
@@ -67,8 +68,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const closeWithUnsyncedRequiresPin = cfg.closeWithUnsyncedRequiresPin ?? true;
   const SYNC_TIMEOUT_MS = Math.max(5, Number(cfg.shiftCloseSyncTimeoutSec ?? 45)) * 1000 || DEFAULT_SYNC_TIMEOUT_MS;
   const [isLoading, setIsLoading] = useState(true);
+  const [syncProblems, setSyncProblems] = useState(0);
+  const [shiftPending, setShiftPending] = useState(0);
   const [loadingNote, setLoadingNote] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const closeInFlight = useRef(false);
   const [summary, setSummary] = useState<any>(null);
   // The shift this terminal thinks is open was already closed server-side
   // (the inactivity sweeper auto-closes a long-idle shift). Not an error to
@@ -138,6 +142,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       setLoadingNote(null);
       const resolvedId = await resolveActiveShiftId(API_URL);
       setShiftId(resolvedId);
+      if (resolvedId) {
+        const sync = await getShiftSyncStatus(resolvedId);
+        setSyncProblems(sync.rejected);
+        setShiftPending(sync.pending);
+      }
       // resolveActiveShiftId already cleared the stale `pos_shift` from
       // localStorage — surface it plainly and route the cashier onward
       // rather than toasting an error into a blank modal.
@@ -155,14 +164,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       if (!isShiftPendingOpen(resolvedId)) {
         try {
           res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(resolvedId)}/summary`, {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: `Bearer ${getToken()}` },
+            signal: AbortSignal.timeout(8000),
           });
         } catch {
           res = null;
         }
       }
       if (!res || res.status >= 500) {
-        setSummary(localShiftSummary(resolvedId));
+        setSummary(await localShiftSummary(resolvedId));
         return;
       }
       if (!res.ok) throw new Error('Failed to fetch shift summary');
@@ -217,7 +227,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // null, not 0 — an uncounted drawer isn't "balanced", it's simply unknown.
   // Pinning this to 0 made the summary read "Counted PKR 0 / Variance:
   // Balanced" whenever cash counting was optional and skipped.
-  const variance = closingCash === '' ? null : counted - expectedCash;
+  const variance = closingCash === '' || summary?.local ? null : counted - expectedCash;
 
   const formatDuration = (openedAtStr: string | null) => {
     if (!openedAtStr) return '—';
@@ -244,7 +254,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // shift goes to PENDING_SYNC and the terminal keeps shipping in the
   // background (spec Part 6).
   const doClose = async (pendingSync: boolean) => {
-    if (!shiftId) return;
+    if (!shiftId || closeInFlight.current) return;
+    closeInFlight.current = true;
     setIsSubmitting(true);
     try {
       const overridePin = localStorage.getItem('shift_override_pin');
@@ -284,14 +295,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       } else try {
         const res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}/close`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+          signal: AbortSignal.timeout(8000),
           body: JSON.stringify(payload),
         });
         if (res.ok) {
           closedOnServer = true;
         } else {
           const errData = await res.json().catch(() => ({}));
-          serverError = errData.error || `Server refused the close (${res.status})`;
+          serverError = res.status >= 500 ? 'offline' : (errData.error || `Server refused the close (${res.status})`);
         }
       } catch {
         serverError = 'offline';
@@ -300,13 +312,13 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       // A 4xx is the server saying "no" for a real reason (blockers, wrong
       // state) — surface it and let the cashier act. Only a transport failure
       // or a 5xx falls through to closing locally.
-      if (!closedOnServer && serverError && serverError !== 'offline' && !/50\d/.test(serverError)) {
+      if (!closedOnServer && serverError && serverError !== 'offline') {
         throw new Error(serverError);
       }
 
       // Local audit: the shift is closed on this terminal now, whatever the
       // sync state.
-      emitShiftClosed(shiftId, closingCash === '' ? 0 : Number(closingCash), closingCash === '' ? 0 : Number(closingCash) - expectedCash, notes.trim() || undefined).catch(() => {});
+      await emitShiftClosed(shiftId, closingCash === '' ? 0 : Number(closingCash), closingCash === '' ? 0 : Number(closingCash) - expectedCash, notes.trim() || undefined);
 
       localStorage.removeItem('shift_override_pin');
       localStorage.removeItem('shift_override_reason');
@@ -337,6 +349,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       setIsSuccess(true);
     } catch (err: any) {
       toast.error(err.message || 'An error occurred closing the shift');
+      closeInFlight.current = false;
       setIsSubmitting(false);
       setSyncPhase('none');
     }
@@ -359,7 +372,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       const summary = await getUnsyncedSummary();
       const c = await getSyncCategoryProgress();
       setSyncNow(c);
-      if (summary.count === 0) {
+      const shiftStatus = shiftId ? await getShiftSyncStatus(shiftId) : null;
+      if (shiftStatus?.rejected) { stopSyncTimers(); setSyncProblems(shiftStatus.rejected); setSyncPhase('none'); return; }
+      if (shiftStatus?.total === 0) {
         stopSyncTimers();
         void doClose(false);
         return;
@@ -385,8 +400,15 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       toast.error('Enter the cash you counted in the drawer');
       return;
     }
+    if (!shiftId || isSubmitting) return;
+    const shiftStatus = await getShiftSyncStatus(shiftId);
+    if (shiftStatus.rejected) {
+      setSyncProblems(shiftStatus.rejected);
+      toast.error('A saved payment or cash movement needs review. Do not record it again.');
+      return;
+    }
     const summary = await getUnsyncedSummary();
-    if (summary.count === 0) {
+    if (shiftStatus.total === 0) {
       void doClose(false);
     } else if (summary.circuitOpen || summary.stalled) {
       // Server already known-unreachable — go straight to the close-anyway
@@ -450,13 +472,8 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const countMissing = cashCountRequired && closingCash === '';
 
   return (
-    <div className="fixed inset-0 z-[200] grid place-items-center p-4">
-      <div className="absolute inset-0 bg-ink/45 backdrop-blur-[2px] animate-[overlay-in_140ms_ease-out]" aria-hidden />
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="relative w-full max-w-[520px] max-h-[calc(100dvh-32px)] flex flex-col bg-surface rounded-2xl border border-line shadow-[0_24px_64px_rgba(15,23,42,0.18)] animate-[dialog-in_180ms_cubic-bezier(0.16,1,0.3,1)]"
-      >
+    <>
+      <Modal isOpen={isOpen} onClose={isSubmitting || syncPhase === 'syncing' ? undefined : onClose} label="Close shift" className="max-w-[520px]">
         {syncPhase !== 'none' ? (
           // ── Sync step (spec Part 6) ──────────────────────────────────────
           (() => {
@@ -633,6 +650,14 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
+                  {(syncProblems > 0 || shiftPending > 0) && <div role="status" className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm">
+                    <p className="font-semibold">{syncProblems ? 'Saved changes need review' : 'Payments and orders are waiting to sync'}</p>
+                    <p className="mt-1 text-ink-2">Do not collect a payment or record a cash movement twice. Your local records have been kept.</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button className="min-h-11 px-3 rounded-lg border border-line bg-surface font-semibold" onClick={() => fetchSummary()}>Sync & recheck</button>
+                      {syncProblems > 0 && <button className="min-h-11 px-3 font-semibold text-brand" onClick={() => { onClose(); router.push('/pos/settings?section=sync'); }}>Review saved changes</button>}
+                    </div>
+                  </div>}
                   {summary.local && (
                     <div className="flex items-start gap-2.5 rounded-xl border border-line bg-sunken px-3.5 py-2.5 text-[12.5px] leading-snug text-ink-2">
                       <CloudOff className="w-4 h-4 mt-0.5 shrink-0 text-ink-3" />
@@ -663,29 +688,22 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                         <strong className="font-semibold text-ink">
                           {summary.unpaidOrders} order{summary.unpaidOrders === 1 ? '' : 's'} still open
                         </strong>{' '}
-                        ({formatPKR(summary.unpaidValue ?? 0)}). Settle or cancel {summary.unpaidOrders === 1 ? 'it' : 'them'} before closing.
+                        ({formatPKR(summary.unpaidValue ?? 0)}). Review these orders before closing. If payment was already taken, check Sync & Data; do not collect it again.
                       </p>
                       {Array.isArray(summary.unpaidOrdersList) && summary.unpaidOrdersList.length > 0 && (
                         <ul className="mx-2 mb-2 rounded-lg border border-line bg-surface divide-y divide-line">
                           {(summary.unpaidOrdersList as UnpaidOrderRow[]).map((o) => (
-                            <li key={o.id} className="px-3 py-2.5 flex items-center gap-3">
+                            <li key={o.id} className="px-3 py-2.5 flex flex-wrap items-center gap-3">
                               <div className="min-w-0 flex-1 flex items-center gap-2">
                                 <span className="text-[13.5px] font-semibold text-ink tabular-nums whitespace-nowrap">#{o.orderNumber}</span>
                                 <OrderTypeBadge type={o.tableLabel ? 'DINE_IN' : 'TAKEAWAY'} tableLabel={o.tableLabel} size="sm" />
                               </div>
                               <span className="text-[13px] text-ink-2 tabular-nums">{formatPKR(o.netAmount)}</span>
                               <button
-                                onClick={() => cancelUnpaidOrder(o.id)}
-                                disabled={busyOrderId === o.id}
-                                className="h-8 px-2.5 rounded-md border border-line text-[12.5px] font-semibold text-danger hover:bg-danger/10 disabled:opacity-50"
+                                onClick={() => { onClose(); router.push(`/pos/order?orderId=${encodeURIComponent(o.id)}`); }}
+                                className="min-h-11 px-3 rounded-lg bg-brand text-on-brand text-[12.5px] font-semibold hover:bg-brand-strong"
                               >
-                                {busyOrderId === o.id ? 'Working…' : 'Cancel'}
-                              </button>
-                              <button
-                                onClick={() => { onClose(); router.push(`/pos/order?orderId=${o.id}&checkout=true`); }}
-                                className="h-8 px-3 rounded-md bg-brand text-on-brand text-[12.5px] font-semibold hover:bg-brand-strong"
-                              >
-                                Settle
+                                Review order
                               </button>
                             </li>
                           ))}
@@ -814,7 +832,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                   <button onClick={onClose} className={`${btn.secondary} flex-1`}>Cancel</button>
                   <button
                     onClick={handleSubmit}
-                    disabled={isLoading || isSubmitting || !summary || countMissing}
+                    disabled={isLoading || isSubmitting || !summary || countMissing || syncProblems > 0}
                     className={`${btn.primary} flex-[1.4]`}
                   >
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -825,7 +843,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
             </footer>
           </>
         )}
-      </div>
+      </Modal>
 
       {showCloseAnywayPin && (
         <AdminPinModal
@@ -836,6 +854,6 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

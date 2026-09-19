@@ -48,10 +48,9 @@ export async function handleBumpOrder(req: FastifyRequest, reply: FastifyReply) 
   const order = await bumpOrder(tenantId, id);
 
   if (order.tableId) {
-    const { prisma } = await import('@dineiz/db');
-    const { emitTableStatusChanged } = await import('../../lib/socket.js');
-    await prisma.table.updateMany({ where: { id: order.tableId, tenantId }, data: { status: 'ready' } });
-    emitTableStatusChanged(order.branchId, { tableId: order.tableId, status: 'ready', orderId: order.id, since: order.createdAt.toISOString() }, tenantId);
+    // A delayed kitchen retry must not overwrite a paid or cleaned table.
+    const { recomputeTableStatus } = await import('../../lib/tableStatus.js');
+    await recomputeTableStatus(tenantId, order.tableId);
   }
 
   return order;

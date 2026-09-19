@@ -1,5 +1,6 @@
 'use client';
 
+import { useBrandingStore } from '@/lib/branding-store';
 import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
@@ -107,14 +108,7 @@ export default function HomeDashboard() {
   };
   // Same master-switch semantics as TicketsDashboard: the tenant-wide toggle
   // must be able to turn KDS off everywhere on its own.
-  const [useKDS] = useState<boolean>(() => {
-    try {
-      const tenantWide = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}')?.kitchen?.useKDS ?? false;
-      const branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
-      return tenantWide && branchLevel;
-    } catch {}
-    return false;
-  });
+  const useKDS = useBrandingStore(s => !!s.branding.kitchen?.useKDS && s.branding.branchKdsEnabled !== false);
 
   // Phase 2: reads directly from the shared event-derived store instead of
   // fetching — populated by lib/core/views.ts's refreshOrders (bootstrap +

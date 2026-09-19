@@ -867,7 +867,7 @@ function OrderEntryPageContent() {
   };
 
   const handleCharge = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 && existingItems.length === 0) return;
     // Fix #4: mutex — prevent double-create
     if (chargeLoading) return;
     if (!canSubmitOrder) {
@@ -1275,7 +1275,7 @@ function OrderEntryPageContent() {
                   cart.reduce((acc, c) => acc + c.quantity, 0)
                 )}
               </div>
-              <span className="tracking-wide">View Order</span>
+              <span className="tracking-wide">View order</span>
             </div>
             <span className="text-lg tracking-tight">{formatPKR(combinedTotal)}</span>
           </button>
@@ -1557,7 +1557,7 @@ function OrderEntryPageContent() {
             <div className="mt-2 flex gap-2">
               {(() => {
                 const kitchenOff = cart.length === 0 || kitchenLoading || orderStatus === 'COMPLETED' || !canSubmitOrder;
-                const chargeOff = cart.length === 0 || chargeLoading || !canSubmitOrder;
+                const chargeOff = (cart.length === 0 && existingItems.length === 0) || orderStatus === 'COMPLETED' || chargeLoading || !canSubmitOrder;
                 const why = needsTable ? 'Pick a table first' : !orderType ? 'Choose an order type first' : undefined;
                 return (
                   <>

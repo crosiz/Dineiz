@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, FileText, Download, Clock, CheckCircle2 } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { downloadShiftReport } from '@/lib/shift-report';
+import { cachedRead } from '@/lib/cached-read';
 import { API_URL } from '@/lib/api';
 
 
@@ -29,14 +30,9 @@ export default function ShiftReportSelectorPage() {
     
     const fetchShifts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/shifts?branchId=${session.branchId}&limit=50`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          // Filter to today's shifts (or keep all recent 50)
-          setShifts(data.data || []);
-        }
+        const { data, offline } = await cachedRead<any>(`/api/shifts?branchId=${session.branchId}&limit=50`);
+        setShifts(data.data || []);
+        if (offline) toast.message('Offline · Showing saved shifts.');
       } catch (e) {
         console.error(e);
         toast.error('Failed to load shifts');

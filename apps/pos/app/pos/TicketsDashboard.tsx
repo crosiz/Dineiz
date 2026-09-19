@@ -1,5 +1,7 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
+import { useBrandingStore } from '@/lib/branding-store';
 import { useState, useEffect, useMemo } from 'react';
 import { useCartStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
@@ -77,14 +79,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   // kdsEnabled=true meant the tenant-wide toggle could never actually turn
   // KDS off.
   // When useKDS is false: PENDING orders get 'Mark Ready' button, not 'Send to Kitchen'
-  const [useKDS, setUseKDS] = useState<boolean>(() => {
-    try {
-      const tenantWide = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}')?.kitchen?.useKDS ?? false;
-      const branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
-      return tenantWide && branchLevel;
-    } catch {}
-    return false;
-  });
+  const useKDS = useBrandingStore(s => !!s.branding.kitchen?.useKDS && s.branding.branchKdsEnabled !== false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -351,39 +346,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   );
   const groupByType = dataMode === 'live' && filter !== 'HELD' && filter !== 'ON_HOLD';
 
-  useEffect(() => {
-    if (!socket || !session.branchId) return;
-    // order:created/status_changed/cancelled → lib/core/views.ts's shared
-    // store is now what live orders render from, and POSLayout.tsx already
-    // refreshes it centrally on these same events (so every screen stays in
-    // sync, not just this one) — no per-screen listener needed here anymore.
-    // Listen for tenant settings updates (e.g. useKDS toggled from admin)
-    const handleSettingsUpdate = (settings: any) => {
-      if (settings?.kitchen?.useKDS !== undefined) {
-        // Keep OR'd with this branch's own KDS flag — a live tenant-wide
-        // toggle-off shouldn't turn off a branch that has its own KDS
-        // hardware configured.
-        let branchLevel = false;
-        try {
-          branchLevel = JSON.parse(localStorage.getItem('pos_branding') || '{}')?.branchKdsEnabled ?? false;
-        } catch {}
-        setUseKDS(settings.kitchen.useKDS || branchLevel);
-        try {
-          const stored = localStorage.getItem('pos_tenant_settings');
-          const parsed = stored ? JSON.parse(stored) : {};
-          parsed.kitchen = { ...parsed.kitchen, useKDS: settings.kitchen.useKDS };
-          localStorage.setItem('pos_tenant_settings', JSON.stringify(parsed));
-        } catch {}
-      }
-    };
 
-    socket.emit('join_branch', session.branchId);
-    socket.on('tenant:settings_updated', handleSettingsUpdate);
-
-    return () => {
-      socket.off('tenant:settings_updated', handleSettingsUpdate);
-    };
-  }, [socket, session.branchId]);
 
   const updateOrderStatus = async (orderId: string, newStatus: 'IN_KITCHEN' | 'READY') => {
     setIsUpdating(orderId);
@@ -551,7 +514,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       if (isPending) {
         // If no KDS: go directly to READY (cashier manually marks food ready)
         // If KDS active: go to IN_KITCHEN so KDS screen picks it up
-        const nextStatus = useKDS ? 'IN_KITCHEN' : 'READY';
+        const nextStatus = 'IN_KITCHEN';
         updateOrderStatus(order.id, nextStatus);
       } else if (isReady) {
         const typeStr = order.type ? order.type.toLowerCase().replace('_', '-') : 'dine-in';
@@ -582,226 +545,6 @@ export default function TicketsDashboard({ onViewChange }: Props) {
       setDetailsOrder(order);
     };
 
-    if (layout === 'list') {
-      return (
-        <div key={order.id} onClick={openOrder} className={`flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-line p-4 rounded-xl transition-all shadow-sm min-w-0 cursor-pointer hover:border-line-strong ${isWhatsApp ? 'border-l-4 border-l-[#25D366]' : ''} ${dataMode === 'history' ? 'opacity-80' : ''}`}>
-          <div className="flex-1 flex items-center gap-4 sm:gap-6 min-w-0">
-            <div className="w-16 shrink-0">
-              <span className="text-xl font-bold text-ink">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-            </div>
-            {order.tableLabel && (
-              <div className="shrink-0 hidden sm:block">
-                <span className={`font-bold border px-2 py-1 rounded ${isReady ? 'text-sm text-green-700 bg-green-50 border-green-200' : 'text-xs text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>
-              </div>
-            )}
-            {order.assignedWaiterName && (
-              <div className="shrink-0 hidden sm:block">
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-bold">
-                  <User className="w-[12px] h-[12px]" />
-                  {order.assignedWaiterName}
-                </div>
-              </div>
-            )}
-            <div className="w-20 shrink-0 hidden sm:block">
-              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-2 py-1 rounded-md uppercase">{typeLabel}</span>
-            </div>
-            <div className="flex-1 truncate text-ink-2 text-sm min-w-0 font-medium">
-              {parsedItems.length > 0 ? parsedItems.map((i:any) => `${i.quantity || i.qty}x ${i.name || i.itemName || i.item?.name}`).join(', ') : `${order.itemCount || 0} items`}
-            </div>
-            <div className="w-24 text-right shrink-0">
-              <span className="text-ink font-bold text-sm">{formatPKR(totalAmount)}</span>
-            </div>
-            <div className="flex justify-end shrink-0 gap-2">
-              {dataMode === 'history' ? (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Reprint Receipt"
-                  className="flex items-center gap-1.5 px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-sunken text-ink-3 border-line hover:bg-hover hover:text-ink transition-colors disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  Reprint
-                </button>
-              ) : (
-                <>
-                  {hasPaidOnline && (
-                    <div className="px-2 py-1 rounded border text-[11px] font-bold tracking-wide bg-green-50 text-green-700 border-green-200">
-                      PAID ONLINE
-                    </div>
-                  )}
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
-            </div>
-          </div>
-          {dataMode === 'live' && (
-            <div className="w-full sm:w-auto mt-2 sm:mt-0 shrink-0 flex gap-2">
-              {!!order.heldAt && (
-                <button
-                  onClick={(e) => deleteHeldOrder(order.id, e)}
-                  className="px-4 py-2 rounded-lg font-semibold text-sm bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                >
-                  Delete
-                </button>
-              )}
-              {!order.heldAt && (
-                <button
-                  onClick={(e) => handlePrintBill(order, e)}
-                  disabled={printingId === order.id}
-                  title="Print Bill"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {printingId === order.id ? <Loader2 className="animate-spin w-[18px] h-[18px]" /> : <Printer className="w-[18px] h-[18px]" />}
-                  <span className="hidden md:inline">Bill</span>
-                </button>
-              )}
-              {isWhatsApp && order.customerPhone && (
-                <a
-                  href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  title="Message Customer"
-                  className="px-3 py-2 rounded-lg font-semibold text-sm bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors flex items-center gap-1.5"
-                >
-                  <MessageSquare className="w-[18px] h-[18px]" />
-                  <span className="hidden md:inline">Message</span>
-                </a>
-              )}
-              <button disabled={isUpdatingThis || (isInKitchen && useKDS)} onClick={onActionClick} className={`w-full sm:w-auto px-6 py-2 rounded-lg font-bold text-sm transition-all flex justify-center items-center gap-2 ${isReady ? 'bg-orange-500 text-white hover:bg-orange-600' : isPending ? 'bg-orange-500 text-white hover:bg-orange-600' : (isInKitchen && useKDS) ? 'bg-blue-100 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-sunken border border-line-strong text-ink hover:bg-hover'}`}>
-                {!!order.heldAt ? 'Resume' : (isPending && isQR) ? 'Confirm Order' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In Kitchen (KDS)...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect Payment' : 'View Order'}
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (layout === 'kanban') {
-      return (
-        <div key={order.id} onClick={openOrder} className="flex flex-col py-3 border-b border-line group shrink-0 w-full cursor-pointer hover:bg-white hover:shadow-sm px-3 rounded-xl transition-all">
-          <div className="flex justify-between items-start mb-2 w-full gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-lg font-bold text-ink tracking-tight">#{order.tokenNumber || order.orderNumber || order.id.slice(-4)}</span>
-              {order.tableLabel && <span className={`font-bold border px-1.5 py-0.5 rounded shrink-0 ${isReady ? 'text-xs text-green-700 bg-green-50 border-green-200' : 'text-[10px] text-ink-3 bg-canvas border-line'}`}>{order.tableLabel}</span>}
-              <span className="text-[10px] font-bold text-ink-3 bg-sunken px-1.5 py-0.5 rounded uppercase shrink-0">{typeLabel}</span>
-              {order.assignedWaiterName && (
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <User className="w-[10px] h-[10px]" />
-                  {order.assignedWaiterName.split(' ')[0]}
-                </div>
-              )}
-              {isQR && (
-                <div className="flex items-center gap-1 bg-purple-50 text-purple-700 border border-purple-100 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <QrCode className="w-[10px] h-[10px]" />
-                  QR
-                </div>
-              )}
-              {isWhatsApp && (
-                <div className="flex items-center gap-1 bg-[#25D366]/10 text-[#128C7E] border border-[#25D366]/30 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0">
-                  <MessageSquare className="w-[10px] h-[10px]" />
-                  WhatsApp
-                </div>
-              )}
-            </div>
-            <div className="flex justify-end gap-1 shrink-0">
-              {dataMode === 'history' ? (
-                <div className="px-1.5 py-0.5 rounded border text-[10px] font-bold tracking-wide bg-sunken text-ink-3 border-line">
-                  {order.status}
-                </div>
-              ) : (
-                <>
-                  {hasPaidOnline && (
-                    <div className="px-1.5 py-0.5 rounded border text-[9px] font-bold tracking-wide bg-green-50 text-green-700 border-green-200">
-                      PAID ONLINE
-                    </div>
-                  )}
-                  <StatusBadge status={order.status} />
-                  <TicketTimer createdAt={timeRef} />
-                </>
-              )}
-            </div>
-          </div>
-          
-          <div className="mb-2 w-full">
-            {parsedItems.map((item: any, idx: number) => (
-              <div key={idx} className="flex justify-between items-start text-[11px] leading-relaxed py-0.5 w-full gap-2">
-                <div className="flex gap-2 flex-1 min-w-0">
-                  <span className="text-ink-3 font-bold shrink-0">{item.quantity || item.qty}x</span>
-                  <span className="text-ink-2 font-medium truncate">
-                    {(item as any).name || (item as any).itemName || (item as any).item?.name}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {parsedItems.length === 0 && (
-              <div className="text-xs text-ink-3 font-medium py-1">{order.itemCount || 0} Items</div>
-            )}
-          </div>
-          
-          {dataMode === 'live' && (
-            <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
-              <div className="flex gap-2">
-                {!!order.heldAt && (
-                  <button
-                    onClick={(e) => deleteHeldOrder(order.id, e)}
-                    className="text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100"
-                  >
-                    Delete
-                  </button>
-                )}
-                {!order.heldAt && (
-                  <button
-                    onClick={(e) => handlePrintBill(order, e)}
-                    disabled={printingId === order.id}
-                    title="Print Bill"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
-                  >
-                    {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-                  </button>
-                )}
-                {isWhatsApp && order.customerPhone && (
-                  <a
-                    href={`https://wa.me/${order.customerPhone.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Message Customer"
-                    className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
-                  >
-                    <MessageSquare className="w-[14px] h-[14px]" />
-                  </a>
-                )}
-                <button
-                  disabled={isUpdatingThis || (isInKitchen && useKDS)}
-                  onClick={onActionClick}
-                  className={`text-[10px] font-bold transition-colors px-3 py-1.5 rounded-md ${isReady ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : isPending ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : (isInKitchen && useKDS) ? 'bg-blue-50 text-blue-600 cursor-not-allowed' : isInKitchen ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-white border border-line-strong text-ink-2 hover:text-ink hover:bg-sunken'}`}
-                >
-                  {!!order.heldAt ? 'Resume' : isPending ? (useKDS ? 'Send to Kitchen' : 'Mark Ready') : (isInKitchen && useKDS) ? 'In KDS...' : isInKitchen ? 'Mark Ready' : isReady ? 'Collect' : 'View Order'}
-                </button>
-              </div>
-            </div>
-          )}
-          {dataMode === 'history' && (
-            <div className="flex justify-between items-center mt-1 opacity-80 group-hover:opacity-100 transition-opacity gap-2">
-              <span className="text-ink font-bold text-[12px]">{formatPKR(totalAmount)}</span>
-              <button
-                onClick={(e) => handlePrintBill(order, e)}
-                disabled={printingId === order.id}
-                title="Reprint Receipt"
-                className="flex items-center justify-center w-7 h-7 rounded-md bg-white border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink transition-colors disabled:opacity-50"
-              >
-                {printingId === order.id ? <Loader2 className="animate-spin w-[14px] h-[14px]" /> : <Printer className="w-[14px] h-[14px]" />}
-              </button>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Grid: the shared ticket card (components/orders/TicketCard.tsx).
     const ticketLines: TicketLine[] = parsedItems.map((item: any) => {
       const opts = item.options ?? {};
       const modifiers = [opts.variation?.name, ...(Array.isArray(opts.addOns) ? opts.addOns.map((a: any) => a?.name) : [])]
@@ -818,9 +561,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     const primary: TicketAction | null = dataMode !== 'live' ? null
       : order.heldAt ? { label: 'Resume', tone: 'brand', onClick: onActionClick }
       : isPending && isQR ? { label: 'Confirm order', tone: 'brand', onClick: onActionClick, busy: isUpdatingThis }
-      : isPending ? (useKDS
-          ? { label: 'Send to kitchen', tone: 'brand', onClick: onActionClick, busy: isUpdatingThis }
-          : { label: 'Mark ready', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis })
+      : isPending ? { label: 'Send to kitchen', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis }
       : isInKitchen && useKDS ? { label: 'Cooking', tone: 'quiet', onClick: onActionClick, disabled: true }
       : isInKitchen ? { label: 'Mark ready', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis }
       : isReady ? { label: 'Collect payment', tone: 'brand', onClick: onActionClick }
@@ -881,6 +622,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         secondary={secondary}
         onOpen={openOrder}
         dimmed={dataMode === 'history'}
+        layout={layout === 'list' ? 'list' : 'grid'}
       />
     );
   };
@@ -889,10 +631,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     <main className="flex-1 bg-canvas overflow-y-auto no-scrollbar font-body-md pb-24 text-ink">
       {/* Toolbar */}
       <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface">
+        {dataMode === 'live' && <button onClick={() => router.push('/pos/tables')} className="h-11 inline-flex items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white"><Plus size={18} />New order</button>}
 
         {/* Status filter: one segmented control, each tab with its count, so
             "how many are ready?" is answered without tapping anything. */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto no-scrollbar">
           <div className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-sunken border border-line">
             {(dataMode === 'live'
               ? ([
@@ -913,7 +656,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <button
                   key={tab}
                   onClick={() => setFilter(tab as any)}
-                  className={`h-8 px-3 rounded-lg flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors ${
+                  className={`h-11 px-3 rounded-lg flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors ${
                     active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
                   }`}
                 >
@@ -944,7 +687,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
 
         {/* Right: Search + Sort + View Mode */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex flex-wrap min-w-0 items-center gap-2 sm:ml-auto">
           {/* Refreshing over cached data. Inline, not a fixed pill: the pill sat
               at top-right and covered the header clock and avatar. */}
           {isStale && (
@@ -960,7 +703,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 placeholder="Search ticket #, customer..."
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="h-10 w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[13px] font-medium text-ink placeholder:text-ink-4 outline-none"
+                className="h-11 w-full sm:w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[13px] font-medium text-ink placeholder:text-ink-4 outline-none"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 w-4 h-4" />
             </div>
@@ -971,7 +714,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
-              className="h-10 bg-surface border border-line rounded-xl pl-3 pr-8 text-[13px] font-semibold text-ink outline-none appearance-none cursor-pointer hover:border-line-strong"
+              className="h-11 bg-surface border border-line rounded-xl pl-3 pr-8 text-[13px] font-semibold text-ink outline-none appearance-none cursor-pointer hover:border-line-strong"
             >
               <option value="oldest">Oldest first</option>
               <option value="newest">Newest first</option>
@@ -981,9 +724,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           </div>
           
           <div className="hidden sm:inline-flex items-center gap-0.5 bg-sunken border border-line p-1 rounded-xl">
-            <button onClick={() => handleSetViewMode('grid')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Grid View" aria-label="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('list')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="List View" aria-label="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
-            <button onClick={() => handleSetViewMode('kanban')} className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Kanban View" aria-label="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('grid')} className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Grid View" aria-label="Grid View"><LayoutGrid className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('list')} className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'list' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="List View" aria-label="List View"><Rows3 className="w-[16px] h-[16px]" /></button>
+            <button onClick={() => handleSetViewMode('kanban')} className={`w-11 h-11 flex items-center justify-center rounded-lg transition-colors ${viewMode === 'kanban' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'}`} title="Kanban View" aria-label="Kanban View"><Columns3 className="w-[16px] h-[16px]" /></button>
           </div>
         </div>
       </div>
@@ -1124,29 +867,20 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           )}
         </div>
       
-      {dataMode === 'live' && (
-        <button
-          onClick={() => router.push('/pos/tables')}
-          className="fixed right-6 bottom-24 w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all z-50"
-        >
-          <Plus className="w-[32px] h-[32px]" />
-        </button>
-      )}
 
       {/* Advanced Filter Modal (Minimalist Redesign) */}
       {filterModalOpen && (
-        <div className="fixed top-0 left-0 w-[100vw] h-[100vh] z-[9999] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" style={{ position: 'fixed', margin: 0 }} onClick={() => setFilterModalOpen(false)}>
-          <div className="bg-white border border-slate-200 shadow-xl rounded-2xl w-[90vw] min-w-[320px] sm:min-w-[450px] max-w-[480px] p-6 sm:p-8 flex flex-col relative overflow-hidden" onClick={e => e.stopPropagation()}>
+        <Modal isOpen label="Ticket filters" onClose={() => setFilterModalOpen(false)} sheetOnMobile className="max-w-[480px] p-5 overflow-y-auto">
             
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Filters</h2>
+                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Filters</h2>
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={resetFilters} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-wider">
                   Reset
                 </button>
-                <button onClick={() => setFilterModalOpen(false)} className="text-slate-400 hover:text-slate-900 transition-colors bg-slate-50 hover:bg-slate-100 rounded-full p-1">
+                <button onClick={() => setFilterModalOpen(false)} aria-label="Close filters" className="w-11 h-11 grid place-items-center text-ink-3 rounded-lg hover:bg-sunken">
                   <X className="w-[20px] h-[20px]" />
                 </button>
               </div>
@@ -1248,7 +982,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                         onClick={() => setTempSortOrder(option)}
                         className={`py-3 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${tempSortOrder === option ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                       >
-                        {option === 'oldest' ? 'schedule' : option === 'newest' ? <Zap className="w-[18px] h-[18px]" /> : <Armchair className="w-[18px] h-[18px]" />}
+                        {option === 'oldest' ? <Clock className="w-[18px] h-[18px]" /> : option === 'newest' ? <Zap className="w-[18px] h-[18px]" /> : <Armchair className="w-[18px] h-[18px]" />}
                         <span className="text-xs font-bold capitalize">{option === 'table' ? 'By Table' : option}</span>
                       </button>
                     ))}
@@ -1260,13 +994,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <div className="mt-8 pt-6 border-t border-slate-100">
               <button 
                 onClick={applyFilters}
-                className="w-full py-4 bg-amber-500 text-white text-sm font-bold rounded-xl hover:bg-amber-600 active:scale-[0.98] transition-all shadow-sm"
+                className="w-full py-4 bg-brand text-white text-sm font-bold rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all shadow-sm"
               >
                 Apply Changes
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Shift Summary Modal.
@@ -1276,9 +1009,8 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           have been decided by DOM order, not intent. ConfirmModal is meant
           to out-rank everything, including this. */}
       {shiftSummaryOpen && (
-        <div className="fixed inset-0 z-[500] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShiftSummaryOpen(false)}>
-          <div className="bg-white border border-slate-200 shadow-xl rounded-2xl w-full max-w-sm p-8 flex flex-col text-center" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-black text-slate-900 mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
+        <Modal isOpen label="Shift summary" onClose={() => setShiftSummaryOpen(false)} className="max-w-sm p-5 overflow-y-auto">
+            <h2 className="text-xl font-semibold text-slate-900 mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
             <div className="text-slate-600 space-y-3 my-6 text-sm font-medium">
               <p className="flex justify-between"><span>Duration</span> <span className="text-slate-900 font-bold">{shiftElapsed}</span></p>
               <p className="flex justify-between"><span>Orders today</span> <span className="text-slate-900 font-bold">{orders.length}</span></p>
@@ -1289,8 +1021,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             >
               Close Shift
             </button>
-          </div>
-        </div>
+        </Modal>
       )}
 
       <ConfirmModal

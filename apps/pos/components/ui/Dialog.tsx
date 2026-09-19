@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { Modal } from './Modal';
 import { X, type LucideIcon } from 'lucide-react';
 
 // The one modal shell. Every dialog in the POS was hand-rolled — each with its
@@ -56,36 +57,10 @@ export function Dialog({
   dismissible?: boolean;
   labelledBy?: string;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open || !dismissible) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, dismissible, onClose]);
-
-  useEffect(() => {
-    if (open) panelRef.current?.focus();
-  }, [open]);
-
-  if (!open) return null;
-
+  const generatedId = useId();
+  const titleId = labelledBy || generatedId;
   return (
-    <div className="fixed inset-0 grid place-items-center p-4" style={{ zIndex: z }}>
-      <div
-        className="absolute inset-0 bg-ink/45 backdrop-blur-[2px] animate-[overlay-in_140ms_ease-out]"
-        onClick={dismissible ? onClose : undefined}
-        aria-hidden
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        tabIndex={-1}
-        className={`relative w-full ${SIZE[size]} max-h-[calc(100dvh-32px)] flex flex-col bg-surface rounded-2xl border border-line shadow-[0_24px_64px_rgba(15,23,42,0.18)] outline-none animate-[dialog-in_180ms_cubic-bezier(0.16,1,0.3,1)]`}
-      >
+    <Modal isOpen={open} onClose={dismissible ? onClose : undefined} labelledBy={titleId} zIndex={z} className={SIZE[size]}>
         <header className="px-6 pt-5 pb-4 flex items-start gap-3.5 shrink-0">
           {Icon && (
             <span className={`w-10 h-10 rounded-xl grid place-items-center shrink-0 ${TONE[tone]}`}>
@@ -93,7 +68,7 @@ export function Dialog({
             </span>
           )}
           <div className="min-w-0 flex-1 pt-0.5">
-            <h2 id={labelledBy} className="text-[17px] font-semibold text-ink leading-snug">{title}</h2>
+            <h2 id={titleId} className="text-[17px] font-semibold text-ink leading-snug">{title}</h2>
             {description && <div className="mt-1 text-[13.5px] leading-relaxed text-ink-3">{description}</div>}
           </div>
           {dismissible && (
@@ -101,7 +76,7 @@ export function Dialog({
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="-mr-2 -mt-1 w-9 h-9 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+              className="-mr-2 -mt-1 w-11 h-11 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
             >
               <X className="w-[18px] h-[18px]" />
             </button>
@@ -111,8 +86,7 @@ export function Dialog({
         {children && <div className="px-6 pb-5 overflow-y-auto min-h-0 flex-1">{children}</div>}
 
         {footer && <footer className="px-6 py-4 border-t border-line flex items-center gap-2.5 shrink-0">{footer}</footer>}
-      </div>
-    </div>
+    </Modal>
   );
 }
 

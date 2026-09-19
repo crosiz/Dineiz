@@ -1,10 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { getToken, getPosShift, resolveActiveShiftId } from '@/lib/pos-session';
 import { Wallet, X, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
+import { recordCashMovement, cashMovements, retryCashMovement } from '@/lib/offline-cash';
+import { cachedRead } from '@/lib/cached-read';
 
 
 const pkr = (n: number) => `PKR ${Math.round(n).toLocaleString('en-US')}`;
@@ -36,6 +39,7 @@ export function CashDrawerModal({
   const [type, setType] = useState<'CASH_IN' | 'CASH_OUT'>('CASH_OUT');
   const [amount, setAmount] = useState<number | ''>('');
   const [reason, setReason] = useState('');
+  const saveInFlight = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const [entries, setEntries] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
@@ -58,7 +62,8 @@ export function CashDrawerModal({
       setLoadError(resolvedId ? '' : 'No open shift on this terminal.');
       if (!resolvedId) return;
 
-      const auth = { headers: { Authorization: `Bearer ${getToken()}` } };
+      const auth = { headers: { Authorization: `Bearer ${getToken()}` }, signal: AbortSignal.timeout(8000) };
+      cashMovements(resolvedId).then(setEntries).catch(() => {});
 
       fetch(`${API_URL}/api/shifts/${resolvedId}/summary`, auth)
         .then(async r => {
@@ -70,7 +75,11 @@ export function CashDrawerModal({
 
       fetch(`${API_URL}/api/shifts/${resolvedId}`, auth)
         .then(r => (r.ok ? r.json() : null))
-        .then(d => setEntries(d?.cashEntries ?? []))
+        .then(async d => {
+          const local = await cashMovements(resolvedId);
+          const remote = d?.cashEntries ?? [];
+          setEntries([...remote, ...local.filter(e => !remote.some((r: any) => r.id === e.id))]);
+        })
         .catch(() => {});
     })();
   }, [isOpen]);
@@ -78,22 +87,15 @@ export function CashDrawerModal({
   if (!isOpen) return null;
 
   const submit = async () => {
+    if (saveInFlight.current) return;
     if (!activeShiftId) { toast.error('No open shift on this terminal'); return; }
     if (amount === '' || Number(amount) <= 0) { toast.error('Enter an amount greater than zero'); return; }
     if (!reason.trim()) { toast.error('Pick or type a reason — this is what the manager sees'); return; }
 
+    saveInFlight.current = true;
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/api/shifts/${activeShiftId}/cash-entries`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ type, amount: Number(amount), reason: reason.trim() }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || 'Could not record the cash movement');
-      }
-      const entry = await res.json();
+      const entry = await recordCashMovement(activeShiftId, type, Number(amount), reason);
       setEntries(prev => [...prev, entry]);
       setSummary((s: any) =>
         s ? {
@@ -105,17 +107,18 @@ export function CashDrawerModal({
       );
       setAmount('');
       setReason('');
-      toast.success(`${type === 'CASH_IN' ? 'Cash in' : 'Cash out'} recorded`);
+      toast.success(`${type === 'CASH_IN' ? 'Cash in' : 'Cash out'} saved on this terminal`);
     } catch (e: any) {
       toast.error(e.message || 'Could not record the cash movement');
     } finally {
+      saveInFlight.current = false;
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fade-in ">
-      <div className="w-full max-w-[460px] bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.25)] overflow-hidden border border-slate-200 flex flex-col max-h-[92dvh] animate-slide-up">
+    <Modal isOpen={isOpen} onClose={submitting ? undefined : onClose} label="Cash drawer" sheetOnMobile className="max-w-[460px]">
+
 
         <div className="bg-slate-50 border-b border-slate-200 p-5 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -129,7 +132,7 @@ export function CashDrawerModal({
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition-colors"
             aria-label="Close"
           >
             <X size={15} />
@@ -138,6 +141,15 @@ export function CashDrawerModal({
 
         <div className="p-5 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-5">
 
+          {entries.some(e => e.state && e.state !== 'confirmed') && (
+            <div className="rounded-lg border border-warn/30 bg-warn/10 p-3 text-sm">
+              <p>Cash movements are saved here until the server confirms them. Do not enter them again.</p>
+              {entries.filter(e => e.state === 'rejected').map(e => <div key={e.id} className="mt-2">
+                <p>{e.reason}: {e.error}</p>
+                <button onClick={async () => { await retryCashMovement(e.id); setEntries(await cashMovements(activeShiftId!)); }} className="min-h-11 font-semibold text-brand">Retry saved movement</button>
+              </div>)}
+            </div>
+          )}
           {loadError && (
             <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-xs font-semibold text-rose-700">
               {loadError}
@@ -199,7 +211,7 @@ export function CashDrawerModal({
                 <button
                   key={r}
                   onClick={() => setReason(r)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                  className={`min-h-11 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                     reason === r
                       ? 'bg-slate-900 text-white border-slate-900'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-200'
@@ -249,7 +261,6 @@ export function CashDrawerModal({
               : <>Record {type === 'CASH_IN' ? 'cash in' : 'cash out'}</>}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getMenuFromCache, syncMenuToCache } from '../lib/offlineHelpers';
+import { edb } from '@/lib/core/event-log';
 import { getToken } from '../lib/pos-session';
 import type { CachedMenuItem } from '../lib/db';
 import { API_URL } from '@/lib/api';
@@ -14,6 +14,7 @@ async function fetchMenuFromAPI(tenantId: string, branchId?: string | null): Pro
   }
 
   const res = await fetch(url.toString(), {
+    signal: AbortSignal.timeout(8000),
     credentials: 'include', // sends Better Auth session cookie
     headers: { 'Authorization': `Bearer ${getToken()}` }
   });
@@ -72,15 +73,23 @@ export function useMenu(tenantId: string | null, branchId?: string | null) {
   return useQuery<CachedMenuItem[], Error>({
     queryKey,
     enabled: !!tenantId,
+    networkMode: 'always',
+    retry: false,
 
     queryFn: async () => {
-      const cached = await getMenuFromCache(tenantId!);
+      // Availability is branch-specific: never reuse another branch's menu.
+      const cacheKey = `menu:${tenantId}:${branchId || 'all'}`;
+      const cached: CachedMenuItem[] = (await edb.meta.get(cacheKey))?.value ?? [];
+      if (navigator.onLine === false) {
+        if (cached.length) return cached;
+        throw new Error('Connect once to save this branch’s menu on this device.');
+      }
 
       // Kick off a network refresh in the background; it patches the query
       // cache directly via setQueryData once it lands, without blocking paint.
       const refresh = fetchMenuFromAPI(tenantId!, branchId)
         .then(async (freshItems) => {
-          await syncMenuToCache(tenantId!, freshItems);
+          await edb.meta.put({ key: cacheKey, value: freshItems });
           queryClient.setQueryData<CachedMenuItem[]>(queryKey, freshItems);
           return freshItems;
         })

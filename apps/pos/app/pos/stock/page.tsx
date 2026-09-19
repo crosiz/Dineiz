@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ManagerOverrideModal } from '@/components/ManagerOverrideModal';
 import { API_URL } from '@/lib/api';
+import { cachedRead } from '@/lib/cached-read';
 
 
 type StockStatus = 'OUT' | 'LOW' | 'OK';
@@ -87,20 +88,21 @@ export default function StockPage() {
   const [filter, setFilter] = useState<FilterKey>('PROBLEMS');
   const [now, setNow] = useState(() => Date.now());
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [offlineSnapshot, setOfflineSnapshot] = useState(false);
 
   // Stock status shares the app-wide React Query cache, so coming back to this
   // tab within staleTime is instant instead of a cold "Loading stock status…".
   const branchId = session?.branchId;
   const stockQuery = useQuery<StockStatusResponse>({
+    networkMode: 'always',
+    retry: false,
     queryKey: ['pos-stock-status', branchId ?? null],
     enabled: !!branchId,
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/pos/stock-status?branchId=${branchId}`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      });
-      if (!res.ok) throw new Error('Failed to load stock status');
-      return res.json() as Promise<StockStatusResponse>;
+      const result = await cachedRead<StockStatusResponse>(`/api/pos/stock-status?branchId=${branchId}`);
+      setOfflineSnapshot(result.offline);
+      return result.data;
     },
   });
   const data = stockQuery.data ?? null;
@@ -305,6 +307,8 @@ export default function StockPage() {
   return (
     <div className="h-full bg-canvas text-ink pb-24 font-body-md select-none overflow-y-auto">
       <main className="max-w-3xl mx-auto p-4 lg:p-6 space-y-5">
+        {offlineSnapshot && <p role="status" className="rounded-xl border border-warn/30 bg-warn/10 p-3 text-sm text-ink-2">Offline · Last saved stock levels. Changes from other terminals will appear after reconnecting.</p>}
+        {stockQuery.isError && !data && <p role="alert" className="rounded-xl border border-line bg-surface p-4 text-sm">Stock has not been downloaded on this terminal. Connect once to save a copy.</p>}
         {/* Summary cards */}
         <section className="grid grid-cols-3 gap-3">
           <button

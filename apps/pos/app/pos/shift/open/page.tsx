@@ -8,6 +8,7 @@ import { getToken, getPosSession, clearPosSession, setPosShift } from '@/lib/pos
 import { allowsViewMode, enterViewMode } from '@/lib/view-mode';
 import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { pendingShiftCloses } from '@/lib/core/outbox';
 import { newOfflineShiftId, queueShiftOpen } from '@/lib/offline-shift';
 
 // Past this with no answer, the shift opens on this terminal instead.
@@ -74,7 +75,7 @@ export default function ShiftOpenGate() {
 
   const handleStartShift = async () => {
     if (submitting) return;
-    if (amount < 0) {
+    if (!Number.isFinite(amount) || amount < 0) {
       toast.error('Enter a valid float amount');
       return;
     }
@@ -85,7 +86,9 @@ export default function ShiftOpenGate() {
       // A timed-out request may still have opened one server-side; that's
       // fine, the registration then finds it and this terminal joins it.
       let res: Response | null = null;
-      if (navigator.onLine !== false) {
+      // A previous offline shift must finish registering/closing first.
+      // Start a separate local shift, never accidentally resume that old one.
+      if (navigator.onLine !== false && pendingShiftCloses().length === 0) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), OPEN_TIMEOUT_MS);
         try {

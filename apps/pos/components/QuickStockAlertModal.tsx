@@ -1,5 +1,6 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
 import { useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -86,13 +87,8 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
   return (
     <>
       {!showPinModal && (
-        <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onDismiss} />
-          <div
-            className="relative z-10 w-full max-w-[420px] bg-white rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.35)] overflow-hidden"
-            style={{ animation: 'slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
-          >
-            <div className="p-6 pb-4">
+<Modal isOpen onClose={onDismiss} label="Stock unavailable" sheetOnMobile className="max-w-[420px] overflow-y-auto">
+            <div className="p-5 pb-4">
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
                   <AlertTriangle size={22} className="text-rose-600" />
@@ -105,7 +101,7 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
                     <span className="font-semibold text-rose-600">{alert.name}</span> is out of stock.
                   </p>
                 </div>
-                <button onClick={onDismiss} className="text-ink-4 hover:text-ink shrink-0" title="Dismiss">
+                <button onClick={onDismiss} className="w-11 h-11 grid place-items-center text-ink-4 hover:text-ink shrink-0" aria-label="Dismiss stock alert">
                   <X size={18} />
                 </button>
               </div>
@@ -126,19 +122,12 @@ export function QuickStockAlertModal({ alert, onDismiss }: QuickStockAlertModalP
               </button>
               <button
                 onClick={onDismiss}
-                className="w-full h-[42px] rounded-xl text-ink-4 font-semibold text-[13px] hover:text-ink-3 transition-colors"
+                className="w-full h-11 rounded-xl text-ink-4 font-semibold text-[13px] hover:text-ink-3 transition-colors"
               >
                 Cancel
               </button>
             </div>
-          </div>
-          <style dangerouslySetInnerHTML={{ __html: `
-            @keyframes slide-up {
-              from { opacity: 0; transform: translateY(24px) scale(0.98); }
-              to { opacity: 1; transform: translateY(0) scale(1); }
-            }
-          `}} />
-        </div>
+        </Modal>
       )}
 
       {showPinModal && (

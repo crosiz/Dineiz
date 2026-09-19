@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
 import { toast } from 'sonner';
 import { DineizLogo } from '@/components/ui/DineizLogo';
-import { getPosBreak, clearPosBreak, getPosShift } from '@/lib/pos-session';
+import { endSavedBreak, savedBreaks } from '@/lib/offline-break';
+import { getPosBreak, clearPosBreak, getPosShift, getPosSession, setPosShift } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
 import {
   canSignInOffline, checkPinOffline, clearServerReauth, queueBreakEnd, queueServerReauth, readRoster, rememberLogin, saveRoster,
@@ -435,6 +436,31 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
     activeShift?: { id: string; openedAt: string; openingFloat: number } | null;
     offline: boolean;
   }) {
+    // Keep each cashier's shift separate during an offline handover.
+    const previousSession = getPosSession();
+    const previousShift = getPosShift();
+    const previousOwner = previousShift?.userId ?? previousSession?.userId;
+    const savedShiftKey = (tenant: string, branch: string, owner: string) => `pos_saved_shift:${tenant}:${branch}:${owner}`;
+    if (previousShift) {
+      if (previousOwner && (previousOwner !== user.id || (previousShift.branchId ?? previousSession?.branchId) !== user.branchId)) {
+        localStorage.setItem(savedShiftKey(previousSession?.tenantId ?? user.tenantId, previousShift.branchId ?? previousSession?.branchId ?? user.branchId, previousOwner),
+          JSON.stringify({ ...previousShift, userId: previousOwner, branchId: previousShift.branchId ?? previousSession?.branchId }));
+        localStorage.removeItem('pos_shift');
+      } else if (previousOwner === user.id) {
+        localStorage.setItem('pos_shift', JSON.stringify({ ...previousShift, userId: user.id, branchId: user.branchId }));
+      } else {
+        // Do not attribute an unidentified legacy shift to a different employee.
+        localStorage.setItem('pos_unclaimed_shift', JSON.stringify(previousShift));
+        localStorage.removeItem('pos_shift');
+      }
+    }
+    const restoredKey = savedShiftKey(user.tenantId, user.branchId, user.id);
+    const restoredShift = localStorage.getItem(restoredKey);
+    if (!localStorage.getItem('pos_shift') && restoredShift) {
+      localStorage.setItem('pos_shift', restoredShift);
+      localStorage.removeItem(restoredKey);
+    }
+
     // Update Session — must include the token itself: this Zustand store is
     // a long-lived in-memory singleton, so several call sites read
     // session.token directly (not the localStorage-backed getToken()
@@ -497,11 +523,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
     // Store or verify pos_shift
     if (activeShift) {
-      localStorage.setItem('pos_shift', JSON.stringify({
+      setPosShift({
         shiftId: activeShift.id,
         openedAt: activeShift.openedAt,
-        openingFloat: activeShift.openingFloat
-      }));
+        openingFloat: activeShift.openingFloat,
+        userId: user.id, branchId: user.branchId,
+      });
     } else if (signedInOffline) {
       // Nothing to verify against: this terminal's open shift is the shift.
       const stored = getPosShift();
@@ -513,65 +540,42 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           const shiftObj = JSON.parse(storedShiftStr);
           if (shiftObj.shiftId) {
             const shiftRes = await fetch(`${API_URL}/api/shifts/${shiftObj.shiftId}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
+              headers: { 'Authorization': `Bearer ${token}` }, signal: AbortSignal.timeout(8000)
             });
             if (shiftRes.ok) {
               const shiftData = await shiftRes.json();
-              if (shiftData.status !== 'OPEN') {
+              if (shiftData.status !== 'OPEN' || (shiftData.userId && shiftData.userId !== user.id)) {
                 localStorage.removeItem('pos_shift');
               } else {
                 setSession({ shiftId: shiftObj.shiftId });
               }
-            } else {
+            } else if ([403, 404].includes(shiftRes.status)) {
               localStorage.removeItem('pos_shift');
+            } else {
+              setSession({ shiftId: shiftObj.shiftId });
             }
           }
-        } catch (e) {
-          localStorage.removeItem('pos_shift');
+        } catch {
+          // An API outage must not erase this employee's locally saved shift.
+          const stored = getPosShift();
+          if (stored?.userId === user.id) setSession({ shiftId: stored.shiftId });
         }
       }
     }
 
     // End break if returning from break mode
-    const posBreak = getPosBreak();
-    if (posBreak?.shiftId && signedInOffline) {
-      // Recorded with the time they actually came back, once there is a
-      // connection to record it on.
-      queueBreakEnd(posBreak.shiftId, new Date().toISOString());
-      clearPosBreak();
-      toast.success('Welcome back! Your break end will be recorded when the connection returns.', { duration: 4000 });
-    } else if (posBreak?.shiftId) {
+    const breakPointer = getPosBreak();
+    const savedBreak = (await savedBreaks().catch(() => [])).find(b => b.actorId === user.id && !b.endedAt);
+    const posBreak = savedBreak ? { breakId: savedBreak.id, shiftId: savedBreak.shiftId, userId: savedBreak.actorId } : breakPointer;
+    if (posBreak?.shiftId && (posBreak.userId ?? previousSession?.userId) === user.id) {
       try {
-        // A Content-Type: application/json header with no body is rejected
-        // by Fastify before the route runs — same bug as break/start (see
-        // POSTopBar.tsx). It made every break-end call fail silently, which
-        // left the ShiftBreak row open forever (durationMinutes null),
-        // still counted as "on break" until the shift itself closed.
-        const breakRes = await fetch(`${API_URL}/api/shifts/${posBreak.shiftId}/break/end`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        if (breakRes.ok) {
-          const breakData = await breakRes.json();
-          const mins = breakData.durationMinutes ?? 0;
-          toast.success(`Welcome back! Break was ${mins} minute${mins !== 1 ? 's' : ''}.`, { duration: 4000 });
-          // Local audit-trail record — only once the server has confirmed
-          // it. Recording this unconditionally (including when the server
-          // rejected the call) left a break "confirmed" in the local log
-          // forever with no way to tell it apart from a real one — SHIFT
-          // events auto-confirm on append and never retry through the
-          // outbox.
-          const { endBreak } = await import('@/lib/core/commands');
-          endBreak(posBreak.shiftId).catch(() => {});
-        } else {
-          const body = await breakRes.json().catch(() => ({}));
-          toast.error(body?.error || "Couldn't confirm your break ended — check with your manager if it looks wrong.");
-        }
+        const endedAt = new Date().toISOString();
+        const handled = await endSavedBreak(posBreak.breakId, endedAt);
+        if (!handled) queueBreakEnd(posBreak.shiftId, endedAt);
+        if (getPosBreak()?.breakId === posBreak.breakId) clearPosBreak();
+        toast.success('Welcome back. Your break end is saved on this device.');
       } catch {
-        toast.error("Couldn't reach the server to end your break — check with your manager if it looks wrong.");
-      } finally {
-        clearPosBreak();
+        toast.error('Could not save your break end. Keep this device open and retry.');
       }
     } else if (signedInOffline) {
       toast.success('Signed in offline. Orders will sync when the connection returns.', { duration: 4000 });

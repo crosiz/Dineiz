@@ -1,5 +1,6 @@
 'use client';
 
+import { TABLE_TONE } from '@/lib/table-tone';
 import { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { formatPKR } from '@/lib/utils';
@@ -30,15 +31,8 @@ export interface TableListRow {
 }
 
 /** One vocabulary for a table's state, shared by the label and the colour. */
-const STATUS: Record<string, { label: string; dot: string; ring: string; tint: string }> = {
-  FREE:           { label: 'Free',      dot: 'bg-ok',      ring: 'border-ok/40',      tint: 'bg-surface' },
-  OCCUPIED:       { label: 'Occupied',  dot: 'bg-danger',  ring: 'border-danger/40',  tint: 'bg-danger/5' },
-  BILL_REQUESTED: { label: 'Billed',    dot: 'bg-info',    ring: 'border-info/40',    tint: 'bg-info/5' },
-  RESERVED:       { label: 'Reserved',  dot: 'bg-special', ring: 'border-special/40', tint: 'bg-special/5' },
-  DIRTY:          { label: 'Cleaning',  dot: 'bg-warn',    ring: 'border-warn/40',    tint: 'bg-warn/5' },
-};
 
-function normalise(status?: string): keyof typeof STATUS {
+function normalise(status?: string): keyof typeof TABLE_TONE {
   const s = (status || 'FREE').toUpperCase();
   if (s === 'AVAILABLE' || s === 'FREE') return 'FREE';
   if (s === 'READY' || s === 'BILLED' || s === 'BILL_REQUESTED') return 'BILL_REQUESTED';
@@ -89,7 +83,7 @@ export function TableListView({
       <div className="grid grid-cols-2 gap-2.5">
         {ordered.map((t) => {
           const key = normalise(t.status);
-          const s = STATUS[key];
+          const s = TABLE_TONE[key];
           const busy = key === 'OCCUPIED' || key === 'BILL_REQUESTED';
           const time = busy ? elapsed(t.occupiedSince) : null;
 
@@ -99,7 +93,7 @@ export function TableListView({
               data-testid="table-row"
               data-table-status={key.toLowerCase()}
               onClick={() => onTap(t)}
-              className={`text-left rounded-xl border-2 ${s.ring} ${s.tint} p-3 min-h-[92px] flex flex-col justify-between transition-colors active:scale-[0.99]`}
+              className={`text-left rounded-xl border ${s.tile} p-3 min-h-[92px] flex flex-col justify-between transition-colors active:scale-[0.99]`}
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="text-[18px] font-semibold text-ink leading-none">{t.label}</span>
@@ -111,7 +105,7 @@ export function TableListView({
                   <Users className="w-3.5 h-3.5" aria-hidden />
                   <span>{t.capacity}</span>
                   <span className="text-ink-4">·</span>
-                  <span className="font-medium text-ink-2">{s.label}</span>
+                  <span className="font-medium text-ink-2">{s.label === 'bill' ? 'Bill requested' : s.label === 'to clean' ? 'Cleaning' : s.label.charAt(0).toUpperCase() + s.label.slice(1)}</span>
                 </div>
 
                 {busy && (

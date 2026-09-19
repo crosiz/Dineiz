@@ -14,11 +14,12 @@
 import { useViews } from '@/lib/core/views';
 import { getPosShift } from '@/lib/pos-session';
 import { resolveShiftId } from '@/lib/offline-shift';
+import { cashMovements } from '@/lib/offline-cash';
 
 const SETTLED = new Set(['COMPLETED']);
 const GONE = new Set(['CANCELLED', 'VOIDED', 'WALKED_OUT']);
 
-export function localShiftSummary(shiftId: string) {
+export async function localShiftSummary(shiftId: string) {
   const target = resolveShiftId(shiftId);
   const shift = getPosShift();
   const orders = Object.values(useViews.getState().orders).filter((o) => resolveShiftId(o.shiftId) === target);
@@ -33,6 +34,9 @@ export function localShiftSummary(shiftId: string) {
 
   const openingFloat = shift && resolveShiftId(shift.shiftId) === target ? Number(shift.openingFloat) || 0 : 0;
   const totalCash = paid.reduce((s, o) => s + cashOf(o), 0);
+  const movements = await cashMovements(shiftId);
+  const cashIn = movements.filter(m => m.type === 'CASH_IN').reduce((s, m) => s + m.amount, 0);
+  const cashOut = movements.filter(m => m.type === 'CASH_OUT').reduce((s, m) => s + m.amount, 0);
 
   return {
     local: true,
@@ -41,9 +45,9 @@ export function localShiftSummary(shiftId: string) {
     totalOrders: paid.length,
     totalSales: paid.reduce((s, o) => s + o.netAmount, 0),
     totalCash,
-    cashIn: 0,
-    cashOut: 0,
-    expectedCash: openingFloat + totalCash,
+    cashIn,
+    cashOut,
+    expectedCash: openingFloat + totalCash + cashIn - cashOut,
     breakCount: 0,
     totalBreakMinutes: 0,
     unpaidOrders: open.length,

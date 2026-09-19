@@ -28,6 +28,9 @@ export function Modal({ isOpen, onClose, children, className = '', labelledBy, l
   useEffect(() => {
     if (!isOpen || !mounted || !dialogRef.current) return;
     const dialog = dialogRef.current;
+    const previousDialog = openDialogs[openDialogs.length - 1];
+    const previousLayer = Number(previousDialog?.parentElement?.style.zIndex || 0);
+    if (dialog.parentElement) dialog.parentElement.style.zIndex = String(Math.max(zIndex, previousLayer + 10));
     const previous = document.activeElement as HTMLElement | null;
     if (openDialogs.length === 0) {
       originalOverflow = document.body.style.overflow;

@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
+import { edb, append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
 import { useViews, resolveLocalOrderId } from './views';
 import { kickOutbox } from './outbox';
 import { useManagerOverlay, type OverlayAction } from '@/lib/manager-overlay';
@@ -156,6 +156,9 @@ export async function markKotPrinted(orderId: string) {
 }
 
 export async function markReady(orderId: string) {
+  const order = useViews.getState().orders[resolveLocalOrderId(orderId)];
+  if (order?.status === 'PENDING') await sendToKitchen(orderId);
+  if (order && !['PENDING', 'IN_KITCHEN'].includes(order.status)) return;
   const e = await emit('ORDER_MARKED_READY', 'ORDER', orderId, {}, chain(orderId));
   remember(orderId, e.id);
 }
@@ -177,8 +180,19 @@ export async function collectPayment(orderId: string, p: {
   if (!(typeof p.total === 'number' && p.total > 0)) {
     throw new Error(`collectPayment: refusing a non-positive total (${p.total}) for ${orderId}`);
   }
-  const e = await emit('PAYMENT_COLLECTED', 'ORDER', orderId, p, chain(orderId));
-  remember(orderId, e.id);
+  const save = async () => {
+    const localId = resolveLocalOrderId(orderId);
+    const order = useViews.getState().orders[localId];
+    if (!order) throw new Error('This order is not available on this terminal. Reopen the order before collecting payment.');
+    const existing = await edb.events.where('aggregateId').equals(localId)
+      .filter(e => e.type === 'PAYMENT_COLLECTED' && e.syncState !== 'SUPERSEDED').first();
+    if (existing || order?.status === 'COMPLETED') throw new Error('Payment is already saved for this order. Open its receipt or review Sync & Data; do not charge again.');
+    const e = await emit('PAYMENT_COLLECTED', 'ORDER', localId, p, chain(localId));
+    remember(localId, e.id);
+  };
+  // Serialise the check-and-save across tabs on this terminal as well as taps.
+  if (typeof navigator !== 'undefined' && navigator.locks?.request) await navigator.locks.request(`dineiz-pos:payment:${resolveLocalOrderId(orderId)}`, save);
+  else await save();
 }
 
 export async function voidOrder(orderId: string, reason: string, approverId: string) {

@@ -7,8 +7,11 @@ import { getToken, getPosSession } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL, isApiConfigured, API_NOT_CONFIGURED } from '@/lib/api';
 import { getTerminalId } from './event-log';
-import { clearPendingShiftOpen, isShiftPendingOpen, readPendingShiftOpen, recordShiftAlias, resolveShiftId } from '@/lib/offline-shift';
+import { savedBreaks, replaySavedBreaks } from '@/lib/offline-break';
+import { clearPendingShiftOpen, pendingShiftOpens, isShiftPendingOpen, readPendingShiftOpen, recordShiftAlias, resolveShiftId } from '@/lib/offline-shift';
 import { getBrandingConfig } from '@/lib/branding-store';
+import { cashMovements, replayCashMovements } from '@/lib/offline-cash';
+import { kitchenReadyOperations, replayKitchenReady } from '@/lib/offline-kitchen';
 
 // ─── The outbox: ships local events to the server (spec Part 5) ────────────
 //
@@ -1124,6 +1127,9 @@ async function drain(): Promise<void> {
   draining = true;
   try {
     await registerPendingShiftOpen();
+    await replaySavedBreaks();
+    await replayCashMovements();
+    await replayKitchenReady();
     const chains = await deriveTaskChains();
     if (chains.size === 0) return;
 
@@ -1404,7 +1410,7 @@ export function startOutbox(): () => void {
 
 export async function hasUnsyncedEvents(): Promise<boolean> {
   const count = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).count();
-  return count > 0;
+  return count > 0 || pendingShiftOpens().length > 0 || pendingShiftCloses().length > 0 || (await savedBreaks()).some(e => e.state !== 'confirmed') || (await cashMovements()).some(e => e.state !== 'confirmed') || (await kitchenReadyOperations()).some(e => e.state !== 'confirmed');
 }
 
 export interface UnsyncedSummary {
@@ -1424,6 +1430,12 @@ export interface UnsyncedSummary {
 }
 
 export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
+  const breaks = await savedBreaks();
+  const shiftOperations = pendingShiftCloses().length + pendingShiftOpens().length;
+  const cash = await cashMovements();
+  const pendingCash = cash.filter(e => e.state === 'pending').length;
+  const rejectedCash = cash.filter(e => e.state === 'rejected').length;
+  const kitchen = await kitchenReadyOperations();
   const pending = await edb.events.where('syncState').anyOf(NON_TERMINAL_STATES).toArray();
   const [poisoned, abandoned, superseded] = await Promise.all([
     edb.events.where('syncState').equals('POISONED').count(),
@@ -1438,11 +1450,11 @@ export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
   const avg = rttSamples.length ? Math.round(rttSamples.reduce((s, n) => s + n, 0) / rttSamples.length) : null;
 
   return {
-    count: pending.length,
-    poisoned, abandoned, superseded, confirmedToday,
+    count: pending.length + pendingCash + kitchen.filter(e => e.state === 'pending').length + breaks.filter(e => e.state === 'pending').length + shiftOperations,
+    poisoned: poisoned + rejectedCash + kitchen.filter(e => e.state === 'rejected').length + breaks.filter(e => e.state === 'rejected').length, abandoned, superseded, confirmedToday,
     oldestAt: pending[0]?.clientTime ?? null,
     authExpiredCount,
-    blockedOnAuthOnly: pending.length > 0 && authExpiredCount === pending.length,
+    blockedOnAuthOnly: pending.length > 0 && authExpiredCount === pending.length && pendingCash === 0 && shiftOperations === 0 && !breaks.some(e => e.state !== 'confirmed'),
     circuitOpen,
     stalled: pending.length > 0 && Date.now() - lastProgressAt > STALL_RESTART_AFTER_MS,
     avgRttMs: avg,
@@ -1452,14 +1464,15 @@ export async function getUnsyncedSummary(): Promise<UnsyncedSummary> {
 
 /** Never report a shift as synced merely because failed events left the retry queue. */
 export async function getShiftSyncStatus(shiftId: string) {
+  const cash = [...await cashMovements(shiftId), ...await savedBreaks(shiftId)].filter(e => e.state !== 'confirmed');
   const events = await edb.events.where('syncState')
     .anyOf([...NON_TERMINAL_STATES, 'POISONED', 'ABANDONED'])
     .and(e => resolveShiftId(e.shiftId) === resolveShiftId(shiftId)).toArray();
   const pending = events.filter(e => NON_TERMINAL_STATES.includes(e.syncState)).length;
   return {
-    pending,
-    rejected: events.length - pending,
-    total: events.length,
+    pending: pending + cash.filter(e => e.state === 'pending').length,
+    rejected: events.length - pending + cash.filter(e => e.state === 'rejected').length,
+    total: events.length + cash.length,
     payments: events.filter(e => e.type === 'PAYMENT_COLLECTED').map(e => ({
       orderId: e.aggregateId,
       rejected: e.syncState === 'POISONED' || e.syncState === 'ABANDONED',
@@ -1483,7 +1496,29 @@ export async function getSyncDiagnostics() {
     avgRttMs: rttSamples.length ? Math.round(rttSamples.reduce((s, n) => s + n, 0) / rttSamples.length) : null,
     lastProgressAt: new Date(lastProgressAt).toISOString(),
     attention,
+    cash: (await cashMovements()).filter(e => e.state !== 'confirmed'),
+    kitchen: (await kitchenReadyOperations()).filter(e => e.state !== 'confirmed'),
+    breaks: (await savedBreaks()).filter(e => e.state !== 'confirmed'),
+    shiftOpens: pendingShiftOpens(),
+    shiftCloses: pendingShiftCloses().map(p => ({ shiftId: p.shiftId, actorId: p.actorId })),
   };
+}
+
+/** Retry the original operation without deleting its payment or changing the bill. */
+export async function retryStuckEvent(eventId: string): Promise<void> {
+  const root = await edb.events.get(eventId);
+  if (!root || !['POISONED', 'ABANDONED'].includes(root.syncState)) return;
+  const session = getPosSession();
+  if (root.actorId !== session?.userId) throw new Error('Sign in as the staff member who saved this change to retry.');
+  // A failed create can poison its whole chain. Replay in dependency order,
+  // retaining ids/payloads so the server's idempotency checks still apply.
+  const related = await edb.events.where('aggregateId').equals(root.aggregateId)
+    .filter(e => e.actorId === root.actorId && ['POISONED', 'ABANDONED'].includes(e.syncState)).toArray();
+  await edb.transaction('rw', edb.events, async () => {
+    for (const e of related) await edb.events.update(e.id, { syncState: 'QUEUED', attempts: 0, lastAttemptAt: null, lastError: null });
+  });
+  reflectOrderSyncState(related.map(e => e.id), 'PENDING');
+  forceSyncNow();
 }
 
 /** Manual "Force Sync Now" from the Sync Status panel. */
@@ -1595,7 +1630,9 @@ export async function getSyncCategoryProgress(): Promise<SyncCategoryProgress> {
     else if (ORDER_TYPES.has(e.type)) orders++;
     else other++;
   }
-  return { payments, orders, other, total: pending.length };
+  const cash = [...await cashMovements(), ...await savedBreaks()].filter(e => e.state !== 'confirmed').length;
+  const kitchen = (await kitchenReadyOperations()).filter(e => e.state !== 'confirmed').length;
+  return { payments, orders, other: other + cash + kitchen, total: pending.length + cash + kitchen };
 }
 
 // Set by the POS when a shift is closed with events still queued. When the
@@ -1607,15 +1644,45 @@ const PENDING_SYNC_SHIFT_KEY = 'pos_pending_sync_shift';
 // has to be replayed before sync-complete can mean anything.
 const PENDING_SHIFT_CLOSE_KEY = 'pos_pending_shift_close';
 
-export function markShiftPendingSync(shiftId: string, unsentClosePayload?: unknown): void {
+interface PendingShiftClose { shiftId: string; payload?: unknown; actorId?: string }
+const CLOSE_QUEUE_KEY = 'pos_shift_close_queue';
+export function pendingShiftCloses(): PendingShiftClose[] {
   try {
-    localStorage.setItem(PENDING_SYNC_SHIFT_KEY, shiftId);
-    if (unsentClosePayload !== undefined) {
-      localStorage.setItem(PENDING_SHIFT_CLOSE_KEY, JSON.stringify(unsentClosePayload));
-    }
-  } catch {
-    throw new Error('Cannot save the shift close on this device. Keep the shift open and try again.');
+    const queue = localStorage.getItem(CLOSE_QUEUE_KEY);
+    if (queue) return JSON.parse(queue);
+    const shiftId = localStorage.getItem(PENDING_SYNC_SHIFT_KEY);
+    const raw = localStorage.getItem(PENDING_SHIFT_CLOSE_KEY);
+    return shiftId ? [{ shiftId, payload: raw ? JSON.parse(raw) : undefined }] : [];
+  } catch { return []; }
+}
+function saveShiftCloses(queue: PendingShiftClose[]) {
+  localStorage.setItem(CLOSE_QUEUE_KEY, JSON.stringify(queue));
+  if (queue.length) {
+    localStorage.setItem(PENDING_SYNC_SHIFT_KEY, queue[0].shiftId);
+    if (queue[0].payload !== undefined) localStorage.setItem(PENDING_SHIFT_CLOSE_KEY, JSON.stringify(queue[0].payload));
+    else localStorage.removeItem(PENDING_SHIFT_CLOSE_KEY);
+  } else {
+    localStorage.removeItem(PENDING_SYNC_SHIFT_KEY);
+    localStorage.removeItem(PENDING_SHIFT_CLOSE_KEY);
   }
+}
+export function markShiftPendingSync(shiftId: string, unsentClosePayload?: unknown): void {
+  const queue = pendingShiftCloses();
+  const index = queue.findIndex(p => resolveShiftId(p.shiftId) === resolveShiftId(shiftId));
+  const entry = { ...(index < 0 ? {} : queue[index]), shiftId, actorId: getPosSession()?.userId,
+    ...(unsentClosePayload !== undefined ? { payload: unsentClosePayload } : {}) };
+  if (index < 0) queue.push(entry); else queue[index] = entry;
+  try { saveShiftCloses(queue); }
+  catch { throw new Error('Cannot save the shift close on this device. Keep the shift open and try again.'); }
+}
+
+async function closeAuthHeaders() {
+  const pending = pendingShiftCloses()[0];
+  if (!pending?.actorId || pending.actorId === getPosSession()?.userId) return authHeaders();
+  const { savedTokenFor } = await import('@/lib/offline-auth');
+  const token = savedTokenFor(pending.actorId);
+  if (!token) throw new Error('The cashier must sign in to finish syncing their shift.');
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
 /** Replay a close POST that never landed. Returns false if it still hasn't. */
@@ -1627,13 +1694,14 @@ async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
   try {
     const res = await fetchWithTimeout(`${API_URL}/api/shifts/${shiftId}/close`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await closeAuthHeaders(),
       body: raw,
     });
     // 4xx here means the server already has it closed, or is refusing for a
     // reason replaying won't fix — either way stop retrying forever.
     if (res.ok) {
-      try { localStorage.removeItem(PENDING_SHIFT_CLOSE_KEY); } catch { /* ignore */ }
+      const queue = pendingShiftCloses();
+      if (queue[0]) { delete queue[0].payload; saveShiftCloses(queue); }
       return true;
     }
   } catch { /* still offline */ }
@@ -1652,6 +1720,10 @@ let shiftOpenErrorShown = false;
 async function registerPendingShiftOpen(): Promise<void> {
   const p = readPendingShiftOpen();
   if (!p) return;
+  const closing = pendingShiftCloses()[0];
+  // Register, drain and close shifts chronologically. Otherwise a later offline
+  // shift could be joined to yesterday's still-open server shift.
+  if (closing && resolveShiftId(closing.shiftId) !== resolveShiftId(p.shiftId)) return;
 
   // The shift belongs to whoever opened it. If someone else is signed in now,
   // their token would register it under their name; use the opener's saved
@@ -1750,7 +1822,8 @@ async function adoptServerShift(localId: string, serverId: string): Promise<void
   if (session.shiftId === localId) useCartStore.setState({ session: { ...session, shiftId: serverId } });
 
   try {
-    if (localStorage.getItem(PENDING_SYNC_SHIFT_KEY) === localId) localStorage.setItem(PENDING_SYNC_SHIFT_KEY, serverId);
+    const closes = pendingShiftCloses().map(p => p.shiftId === localId ? { ...p, shiftId: serverId } : p);
+    saveShiftCloses(closes);
   } catch { /* ignore */ }
 
   // SHORT order numbers count per shift; carry the count over so the next
@@ -1788,7 +1861,7 @@ async function finalisePendingSyncShift(): Promise<void> {
   if (!localShiftId) return;
   // A shift opened AND closed offline: the server has to learn it exists
   // before a close for it can mean anything.
-  if (readPendingShiftOpen()) return;
+  if (isShiftPendingOpen(localShiftId)) return;
   const shiftId = resolveShiftId(localShiftId);
 
   const remaining = await getShiftSyncStatus(shiftId);
@@ -1803,13 +1876,14 @@ async function finalisePendingSyncShift(): Promise<void> {
   try {
     const res = await fetchWithTimeout(`${API_URL}/api/shifts/${shiftId}/sync-complete`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await closeAuthHeaders(),
       // Nothing more to send — the server recomputes from the DB, which now
       // has every one of this shift's orders/payments.
       body: JSON.stringify({}),
     });
     if (res.ok) {
-      try { localStorage.removeItem(PENDING_SYNC_SHIFT_KEY); } catch { /* ignore */ }
+      saveShiftCloses(pendingShiftCloses().slice(1));
+      kickOutbox('immediate');
       if (poisonedOrAbandoned === 0) {
         try {
           const { toast } = await import('sonner');

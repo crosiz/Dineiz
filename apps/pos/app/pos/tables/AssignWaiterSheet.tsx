@@ -5,6 +5,8 @@ import { X, Search, Check, UserX, Loader2 } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL } from '@/lib/api';
+import { cachedRead } from '@/lib/cached-read';
+import { useViews } from '@/lib/core/views';
 import * as commands from '@/lib/core/commands';
 import { Modal } from '@/components/ui/Modal';
 
@@ -65,25 +67,9 @@ export function AssignWaiterSheet({
   const fetchWaiters = async () => {
     setLoading(true);
     try {
-      const token = getToken();
-
-      // Real per-waiter table load — the floor plan already carries
-      // assignedWaiterId per table (same field ClientTableMap.tsx reads),
-      // so we can derive a real count instead of a placeholder.
-      const [waitersRes, floorPlanRes] = await Promise.all([
-        fetch(`${API_URL}/api/pos/waiters?branchId=${branchId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_URL}/api/floor-plan/${branchId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      ]);
-
-      if (!waitersRes.ok) return;
-      const res = await waitersRes.json();
+      const { data: res } = await cachedRead<any>(`/api/pos/waiters?branchId=${branchId}`);
       const dataArray = Array.isArray(res) ? res : (res.waiters || res.data || []);
-
-      const floorTables: any[] = Array.isArray(floorPlanRes) ? floorPlanRes : (floorPlanRes?.tables || []);
+      const floorTables = Object.values(useViews.getState().tables);
       const tableCountByWaiter = new Map<string, number>();
       for (const t of floorTables) {
         if (!t.assignedWaiterId) continue;
@@ -105,7 +91,7 @@ export function AssignWaiterSheet({
         };
       }));
     } catch (err) {
-      console.error(err);
+      toast.error("The staff list is not saved on this device yet. Connect once to download it.");
     } finally {
       setLoading(false);
     }

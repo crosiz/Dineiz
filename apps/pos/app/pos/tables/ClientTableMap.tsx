@@ -37,6 +37,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
+import { Modal } from '@/components/ui/Modal';
 import { useScreenSize } from '@/lib/use-screen-size';
 import { TableListView } from './TableListView';
 
@@ -151,7 +152,7 @@ export default function ClientTableMap() {
   // hatch for a floor the plan genuinely can't serve at phone width — a long
   // narrow room, or more tables than fit legibly at any zoom. Remembered per
   // terminal so a waiter who prefers one isn't re-choosing every shift.
-  const [narrowView, setNarrowView] = useState<'plan' | 'list'>('plan');
+  const [narrowView, setNarrowView] = useState<'plan' | 'list'>('list');
   useEffect(() => {
     const saved = localStorage.getItem('pos_tables_view');
     if (saved === 'list' || saved === 'plan') setNarrowView(saved);
@@ -254,7 +255,7 @@ export default function ClientTableMap() {
             onClick={toggleNarrowView}
             title={narrowView === 'plan' ? 'Show as a list' : 'Show the floor plan'}
             aria-label={narrowView === 'plan' ? 'Show tables as a list' : 'Show the floor plan'}
-            className="grid place-items-center w-10 h-10 rounded-xl border border-line bg-surface text-ink-2 active:bg-sunken transition-colors"
+            className="grid place-items-center w-11 h-11 rounded-xl border border-line bg-surface text-ink-2 active:bg-sunken transition-colors"
           >
             {narrowView === 'plan' ? <Rows3 className="w-[18px] h-[18px]" /> : <MapIcon className="w-[18px] h-[18px]" />}
           </button>
@@ -307,6 +308,7 @@ export default function ClientTableMap() {
     if (voPopup && voPopup.total > 0) {
       setPopupOrder(voPopup);
       setPopupLoading(false);
+      return; // This terminal's local order includes unsynced changes.
     } else if (cached?.data?.[0]) {
       setPopupOrder(cached.data[0]);
       setPopupLoading(false);
@@ -323,7 +325,7 @@ export default function ClientTableMap() {
 
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/api/orders?tableId=${tableId}&status=PENDING,IN_KITCHEN,READY,COMPLETED&limit=1`, {
+      const res = await fetch(`${API_URL}/api/orders?tableId=${tableId}&status=PENDING,IN_KITCHEN,READY&limit=1`, {
         signal: controller.signal,
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -724,40 +726,6 @@ export default function ClientTableMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFloor, floorTables.length, isNarrow, narrowView]);
 
-  /**
-   * Where a table's detail card goes.
-   *
-   * On a phone it's a bottom sheet — anchoring a 320px card to a table on a
-   * 375px screen leaves it covering the table it describes and half the floor,
-   * and the old version clamped against `window.innerWidth/innerHeight` with
-   * hardcoded 340/380px card sizes, which is neither this container's size nor
-   * the card's. On a larger screen it sits beside the table, clamped to the
-   * canvas's own rect.
-   */
-  const getPopupPosition = (table: TableData): React.CSSProperties => {
-    if (isNarrow) return {};
-    const rect = canvasContainerRef.current?.getBoundingClientRect();
-    if (!rect) return {};
-    const { width } = getTableDimensions(table.shape, table.capacity);
-    const screenX = rect.left + table.x * view.zoom + view.x;
-    const screenY = rect.top + table.y * view.zoom + view.y;
-
-    const CARD_W = 320;
-    const CARD_H = 380;
-    // Prefer the right of the table; flip to the left when that would overflow.
-    const wantLeft = screenX + (width + CHAIR_PAD) * view.zoom + 12;
-    const left = wantLeft + CARD_W > rect.right - 16
-      ? Math.max(rect.left + 16, screenX - CARD_W - 12)
-      : wantLeft;
-    const top = clamp(screenY - 24, rect.top + 16, Math.max(rect.top + 16, rect.bottom - CARD_H - 16));
-    return { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
-  };
-
-  /** Shared shell for the three table-detail cards (occupied / reserved / dirty). */
-  const popupShellCls = isNarrow
-    ? 'fixed inset-x-0 bottom-0 z-[var(--z-modal)] w-full max-h-[80dvh] overflow-y-auto bg-surface border-t border-line rounded-t-2xl shadow-2xl p-5 pb-safe space-y-4 text-ink animate-in slide-in-from-bottom duration-200'
-    : 'fixed z-[var(--z-modal)] w-80 max-h-[calc(100dvh-32px)] overflow-y-auto bg-surface border border-line rounded-2xl shadow-2xl p-5 space-y-4 text-ink animate-in fade-in zoom-in-95 duration-150';
-
   // The table detail sheets and modals, shared by both the canvas and the
   // phone list — they are driven by `selectedTable`, not by which layout is
   // on screen, so neither branch should own them.
@@ -777,14 +745,13 @@ export default function ClientTableMap() {
 
     {/* TABLE DETAIL POPUP FOR OCCUPIED / BILL REQUESTED TABLES */}
     {selectedTable && (selectedTable.status === 'OCCUPIED' || selectedTable.status === 'BILL_REQUESTED' || selectedTable.status === 'READY') && (
-      <div
-        style={getPopupPosition(selectedTable)}
-        className={popupShellCls}
-      >
+      <Modal isOpen onClose={() => setSelectedTable(null)} label={`Table ${selectedTable.label}`} sheetOnMobile className="max-w-[420px]">
+        <div className="p-5 space-y-4 overflow-y-auto">
+
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-black text-slate-900">{selectedTable.label}</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{selectedTable.label}</h3>
               <span
                 className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
                   selectedTable.status === 'BILL_REQUESTED'
@@ -801,7 +768,7 @@ export default function ClientTableMap() {
           </div>
           <button
             onClick={() => setSelectedTable(null)}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            aria-label="Close table details" className="w-11 h-11 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -831,7 +798,7 @@ export default function ClientTableMap() {
                   {formatPKR(popupOrder.total || popupOrder.totalAmount || 0)}
                 </span>
               </div>
-              <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+              <div className="max-h-[32dvh] overflow-y-auto space-y-1 pr-1">
                 {popupOrder.items?.map((item: any, idx: number) => (
                   <div key={idx} className="flex justify-between text-slate-700">
                     <span>
@@ -869,7 +836,7 @@ export default function ClientTableMap() {
                   `/pos/order?type=dine-in&tableId=${selectedTable.id}&orderId=${popupOrder?.id || ''}&tableLabel=${encodeURIComponent(selectedTable.label)}`
                 );
               }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+              className="w-full flex items-center justify-center gap-2 min-h-11 py-2.5 px-3 bg-brand hover:brightness-95 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>Add Items</span>
@@ -879,7 +846,7 @@ export default function ClientTableMap() {
           <div className={`grid ${isViewMode() ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
             <button
               onClick={handlePrintBill}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
+              className="flex items-center justify-center gap-1.5 min-h-11 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
             >
               <Printer className="w-3.5 h-3.5 text-blue-600" />
               <span>Print Bill</span>
@@ -909,7 +876,7 @@ export default function ClientTableMap() {
                 setIsPaymentOpen(true);
               }}
               disabled={popupLoading}
-              className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 min-h-11 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-xs disabled:opacity-50"
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>Collect Payment</span>
@@ -920,7 +887,7 @@ export default function ClientTableMap() {
           {/* Assign Waiter Button */}
           <button
             onClick={() => setIsAssignWaiterOpen(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
+            className="w-full flex items-center justify-center gap-1.5 min-h-11 py-2.5 px-3 bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs rounded-xl transition-all border border-slate-200"
           >
             {popupOrder?.assignedWaiterId ? (
               <>
@@ -937,15 +904,15 @@ export default function ClientTableMap() {
             )}
           </button>
         </div>
-      </div>
+        </div>
+      </Modal>
     )}
 
     {/* POPUP FOR RESERVED TABLES */}
     {selectedTable && selectedTable.status === 'RESERVED' && (
-      <div
-        style={getPopupPosition(selectedTable)}
-        className={popupShellCls}
-      >
+      <Modal isOpen onClose={() => setSelectedTable(null)} label={`Table ${selectedTable.label}`} sheetOnMobile className="max-w-[420px]">
+        <div className="p-5 space-y-4 overflow-y-auto">
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-purple-600">
             <ShieldAlert className="w-5 h-5" />
@@ -953,7 +920,7 @@ export default function ClientTableMap() {
           </div>
           <button
             onClick={() => setSelectedTable(null)}
-            className="p-1 text-slate-400 hover:text-slate-700"
+            aria-label="Close table details" className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-700"
           >
             <X className="w-4 h-4" />
           </button>
@@ -968,15 +935,15 @@ export default function ClientTableMap() {
           <ShieldAlert className="w-3.5 h-3.5" />
           <span>Override (Manager PIN)</span>
         </button>
-      </div>
+        </div>
+      </Modal>
     )}
 
     {/* POPUP FOR DIRTY TABLES */}
     {selectedTable && selectedTable.status === 'DIRTY' && (
-      <div
-        style={getPopupPosition(selectedTable)}
-        className={popupShellCls}
-      >
+      <Modal isOpen onClose={() => setSelectedTable(null)} label={`Table ${selectedTable.label}`} sheetOnMobile className="max-w-[420px]">
+        <div className="p-5 space-y-4 overflow-y-auto">
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-600">
             <Sparkles className="w-5 h-5" />
@@ -984,7 +951,7 @@ export default function ClientTableMap() {
           </div>
           <button
             onClick={() => setSelectedTable(null)}
-            className="p-1 text-slate-400 hover:text-slate-700"
+            aria-label="Close table details" className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-slate-700"
           >
             <X className="w-4 h-4" />
           </button>
@@ -994,12 +961,13 @@ export default function ClientTableMap() {
 
         <button
           onClick={() => handleMarkAsFree(selectedTable.id)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+          className="w-full flex items-center justify-center gap-2 min-h-11 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>Mark as Free</span>
         </button>
-      </div>
+        </div>
+      </Modal>
     )}
 
     {/* Manager PIN Override Modal */}
@@ -1201,7 +1169,7 @@ export default function ClientTableMap() {
             type="button"
             onClick={handleZoomOut}
             title="Zoom Out"
-            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-11 h-11 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -1212,7 +1180,7 @@ export default function ClientTableMap() {
             type="button"
             onClick={handleZoomIn}
             title="Zoom In"
-            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-11 h-11 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
@@ -1221,7 +1189,7 @@ export default function ClientTableMap() {
             type="button"
             onClick={handleResetZoom}
             title="Reset View"
-            className="w-9 h-9 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
+            className="w-11 h-11 grid place-items-center rounded-lg text-ink-2 hover:text-ink hover:bg-sunken transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
           </button>

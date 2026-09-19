@@ -429,6 +429,9 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
         const existing = existingStr ? JSON.parse(existingStr) : {};
         const updated = { ...existing, ...settings };
         localStorage.setItem('pos_tenant_settings', JSON.stringify(updated));
+        const current = useBrandingStore.getState().branding;
+        setBranding({ ...current, ...settings, pos: { ...current.pos, ...settings.pos }, kitchen: { ...current.kitchen, ...settings.kitchen } });
+        applyBranding();
       } catch {}
     };
 

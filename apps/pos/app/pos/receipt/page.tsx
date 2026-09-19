@@ -1,4 +1,8 @@
 'use client'
+import { useViews } from '@/lib/core/views'
+import { setTableStatus } from '@/lib/core/commands'
+import { cachedRead } from '@/lib/cached-read'
+import { Check, Printer, MessageSquare, ArrowRight } from 'lucide-react'
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useBrandingStore } from '@/lib/branding-store'
@@ -23,6 +27,8 @@ function ReceiptPageContent() {
   const tableId = searchParams.get('tableId')
   const tableLabel = searchParams.get('tableLabel')
 
+  const localOrder = useViews(s => Object.values(s.orders).find(o => o.id === orderId || o.serverId === orderId))
+  const [loadError, setLoadError] = useState('')
   const [order, setOrder] = useState<any>(null)
   const [countdown, setCountdown] = useState(30)
   const [autoRedirect, setAutoRedirect] = useState(true)
@@ -36,16 +42,20 @@ function ReceiptPageContent() {
     setMounted(true)
   }, [])
 
-  // Fetch order:
   useEffect(() => {
-    if (!orderId) return
-    fetch(`${API_URL}/api/orders/${orderId}`, {
-      headers: { 'Authorization': `Bearer ${getToken()}` }
-    })
-    .then(r => r.json())
-    .then(setOrder)
-    .catch(() => {})
-  }, [orderId])
+    if (!orderId) { setLoadError('Choose an order from Tickets to view its receipt.'); return; }
+    if (localOrder) {
+      setOrder({ ...localOrder, totalAmount: localOrder.subtotal, table: { label: localOrder.tableLabel },
+        customer: { phone: localOrder.customerPhone }, shift: { user: { name: localOrder.cashierName } },
+        items: localOrder.items.filter(i => !i.voided).map(i => ({ itemName: i.itemName, quantity: i.qty, unitPrice: i.unitPrice, subtotal: i.qty * i.unitPrice, options: { variation: { name: i.variationName }, addOns: i.addOns } })),
+      });
+      return;
+    }
+    let active = true;
+    cachedRead<any>(`/api/orders/${orderId}`).then(({ data }) => { if (active) setOrder(data); })
+      .catch(() => { if (active) setLoadError('This receipt is not saved here. Reconnect to retrieve it.'); });
+    return () => { active = false; };
+  }, [orderId, localOrder])
 
   // Fix #20: start countdown only AFTER order data has loaded
   useEffect(() => {
@@ -69,11 +79,7 @@ function ReceiptPageContent() {
 
   const markCleaning = async () => {
     if (!tableId) return
-    await fetch(`${API_URL}/api/tables/${tableId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-      body: JSON.stringify({ status: 'dirty' })
-    }).catch(() => {})
+    await setTableStatus(tableId, 'DIRTY')
   }
 
   // Same shape PaymentModal builds for the on-screen receipt right after a
@@ -152,123 +158,23 @@ function ReceiptPageContent() {
   }
 
   return (
-    <div style={{
-      height: '100%', overflow: 'auto', backgroundColor: '#F8FAFC',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'flex-start', padding: '24px 16px',
-    }}>
-      {/* Success indicator */}
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div style={{
-          width: '80px', height: '80px', borderRadius: '50%',
-          backgroundColor: '#E9F7F0',
-          border: '2.5px solid #10B981',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 12px',
-          animation: 'scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1)',
-        }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
+    <main className="h-full overflow-y-auto bg-canvas px-4 py-6 pb-24">
+      <div className="max-w-[420px] mx-auto">
+        <header className="mb-5 text-center">
+          <span className="mx-auto mb-3 w-12 h-12 rounded-full bg-ok/10 text-ok grid place-items-center"><Check size={24} /></span>
+          <h1 className="text-xl font-semibold text-ink">{order?.status === 'COMPLETED' ? 'Payment received' : 'Order receipt'}</h1>
+          <p className="mt-1 text-sm text-ink-3">{order?.orderNumber || 'Saved order'}</p>
+        </header>
+        {receiptData ? <ReceiptView data={receiptData} /> : <p role="status" className="p-5 border border-line bg-surface rounded-xl text-sm text-ink-3">{loadError || 'Loading receipt…'}</p>}
+        <div className="mt-5 flex gap-2">
+          <button onClick={handlePrint} disabled={isPrinting || !receiptData} className="min-h-11 flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface text-sm font-semibold disabled:opacity-50"><Printer size={17} />{isPrinting ? 'Printing…' : 'Print receipt'}</button>
+          {order?.customer?.phone && <a href={`https://wa.me/${String(order.customer.phone).replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="min-h-11 flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface text-sm font-semibold"><MessageSquare size={17} />Message</a>}
         </div>
-        <h2 style={{ color: '#0F172A', fontSize: '22px', fontWeight: 700, margin: 0 }}>
-          Payment Confirmed
-        </h2>
-        <p style={{ color: '#64748B', fontSize: '13px', marginTop: '4px' }}>
-          {tableLabel ? `Table ${tableLabel}` : 'Takeaway'} • {method}
-        </p>
+        {tableId && <button onClick={async () => { try { await markCleaning(); router.push('/pos/tables'); } catch { toast.error('Could not save the table status. Try again.'); } }} className="mt-2 w-full min-h-11 rounded-xl border border-line bg-surface text-sm font-semibold">Mark table for cleaning</button>}
+        <button onClick={() => router.push('/pos/home')} className="mt-3 min-h-12 w-full rounded-xl bg-brand text-on-brand text-sm font-semibold inline-flex items-center justify-center gap-2">Back to home <ArrowRight size={17} /></button>
+        {autoRedirect && order && <button onClick={() => setAutoRedirect(false)} className="min-h-11 w-full mt-2 text-xs text-ink-3">Returning in {countdown}s · Stay here</button>}
       </div>
-
-      {/* Receipt — same ReceiptView component PaymentModal renders right
-          after a payment completes; see components/ReceiptView.tsx. */}
-      <div style={{ width: '100%', maxWidth: '420px', marginBottom: '16px' }}>
-        {receiptData ? (
-          <ReceiptView data={receiptData} />
-        ) : (
-          <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', padding: '24px' }}>Loading receipt…</div>
-        )}
-      </div>
-
-      {/* Action buttons — WhatsApp only shows when we actually have a
-          number to send to (e.g. WhatsApp-sourced orders); previously this
-          button rendered unconditionally with an empty onClick and did
-          nothing when tapped — and separately read order?.customerPhone,
-          a flat field getOrder() never returns (the phone is nested under
-          order.customer.phone), so it never showed at all. */}
-      <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
-        <button
-          onClick={handlePrint}
-          disabled={isPrinting || !receiptData}
-          style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: isPrinting ? 'default' : 'pointer', fontWeight: 600, opacity: isPrinting || !receiptData ? 0.6 : 1 }}
-        >
-          {isPrinting ? '⏳ Printing…' : '🖨 Print'}
-        </button>
-        {order?.customer?.phone && (
-          <a
-            href={`https://wa.me/${String(order.customer.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(order?.netAmount ?? 0).toLocaleString('en-PK')}.`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#0F7A55', border: 'none', color: 'white', fontSize: '13px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
-          >
-            📱 WhatsApp
-          </a>
-        )}
-      </div>
-
-      {tableId && (
-        <div style={{ width: '100%', maxWidth: '420px', display: 'flex', gap: '8px', marginBottom: '8px' }}>
-          <button
-            onClick={async () => { await markCleaning(); router.push('/pos/tables') }}
-            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFF8EC', border: '1px solid rgba(245,158,11,0.3)', color: '#B4770B', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
-          >
-            🧹 Mark as Cleaning
-          </button>
-          <button
-            onClick={() => router.push(`/pos/order?type=dine-in&tableId=${tableId}&tableLabel=${tableLabel}`)}
-            style={{ flex: 1, height: '44px', borderRadius: '10px', backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontSize: '13px', cursor: 'pointer', fontWeight: 600 }}
-          >
-            + New Order {tableLabel}
-          </button>
-        </div>
-      )}
-
-      {/* New Order button */}
-      <button
-        onClick={() => router.push('/pos/home')}
-        style={{
-          width: '100%', maxWidth: '420px', height: '52px',
-          borderRadius: '12px', border: 'none',
-          backgroundColor: 'var(--pos-primary, #F59E0B)',
-          color: 'white', fontSize: '15px', fontWeight: 700,
-          cursor: 'pointer', marginBottom: '12px',
-          boxShadow: '0 4px 14px rgba(245,158,11,0.3)',
-        }}
-      >
-        ⚡ Start New Order
-      </button>
-
-      {/* Auto-redirect countdown */}
-      {autoRedirect && (
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ color: '#94A3B8', fontSize: '12px', margin: '0 0 4px' }}>
-            Returning to home in {countdown}s
-          </p>
-          <button
-            onClick={() => setAutoRedirect(false)}
-            style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}
-          >
-            Cancel auto-redirect
-          </button>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes scaleIn {
-          from { transform: scale(0.5); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
-    </div>
+    </main>
   )
 }
 

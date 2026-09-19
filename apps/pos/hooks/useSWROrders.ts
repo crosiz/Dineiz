@@ -77,7 +77,7 @@ export function useSWROrders({
   enabled = true,
 }: UseSWROrdersOptions): UseSWROrdersResult {
   // Composite key — one cache slot per (mode × branch)
-  const cacheKey = `${dataMode}-${branchId ?? 'none'}`;
+  const cacheKey = JSON.stringify([dataMode, branchId, myOrdersOnly ? cashierId : null, waiterId, sortOrder, historySearch]);
 
   // ── 1. Read IDB cache before query fires ──────────────────────────────────
   const [initialData, setInitialData] = useState<any[] | undefined>(undefined);
@@ -117,6 +117,7 @@ export function useSWROrders({
       const params = new URLSearchParams({ branchId });
       const res = await fetch(`${API_URL}/api/orders/live?${params}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
+      signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) throw new Error(`Live orders fetch failed (${res.status})`);
       const json = await res.json();
@@ -154,6 +155,7 @@ export function useSWROrders({
     });
     const res = await fetch(`${API_URL}/api/orders/history?${params}`, {
       headers: { Authorization: `Bearer ${getToken()}` },
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) throw new Error(`History orders fetch failed (${res.status})`);
     const json = await res.json();
@@ -177,7 +179,10 @@ export function useSWROrders({
 
   const { data: networkData, isFetching, refetch } = useQuery<any[]>({
     queryKey,
+    networkMode: 'always',
+    retry: false,
     queryFn: async () => {
+      if (!navigator.onLine) return (await readCache(cacheKey))?.data ?? [];
       const fresh = await fetchOrders();
       // Fire-and-forget write-back to IDB
       writeCache(cacheKey, fresh);

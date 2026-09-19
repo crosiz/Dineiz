@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store';
 import { useBrandingStore } from '@/lib/branding-store';
@@ -241,6 +242,7 @@ export default function PaymentModal({
     : parseFloat(((dynamicTotal * tipPercent) / 100).toFixed(2));
   const totalWithTip = dynamicTotal + tipAmount;
 
+  const paymentInFlight = useRef(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   // What was actually charged when payment succeeded — captured once so the
@@ -402,6 +404,7 @@ export default function PaymentModal({
   // PAYMENT_COLLECTED event below) — it has its own retry/backoff and
   // survives this modal closing, unlike the old inline fetch-then-queue.
   const submitPayment = async (payload: any) => {
+    if (paymentInFlight.current) return;
     // Never queue a PKR 0 payment — the server rejects it (422) and the order
     // silently bounces back onto the board. If we got here with no total,
     // the order's lines didn't resolve; tell the cashier to reopen it.
@@ -409,6 +412,7 @@ export default function PaymentModal({
       toast.error("Nothing to charge — this order's total came through as zero. Reopen it from Tickets.");
       return;
     }
+    paymentInFlight.current = true;
     setIsProcessing(true);
     try {
       const isCash = payload.method === 'CASH';
@@ -424,6 +428,7 @@ export default function PaymentModal({
         cashReceived: isCash ? payload.amount + (payload.change || 0) : undefined,
         change: payload.change || 0,
         taxAmount,
+        transactionRef: payload.transactionRef,
         payments: payload.method === 'SPLIT'
           ? payload.payments.map((p: any) => ({
               method: p.method,
@@ -438,8 +443,9 @@ export default function PaymentModal({
       // Paint the receipt now — this is the whole point of local-first.
       await handlePaymentSuccess(payload.method || 'SPLIT', tendered, payload.change || 0);
     } catch (e) {
-      toast.error('Payment submission failed. Please try again.');
+      toast.error(e instanceof Error ? e.message : 'Could not save payment. Check this order before trying again.');
     } finally {
+      paymentInFlight.current = false;
       setIsProcessing(false);
     }
   };
@@ -450,11 +456,13 @@ export default function PaymentModal({
       return;
     }
     if (activeMethod === 'CASH') {
+      if (!isCashValid) return;
       submitPayment({ method: 'CASH', amount: totalWithTip, change: changeDue, tip: tipAmount });
     } else if (activeMethod === 'CARD') {
       if (!authCode) { toast.error('Enter the authorization code from the card terminal.'); return; }
       submitPayment({ method: 'CARD', amount: totalWithTip, transactionRef: authCode, tip: tipAmount });
     } else if (activeMethod === 'SPLIT') {
+      if (!isSplitValid) return;
       submitPayment({
         method: 'SPLIT',
         payments: [
@@ -485,7 +493,7 @@ export default function PaymentModal({
 
   if (showSuccess && receiptSnapshot) {
     return (
-      <div className="fixed inset-0 bg-canvas flex flex-col items-center z-[60] overflow-y-auto py-10 px-4 animate-[overlay-in_160ms_ease-out]">
+      <Modal isOpen label="Payment received" onClose={handleDone} className="max-w-[520px]"><div className="flex flex-col items-center overflow-y-auto py-6 px-4">
         <span className="w-14 h-14 rounded-full bg-ok/10 text-ok grid place-items-center mb-3 shrink-0">
           <Check className="w-7 h-7" strokeWidth={2.5} />
         </span>
@@ -525,7 +533,7 @@ export default function PaymentModal({
             Done
           </button>
         </div>
-      </div>
+      </div></Modal>
     );
   }
 
@@ -550,21 +558,12 @@ export default function PaymentModal({
   const quick = [500, 1000, 2000, 5000];
   const keyCls = 'h-14 rounded-xl bg-sunken border border-line text-ink text-[20px] font-semibold tabular-nums hover:bg-hover active:scale-[0.97] transition';
   const segCls = (active: boolean) =>
-    `h-10 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+    `h-11 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
       active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
     }`;
 
-  // z-[110]: OrderDetailsModal renders this above its own z-[100] layer.
   return (
-    <div className="fixed inset-0 z-[110] flex items-end md:items-center justify-center md:p-4">
-      <div className="absolute inset-0 bg-ink/45 backdrop-blur-[2px] animate-[overlay-in_140ms_ease-out]" onClick={onClose} aria-hidden />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Charge order ${orderLabel}`}
-        className="relative w-full md:max-w-[1000px] h-[95dvh] md:h-[min(780px,calc(100dvh-32px))] flex flex-col md:flex-row bg-surface rounded-t-2xl md:rounded-2xl border border-line shadow-[0_24px_64px_rgba(15,23,42,0.2)] overflow-hidden animate-[dialog-in_200ms_cubic-bezier(0.16,1,0.3,1)]"
-      >
+    <Modal isOpen onClose={isProcessing ? undefined : onClose} label={`Charge order ${orderLabel}`} sheetOnMobile className="md:max-w-[1000px] h-[95dvh] md:h-[min(780px,calc(100dvh-32px))] md:flex-row">
         {/* ── The bill ─────────────────────────────────────────────────── */}
         <aside className="md:w-[360px] shrink-0 flex flex-col bg-canvas border-b md:border-b-0 md:border-r border-line max-h-[42%] md:max-h-none">
           <header className="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
@@ -578,7 +577,7 @@ export default function PaymentModal({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="md:hidden w-9 h-9 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+              className="md:hidden w-11 h-11 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
             >
               <X className="w-[18px] h-[18px]" />
             </button>
@@ -644,7 +643,7 @@ export default function PaymentModal({
         {/* ── Taking the money ─────────────────────────────────────────── */}
         <section className="flex-1 min-w-0 min-h-0 flex flex-col">
           <div className="px-5 md:px-6 pt-5 flex items-center gap-3">
-            <div className="flex-1 grid grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
+            <div className="flex-1 grid grid-cols-3 sm:grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
               {[
                 { method: 'CASH' as PaymentMethod, Icon: Banknote, label: 'Cash' },
                 { method: 'CARD' as PaymentMethod, Icon: CreditCard, label: 'Card' },
@@ -817,7 +816,7 @@ export default function PaymentModal({
                   { m: splitMethod1, setM: setSplitMethod1, value: splitAmount1, editable: true },
                   { m: splitMethod2, setM: setSplitMethod2, value: String(Math.round(splitNum2)), editable: false },
                 ].map((row, i) => (
-                  <div key={i} className="flex items-center gap-2.5">
+                  <div key={i} className="flex flex-col sm:flex-row items-stretch gap-2.5">
                     <div className="grid grid-cols-2 gap-0.5 p-1 rounded-xl bg-sunken border border-line w-[168px] shrink-0">
                       {(['CASH', 'CARD'] as const).map((m) => (
                         <button key={m} onClick={() => row.setM(m)} className={segCls(row.m === m)}>
@@ -879,7 +878,6 @@ export default function PaymentModal({
             </div>
           </footer>
         </section>
-      </div>
-    </div>
+    </Modal>
   );
 }

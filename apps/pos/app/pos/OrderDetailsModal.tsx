@@ -14,7 +14,7 @@ import { VoidItemBottomSheet } from './order/VoidItemBottomSheet';
 import PaymentModal from '@/components/PaymentModal';
 import { useViews } from '@/lib/core/views';
 import { useBrandingStore } from '@/lib/branding-store';
-import { markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
+import { assignWaiter, markReady, sendToKitchen, cancelOrder } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
 import { Loader2, PlusCircle, ReceiptText, Trash2, UserPlus, X, XCircle } from 'lucide-react';
@@ -212,24 +212,21 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
     // cashier about what they already did. Shipping to the server, with
     // retry/backoff, is the outbox's job now (lib/core/outbox.ts's
     // UPDATE_STATUS task) — it runs independently of this modal.
-    setOrder((prev: any) => (prev ? { ...prev, status } : prev));
-    if (status === 'READY') await markReady(orderId!);
-    else if (status === 'IN_KITCHEN') await sendToKitchen(orderId!);
-    else if (status === 'CANCELLED') await cancelOrder(orderId!);
-    onChanged?.();
-    toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : status === 'CANCELLED' ? 'Order cancelled' : 'Order updated');
-    setIsUpdating(false);
+    try {
+      if (status === 'READY') await markReady(orderId!);
+      else if (status === 'IN_KITCHEN') await sendToKitchen(orderId!);
+      else if (status === 'CANCELLED') await cancelOrder(orderId!);
+      setOrder((prev: any) => prev ? { ...prev, status } : prev);
+      onChanged?.();
+      toast.success(status === 'READY' ? 'Order marked ready' : status === 'IN_KITCHEN' ? 'Sent to kitchen' : 'Order updated');
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Could not save this change'); }
+    finally { setIsUpdating(false); }
   };
 
   const handleAssign = async (waiter: { id: string; name: string } | null) => {
     setIsUpdating(true);
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}/assign`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ waiterId: waiter?.id ?? null, waiterName: waiter?.name ?? null }),
-      });
-      if (!res.ok) throw new Error();
+      await assignWaiter(orderId!, waiter?.id ?? null, waiter?.name ?? null);
       toast.success(waiter ? `Assigned to ${waiter.name}` : 'Waiter unassigned');
       setAssignOpen(false);
       // Reflect it locally too so an in-store order updates without a re-pull.
@@ -325,7 +322,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   {order.assignedWaiter?.name && ` · ${order.assignedWaiter.name}`}
                 </p>
               </div>
-              <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-sunken text-ink-3">
+              <button aria-label="Close order details" onClick={onClose} className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-sunken text-ink-3">
                 <X className="w-[20px] h-[20px]" />
               </button>
             </div>
@@ -480,9 +477,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
 
       {/* Assign waiter sheet */}
       {assignOpen && (
-        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setAssignOpen(false)} />
-          <div className="relative w-full sm:max-w-[360px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl p-5 max-h-[70dvh] overflow-y-auto">
+        <Modal isOpen onClose={() => setAssignOpen(false)} label="Assign waiter" sheetOnMobile className="max-w-[440px] p-5 overflow-y-auto">
             <h3 className="font-bold text-[16px] text-ink mb-4">Assign Waiter</h3>
             <div className="space-y-1.5">
               <button onClick={() => handleAssign(null)} className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-sunken text-ink-3 font-medium text-[14px]">
@@ -494,8 +489,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                 </button>
               ))}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {voidState.isOpen && (

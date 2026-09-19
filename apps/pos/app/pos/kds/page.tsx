@@ -1,5 +1,7 @@
 'use client';
 
+import { Modal } from '@/components/ui/Modal';
+import { OrderTypeBadge } from '@/components/OrderStatusBadge';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/lib/store';
@@ -21,6 +23,8 @@ import {
 } from 'lucide-react';
 import { DineizLogo } from '@/components/ui/DineizLogo';
 import { API_URL } from '@/lib/api';
+import { cachedRead } from '@/lib/cached-read';
+import { recordKitchenReady, kitchenReadyOperations } from '@/lib/offline-kitchen';
 
 
 interface OrderItem {
@@ -94,6 +98,7 @@ export default function KDSPage() {
   const { socket, isConnected } = useSocket();
 
   const [isMounted, setIsMounted] = useState(false);
+  const [offlineSnapshot, setOfflineSnapshot] = useState(false);
   const [orders, setOrders] = useState<KdsOrder[]>([]);
   const [stations, setStations] = useState<KdsStationInfo[]>([]);
   const [summary, setSummary] = useState<KdsSummary | null>(null);
@@ -114,20 +119,14 @@ export default function KDSPage() {
     if (!session?.branchId) return;
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_URL}/api/kds/orders?branchId=${session.branchId}${activeStationId ? `&stationId=${activeStationId}` : ''}`, {
-        headers: {
-          'Authorization': `Bearer ${getToken()}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // POS KDS only shows pending and cooking orders, not ready orders
-        setOrders(data.orders.filter((o: any) => o.status !== 'READY' && o.status !== 'COMPLETED'));
-        setStations(data.stations);
-        setSummary(data.summary);
-      } else {
-        console.error('Failed to fetch KDS data', await res.text());
-      }
+      const result = await cachedRead<any>(`/api/kds/orders?branchId=${session.branchId}${activeStationId ? `&stationId=${activeStationId}` : ''}`);
+      const data = result.data;
+      const ready = await kitchenReadyOperations();
+      const hidden = new Set(ready.filter(op => op.state !== 'rejected').map(op => op.orderId));
+      setOrders((data.orders || []).filter((o: any) => o.status !== 'READY' && o.status !== 'COMPLETED' && !hidden.has(o.id)));
+      setStations(data.stations || []);
+      setSummary(data.summary);
+      setOfflineSnapshot(result.offline);
     } catch (error) {
       console.error(error);
     } finally {
@@ -202,7 +201,7 @@ export default function KDSPage() {
   };
 
   return (
-    <div className={`flex flex-col h-screen select-none font-body-md text-ink bg-canvas overflow-hidden font-size-${settings.fontSize}`}>
+    <div className={`flex flex-col h-dvh select-none font-body-md text-ink bg-canvas overflow-hidden font-size-${settings.fontSize}`}>
       <style dangerouslySetInnerHTML={{ __html: `
         .pulse-green { animation: pulseGreen 1.5s infinite; }
         @keyframes pulseGreen { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
@@ -217,6 +216,7 @@ export default function KDSPage() {
         .font-size-large { --kds-font-base: 16px; --kds-font-lg: 20px; --kds-font-xl: 24px; }
       `}} />
 
+      {offlineSnapshot && <p role="status" className="shrink-0 bg-warn/10 border-b border-warn/25 p-3 text-sm text-ink">Offline · Saved kitchen tickets only. New orders from other terminals arrive when the connection returns.</p>}
       {/* Top Bar (72px) — same min-w-[280px]/min-w-[300px] overflow this
           shares with POSTopBar.tsx, fixed the same way: no width floors,
           secondary text hidden below sm, safe-area gutter added above
@@ -255,13 +255,13 @@ export default function KDSPage() {
 
           <div className="w-[1px] h-6 bg-hover mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>
 
-          <button onClick={fetchDashboard} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
+          <button aria-label="Refresh kitchen" onClick={fetchDashboard} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
             <RefreshCw size={20} className="text-ink-2" />
           </button>
-          <button onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
+          <button aria-label="Kitchen settings" onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
             <Settings size={20} className="text-ink-2" />
           </button>
-          <button onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200 shrink-0">
+          <button aria-label="Log out" onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200 shrink-0">
             <LogOut size={16} />
             <span className="hidden md:inline text-[14px] font-medium">Log Out</span>
           </button>
@@ -306,7 +306,7 @@ export default function KDSPage() {
         ) : orders.length === 0 ? (
           <div className="h-full flex items-center justify-center text-ink-3">No active orders</div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 auto-rows-max">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max">
             {orders.map(order => (
               <OrderCard 
                 key={order.id} 
@@ -325,8 +325,8 @@ export default function KDSPage() {
       </main>
 
       {/* Bottom Status Bar */}
-      <footer className="h-[32px] bg-white border-t border-line flex items-center justify-between px-4 shrink-0 text-[12px] text-ink-3">
-        <div className="flex gap-4">
+      <footer className="min-h-11 bg-white border-t border-line flex flex-wrap gap-2 items-center justify-between px-4 py-2 shrink-0 text-[12px] text-ink-3">
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
           <span>Queue: {summary?.inQueue || 0}</span>
           <span>In Progress: {summary?.inProgress || 0}</span>
           <span>Completed Today: {summary?.completedToday || 0}</span>
@@ -349,11 +349,10 @@ export default function KDSPage() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-[400px] max-h-[85vh] overflow-y-auto bg-white border border-line rounded-xl p-6 shadow-2xl">
+<Modal isOpen onClose={() => setShowSettings(false)} label="Kitchen settings" className="max-w-[420px] p-5 overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-[20px] font-semibold text-ink">KDS Settings</h2>
-              <button onClick={() => setShowSettings(false)} className="text-ink-3 hover:text-ink">
+              <button aria-label="Close kitchen settings" onClick={() => setShowSettings(false)} className="w-11 h-11 grid place-items-center text-ink-3 hover:text-ink">
                 <X size={24} />
               </button>
             </div>
@@ -397,7 +396,7 @@ export default function KDSPage() {
                      <button 
                        key={sz}
                        onClick={() => saveSettings({...settings, fontSize: sz as any})}
-                       className={`flex-1 py-1.5 rounded-lg border capitalize transition-colors ${
+                       className={`flex-1 min-h-11 rounded-lg border capitalize transition-colors ${
                          settings.fontSize === sz 
                            ? 'border-brand bg-brand/10 text-brand' 
                            : 'border-line-strong text-ink-3 hover:border-ink-4'
@@ -409,8 +408,7 @@ export default function KDSPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
@@ -500,7 +498,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   useEffect(() => {
     const calcTime = () => {
       const diffMs = Date.now() - new Date(order.createdAt).getTime();
-      setElapsedSecs(Math.floor(diffMs / 1000));
+      setElapsedSecs(Math.max(0, Math.floor(diffMs / 1000)));
     };
     calcTime();
     const int = setInterval(calcTime, 1000);
@@ -514,43 +512,31 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
     timeStr = `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
   }
 
-  const handleMarkReady = () => {
-    // Remove it from the board immediately — no artificial delay. The PATCH
-    // fires in the background and never gates this; a slide-out animation
-    // isn't worth trading away instant removal for.
-    toast.success(`Order #${order.orderNumber} bumped`);
-    onReady(order.id);
-
-    fetch(`${API_URL}/api/kds/orders/${order.id}/bump`, {
-      method: 'PATCH',
-      // credentials:'include' alone was the bug — the POS sets no session
-      // cookie, so this call carried no auth at all and likely 401'd.
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
-      body: JSON.stringify({}),
-      credentials: 'include',
-    }).then((res) => {
-      if (!res.ok) throw new Error('Failed to bump order');
-    }).catch(() => {
-      toast.error(`Order #${order.orderNumber} failed to bump — restored`);
-      onReadyFailed(order);
-    });
+  const handleMarkReady = async () => {
+    try {
+      await recordKitchenReady(order.id);
+      toast.success(`Order #${order.orderNumber} marked ready on this device`);
+      onReady(order.id);
+    } catch {
+      toast.error('Could not save this change. The order has been kept on screen.');
+    }
   };
 
   let typeBadgeColor = 'border-blue-500 text-blue-400 bg-blue-500/10';
   if (order.type === 'TAKEAWAY') typeBadgeColor = 'border-purple-500 text-purple-400 bg-purple-500/10';
   if (order.type === 'DELIVERY') typeBadgeColor = 'border-orange-500 text-orange-400 bg-orange-500/10';
 
-  let headerBg = 'bg-warn';
+  let headerBg = 'bg-surface';
   let headerText = 'text-black';
   if (elapsedMin >= rushThreshold) {
-    headerBg = 'bg-red-500 pulse-red';
-    headerText = 'text-white';
+    headerBg = 'bg-danger/10';
+    headerText = 'text-danger';
   } else if (elapsedMin >= 10) {
-    headerBg = 'bg-amber-500';
+    headerBg = 'bg-warn/10';
   }
 
   return (
-    <article className="bg-white rounded-xl shadow-md border border-line flex flex-col h-[340px] overflow-hidden">
+    <article className="bg-white rounded-xl border border-line flex flex-col h-[340px] overflow-hidden">
       {/* Header */}
       <div className={`${headerBg} ${headerText} p-3 flex justify-between items-center transition-colors duration-500 shrink-0`}>
         <div className="flex items-baseline gap-2">
@@ -565,9 +551,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
       
       <div className="p-3 flex flex-col flex-1 overflow-hidden">
         <div className="flex justify-between items-center mb-3 shrink-0">
-          <span className={`px-2 py-0.5 rounded border text-[10px] font-bold tracking-widest uppercase ${typeBadgeColor}`}>
-            {order.type.replace('-', ' ')}
-          </span>
+<OrderTypeBadge type={order.type} />
           <div className="flex items-center gap-1.5 text-warn text-[12px] font-bold">
             <UtensilsCrossed className="w-[16px] h-[16px]" />
             <span>Cooking</span>
@@ -625,7 +609,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
           className="flex-[1.2] h-11 rounded-md bg-ok hover:bg-ok text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
         >
           <CheckCircle2 className="w-[16px] h-[16px]" />
-          Bump
+          Mark ready
         </button>
       </div>
     </article>
