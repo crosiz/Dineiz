@@ -13,7 +13,7 @@ export type IllustrationKind =
   | 'dine-in' | 'takeaway' | 'tickets'
   | 'kitchen' | 'stock' | 'floor' | 'order' | 'shift-done'
   | 'payment' | 'open-shift' | 'break' | 'lost' | 'error'
-  | 'cashier' | 'waiter' | 'rider' | 'manager';
+  | 'cashier' | 'waiter' | 'rider' | 'manager' | 'on-hold';
 
 const ACCENT = 'var(--illustration-accent)';
 
@@ -399,11 +399,34 @@ function Manager() {
   </>;
 }
 
+/** Order slips waiting on the kitchen rail, one paused. For held orders. */
+function OnHold() {
+  return <>
+    {shadow(80, 110, 46, 7)}
+    {/* the rail, with its two end brackets */}
+    <path d="M30 24v10M130 24v10" stroke="#9CA8B6" strokeWidth="3" strokeLinecap="round" />
+    <rect x="26" y="26" width="108" height="7" rx="3.5" fill="#CFD8E1" stroke="#B9C5D1" />
+    {/* a slip behind */}
+    <path d="M94 33h26v48l-4.3-3-4.3 3-4.4-3-4.3 3-4.4-3-4.3 3V33Z" fill="#E9EEF2" stroke="#CBD5DF" strokeLinejoin="round" />
+    <path d="M100 44h14M100 51h10" stroke="#D5DDE5" strokeWidth="2.5" strokeLinecap="round" />
+    {/* the held slip in front */}
+    <path d="M46 33h42v68l-5.25-3-5.25 3-5.25-3-5.25 3-5.25-3-5.25 3-5.25-3-5.25 3V33Z" fill="#FFF" stroke="#C7D1DC" strokeLinejoin="round" />
+    <rect x="53" y="44" width="20" height="4.5" rx="2" fill={ACCENT} />
+    <path d="M53 57h28M53 65h20M53 73h24" stroke="#CCD5DE" strokeWidth="3" strokeLinecap="round" />
+    <rect x="61" y="23" width="12" height="13" rx="2.5" fill="#9CA8B6" />
+    {/* pause badge */}
+    <circle cx="90" cy="88" r="12.5" fill={ACCENT} />
+    <rect x="84.5" y="81.5" width="3.8" height="13" rx="1.2" fill="#FFF" />
+    <rect x="91.7" y="81.5" width="3.8" height="13" rx="1.2" fill="#FFF" />
+  </>;
+}
+
 export function ServiceIllustration({ kind, className = '' }: { kind: IllustrationKind; className?: string }) {
   const style = { '--illustration-accent': 'var(--pos-primary)' } as CSSProperties;
   return (
     <svg viewBox="0 0 160 128" fill="none" aria-hidden="true" focusable="false" className={className} style={style}>
       {kind === 'kitchen' ? <Kitchen />
+        : kind === 'on-hold' ? <OnHold />
         : kind === 'cashier' ? <Cashier />
         : kind === 'waiter' ? <Waiter />
         : kind === 'rider' ? <Rider />

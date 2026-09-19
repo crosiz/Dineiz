@@ -146,6 +146,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   }, []);
   const [filter, setFilter] = useState<string>('ALL');
+  // Home's On hold card links here with ?filter=held; open on that filter
+  // rather than All. Read from the URL directly, like the history-mode
+  // signal above, so this screen needs no Suspense boundary.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('filter') === 'held') setFilter('ON_HOLD');
+  }, []);
   const [sourceFilter, setSourceFilter] = useState<'ALL' | 'WHATSAPP'>('ALL');
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest' | 'table'>('oldest');
   const [historySearch, setHistorySearch] = useState('');
