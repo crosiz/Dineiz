@@ -22,6 +22,7 @@ async function prepare(page: Page, role = 'CASHIER') {
   }, { openedAt, branding, role });
   await page.route('**/socket.io/**', route => route.abort());
   await page.route('**/api/**', async route => {
+    if (route.request().method() !== 'GET') return route.fulfill({ status: 503, json: { error: 'Fixture blocks all external writes' } });
     const url = new URL(route.request().url()), path = url.pathname;
     let data: any = {};
     if (path.endsWith('/menu')) data = categories;
@@ -105,7 +106,10 @@ test('a paid offline order stays durable and is not charged twice', async ({ pag
   const payment = page.getByRole('dialog', { name: /Charge order/ });
   await expect(payment).toBeVisible();
   await payment.getByRole('button', { name: 'Exact', exact: true }).click();
-  await payment.getByRole('button', { name: /^Collect PKR/ }).click();
+  await payment.getByRole('button', { name: /^Collect PKR/ }).evaluate(button => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
   await expect(page.getByRole('dialog', { name: 'Payment received', exact: true })).toBeVisible();
   const payments = await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => { const r = indexedDB.open('DineizPOS_EventStore_v1'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
@@ -172,7 +176,8 @@ test('production app reloads and opens cached screens with the network disconnec
   // These pages were never visited by this browser; their shells must already exist.
   for (const screen of ['home', 'tables', 'tickets', 'settings?section=sync', 'stock', 'admin', 'admin/reports/shift', 'kds']) {
     await page.goto('/pos/' + screen);
-    await expect(page.locator('main').first()).toBeVisible();
+    await expect(page.locator('main:visible, h1:visible, h2:visible').first()).toBeVisible();
+    if (screen === 'tickets') await expect(page.getByTestId('ticket-card')).toHaveCount(8);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.getByText(/Application error|This site can’t be reached/i)).toHaveCount(0);
   }
@@ -194,6 +199,75 @@ test('a rejected payment is visible and blocks an apparently empty shift close',
   await page.goto('/pos/shift/close');
   const close = page.getByRole('dialog', { name: 'Close shift', exact: true });
   await expect(close.getByText(/need.*review|review.*required/i).first()).toBeVisible({ timeout: 20000 });
-  await expect(close.getByRole('button', { name: /Close shift/i }).last()).toBeDisabled();
+  await close.getByRole('textbox', { name: 'PKR', exact: true }).fill('5000');
+  await expect(close.locator('footer button').last()).toBeDisabled();
   await page.screenshot({ path: info.outputPath('rejected-payment-close.png') });
+});
+
+test('table filters, plan switching and ticket search work on a phone', async ({ page }, info) => {
+  await prepare(page);
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto('/pos/tables');
+  await expect(page.getByTestId('table-row')).toHaveCount(12);
+  await page.getByRole('button', { name: /^Occupied/ }).click();
+  await expect(page.getByTestId('table-row')).toHaveCount(4);
+  await page.getByRole('button', { name: /^Available/ }).click();
+  await expect(page.getByTestId('table-row')).toHaveCount(8);
+  await page.getByRole('button', { name: /^All tables/ }).click();
+  await page.getByRole('textbox', { name: 'Find a table' }).fill('12');
+  await expect(page.getByTestId('table-row')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Show floor plan', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Table 12, 4 seats, free', exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('table-search-plan.png') });
+  await page.goto('/pos/tickets');
+  await page.getByRole('textbox', { name: 'Search tickets' }).fill('A-1809-002');
+  await expect(page.getByTestId('ticket-card')).toHaveCount(1);
+  await expect(page.getByTestId('ticket-card')).toContainText('Takeaway');
+});
+
+test('a locally paid order is shown as awaiting sync, not as a second payment to collect', async ({ page }, info) => {
+  await prepare(page);
+  await page.route('**/api/shifts/shift-fixture/summary', route => route.fulfill({ json: {
+    shiftId: 'shift-fixture', openedAt, totalOrders: 0, totalSales: 0, totalCash: 0, expectedCash: 5000, openingFloat: 5000,
+    paidOrders: [], unpaidOrders: 1, unpaidValue: 26250, unpaidOrdersList: [orders[0]],
+  } }));
+  await page.goto('/pos/tickets');
+  await page.getByTestId('ticket-card').filter({ hasText: '50 items' }).getByRole('heading').click();
+  await page.getByRole('dialog', { name: 'Order details', exact: true }).getByRole('button', { name: 'Collect Payment', exact: true }).click();
+  const payment = page.getByRole('dialog', { name: /Charge order/ });
+  await payment.getByRole('button', { name: 'Exact', exact: true }).click();
+  await payment.getByRole('button', { name: /^Collect PKR/ }).click();
+  await expect(page.getByRole('dialog', { name: 'Payment received', exact: true })).toBeVisible();
+  await page.goto('/pos/shift/close');
+  const close = page.getByRole('dialog', { name: 'Close shift', exact: true });
+  await expect(close.getByRole('button', { name: 'Sync & recheck', exact: true })).toBeVisible({ timeout: 20000 });
+  await expect(close.getByRole('button', { name: 'Review order', exact: true })).toHaveCount(0);
+  await expect(close.getByText(/Do not collect.*twice/i)).toBeVisible();
+  await page.screenshot({ path: info.outputPath('paid-order-awaiting-sync.png') });
+});
+
+test('legacy saved payment recovers its missing order and survives another offline reload', async ({ page, context }) => {
+  test.skip(!process.env.POS_AUDIT_URL, 'Offline reload requires the production service worker.');
+  await prepare(page);
+  await page.goto('/pos/home');
+  await expect(page.getByTestId('ticket-card').first()).toBeVisible();
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const r = indexedDB.open('DineizPOS_EventStore_v1'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(['views', 'events'], 'readwrite');
+      tx.objectStore('views').clear(); // Isolated browser fixture; no restaurant data.
+      tx.objectStore('events').put({ id: 'legacy-paid-fixture', seq: 999, type: 'PAYMENT_COLLECTED', aggregateType: 'ORDER', aggregateId: 'order-0', shiftId: 'shift-fixture', branchId: 'branch-fixture', tenantId: 'tenant-fixture', actorId: 'cashier-fixture', actorName: 'Test Cashier', terminalId: 'fixture', payload: { method: 'CASH', total: 26250 }, dependsOn: [], clientTime: new Date().toISOString(), syncState: 'DEGRADED', attempts: 1, lastError: 'Fixture offline payment' });
+      tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => reject(tx.error);
+    });
+  });
+  await page.goto('/pos/tickets');
+  await expect(page.getByTestId('ticket-card')).toHaveCount(7);
+  await expect(page.getByTestId('ticket-card').filter({ hasText: '#A-1809-001' })).toHaveCount(0);
+  await page.unroute('**/api/**');
+  await page.route('**/api/**', route => route.abort());
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByTestId('ticket-card')).toHaveCount(7);
+  await expect(page.getByTestId('ticket-card').filter({ hasText: '#A-1809-001' })).toHaveCount(0);
 });

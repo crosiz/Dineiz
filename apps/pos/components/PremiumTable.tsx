@@ -122,13 +122,13 @@ interface Seat {
   o: 'h' | 'v' | 'd';
 }
 
-const SEAT_LONG = 18;
-const SEAT_SHORT = 6;
-const SEAT_GAP = 5;
+const SEAT_LONG = 22;
+const SEAT_SHORT = 10;
+const SEAT_GAP = 4;
 
 function calculateSeats(capacity: number, shape: string, w: number, h: number): Seat[] {
   const seats: Seat[] = [];
-  const cap = Math.max(1, capacity);
+  const cap = Math.max(1, Math.min(20, capacity));
   const isRound = shape.toLowerCase() === 'round' || shape.toLowerCase() === 'table_round';
   const P = CHAIR_PAD;
 
@@ -143,28 +143,19 @@ function calculateSeats(capacity: number, shape: string, w: number, h: number): 
     return seats;
   }
 
-  let topBottom: number;
-  let sides: number;
-  if (cap <= 2) { topBottom = 1; sides = 0; }
-  else if (cap <= 4) { topBottom = 1; sides = 1; }
-  else { sides = 1; topBottom = Math.floor((cap - 2) / 2); }
-
-  const topY = P - SEAT_GAP - SEAT_SHORT;
-  const bottomY = P + h + SEAT_GAP;
-  const leftX = P - SEAT_GAP - SEAT_SHORT;
-  const rightX = P + w + SEAT_GAP;
-
-  for (let i = 0; i < topBottom; i++) {
-    const cx = P + (w * (i + 1)) / (topBottom + 1);
-    seats.push({ x: Math.round(cx - SEAT_LONG / 2), y: topY, o: 'h' });
-    seats.push({ x: Math.round(cx - SEAT_LONG / 2), y: bottomY, o: 'h' });
+  const sideCount = cap > 2 ? 2 : 0;
+  const topCount = Math.ceil((cap - sideCount) / 2);
+  const bottomCount = Math.floor((cap - sideCount) / 2);
+  for (const [count, y] of [[topCount, P - SEAT_GAP - SEAT_SHORT], [bottomCount, P + h + SEAT_GAP]]) {
+    for (let i = 0; i < count; i++) {
+      seats.push({ x: Math.round(P + w * (i + 1) / (count + 1) - SEAT_LONG / 2), y, o: 'h' });
+    }
   }
-  for (let i = 0; i < sides; i++) {
-    const cy = P + (h * (i + 1)) / (sides + 1);
-    seats.push({ x: leftX, y: Math.round(cy - SEAT_LONG / 2), o: 'v' });
-    seats.push({ x: rightX, y: Math.round(cy - SEAT_LONG / 2), o: 'v' });
+  if (sideCount) {
+    seats.push({ x: P - SEAT_GAP - SEAT_SHORT, y: P + h / 2 - SEAT_LONG / 2, o: 'v' });
+    seats.push({ x: P + w + SEAT_GAP, y: P + h / 2 - SEAT_LONG / 2, o: 'v' });
   }
-  return seats;
+  return seats.slice(0, cap);
 }
 
 export function PremiumTable({
@@ -201,16 +192,17 @@ export function PremiumTable({
       data-testid="table-node"
       onClick={onClick}
       style={{ width: width + CHAIR_PAD * 2, height: height + CHAIR_PAD * 2, position: 'relative', userSelect: 'none', ...style }}
-      className={`group cursor-pointer ${className}`}
+      className={`group cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${className}`}
       role="button"
       tabIndex={0}
-      aria-label={`${label}, ${norm.replace('_', ' ').toLowerCase()}`}
+      aria-label={`Table ${label}, ${capacity} seats, ${norm.replace('_', ' ').toLowerCase()}`}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
     >
       {seats.map((s, i) => (
         <span
           key={i}
           aria-hidden
-          className={`absolute rounded-full ${tone.seat}`}
+          className={`absolute rounded-[4px] border border-black/[0.06] shadow-[0_1px_1px_rgba(15,23,42,0.06)] ${tone.seat}`}
           style={{
             left: s.x,
             top: s.y,
@@ -222,11 +214,12 @@ export function PremiumTable({
 
       <div
         style={{ left: CHAIR_PAD, top: CHAIR_PAD, width, height, borderRadius }}
-        className={`absolute z-10 flex flex-col items-center justify-center text-center border-[1.5px] transition-[transform,box-shadow] duration-150 group-hover:shadow-[0_4px_14px_rgba(15,23,42,0.10)] ${tone.surface} ${
+        className={`absolute z-10 flex flex-col items-center justify-center text-center border-[1.5px] shadow-[0_3px_0_0_rgba(148,163,184,0.18),0_5px_8px_-5px_rgba(15,23,42,0.12)] transition-[transform,box-shadow] duration-150 group-hover:shadow-[0_4px_14px_rgba(15,23,42,0.10)] ${tone.surface} ${
           isSelected ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas' : ''
         }`}
       >
-        <span className={`text-[15px] font-semibold leading-none tracking-tight ${tone.label}`}>{label}</span>
+        <span aria-hidden className="absolute inset-[3px] border border-white/70 pointer-events-none" style={{ borderRadius }} />
+        <span className={`text-[17px] font-semibold leading-none tracking-tight ${tone.label}`}>{label}</span>
         <span className={`mt-1.5 text-[11px] font-medium leading-none tabular-nums ${tone.sub}`}>
           {tone.caption(elapsed, capacity)}
         </span>

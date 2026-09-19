@@ -33,6 +33,7 @@ import {
   Layers,
   Map as MapIcon,
   Rows3,
+  Search,
   User,
   UserPlus,
 } from 'lucide-react';
@@ -153,17 +154,14 @@ export default function ClientTableMap() {
   // narrow room, or more tables than fit legibly at any zoom. Remembered per
   // terminal so a waiter who prefers one isn't re-choosing every shift.
   const [narrowView, setNarrowView] = useState<'plan' | 'list'>('list');
+  const [wideView, setWideView] = useState<'plan' | 'list'>('plan');
+  const [tableSearch, setTableSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const showList = isNarrow ? narrowView === 'list' : wideView === 'list';
   useEffect(() => {
     const saved = localStorage.getItem('pos_tables_view');
     if (saved === 'list' || saved === 'plan') setNarrowView(saved);
   }, []);
-  const toggleNarrowView = () => {
-    setNarrowView((v) => {
-      const next = v === 'plan' ? 'list' : 'plan';
-      localStorage.setItem('pos_tables_view', next);
-      return next;
-    });
-  };
 
   // ── Canvas zoom & pan ───────────────────────────────────────────────────
   //
@@ -213,57 +211,7 @@ export default function ClientTableMap() {
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
 
 
-  // Status Legend Component for POSTopBar. hidden below sm: at phone width
-  // POSTopBar's rightActions slot has only ~40-95px free once the always-
-  // visible avatar/sync cluster takes its share, and this pill wants ~360px
-  // unwrapped — rather than a barely-discoverable horizontal-scroll sliver,
-  // it's dropped in favor of the table colors on the canvas itself (which
-  // this legend is only a supplementary key for; tapping a table also shows
-  // its status by name).
-  const legendElement = useMemo(
-    () => {
-      const counts: Record<string, number> = {};
-      for (const t of tables) {
-        const st = String(t.status || 'FREE').toUpperCase();
-        counts[st] = (counts[st] || 0) + 1;
-      }
-      return (
-        <div className="hidden sm:flex items-center gap-3.5 h-9 px-3 rounded-lg border border-line bg-surface text-[12.5px] text-ink-3">
-          {(['FREE', 'OCCUPIED', 'BILL_REQUESTED', 'RESERVED', 'DIRTY'] as const).map((st) => (
-            <span key={st} className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className={`w-2 h-2 rounded-full ${TABLE_TONE[st].dot}`} />
-              <span className="font-semibold text-ink-2 tabular-nums">{counts[st] || 0}</span>
-              <span>{TABLE_TONE[st].label.charAt(0).toUpperCase() + TABLE_TONE[st].label.slice(1)}</span>
-            </span>
-          ))}
-        </div>
-      );
-    },
-    [tables]
-  );
-
-  // Configure TopBar explicitly without duplicate titles or clutter
-  useTopBar({
-    pageTitle: 'Floor Plan',
-    rightActions: (
-      <div className="flex items-center gap-2">
-        {legendElement}
-        {/* Phone only — there is room for the plan on anything wider, so the
-            choice doesn't arise there and the control shouldn't either. */}
-        {isNarrow && (
-          <button
-            onClick={toggleNarrowView}
-            title={narrowView === 'plan' ? 'Show as a list' : 'Show the floor plan'}
-            aria-label={narrowView === 'plan' ? 'Show tables as a list' : 'Show the floor plan'}
-            className="grid place-items-center w-11 h-11 rounded-xl border border-line bg-surface text-ink-2 active:bg-sunken transition-colors"
-          >
-            {narrowView === 'plan' ? <Rows3 className="w-[18px] h-[18px]" /> : <MapIcon className="w-[18px] h-[18px]" />}
-          </button>
-        )}
-      </div>
-    ),
-    showBackButton: false,
-  });
+  useTopBar({ pageTitle: 'Tables', showBackButton: false });
 
   // Refresh table reference data from the server into the shared store —
   // same function POSLayout.tsx calls at bootstrap and on table:status_changed;
@@ -724,7 +672,7 @@ export default function ClientTableMap() {
     // this dep the effect wouldn't re-run: no fit, no ResizeObserver, and the
     // floor sat at its initial translate(0,0) scale(1) in the corner.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFloor, floorTables.length, isNarrow, narrowView]);
+  }, [activeFloor, floorTables.length, isNarrow, narrowView, wideView]);
 
   // The table detail sheets and modals, shared by both the canvas and the
   // phone list — they are driven by `selectedTable`, not by which layout is
@@ -1013,36 +961,43 @@ export default function ClientTableMap() {
     </>
   );
 
-  // The floor plan is the view on every screen size, phones included — a waiter
-  // navigates by where a table physically is, and taking that away costs more
-  // than the cramped rendering does. What a phone needs is not a different
-  // screen but a legible one: `computeFit` holds a minimum zoom below `sm` so
-  // tables never shrink to unreadable, and you pan to reach the rest.
-  //
-  // The list stays available behind the toggle in the header for the case the
-  // plan is genuinely bad at — a long narrow room, or a floor with more tables
-  // than fits legibly at any zoom.
-  if (isNarrow && narrowView === 'list') {
+  const matchesTable = (t: { label: string; status?: string }) =>
+    (!tableSearch.trim() || t.label.toLowerCase().includes(tableSearch.trim().toLowerCase())) &&
+    (statusFilter === 'ALL' || t.status?.toUpperCase() === statusFilter);
+  const visibleTables = floorTables.filter(matchesTable);
+  const tableToolbar = (
+    <div className="shrink-0 bg-surface border-b border-line px-4 sm:px-6 py-3 space-y-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="relative w-full sm:w-72 sm:shrink-0">
+          <Search size={17} className="absolute left-3 top-3.5 text-ink-3" />
+          <input aria-label="Find a table" placeholder="Find a table" value={tableSearch} onChange={e => setTableSearch(e.target.value)} className="w-full h-11 rounded-lg border border-line bg-canvas pl-10 pr-3 text-[16px] focus:outline-none focus:ring-2 focus:ring-brand/30" />
+        </label>
+        <select aria-label="Choose floor" value={activeFloor} onChange={e => setActiveFloor(Number(e.target.value))} className="h-11 min-w-0 rounded-lg border border-line bg-surface px-3 text-sm font-medium">
+          {floors.map(f => <option key={f} value={f}>Floor {f}</option>)}
+        </select>
+        <div className="inline-flex ml-auto rounded-lg border border-line bg-canvas p-1">
+          {(['list', 'plan'] as const).map(mode => <button key={mode} aria-pressed={showList === (mode === 'list')} aria-label={mode === 'list' ? 'Show table cards' : 'Show floor plan'} onClick={() => { if (isNarrow) { setNarrowView(mode); localStorage.setItem('pos_tables_view', mode); } else setWideView(mode); }} className={`h-11 px-3 rounded-md inline-flex items-center gap-2 text-sm font-medium ${showList === (mode === 'list') ? 'bg-surface text-ink shadow-sm' : 'text-ink-3'}`}>
+            {mode === 'list' ? <Rows3 size={17} /> : <MapIcon size={17} />}<span className="hidden sm:inline">{mode === 'list' ? 'Cards' : 'Floor plan'}</span>
+          </button>)}
+        </div>
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar" role="group" aria-label="Filter tables by status">
+        {(['ALL', 'FREE', 'OCCUPIED', 'BILL_REQUESTED', 'RESERVED', 'DIRTY'] as const).map(status => {
+          const count = status === 'ALL' ? floorTables.length : floorTables.filter(t => t.status?.toUpperCase() === status).length;
+          const label = status === 'ALL' ? 'All tables' : status === 'FREE' ? 'Available' : status === 'BILL_REQUESTED' ? 'Bill requested' : status === 'DIRTY' ? 'To clean' : status === 'RESERVED' ? 'Reserved' : 'Occupied';
+          return <button key={status} aria-pressed={statusFilter === status} onClick={() => setStatusFilter(status)} className={`h-11 shrink-0 px-3 inline-flex items-center gap-2 rounded-lg text-[13px] font-medium border ${statusFilter === status ? 'bg-ink text-white border-ink' : 'border-transparent text-ink-3 hover:bg-canvas'}`}>
+            {status !== 'ALL' && <span className={`w-1.5 h-1.5 rounded-full ${TABLE_TONE[status].dot}`} />}{label}<span className="opacity-70 tabular-nums">{count}</span>
+          </button>;
+        })}
+      </div>
+    </div>
+  );
+
+  if (showList) {
     return (
       <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden">
-        {floors.length > 1 && (
-          <div className="shrink-0 flex items-center gap-1.5 px-3 pt-3 overflow-x-auto no-scrollbar">
-            {floors.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFloor(f)}
-                className={`px-3 h-9 text-[13px] font-semibold rounded-full shrink-0 border transition-colors ${
-                  activeFloor === f
-                    ? 'bg-brand border-brand text-white'
-                    : 'bg-surface border-line text-ink-2'
-                }`}
-              >
-                Floor {f}
-              </button>
-            ))}
-          </div>
-        )}
-        <TableListView tables={listRows} onTap={(row) => {
+        {tableToolbar}
+        <TableListView tables={listRows.filter(matchesTable)} onTap={(row) => {
           const table = floorTables.find((t) => t.id === row.id);
           if (table) handleTableTap(table);
         }} />
@@ -1052,7 +1007,8 @@ export default function ClientTableMap() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-100 text-slate-900 select-none overflow-hidden relative">
+    <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden relative">
+      {tableToolbar}
       {/* Main Floor Canvas Container. height:100% (not the old hardcoded
           calc(100vh - 72px - 64px)) — this root now fills POSLayout's
           already-correctly-sized flex-1 content slot via h-full above, so
@@ -1068,7 +1024,8 @@ export default function ClientTableMap() {
         onWheel={handleWheel}
         style={{
           width: '100%',
-          height: '100%',
+          flex: 1,
+          minHeight: 0,
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: 'var(--pos-bg-base)',
@@ -1082,27 +1039,8 @@ export default function ClientTableMap() {
         }}
         className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
-        {/* Floating Glassmorphism Floor Switcher — scrolls horizontally past
-            3-4 floors instead of running off the edge of a narrow screen. */}
-        {floors.length > 1 && (
-          <div className="absolute top-4 sm:top-5 left-4 sm:left-5 right-4 sm:right-auto z-40 flex items-center gap-0.5 bg-surface border border-line p-1 rounded-xl shadow-[0_2px_8px_rgba(15,23,42,0.06)] max-w-[calc(100%-2rem)] overflow-x-auto no-scrollbar">
-            <Layers className="w-4 h-4 text-ink-3 ml-1.5 mr-1 shrink-0" />
-            {floors.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFloor(f)}
-                className={`h-8 px-3 text-[13px] font-semibold rounded-lg transition-colors shrink-0 ${
-                  activeFloor === f
-                    ? 'bg-ink text-white'
-                    : 'text-ink-3 hover:text-ink hover:bg-sunken'
-                }`}
-              >
-                Floor {f}
-              </button>
-            ))}
-          </div>
-        )}
-
+        <div className="absolute top-3 left-4 z-20 pointer-events-none text-xs text-ink-3">{visibleTables.length} tables · Tap a table to open it</div>
+        {visibleTables.length === 0 && <div className="absolute inset-0 grid place-items-center text-sm text-ink-3 pointer-events-none">No tables match. Try another filter.</div>}
         {/* Transform wrapper. `translate() scale()`, in that order — see the
             `view` comment at the top of this component for why the order is
             load-bearing. `inset: 0` rather than a hardcoded 1200×700 design
@@ -1119,7 +1057,7 @@ export default function ClientTableMap() {
             willChange: 'transform',
           }}
         >
-          {floorTables.map((table) => (
+          {visibleTables.map((table) => (
             <div
               key={table.id}
               data-testid="table-node"

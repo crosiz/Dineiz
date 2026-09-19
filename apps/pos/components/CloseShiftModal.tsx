@@ -540,7 +540,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         <button
           onClick={onClose}
           aria-label="Cancel"
-          className="-mr-2 -mt-1 w-9 h-9 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+          className="-mr-2 -mt-1 w-11 h-11 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
         >
           <X className="w-[18px] h-[18px]" />
         </button>
@@ -847,7 +847,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                           <button
                             key={m.key}
                             onClick={() => setCountMode(m.key)}
-                            className={`h-7 px-3 rounded-md text-[12.5px] font-semibold transition-colors ${
+                            className={`h-11 px-3 rounded-md text-[12.5px] font-semibold transition-colors ${
                               countMode === m.key ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
                             }`}
                           >

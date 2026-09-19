@@ -597,7 +597,7 @@ function deriveTableView(
   return {
     ...t,
     status,
-    occupiedSince: busy ? (t.occupiedSince ?? new Date(now).toISOString()) : null,
+    occupiedSince: busy ? (t.occupiedSince ?? onTable.find(o => ['PENDING', 'IN_KITCHEN', 'READY', 'SERVED'].includes(o.status))?.createdAt ?? new Date(now).toISOString()) : null,
     activeOrderId,
   };
 }
@@ -685,19 +685,38 @@ export async function rebuildViews(): Promise<void> {
   if (floor?.value?.branchId && floor.value.branchId === currentBranchId()) {
     useViews.getState()._setSnapshot({ tables: floor.value.tables });
   }
+  const referenceKey = serverOrdersCacheKey();
+  const referenceOrders = referenceKey ? await edb.views.get(referenceKey) : null;
+  if (referenceOrders) useViews.getState()._setSnapshot({ orders: referenceOrders.value });
   const snapshot = await edb.views.get('snapshot');
   if (snapshot) {
     useViews.getState()._setSnapshot(snapshot.value);
   }
+  // Server-origin orders have no ORDER_CREATED event on this device. Restore
+  // their durable starting point before replaying a payment or item change.
+  const basePrefix = orderReplayPrefix();
+  const orderBases = basePrefix ? await edb.views.where('key').startsWith(basePrefix).toArray() : [];
+  const baseVersions = new Map<string, number>();
+  const restoredOrders = { ...useViews.getState().orders };
+  for (const base of orderBases) {
+    const order = base.value as OrderView;
+    if (snapshot?.value?.orders?.[order.id] && snapshot.version >= base.version) continue;
+    restoredOrders[order.id] = order;
+    baseVersions.set(order.id, base.version);
+  }
+  useViews.getState()._setSnapshot({ orders: restoredOrders });
   const lastSeq = snapshot?.version ?? 0;
-  const events = await edb.events.where('seq').above(lastSeq).sortBy('seq');
+  const replayFrom = Math.min(lastSeq, ...Array.from(baseVersions.values()));
+  const events = await edb.events.where('seq').above(replayFrom).sortBy('seq');
   const apply = useViews.getState()._applyEvent;
   // SUPERSEDED = "this event is void, act as if it never happened" — both for a
   // stale duplicate the outbox collapsed AND for a poisoned event an operator
   // dismissed (outbox.discardStuckEvent). Skipping it here is what makes
   // dismissing a rejected PKR-0 / half-total payment actually put the order
   // back on the board instead of leaving it "paid" locally forever.
-  for (const e of events) if (e.syncState !== 'SUPERSEDED') apply(e);
+  for (const e of events) {
+    if (e.syncState !== 'SUPERSEDED' && e.seq > (baseVersions.get(e.aggregateId) ?? lastSeq)) apply(e);
+  }
 
   // Re-apply any serverId reconciliations persisted by reconcileServerId —
   // these aren't events (they're a shipping-layer detail, not a fact about
@@ -718,6 +737,28 @@ export async function rebuildViews(): Promise<void> {
   if (Object.keys(useViews.getState().tables).length > 0) reconcileTables();
 
   useViews.getState()._markReady();
+}
+
+function orderReplayPrefix(): string | null {
+  const session = getPosSession();
+  return session ? `orderBase:${session.tenantId}:${session.branchId}:` : null;
+}
+
+function serverOrdersCacheKey(): string | null {
+  const session = getPosSession();
+  return session ? `serverOrders:${session.tenantId}:${session.branchId}:${session.userId}` : null;
+}
+
+/** Must finish before a server-origin order's first local mutation is saved. */
+export async function ensureOrderReplayBase(order: OrderView): Promise<void> {
+  const prefix = orderReplayPrefix();
+  if (!prefix || !order.serverId || order.id !== order.serverId) return;
+  const key = prefix + order.id;
+  await edb.transaction('rw', edb.views, edb.events, async () => {
+    if (await edb.views.get(key)) return;
+    const previous = await edb.events.where('aggregateId').equals(order.id).sortBy('seq');
+    await edb.views.put({ key, value: order, version: previous.at(-1)?.seq ?? 0 });
+  });
 }
 
 // ─── FLOOR PLAN CACHE: tables survive a cold start with no network ─────────
@@ -1181,7 +1222,38 @@ export async function refreshOrders(
       seen.set(o.orderNumber, keepId);
     }
 
+    // Keep the latest server-only reference orders for an offline cold start.
+    // Client-created orders are rebuilt from their own events, never duplicated
+    // under the server ID. Immutable replay bases preserve local modifications.
+    const referenceKey = serverOrdersCacheKey();
+    if (referenceKey) {
+      const reference: Record<string, OrderView> = {};
+      for (const raw of list) {
+        const localId = bySeverId.get(raw.id) ?? (raw.orderNumber ? byNumber.get(raw.orderNumber) : undefined);
+        if (!localId || localId === raw.id) reference[raw.id] = mapServerOrderToView(raw);
+      }
+      await edb.views.put({ key: referenceKey, value: reference, version: 0 }).catch(() => {});
+    }
     useViews.getState()._setSnapshot({ orders: merged });
+    // Recover older installations that saved a payment but not its imported
+    // order. This restores the local projection only; it never changes server
+    // records or fabricates a confirmation. Rejections remain review blockers.
+    const session = getPosSession();
+    const savedPayments = await edb.events.where('type').equals('PAYMENT_COLLECTED')
+      .filter(e => e.branchId === session?.branchId && e.tenantId === session?.tenantId &&
+        !['SUPERSEDED', 'CONFIRMED'].includes(e.syncState)).sortBy('seq');
+    for (const payment of savedPayments) {
+      const order = useViews.getState().orders[payment.aggregateId];
+      if (!order || TERMINAL_ORDER_STATUSES.has(order.status) ||
+          !(Number(payment.payload.total) > 0) || Number(payment.payload.total) + 0.01 < order.netAmount) continue;
+      const prefix = orderReplayPrefix();
+      if (prefix) await edb.transaction('rw', edb.views, async () => {
+        const key = prefix + order.id;
+        if (!await edb.views.get(key)) await edb.views.put({ key, value: order, version: payment.seq - 1 });
+      });
+      useViews.getState()._applyEvent(payment);
+    }
+    reconcileTables();
   } catch {
     // Best-effort — orders view just stays whatever it already was
   }

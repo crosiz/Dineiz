@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 import { edb, append, nextOrderNumber, laneForEvent, type EventType } from './event-log';
-import { useViews, resolveLocalOrderId } from './views';
+import { useViews, resolveLocalOrderId, ensureOrderReplayBase } from './views';
 import { kickOutbox } from './outbox';
 import { useManagerOverlay, type OverlayAction } from '@/lib/manager-overlay';
 
@@ -33,7 +33,12 @@ async function emit(
   payload: any,
   dependsOn: string[] = []
 ) {
-  const e = await append(type, aggType, aggKey(aggType, aggId), payload, dependsOn);
+  const key = aggKey(aggType, aggId);
+  if (aggType === 'ORDER' && type !== 'ORDER_CREATED') {
+    const order = useViews.getState().orders[key];
+    if (order) await ensureOrderReplayBase(order);
+  }
+  const e = await append(type, aggType, key, payload, dependsOn);
   useViews.getState()._applyEvent(e); // views update NOW
   // A CRITICAL (payment/void) or HIGH (create/send-to-kitchen) event ships
   // right away; everything else coalesces over ~200ms (spec Part 5).

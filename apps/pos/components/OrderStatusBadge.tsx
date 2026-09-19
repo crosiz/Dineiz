@@ -19,7 +19,7 @@ import { formatElapsed, minutesSince } from '@/lib/time';
 const LATE_AFTER = 15;
 const VERY_LATE_AFTER = 30;
 
-export const TicketTimer = ({ createdAt, className = '' }: { createdAt: string; className?: string }) => {
+export const TicketTimer = ({ createdAt, className = '', urgent = true }: { createdAt: string; className?: string; urgent?: boolean }) => {
   const [, tick] = useState(0);
   useEffect(() => {
     const h = setInterval(() => tick((n) => n + 1), 30_000);
@@ -27,7 +27,7 @@ export const TicketTimer = ({ createdAt, className = '' }: { createdAt: string; 
   }, []);
 
   const mins = minutesSince(createdAt);
-  const tone = mins >= VERY_LATE_AFTER ? 'text-danger' : mins >= LATE_AFTER ? 'text-warn' : 'text-ink-3';
+  const tone = !urgent ? 'text-ink-3' : mins >= VERY_LATE_AFTER ? 'text-danger' : mins >= LATE_AFTER ? 'text-warn' : 'text-ink-3';
 
   return (
     <span className={`inline-flex items-center gap-1 text-[12px] font-semibold tabular-nums whitespace-nowrap ${tone} ${className}`}>
@@ -103,7 +103,7 @@ export const OrderTypeBadge = ({
       <t.Icon className={size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5'} strokeWidth={2.25} />
       {table ? (
         <>
-          <span>{table}</span>
+          <span>{/^table\b/i.test(table) ? table : `Table ${table}`}</span>
           <span className="opacity-60 font-medium">Dine-in</span>
         </>
       ) : (

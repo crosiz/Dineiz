@@ -44,7 +44,6 @@ export function TicketCard({
   secondary,
   onOpen,
   compact = false,
-  fill = false,
   dimmed = false,
   layout = 'grid',
 }: {
@@ -67,8 +66,6 @@ export function TicketCard({
   onOpen?: () => void;
   /** Home's row: fewer lines, no action bar. */
   compact?: boolean;
-  /** Compact, but as wide as its grid cell instead of a fixed 248px. */
-  fill?: boolean;
   dimmed?: boolean;
   layout?: 'grid' | 'list';
 }) {
@@ -91,22 +88,22 @@ export function TicketCard({
       onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen?.(); } }}
       className={`group relative flex flex-col bg-surface border border-line rounded-xl overflow-hidden transition-[border-color,box-shadow] ${
         onOpen ? 'cursor-pointer hover:border-line-strong hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]' : ''
-      } ${dimmed ? 'opacity-70' : ''} ${compact ? (fill ? 'w-full' : 'w-[248px] shrink-0') : layout === 'list' ? 'sm:grid sm:grid-cols-[minmax(180px,1fr)_minmax(200px,2fr)]' : 'h-full'}`}
+      } ${dimmed ? 'opacity-70' : ''} ${compact ? 'min-w-0 w-full' : layout === 'list' ? 'sm:grid sm:grid-cols-[minmax(180px,1fr)_minmax(200px,2fr)]' : 'h-full'}`}
     >
       {/* Type accent: the one piece of colour that says what kind of order
           this is from across the room. */}
       <span className={`absolute inset-x-0 top-0 h-[3px] ${orderTypeBar(type)}`} aria-hidden />
 
       <header className={compact ? 'px-3.5 pt-3.5' : 'px-4 pt-4'}>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
           <OrderTypeBadge type={type} tableLabel={tableLabel} size={compact ? 'sm' : 'md'} />
           <StatusBadge status={status} />
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-3">
-          <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[16px]' : 'text-[17px]'}`}>
+          <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[16px]' : 'text-[18px]'}`}>
             #{orderNumber}
           </h3>
-          {createdAt && <TicketTimer createdAt={createdAt} />}
+          {createdAt && <TicketTimer createdAt={createdAt} urgent={status === 'PENDING' || status === 'IN_KITCHEN'} />}
         </div>
         {(metaText || flags) && (
           <div className="mt-1 flex items-center gap-1.5 min-w-0">
@@ -116,7 +113,7 @@ export function TicketCard({
         )}
       </header>
 
-      <ul className={`flex-1 ${compact ? 'px-3.5 pt-2.5 pb-3 space-y-1' : 'px-4 pt-3 pb-3.5 space-y-1.5'}`}>
+      <ul className={`flex-1 ${compact ? 'px-3.5 pt-2.5 pb-3 space-y-1' : 'px-4 pt-4 pb-4 space-y-2 min-h-[136px]'}`}>
         {shown.map((l, i) => (
           <li key={i} className="flex gap-2.5 min-w-0">
             <span className={`shrink-0 text-right font-semibold tabular-nums text-ink ${compact ? 'w-4 text-[12px]' : 'w-5 text-[13px]'}`}>
@@ -144,10 +141,10 @@ export function TicketCard({
       </ul>
 
       <footer
-        className={`flex flex-wrap items-center gap-2 border-t border-line ${layout === 'list' ? 'sm:col-span-2' : ''} ${compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
+        className={`flex flex-wrap items-center gap-2 border-t border-line bg-surface ${layout === 'list' ? 'sm:col-span-2' : ''} ${compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
         onClick={(e) => { if (primary || secondary) e.stopPropagation(); }}
       >
-        <span className={`mr-auto font-bold text-ink tabular-nums ${compact ? 'text-[14px]' : 'text-[15px]'}`}>
+        <span className={`mr-auto font-semibold text-ink tabular-nums ${compact ? 'text-[14px]' : 'text-[15px]'}`}>
           {formatPKR(total)}
         </span>
         {!compact && secondary}
@@ -156,7 +153,7 @@ export function TicketCard({
             type="button"
             onClick={primary.onClick}
             disabled={primary.disabled || primary.busy}
-            className={`min-h-11 px-3.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed ${
+            className={`w-full min-h-11 px-3.5 rounded-lg text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed ${
               primary.tone === 'brand'
                 ? 'bg-brand text-on-brand hover:bg-brand-strong disabled:opacity-60'
                 : primary.tone === 'ink'

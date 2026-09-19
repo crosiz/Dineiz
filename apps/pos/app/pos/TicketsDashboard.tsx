@@ -1,5 +1,6 @@
 'use client';
 
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import { Modal } from '@/components/ui/Modal';
 import { useBrandingStore } from '@/lib/branding-store';
 import { useState, useEffect, useMemo } from 'react';
@@ -316,9 +317,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    if (dataMode === 'history') return orders;
+    if (dataMode === 'history') return filter === 'ALL' ? orders : orders.filter((o: any) => o.status === filter);
 
-    const bySource = (list: any[]) => (sourceFilter === 'ALL' ? list : list.filter((o: any) => o.source === sourceFilter));
+    const bySource = (list: any[]) => list.filter((o: any) => {
+      const q = historySearch.trim().toLowerCase();
+      return (sourceFilter === 'ALL' || o.source === sourceFilter) &&
+        (!q || [o.orderNumber, o.tokenNumber, o.tableLabel, o.customerName, o.customerPhone].some(v => String(v ?? '').toLowerCase().includes(q)));
+    });
 
     const nonCompleted = orders.filter((o: any) => o.status !== 'COMPLETED');
     if (filter === 'ALL') return bySource(nonCompleted);
@@ -331,7 +336,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
     // Otherwise it's an order type (DINE_IN, TAKEAWAY, DELIVERY)
     return bySource(nonCompleted.filter((o: any) => o.type === filter));
-  }, [orders, filter, heldOrders, dataMode, sourceFilter]);
+  }, [orders, filter, heldOrders, dataMode, sourceFilter, historySearch]);
 
   // Live tickets read fastest grouped by service type first — dine-in tables
   // in one lane, takeaway/delivery in another — status is a secondary filter
@@ -687,7 +692,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
 
         {/* Right: Search + Sort + View Mode */}
-        <div className="flex flex-wrap min-w-0 items-center gap-2 sm:ml-auto">
+        <div className="flex flex-wrap w-full xl:w-auto min-w-0 items-center gap-2 sm:ml-auto">
           {/* Refreshing over cached data. Inline, not a fixed pill: the pill sat
               at top-right and covered the header clock and avatar. */}
           {isStale && (
@@ -696,14 +701,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               Updating
             </span>
           )}
-          {dataMode === 'history' && (
-            <div className="relative">
+          {(
+            <div className="relative flex-1 min-w-0">
               <input
                 type="text"
-                placeholder="Search ticket #, customer..."
+                aria-label="Search tickets" placeholder="Find order, table or customer"
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="h-11 w-full sm:w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[13px] font-medium text-ink placeholder:text-ink-4 outline-none"
+                className="h-11 w-full sm:w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[16px] font-medium text-ink placeholder:text-ink-4 outline-none"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 w-4 h-4" />
             </div>
@@ -742,14 +747,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           )}
           {!isLoading && filteredOrders.length === 0 && (
             <div className="py-20 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-xl bg-sunken border border-line grid place-items-center text-ink-3 mb-3">
-                <Search className="w-5 h-5" />
-              </div>
+              <ServiceIllustration kind="tickets" className="w-32 h-28 mb-3" />
               <p className="text-[15px] font-semibold text-ink">
-                {dataMode === 'history' ? 'No orders in this period' : filter === 'ALL' ? 'No live orders' : 'Nothing here right now'}
+                {historySearch.trim() ? 'No matching orders' : dataMode === 'history' ? 'No orders in this period' : filter === 'ALL' ? 'You’re up to date' : 'Nothing here right now'}
               </p>
               <p className="text-[13px] text-ink-3 mt-1">
-                {dataMode === 'history' ? 'Try a different date or filter.' : 'New orders appear here the moment they are punched.'}
+                {historySearch.trim() ? 'Try another order number, table or customer.' : dataMode === 'history' ? 'Try a different date or filter.' : 'New orders will appear here, ready for the next step.'}
               </p>
             </div>
           )}
