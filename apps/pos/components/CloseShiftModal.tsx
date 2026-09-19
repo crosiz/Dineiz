@@ -25,6 +25,7 @@ import {
 import { API_URL } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
 import { markSessionExpired, useSessionGuard } from '@/lib/session-guard';
+import { serverShiftStatus } from '@/lib/core/outbox';
 
 interface UnpaidOrderRow {
   id: string;
@@ -375,10 +376,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         const res = await fetch(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}/close`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          signal: AbortSignal.timeout(8000),
+          // Closing does real work (totals, breaks, the timeline) and takes
+          // several seconds on a remote database. At 8s the terminal often
+          // gave up on a close that then succeeded.
+          signal: AbortSignal.timeout(20000),
           body: JSON.stringify(payload),
         });
         if (res.ok) {
+          closedOnServer = true;
+        } else if (res.status === 404 && ['CLOSED', 'PENDING_SYNC', 'ABANDONED'].includes((await serverShiftStatus(shiftId)) ?? '')) {
+          // An earlier attempt already closed it; only its answer was lost.
           closedOnServer = true;
         } else if (res.status === 401) {
           markSessionExpired();
@@ -388,7 +395,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
           serverError = res.status >= 500 ? 'offline' : (errData.error || `Server refused the close (${res.status})`);
         }
       } catch {
-        serverError = 'offline';
+        // No answer is not the same as not closed: it may have landed.
+        const status = await serverShiftStatus(shiftId);
+        if (status && status !== 'OPEN') closedOnServer = true;
+        else serverError = 'offline';
       }
 
       // A 4xx is the server saying "no" for a real reason (blockers, wrong

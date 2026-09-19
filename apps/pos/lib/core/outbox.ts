@@ -1695,6 +1695,22 @@ async function closeAuthHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
+/**
+ * What the server says a shift's status is, or null if it couldn't be asked.
+ * A close whose answer was lost (the request timed out while the server was
+ * still working) did land; this is how the terminal finds out.
+ */
+export async function serverShiftStatus(shiftId: string, headers?: Record<string, string>): Promise<string | null> {
+  try {
+    const res = await fetchWithTimeout(`${API_URL}/api/shifts/${resolveShiftId(shiftId)}`, { headers: headers ?? authHeaders() });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return typeof body?.status === 'string' ? body.status : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Replay a close POST that never landed. Returns false if it still hasn't. */
 async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
   let raw: string | null = null;
@@ -1709,7 +1725,25 @@ async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
     });
     // 4xx here means the server already has it closed, or is refusing for a
     // reason replaying won't fix — either way stop retrying forever.
-    if (res.ok) {
+    // Refused: most often because the first attempt DID close it and only
+    // its answer was lost (the close takes seconds on a remote database, and
+    // the terminal gave up waiting), so the server no longer has it open and
+    // says 404. Treating that as "try again" retried forever and left the
+    // terminal on "Finishing sync · 0 changes". Ask what the shift is now.
+    let landed = res.ok;
+    if (!landed && res.status !== 401 && res.status !== 429 && res.status < 500) {
+      const status = await serverShiftStatus(shiftId, await closeAuthHeaders());
+      landed = status !== null && status !== 'OPEN';
+      if (!landed && status === 'OPEN' && !closeRefusedShown) {
+        // Still open and the server won't close it (e.g. an order it thinks
+        // is unpaid). Replaying won't change that; someone has to look.
+        closeRefusedShown = true;
+        const body = await res.json().catch(() => ({}));
+        const { toast } = await import('sonner');
+        toast.error(`The server has not accepted this shift's close: ${body?.error ?? `HTTP ${res.status}`}. Ask a manager to close it from the dashboard.`, { duration: 15000 });
+      }
+    }
+    if (landed) {
       const queue = pendingShiftCloses();
       if (queue[0]) { delete queue[0].payload; saveShiftCloses(queue); }
       return true;
@@ -1717,6 +1751,7 @@ async function replayPendingShiftClose(shiftId: string): Promise<boolean> {
   } catch { /* still offline */ }
   return false;
 }
+let closeRefusedShown = false;
 
 // ─── Shifts opened offline (lib/offline-shift.ts) ─────────────────────────
 

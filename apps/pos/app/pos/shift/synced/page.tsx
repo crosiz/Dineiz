@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { RefreshCw, CheckCircle2, CloudOff, LogOut } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import {
-  getUnsyncedSummary, getSyncCategoryProgress, kickOutbox, getShiftSyncStatus,
+  getUnsyncedSummary, getSyncCategoryProgress, kickOutbox, forceSyncNow, getShiftSyncStatus,
   type UnsyncedSummary, type SyncCategoryProgress,
 } from '@/lib/core/outbox';
 import { shiftSyncCompleted } from '@/lib/core/commands';
@@ -29,6 +29,10 @@ export default function ShiftSyncedPage() {
   const [summary, setSummary] = useState<UnsyncedSummary | null>(null);
   const [cat, setCat] = useState<SyncCategoryProgress>({ payments: 0, orders: 0, other: 0, total: 0 });
   const [done, setDone] = useState(false);
+  // What is left once there are no changes to send. The counters only cover
+  // orders, payments and cash; with those at zero the screen used to read
+  // "still sending 0 changes" while it was actually waiting on the close.
+  const [waitingOn, setWaitingOn] = useState<'open' | 'close' | 'finalise' | 'other' | null>(null);
   const baseRef = useRef<SyncCategoryProgress | null>(null);
   const finishingRef = useRef(false);
 
@@ -76,7 +80,16 @@ export default function ShiftSyncedPage() {
       try { closeQueued = closeQueued || !!localStorage.getItem('pos_pending_shift_close'); } catch { /* ignore */ }
       if (closeQueued) kickOutbox();
       const shiftSync = shiftId ? await getShiftSyncStatus(shiftId) : null;
-      if (shiftSync?.total === 0 && !done && !closeQueued && !localStorage.getItem('pos_pending_sync_shift')) void finalise();
+      const finalisePending = !!localStorage.getItem('pos_pending_sync_shift');
+      setWaitingOn(
+        c.total > 0 ? null
+          : readPendingShiftOpen() ? 'open'
+          : closeQueued ? 'close'
+          : (shiftSync?.total ?? 0) > 0 ? 'other'
+          : finalisePending ? 'finalise'
+          : null,
+      );
+      if (shiftSync?.total === 0 && !done && !closeQueued && !finalisePending) void finalise();
     };
     void tick();
     const h = setInterval(tick, 1500);
@@ -121,11 +134,25 @@ export default function ShiftSyncedPage() {
             </div>
             <h1 className="text-lg font-bold text-slate-900 mb-1">Finishing sync</h1>
             <p className="text-xs text-slate-500 leading-relaxed mb-5">
-              Your shift is closed. This terminal is still sending{' '}
-              <strong className="text-slate-700 tabular-nums">{cat.total} change{cat.total === 1 ? '' : 's'}</strong>{' '}
-              to the server. You can wait, or sign out — nothing is lost, it finishes on the next login here.
+              {cat.total > 0 ? (
+                <>
+                  Your shift is closed. This terminal is still sending{' '}
+                  <strong className="text-slate-700 tabular-nums">{cat.total} change{cat.total === 1 ? '' : 's'}</strong>{' '}
+                  to the server.
+                </>
+              ) : waitingOn === 'open' ? (
+                'Everything is sent. The server is being told about this shift, which was opened offline.'
+              ) : waitingOn === 'close' ? (
+                'Everything is sent. Confirming the shift close with the server.'
+              ) : waitingOn === 'other' ? (
+                'Everything else is sent. A break or cash entry from this shift is still being confirmed.'
+              ) : (
+                'Everything is sent. Marking the shift as finished on the server.'
+              )}{' '}
+              You can wait, or sign out — nothing is lost, it finishes on the next login here.
             </p>
 
+            {base.total > 0 && <>
             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden mb-1.5">
               <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
             </div>
@@ -141,6 +168,7 @@ export default function ShiftSyncedPage() {
                 </div>
               ))}
             </div>
+            </>}
 
             {poisoned > 0 && (
               <div className="flex items-start gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-4">
@@ -153,7 +181,7 @@ export default function ShiftSyncedPage() {
 
             <div className="flex gap-2.5">
               <button
-                onClick={() => kickOutbox('immediate')}
+                onClick={() => forceSyncNow()}
                 className="flex-1 h-10 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5"
               >
                 <RefreshCw size={13} /> Retry now
