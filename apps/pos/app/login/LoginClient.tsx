@@ -8,12 +8,12 @@ import { DineizLogo } from '@/components/ui/DineizLogo';
 import { endSavedBreak, savedBreaks } from '@/lib/offline-break';
 import { getPosBreak, clearPosBreak, getPosShift, getPosSession, setPosShift } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
-import { ServiceIllustration } from '@/components/ServiceIllustration';
+import { ServiceIllustration, type IllustrationKind } from '@/components/ServiceIllustration';
 import {
   canSignInOffline, checkPinOffline, clearServerReauth, queueBreakEnd, queueServerReauth, readRoster, rememberLogin, saveRoster,
   type OfflineUser,
 } from '@/lib/offline-auth';
-import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Link2, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, WifiOff, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Delete, Link2, Loader2, LogIn, WifiOff } from 'lucide-react';
 import { Dialog, DialogButton } from '@/components/ui/Dialog';
 
 const PIN_LENGTH = 4;
@@ -63,11 +63,17 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
   const [activeBranchId, setActiveBranchId] = useState<string>('');
   const [activeBranchName, setActiveBranchName] = useState<string>(defaultBranchName);
+  // The server renders a placeholder name ("Main Branch"); the real one comes
+  // from this terminal's copy or the staff call. Show neither until known.
+  const [branchKnown, setBranchKnown] = useState(false);
 
   const [timeStr, setTimeStr] = useState('00:00');
   const [greeting, setGreeting] = useState('Good morning');
 
   const [staffList, setStaffList] = useState<Staff[]>([]);
+  // Until the first answer (server or this terminal's copy), there is nothing
+  // true to say about roles; "No roles configured" used to flash here.
+  const [staffReady, setStaffReady] = useState(false);
   const [hasActiveShift, setHasActiveShift] = useState(false);
   const [isShiftLoading, setIsShiftLoading] = useState(true);
   // The API couldn't be reached and the staff list came from this terminal's
@@ -84,15 +90,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       let label = roleId.replace(/_/g, ' ');
       label = label.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 
-      let Icon: LucideIcon = CircleUser;
-      if (roleId === 'BRANCH_MANAGER' || roleId === 'MANAGER') Icon = UserCog;
-      else if (roleId === 'HEAD_CASHIER' || roleId === 'CASHIER') Icon = Banknote;
-      else if (roleId === 'KITCHEN_STAFF') Icon = ChefHat;
-      else if (roleId === 'RIDER' || roleId === 'DELIVERY') Icon = Bike;
-      else if (roleId === 'WAITER') Icon = Utensils;
-
-      return { id: roleId, label, Icon };
-    });
+      const card = ROLE_CARD[roleId] ?? { kind: 'tickets' as IllustrationKind, hint: '' };
+      return { id: roleId, label, ...card };
+    // Most-used first, the same order every day: people find their card by
+    // where it is, and the server's order isn't stable.
+    }).sort((a, b) => roleRank(a.id) - roleRank(b.id));
   }, [staffList]);
 
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
@@ -109,6 +111,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
   // Tick counter — forces re-render every minute so elapsed recalculates
   const [breakTick, setBreakTick] = useState(0);
+  // The break's start lives in this terminal's storage, which the server
+  // can't read: computing the elapsed time before mount rendered different
+  // text on the server and in the browser (a hydration error).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     if (!isBreakMode) return;
     const id = setInterval(() => setBreakTick(t => t + 1), 60_000);
@@ -117,11 +124,11 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
   // Compute elapsed on every render (driven by breakTick)
   const breakElapsed = (() => {
-    if (!isBreakMode) return '';
+    if (!isBreakMode || !mounted) return '';
     const posBreak = getPosBreak();
     if (!posBreak?.startedAt) return '';
     const ms = Date.now() - new Date(posBreak.startedAt).getTime();
-    if (ms < 60_000) return '< 1 min';
+    if (ms < 60_000) return 'under a minute';
     const totalMin = Math.floor(ms / 60_000);
     const h = Math.floor(totalMin / 60);
     const m = totalMin % 60;
@@ -133,6 +140,8 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
     const storedBranchId = localStorage.getItem('pos_branch_id');
     const branchToUse = storedBranchId || defaultBranchId;
     setActiveBranchId(branchToUse);
+    const known = readRoster(branchToUse)?.branchName;
+    if (known) { setActiveBranchName(known); setBranchKnown(true); }
 
     if (!storedBranchId) {
       localStorage.setItem('pos_branch_id', defaultBranchId);
@@ -169,6 +178,13 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
     const fetchStaff = async () => {
       try {
+        await loadStaff();
+      } finally {
+        setStaffReady(true);
+      }
+    };
+    const loadStaff = async () => {
+      try {
         const res = await fetchWithTimeout(`${API_URL}/api/pos/staff?branchId=${activeBranchId}`, { credentials: 'include' }, STAFF_TIMEOUT_MS);
         if (res.ok) {
           const data = await res.json();
@@ -176,12 +192,13 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             setStaffList(data.staff);
             saveRoster(activeBranchId, data.branchName ?? '', data.staff);
           }
-          if (data.branchName) setActiveBranchName(data.branchName);
+          if (data.branchName) { setActiveBranchName(data.branchName); setBranchKnown(true); }
           setOffline(false);
           return;
         }
         if (res.status === 404) {
           setActiveBranchName('Branch Not Found');
+          setBranchKnown(true);
           return;
         }
         throw new Error(`HTTP ${res.status}`);
@@ -191,7 +208,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         const cached = readRoster(activeBranchId);
         if (cached) {
           setStaffList(cached.staff);
-          if (cached.branchName) setActiveBranchName(cached.branchName);
+          if (cached.branchName) { setActiveBranchName(cached.branchName); setBranchKnown(true); }
         }
       }
     };
@@ -699,9 +716,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         {/* Top: Flush Left Dineiz Logo (Light Variant) & Tagline */}
         <div className="relative z-10 animate-entrance-fade" style={{ animationDelay: '0.1s' }}>
           <DineizLogo size="xl" variant="light" showBadge={false} />
-          <p className="text-[12px] text-ink-3 font-semibold tracking-[0.2em] mt-3 uppercase">
-            Restaurant Intelligence Platform
-          </p>
+          <p className="text-[14px] text-ink-3 mt-2">Restaurant intelligence platform</p>
         </div>
 
         {/* Middle: Clock & Greet */}
@@ -713,53 +728,23 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
             {greeting}, {selectedStaff ? selectedStaff.name.split(' ')[0] : 'Team'}
           </p>
 
-          {/* ON BREAK Banner */}
           {isBreakMode && (
-            <div className="mt-5 flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-3.5 animate-fade-in">
-              <ServiceIllustration kind="break" className="w-14 h-11 shrink-0 -my-1" />
-              <div>
-                <p className="text-amber-700 font-black text-[13px] uppercase tracking-widest">Terminal On Break</p>
-                <p className="text-amber-600 text-[12px] font-medium mt-0.5">
-                  Away for <span className="font-bold">{breakElapsed}</span> · Log in to resume
-                </p>
-              </div>
-              <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <div className="mt-8">
+              <BreakNote elapsed={breakElapsed} />
             </div>
           )}
         </div>
 
-        {/* Bottom: Status & Version */}
+        {/* Bottom: where this terminal is, and whether a shift is open. */}
         <div className="relative z-10 animate-entrance-fade" style={{ animationDelay: '0.3s' }}>
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-[20px] font-semibold text-ink mb-2 flex flex-col cursor-pointer hover:text-slate-600 transition-colors" onClick={promptBranchChange} title="Click to change branch">
-                <span className="flex items-center gap-2">
-                  {activeBranchName}
-                  <Pencil className="text-ink-3 w-[16px] h-[16px]" />
-                </span>
-                <span className="text-[12px] text-ink-3 font-semibold tracking-wide uppercase mt-1">Terminal Linked</span>
-              </h2>
-              {!isShiftLoading && (
-                hasActiveShift ? (
-                  <div className="inline-flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span className="text-[12px] font-bold text-emerald-700 uppercase tracking-wider">Shift Active</span>
-                  </div>
-                ) : (
-                  <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                    <span className="text-[12px] font-bold text-rose-700 uppercase tracking-wider">No Active Shift</span>
-                  </div>
-                )
-              )}
-              {offline && <OfflineChip className="ml-2" />}
-            </div>
-            {activeBranchId && (
-              <div className="text-right text-[12px] text-ink-3 leading-relaxed font-medium font-mono" title={activeBranchId}>
-                <p>Branch Ref: {activeBranchId.slice(-8).toUpperCase()}</p>
-              </div>
-            )}
-          </div>
+          <TerminalStatus
+            size="lg"
+            branchName={branchKnown ? activeBranchName : null}
+            onChangeBranch={promptBranchChange}
+            shift={isShiftLoading ? 'loading' : hasActiveShift ? 'open' : 'none'}
+            offline={offline}
+            terminalRef={activeBranchId ? activeBranchId.slice(-8).toUpperCase() : null}
+          />
         </div>
       </section>
 
@@ -768,40 +753,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           break banner) so it stays useful on a phone/tablet without pushing
           the actual login flow below the fold. */}
       <div className="lg:hidden shrink-0 bg-canvas border-b border-line px-4 pt-safe">
-        <div className="flex items-center justify-between pt-3">
+        <div className="py-3">
           <DineizLogo size="sm" variant="light" showBadge={false} />
-          <div className="flex items-center gap-1.5">
-            {offline && <OfflineChip compact />}
-            {!isShiftLoading && (
-              hasActiveShift ? (
-                <div className="inline-flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">Shift Active</span>
-                </div>
-              ) : (
-                <div className="inline-flex items-center gap-1.5 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-                  <span className="text-[10px] font-bold text-rose-700 uppercase tracking-wider">No Shift</span>
-                </div>
-              )
-            )}
-          </div>
         </div>
-        <button
-          onClick={promptBranchChange}
-          className="flex items-center gap-1.5 text-[13px] font-semibold text-ink py-2.5 -mx-1 px-1"
-          title="Tap to change branch"
-        >
-          {activeBranchName}
-          <Pencil className="text-ink-3 w-[14px] h-[14px]" />
-        </button>
         {isBreakMode && (
-          <div className="mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
-            <ServiceIllustration kind="break" className="w-10 h-8 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-amber-700 font-black text-[11px] uppercase tracking-widest">Terminal On Break</p>
-              <p className="text-amber-600 text-[11px] font-medium truncate">Away for <span className="font-bold">{breakElapsed}</span></p>
-            </div>
+          <div className="pb-3">
+            <BreakNote elapsed={breakElapsed} compact />
           </div>
         )}
       </div>
@@ -810,51 +767,53 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
       <section className="flex-1 min-h-0 w-full lg:w-1/2 bg-white flex items-center justify-center p-4 sm:p-8 lg:p-12 relative overflow-hidden">
 
         {/* Step 1: Role Selection */}
-        <div className={`w-full max-w-[400px] space-y-8 transition-all duration-300 absolute ${!selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
-          <header className="text-center space-y-2 mb-10">
-            <h3 className="font-clash font-bold text-2xl text-ink">Select your role</h3>
-            <p className="text-ink-3">Identify yourself to begin the shift</p>
+        <div className={`w-[calc(100%-2rem)] max-w-[400px] space-y-8 transition-all duration-300 absolute ${!selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
+          <header className="text-center mb-8">
+            <h3 className="text-[24px] font-semibold text-ink">Who&apos;s signing in?</h3>
+            <p className="mt-1 text-[14px] text-ink-3">Choose your role</p>
             {offline && staffList.length > 0 && <OfflineNote />}
           </header>
 
-          <div className="grid grid-cols-1 gap-3 max-h-[60dvh] overflow-y-auto pr-2 custom-scrollbar">
-            {availableRoles.length === 0 && (
-              <div className="text-center text-ink-3 py-8">
+          <div className="grid grid-cols-2 gap-3 max-h-[60dvh] overflow-y-auto p-0.5 custom-scrollbar">
+            {!staffReady && [0, 1, 2, 3].map((i) => (
+              <div key={i} className="min-h-[120px] rounded-xl bg-sunken animate-pulse" aria-hidden />
+            ))}
+            {staffReady && availableRoles.length === 0 && (
+              <div className="col-span-2 text-center text-[14px] text-ink-3 py-8">
                 {offline
                   ? 'No connection. This terminal needs to be online once to load its staff.'
-                  : 'No roles configured for this branch.'}
+                  : 'No staff are set up for this branch yet. A manager can add them in the dashboard.'}
               </div>
             )}
 
             {availableRoles.map((role) => (
               <button
                 key={role.id}
-                className="role-card group flex items-center justify-between h-[56px] px-6 bg-canvas border border-line rounded-xl hover:bg-sunken transition-all hover:border-brand relative overflow-hidden shrink-0 shadow-sm"
+                type="button"
+                className="relative overflow-hidden min-h-[120px] rounded-xl bg-surface border border-line hover:border-brand/50 p-4 flex flex-col justify-end text-left transition-colors active:scale-[0.99]"
                 onClick={() => setSelectedRole(role.id)}
               >
-                <div className="flex items-center gap-4">
-                  <role.Icon className="w-5 h-5 text-ink-3 group-hover:text-brand transition-colors" />
-                  <span className="font-bold text-ink">{role.label}</span>
-                </div>
-                <ChevronRight className="text-ink-3 chevron transition-transform group-hover:translate-x-1 w-[20px] h-[20px]" />
+                <ServiceIllustration kind={role.kind} className="absolute w-[92px] h-[74px] -right-1 top-0 pointer-events-none" />
+                <span className="relative z-10 block text-[16px] font-semibold text-ink leading-tight">{role.label}</span>
+                {role.hint && <span className="relative z-10 block text-[12px] text-ink-3 mt-0.5 truncate">{role.hint}</span>}
               </button>
             ))}
           </div>
         </div>
 
         {/* Step 2: Staff Selection */}
-        <div className={`w-full max-w-[400px] space-y-8 transition-all duration-300 absolute ${selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
-          <header className="text-center space-y-3 mb-10">
+        <div className={`w-[calc(100%-2rem)] max-w-[400px] space-y-8 transition-all duration-300 absolute ${selectedRole && !selectedStaff ? 'opacity-100 scale-100 z-10' : 'opacity-0 scale-95 pointer-events-none -z-10'}`}>
+          <header className="text-center space-y-3 mb-8">
             <button
-              className="flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
+              className="h-11 px-3 rounded-lg flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
               onClick={() => setSelectedRole(null)}
             >
               <ArrowLeft className="group-hover:-translate-x-1 transition-transform w-[16px] h-[16px]" />
-              <span className="text-[12px] font-bold uppercase tracking-wider">Change Role</span>
+              <span className="text-[14px] font-semibold">Change role</span>
             </button>
             <div>
-              <h3 className="font-clash font-bold text-2xl text-ink">Select User</h3>
-              <p className="text-ink-3">Choose your profile</p>
+              <h3 className="text-[24px] font-semibold text-ink">Choose your name</h3>
+              <p className="mt-1 text-[14px] text-ink-3">You&apos;ll enter your PIN next</p>
               {offline && <OfflineNote />}
             </div>
           </header>
@@ -906,12 +865,12 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </div>
 
         {/* Step 3: PIN Entry Modal */}
-        <div className={`w-full max-w-[320px] space-y-10 transition-all duration-300 absolute ${selectedStaff ? 'opacity-100 translate-y-0 z-20' : 'opacity-0 translate-y-8 pointer-events-none -z-10'}`}>
+        <div className={`w-[calc(100%-2rem)] max-w-[320px] space-y-10 transition-all duration-300 absolute ${selectedStaff ? 'opacity-100 translate-y-0 z-20' : 'opacity-0 translate-y-8 pointer-events-none -z-10'}`}>
           {selectedStaff && (
             <>
               <header className="text-center space-y-3">
                 <button
-                  className="flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
+                  className="h-11 px-3 rounded-lg flex items-center gap-2 mx-auto text-ink-3 hover:text-brand transition-colors group"
                   onClick={() => {
                     setSelectedStaff(null);
                     setPin('');
@@ -920,7 +879,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
                   disabled={lockoutTimer > 0 || pinStatus === 'loading'}
                 >
                   <ArrowLeft className="group-hover:-translate-x-1 transition-transform w-[16px] h-[16px]" />
-                  <span className="text-[12px] font-bold uppercase tracking-wider">Change User</span>
+                  <span className="text-[14px] font-semibold">Change person</span>
                 </button>
                 <div className="pt-2">
                   <div
@@ -1023,12 +982,6 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           )}
         </div>
 
-        {/* Decorative Icons */}
-        <div className="absolute bottom-12 right-12 flex gap-5 opacity-20 pointer-events-none text-ink-3">
-          {offline ? <WifiOff className="w-[36px] h-[36px]" /> : <Wifi className="w-[36px] h-[36px]" />}
-          <BatteryCharging className="w-[36px] h-[36px]" />
-        </div>
-
         {/* Custom scrollbar CSS */}
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -1038,18 +991,96 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
         `}} />
       </section>
+
+      {/* Phones and portrait tablets: the branch and shift sit below the
+          sign-in, where the large-screen layout keeps them too. */}
+      <div className="lg:hidden shrink-0 border-t border-line bg-canvas px-4 pt-3 pb-safe">
+        <div className="pb-3">
+          <TerminalStatus
+            size="sm"
+            branchName={branchKnown ? activeBranchName : null}
+            onChangeBranch={promptBranchChange}
+            shift={isShiftLoading ? 'loading' : hasActiveShift ? 'open' : 'none'}
+            offline={offline}
+            terminalRef={null}
+          />
+        </div>
+      </div>
     </main>
   );
 }
 
-function OfflineChip({ compact = false, className = '' }: { compact?: boolean; className?: string }) {
+const ROLE_ORDER = ['CASHIER', 'HEAD_CASHIER', 'WAITER', 'KITCHEN_STAFF', 'BRANCH_MANAGER', 'MANAGER', 'TENANT_ADMIN', 'RIDER', 'DELIVERY'];
+function roleRank(id: string): number {
+  const i = ROLE_ORDER.indexOf(id);
+  return i < 0 ? ROLE_ORDER.length : i;
+}
+
+// Each role, the drawing that shows its job and a one-line reminder of it.
+const ROLE_CARD: Record<string, { kind: IllustrationKind; hint: string }> = {
+  CASHIER: { kind: 'cashier', hint: 'Till and payments' },
+  HEAD_CASHIER: { kind: 'cashier', hint: 'Till and payments' },
+  WAITER: { kind: 'waiter', hint: 'Tables and orders' },
+  RIDER: { kind: 'rider', hint: 'Deliveries' },
+  DELIVERY: { kind: 'rider', hint: 'Deliveries' },
+  BRANCH_MANAGER: { kind: 'manager', hint: 'Approvals and reports' },
+  MANAGER: { kind: 'manager', hint: 'Approvals and reports' },
+  TENANT_ADMIN: { kind: 'manager', hint: 'The whole restaurant' },
+  KITCHEN_STAFF: { kind: 'kitchen', hint: 'Kitchen display' },
+};
+
+// Where this terminal is, and whether a shift is open: plain text with a
+// small status dot. It was a stack of pills (SHIFT ACTIVE, NO SHIFT, OFFLINE,
+// TERMINAL LINKED) in bold capitals at the top of the screen.
+function TerminalStatus({
+  size, branchName, onChangeBranch, shift, offline, terminalRef,
+}: {
+  size: 'lg' | 'sm';
+  branchName: string | null;
+  onChangeBranch: () => void;
+  shift: 'loading' | 'open' | 'none';
+  offline: boolean;
+  terminalRef: string | null;
+}) {
+  const line = (dot: string, text: string) => (
+    <li className="flex items-center gap-2">
+      <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+      {text}
+    </li>
+  );
   return (
-    <div
-      className={`inline-flex items-center gap-1.5 bg-sunken border border-line-strong rounded-full ${compact ? 'px-2.5 py-1' : 'px-3 py-1'} ${className}`}
-      title="No connection to the server"
-    >
-      <WifiOff className={`text-ink-2 ${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} />
-      <span className={`font-bold text-ink-2 uppercase tracking-wider ${compact ? 'text-[10px]' : 'text-[12px]'}`}>Offline</span>
+    <div className="min-w-0">
+      <div className="flex items-center gap-1 min-w-0">
+        {branchName
+          ? <span className={`font-semibold text-ink truncate ${size === 'lg' ? 'text-[20px]' : 'text-[16px]'}`}>{branchName}</span>
+          : <span className={`rounded bg-sunken animate-pulse ${size === 'lg' ? 'h-6 w-40' : 'h-5 w-32'}`} aria-hidden />}
+        <button
+          type="button"
+          onClick={onChangeBranch}
+          className="h-11 -my-2 px-2 rounded-lg text-[14px] font-semibold text-brand hover:bg-brand/5 shrink-0"
+        >
+          Change
+        </button>
+      </div>
+      <ul className={`mt-1 flex ${size === 'lg' ? 'flex-col gap-1' : 'flex-wrap gap-x-4 gap-y-1'} text-[14px] text-ink-2`}>
+        {shift !== 'loading' && line(shift === 'open' ? 'bg-ok' : 'bg-ink-4', shift === 'open' ? 'Shift open at this branch' : 'No shift open yet')}
+        {offline && line('bg-warn', 'No connection')}
+      </ul>
+      {terminalRef && <p className="mt-3 text-[12px] text-ink-4">Terminal ref {terminalRef}</p>}
+    </div>
+  );
+}
+
+// The terminal is locked for someone's break: the tea drawing and two plain
+// lines, in place of a TERMINAL ON BREAK badge and a coffee emoji.
+function BreakNote({ elapsed, compact = false }: { elapsed: string; compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <ServiceIllustration kind="break" className={`shrink-0 ${compact ? 'w-12 h-10' : 'w-16 h-[52px]'}`} />
+      <div className="min-w-0">
+        <p className="text-[16px] font-semibold text-ink">On break{elapsed ? ` for ${elapsed}` : ''}</p>
+        <p className="text-[14px] text-ink-3">Sign in to carry on.</p>
+      </div>
     </div>
   );
 }

@@ -12,7 +12,8 @@ import type { CSSProperties, ReactNode } from 'react';
 export type IllustrationKind =
   | 'dine-in' | 'takeaway' | 'tickets'
   | 'kitchen' | 'stock' | 'floor' | 'order' | 'shift-done'
-  | 'payment' | 'open-shift' | 'break' | 'lost' | 'error';
+  | 'payment' | 'open-shift' | 'break' | 'lost' | 'error'
+  | 'cashier' | 'waiter' | 'rider' | 'manager';
 
 const ACCENT = 'var(--illustration-accent)';
 
@@ -296,11 +297,117 @@ function Spill() {
   </>;
 }
 
+/** A till: screen, keypad, receipt. For the cashier role. */
+function Cashier() {
+  const ox = 82, oy = 46, top = 22;
+  return <>
+    {shadow(86, 97, 56, 8)}
+    <IsoBox ox={ox} oy={oy} x={0} y={0} w={56} d={40} h={top} face={COOL} />
+    <polyline points={pts(ox, oy, [[0, 40, 9], [56, 40, 9]])} stroke="#B9C5D1" />
+    <polyline points={pts(ox, oy, [[20, 40, 5], [36, 40, 5]])} stroke="#9CA8B6" strokeWidth="3" strokeLinecap="round" />
+    {/* screen, standing at the back, turned to the cashier */}
+    <polyline points={pts(ox, oy, [[8, 18, top], [8, 18, top + 6]])} stroke="#9CA8B6" strokeWidth="3" />
+    <polygon points={pts(ox, oy, [[6, 4, top + 26], [6, 32, top + 26], [6, 32, top + 6], [6, 4, top + 6]])} fill="#F8FAFC" stroke="#B9C5D1" strokeLinejoin="round" />
+    <polygon points={pts(ox, oy, [[6, 8, top + 22], [6, 28, top + 22], [6, 28, top + 11], [6, 8, top + 11]])} fill={ACCENT} fillOpacity=".14" stroke={ACCENT} strokeOpacity=".45" />
+    <polyline points={pts(ox, oy, [[6, 12, top + 17], [6, 22, top + 17]])} stroke={ACCENT} strokeWidth="2.5" strokeLinecap="round" />
+    {/* keypad */}
+    {[22, 30, 38].flatMap((x) => [8, 16, 24].map((y) => (
+      <polygon key={`${x}-${y}`} points={pts(ox, oy, [[x, y, top + 0.5], [x + 6, y, top + 0.5], [x + 6, y + 6, top + 0.5], [x, y + 6, top + 0.5]])}
+        fill={x === 38 && y === 24 ? ACCENT : '#FFF'} stroke={x === 38 && y === 24 ? ACCENT : '#C7D1DC'} />
+    )))}
+    {/* receipt coming out of the printer slot */}
+    <polygon points={pts(ox, oy, [[44, 3, top], [53, 3, top], [53, 3, top + 20], [44, 3, top + 20]])} fill="#FFF" stroke="#C7D1DC" />
+    <polyline points={pts(ox, oy, [[46, 3, top + 15], [51, 3, top + 15]])} stroke="#CCD5DE" strokeWidth="2" strokeLinecap="round" />
+    <polyline points={pts(ox, oy, [[46, 3, top + 10], [51, 3, top + 10]])} stroke="#CCD5DE" strokeWidth="2" strokeLinecap="round" />
+  </>;
+}
+
+/** A round tray: two glasses and a folded napkin. For the waiter role. */
+function Waiter() {
+  const glass = (cx: number, topY: number, h: number) => (
+    <g>
+      <path d={`M${cx - 7} ${topY}v${h}c0 2 3.2 3.2 7 3.2s7-1.2 7-3.2V${topY}`} fill="#FFF" stroke="#C7D1DC" />
+      <path d={`M${cx - 5.5} ${topY + h * 0.55}h11`} stroke={ACCENT} strokeOpacity=".35" strokeWidth={h * 0.5} />
+      <ellipse cx={cx} cy={topY} rx="7" ry="2.6" fill="#F8FAFC" stroke="#C7D1DC" />
+    </g>
+  );
+  return <>
+    {shadow(80, 106, 50, 8)}
+    <ellipse cx="80" cy="84" rx="52" ry="17" fill="#CFD8E1" />
+    <ellipse cx="80" cy="80" rx="52" ry="17" fill="#EEF2F5" stroke="#B9C5D1" />
+    <ellipse cx="80" cy="80" rx="43" ry="12.5" stroke="#DDE3E8" />
+    {glass(60, 52, 24)}
+    {glass(80, 58, 20)}
+    {/* folded napkin */}
+    <path d="m94 80 16-7 9 6-16 8-9-7Z" fill={ACCENT} opacity=".85" />
+    <path d="m101 83 13-6" stroke="#FFF" strokeOpacity=".7" strokeWidth="1.5" />
+  </>;
+}
+
+/** A scooter with a delivery box on the back. For the rider role. */
+function Rider() {
+  const box = { ox: 52, oy: 42 };
+  const wheel = (cx: number) => (
+    <g>
+      <circle cx={cx} cy="94" r="12" fill="#FFF" stroke="#9CA8B6" strokeWidth="4" />
+      <circle cx={cx} cy="94" r="3.5" fill="#9CA8B6" />
+    </g>
+  );
+  return <>
+    {shadow(84, 108, 58, 6)}
+    {/* rear body and seat */}
+    <path d="M34 90c0-13 9-20 23-20h24c6 0 9 4 9 10v10H34Z" fill="#EEF2F5" stroke="#B9C5D1" strokeLinejoin="round" />
+    <path d="M48 64h26c3 0 4 2 3 5H46c-1-3 0-5 2-5Z" fill="#9CA8B6" />
+    {/* deck, front shield, steering column */}
+    <rect x="62" y="86" width="44" height="6" rx="3" fill="#CFD8E1" />
+    <path d="M102 90 112 58h9l-6 32Z" fill="#DDE3E8" stroke="#B9C5D1" strokeLinejoin="round" />
+    <path d="M117 58 121 44" stroke="#9CA8B6" strokeWidth="4.5" strokeLinecap="round" />
+    <path d="M113 44h16" stroke="#9CA8B6" strokeWidth="4" strokeLinecap="round" />
+    <circle cx="116.5" cy="64" r="2.8" fill={ACCENT} />
+    {/* delivery box */}
+    <IsoBox ox={box.ox} oy={box.oy} x={0} y={0} w={24} d={24} h={22} face={CARD} />
+    <polygon points={pts(box.ox, box.oy, [[24, 6, 15], [24, 18, 15], [24, 18, 7], [24, 6, 7]])} fill={ACCENT} />
+    {wheel(48)}
+    {wheel(118)}
+  </>;
+}
+
+/** A clipboard of ticked approvals, and the keys. For the manager role. */
+function Manager() {
+  const row = (y: number, done: boolean, len: number) => (
+    <g key={y}>
+      <rect x="58" y={y} width="9" height="9" rx="2" fill={done ? ACCENT : '#FFF'} stroke={done ? ACCENT : '#B9C5D1'} />
+      {done && <path d={`M60 ${y + 4.6}l2 2 3.5-4`} stroke="#FFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />}
+      <path d={`M73 ${y + 4.5}h${len}`} stroke="#CCD5DE" strokeWidth="3" strokeLinecap="round" />
+    </g>
+  );
+  return <>
+    {shadow(82, 108, 48, 7)}
+    <g transform="rotate(-6 80 62)">
+      <path d="M48 22h58a4 4 0 0 1 4 4v74a4 4 0 0 1-4 4H48a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4Z" fill="#E6D7C4" stroke="#D8C9B7" />
+      <rect x="51" y="31" width="52" height="68" rx="2" fill="#FFF" stroke="#C7D1DC" />
+      <rect x="64" y="16" width="26" height="12" rx="3" fill="#9CA8B6" />
+      <rect x="72" y="19" width="10" height="4" rx="2" fill="#EEF2F5" />
+      {row(40, true, 24)}
+      {row(55, true, 18)}
+      {row(70, false, 22)}
+    </g>
+    {/* keys */}
+    <circle cx="122" cy="80" r="9" stroke="#9CA8B6" strokeWidth="4" />
+    <path d="M115.5 86.5 101 101m3 1 4 4m0-8 3 3" stroke="#9CA8B6" strokeWidth="4" strokeLinecap="round" />
+    <rect x="126" y="62" width="10" height="14" rx="3" transform="rotate(24 131 69)" fill={ACCENT} />
+  </>;
+}
+
 export function ServiceIllustration({ kind, className = '' }: { kind: IllustrationKind; className?: string }) {
   const style = { '--illustration-accent': 'var(--pos-primary)' } as CSSProperties;
   return (
     <svg viewBox="0 0 160 128" fill="none" aria-hidden="true" focusable="false" className={className} style={style}>
       {kind === 'kitchen' ? <Kitchen />
+        : kind === 'cashier' ? <Cashier />
+        : kind === 'waiter' ? <Waiter />
+        : kind === 'rider' ? <Rider />
+        : kind === 'manager' ? <Manager />
         : kind === 'payment' ? <Payment />
         : kind === 'open-shift' ? <OpenShift />
         : kind === 'break' ? <Break />
