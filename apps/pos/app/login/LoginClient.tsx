@@ -12,7 +12,8 @@ import {
   canSignInOffline, checkPinOffline, clearServerReauth, queueBreakEnd, queueServerReauth, readRoster, rememberLogin, saveRoster,
   type OfflineUser,
 } from '@/lib/offline-auth';
-import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, WifiOff, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Banknote, BatteryCharging, Bike, ChefHat, ChevronRight, CircleUser, Delete, Link2, Loader2, LogIn, Pencil, UserCog, Utensils, Wifi, WifiOff, type LucideIcon } from 'lucide-react';
+import { Dialog, DialogButton } from '@/components/ui/Dialog';
 
 const PIN_LENGTH = 4;
 
@@ -654,36 +655,34 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
 
   return (
     <main className="flex flex-col lg:flex-row h-dvh w-full bg-canvas text-ink overflow-hidden font-body-md">
-      {/* Link Terminal Modal */}
-      {linkModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
-          <div className="w-full max-w-[380px] bg-white border border-line rounded-2xl p-8 shadow-2xl">
-            <h3 className="font-clash font-bold text-xl text-ink mb-2">Link Terminal</h3>
-            <p className="text-ink-3 text-sm mb-6">Enter the POS Code displayed in your Dashboard to link this terminal to a branch.</p>
-            <input
-              type="text"
-              autoFocus
-              value={linkCode}
-              onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && handleLinkTerminal()}
-              placeholder="e.g. POS-A4BX"
-              className="w-full bg-canvas border border-line-strong focus:border-brand rounded-xl px-4 py-3 text-ink text-[16px] font-mono tracking-widest placeholder:text-ink-4 outline-none transition-colors mb-4"
-            />
-            <div className="flex gap-3">
-              <button
-                onClick={() => setLinkModalOpen(false)}
-                className="flex-1 h-11 rounded-xl border border-line-strong text-ink-2 hover:text-ink hover:bg-sunken transition-all font-semibold"
-              >Cancel</button>
-              <button
-                onClick={handleLinkTerminal}
-                disabled={!linkCode.trim() || isLinking}
-                className="flex-1 h-11 rounded-xl font-bold text-white disabled:opacity-50 transition-all shadow-sm"
-                style={{ backgroundColor: 'var(--pos-primary, #F59E0B)', color: '#FFFFFF' }}
-              >{isLinking ? 'Linking…' : 'Link Terminal'}</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Link Terminal */}
+      <Dialog
+        open={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        dismissible={!isLinking}
+        icon={Link2}
+        tone="brand"
+        title="Link this terminal"
+        description="Enter the POS code shown in your dashboard to connect this terminal to a branch."
+        footer={
+          <>
+            <DialogButton onClick={() => setLinkModalOpen(false)} disabled={isLinking}>Cancel</DialogButton>
+            <DialogButton variant="primary" onClick={handleLinkTerminal} disabled={!linkCode.trim()} busy={isLinking}>
+              Link terminal
+            </DialogButton>
+          </>
+        }
+      >
+        <input
+          type="text"
+          aria-label="POS code"
+          value={linkCode}
+          onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+          onKeyDown={(e) => e.key === 'Enter' && handleLinkTerminal()}
+          placeholder="e.g. POS-A4BX"
+          className="w-full h-12 bg-surface border border-line-strong focus:border-brand rounded-xl px-4 text-ink text-[16px] font-mono tracking-widest placeholder:text-ink-4 outline-none transition-colors"
+        />
+      </Dialog>
 
       {/* LEFT PANEL — Flush-Left Premium Branding & Info. Desktop-only
           (lg+): below that, a hard w-1/2 (both panels) meant the login flow's

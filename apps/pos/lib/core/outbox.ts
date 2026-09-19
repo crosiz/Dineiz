@@ -12,6 +12,7 @@ import { clearPendingShiftOpen, pendingShiftOpens, isShiftPendingOpen, readPendi
 import { getBrandingConfig } from '@/lib/branding-store';
 import { cashMovements, replayCashMovements } from '@/lib/offline-cash';
 import { kitchenReadyOperations, replayKitchenReady } from '@/lib/offline-kitchen';
+import { markSessionExpired } from '@/lib/session-guard';
 
 // ─── The outbox: ships local events to the server (spec Part 5) ────────────
 //
@@ -851,16 +852,14 @@ async function reportDeadLetter(e: PosEvent, attempts: number): Promise<void> {
   }
 }
 
-let authExpiredToastShownAt = 0;
 // Event ids already warned about by runWatchdog's stuck-payment check —
 // per-event, not time-windowed, since the same event stays non-terminal
 // across many 60s watchdog ticks and should only ever surface once.
 const stalePaymentWarned = new Set<string>();
+// The session lapsed: ask for the PIN in place (lib/session-guard.ts). The
+// events stay queued and go on the next cycle after the token is renewed.
 function notifyAuthExpiredOnce() {
-  const now = Date.now();
-  if (now - authExpiredToastShownAt < 10 * 60 * 1000) return;
-  authExpiredToastShownAt = now;
-  toast.warning('Your session has expired — sign out and back in to sync pending changes.', { duration: 8000 });
+  markSessionExpired();
 }
 
 // A poisoned event only ever showed up as a quiet dot in the top bar

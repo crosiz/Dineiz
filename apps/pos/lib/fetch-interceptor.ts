@@ -1,4 +1,5 @@
 import { API_URL } from '@/lib/api';
+import { markSessionExpired } from '@/lib/session-guard';
 
 // Attaches the POS bearer token to calls that go to OUR API and don't already
 // carry an Authorization header.
@@ -12,6 +13,11 @@ import { API_URL } from '@/lib/api';
 // third-party URLs — so the cashier's token was attached to requests leaving
 // for other origins entirely. Scoped to the configured API origin now, and
 // same-origin `/api/...` paths, nothing else.
+//
+// It also watches the answers: a 401 from the auth middleware means the
+// server session has lapsed (lib/session-guard.ts). Only that one — a wrong
+// manager PIN is a 401 too, with its own message, and must not ask the
+// cashier to sign in again.
 
 if (typeof window !== 'undefined') {
   const originalFetch = window.fetch;
@@ -37,6 +43,15 @@ if (typeof window !== 'undefined') {
     }
   };
 
+  const watch = async (res: Response): Promise<Response> => {
+    if (res.status !== 401) return res;
+    try {
+      const body = await res.clone().json();
+      if (typeof body?.error === 'string' && body.error.startsWith('Unauthorized')) markSessionExpired();
+    } catch { /* not the middleware's JSON */ }
+    return res;
+  };
+
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url =
       typeof input === 'string' ? input
@@ -51,13 +66,13 @@ if (typeof window !== 'undefined') {
 
     // A Request object carries its own headers; don't rebuild it — just skip,
     // since every Request-based caller in this app sets its own auth.
-    if (input instanceof Request) return originalFetch(input, init);
+    if (input instanceof Request) return watch(await originalFetch(input, init));
 
     const options: RequestInit = { ...(init ?? {}) };
     const headers = new Headers(options.headers ?? {});
     if (!headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
     options.headers = headers;
 
-    return originalFetch(input as any, options);
+    return watch(await originalFetch(input as any, options));
   };
 }

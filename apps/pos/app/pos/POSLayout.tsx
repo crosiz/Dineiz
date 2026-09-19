@@ -26,6 +26,8 @@ import { ViewModeBanner } from '@/components/ViewModeBanner';
 import { allowsViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
 import { resumeOfflineFollowUps } from '@/lib/offline-auth';
+import { markSessionExpired, sessionLooksExpired } from '@/lib/session-guard';
+import { SessionExpiredDialog } from '@/components/SessionExpiredDialog';
 
 // Spec Part 2 — a cashier's / waiter's live board is scoped to their own
 // open shift; a branch manager / admin sees the whole branch. The server
@@ -179,6 +181,25 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   // token, and report a break that ended offline. Offline, every screen change
   // is a full page load, so this picks the work back up on each one.
   useEffect(() => { resumeOfflineFollowUps(); }, []);
+
+  // Ask for the PIN when the 12-hour server session runs out, rather than
+  // waiting for the first request to fail (lib/session-guard.ts). Checked on
+  // load, when the screen comes back into view, and every minute.
+  useEffect(() => {
+    const check = () => {
+      if (navigator.onLine !== false && sessionLooksExpired()) markSessionExpired();
+    };
+    check();
+    const id = setInterval(check, 60_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', check);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', check);
+    };
+  }, []);
   // Set true on this terminal's first successful connect; a later 'connect'
   // (Socket.IO auto-reconnecting after a drop) then reads as a genuine
   // reconnect, not just an initial-mount connect the mount effect already
@@ -629,6 +650,8 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
           onResolved={recheckOrphans}
         />
       )}
+
+      <SessionExpiredDialog />
     </div>
   );
 }

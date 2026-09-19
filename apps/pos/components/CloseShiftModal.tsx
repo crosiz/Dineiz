@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { Modal } from '@/components/ui/Modal';
+import { markSessionExpired, useSessionGuard } from '@/lib/session-guard';
 
 interface UnpaidOrderRow {
   id: string;
@@ -79,6 +80,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   // retry — there is simply nothing to close. Show a way forward instead of
   // a dead "couldn't load" state.
   const [noOpenShift, setNoOpenShift] = useState(false);
+  // The server session lapsed mid-shift (it lasts 12 hours). The PIN prompt
+  // is up (SessionExpiredDialog); the totals load again once it's renewed.
+  const [awaitingSignIn, setAwaitingSignIn] = useState(false);
+  const renewedAt = useSessionGuard((s) => s.renewedAt);
 
   const [closingCash, setClosingCash] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
@@ -128,6 +133,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
   const fetchSummary = async (showSpinner = true) => {
     if (showSpinner) setIsLoading(true);
     setNoOpenShift(false);
+    setAwaitingSignIn(false);
     try {
       // The summary is the server's view of this shift. Anything still queued
       // here (a payment taken seconds ago) goes first, or it comes back as an
@@ -171,11 +177,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
           res = null;
         }
       }
-      if (!res || res.status >= 500) {
+      if (res?.status === 401) {
+        markSessionExpired();
+        setAwaitingSignIn(true);
+        return;
+      }
+      // Any other answer that isn't the summary: this terminal's own figures
+      // still let the cashier count and close, and the server recomputes the
+      // totals when the close reaches it. A dead end here was the worst option.
+      if (!res || !res.ok) {
         setSummary(await localShiftSummary(resolvedId));
         return;
       }
-      if (!res.ok) throw new Error('Failed to fetch shift summary');
       setSummary(dropLocallySettled(await res.json()));
     } catch (err: any) {
       toast.error(err.message || 'Error fetching shift summary');
@@ -189,6 +202,11 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, token]);
+
+  useEffect(() => {
+    if (isOpen && awaitingSignIn && renewedAt) fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renewedAt]);
 
   // Cancelling here goes through the same local-first command Tickets uses
   // — applies instantly, the outbox ships it — so the cashier never has to
@@ -301,6 +319,9 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         });
         if (res.ok) {
           closedOnServer = true;
+        } else if (res.status === 401) {
+          markSessionExpired();
+          serverError = 'Enter your PIN to sign back in, then close the shift.';
         } else {
           const errData = await res.json().catch(() => ({}));
           serverError = res.status >= 500 ? 'offline' : (errData.error || `Server refused the close (${res.status})`);
@@ -640,13 +661,26 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                     It closed automatically after being left open too long. Everything it recorded is saved.
                   </p>
                 </div>
+              ) : awaitingSignIn ? (
+                <div className="py-10 text-center">
+                  <p className="text-[14px] font-semibold text-ink">Sign back in to load the totals</p>
+                  <p className="mt-1 mx-auto max-w-[320px] text-[13px] text-ink-3 leading-relaxed">
+                    Your sign-in timed out. Enter your PIN and this picks up where it left off.
+                  </p>
+                </div>
               ) : !summary ? (
                 <div className="py-10 text-center">
                   <span className="w-11 h-11 rounded-xl bg-danger/10 text-danger grid place-items-center mx-auto mb-3">
                     <AlertCircle className="w-5 h-5" />
                   </span>
                   <p className="text-[14px] font-semibold text-ink">Couldn’t load this shift’s totals</p>
-                  <p className="mt-1 text-[13px] text-ink-3">Close this and try again.</p>
+                  <button
+                    type="button"
+                    onClick={() => fetchSummary()}
+                    className="mt-3 min-h-11 px-4 rounded-lg border border-line bg-surface text-[14px] font-semibold text-ink hover:bg-sunken"
+                  >
+                    Try again
+                  </button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">

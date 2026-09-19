@@ -16,9 +16,9 @@ import {
   EyeOff,
   SlidersHorizontal,
   PackageCheck,
-  X,
 } from 'lucide-react';
 import { ManagerOverrideModal } from '@/components/ManagerOverrideModal';
+import { Dialog, DialogButton } from '@/components/ui/Dialog';
 import { API_URL } from '@/lib/api';
 import { cachedRead } from '@/lib/cached-read';
 
@@ -393,20 +393,25 @@ export default function StockPage() {
       </main>
 
       {/* Quick Adjust — step 1: new quantity */}
-      {adjustStep === 'qty' && adjustItem && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={closeQuickAdjust} />
-          <div className="relative z-10 w-full max-w-[360px] bg-white rounded-[24px] shadow-[0_30px_80px_rgba(0,0,0,0.3)] p-6">
-            <div className="flex items-start justify-between mb-1">
-              <h2 className="text-[17px] font-bold text-ink">Quick Adjust</h2>
-              <button onClick={closeQuickAdjust} className="text-ink-4 hover:text-ink">
-                <X size={18} />
-              </button>
-            </div>
-            <p className="text-[13px] text-ink-3 mb-4">{adjustItem.name} — set the new on-hand quantity.</p>
-            <label className="block text-[11px] font-bold text-ink-4 uppercase tracking-wider mb-1.5">
-              New Quantity ({formatUnit(adjustItem.unit)})
-            </label>
+      <Dialog
+        open={adjustStep === 'qty' && !!adjustItem}
+        onClose={closeQuickAdjust}
+        z={110}
+        icon={SlidersHorizontal}
+        title="Adjust stock"
+        description={adjustItem ? `${adjustItem.name}: set the quantity on hand now.` : undefined}
+        footer={
+          <>
+            <DialogButton onClick={closeQuickAdjust}>Cancel</DialogButton>
+            <DialogButton variant="ink" onClick={submitQtyStep} disabled={adjustQty.trim() === ''}>Continue</DialogButton>
+          </>
+        }
+      >
+        {adjustItem && (
+          <label className="block">
+            <span className="block text-[12px] font-medium text-ink-3 mb-1.5">
+              New quantity ({formatUnit(adjustItem.unit)})
+            </span>
             <input
               type="number"
               inputMode="decimal"
@@ -414,26 +419,12 @@ export default function StockPage() {
               step="any"
               value={adjustQty}
               onChange={(e) => setAdjustQty(e.target.value)}
-              autoFocus
-              className="w-full h-[52px] px-4 bg-canvas border border-line rounded-xl text-[16px] font-bold text-ink focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink mb-5"
+              onKeyDown={(e) => e.key === 'Enter' && submitQtyStep()}
+              className="w-full h-12 px-4 bg-surface border border-line-strong rounded-xl text-[16px] font-semibold text-ink tabular-nums focus:outline-none focus:border-ink"
             />
-            <div className="flex gap-3">
-              <button
-                onClick={closeQuickAdjust}
-                className="flex-1 h-[46px] rounded-xl border border-line text-ink-2 font-bold text-[14px] hover:bg-canvas active:scale-[0.98] transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitQtyStep}
-                className="flex-1 h-[46px] rounded-xl bg-ink text-white font-bold text-[14px] hover:bg-ink active:scale-[0.98] transition-all"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </label>
+        )}
+      </Dialog>
 
       {/* Quick Adjust — step 2: manager PIN + reason. Only mounted while
           active so its internal PIN/reason state starts fresh each time. */}

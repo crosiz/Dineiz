@@ -17,7 +17,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { getToken } from '@/lib/pos-session';
 import { VoidItemBottomSheet } from './VoidItemBottomSheet';
 import * as commands from '@/lib/core/commands';
-import { useViews, seedServerOrder } from '@/lib/core/views';
+import { useViews, seedServerOrder, resolveLocalOrderId } from '@/lib/core/views';
 import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
@@ -341,8 +341,22 @@ function OrderEntryPageContent() {
     clearCartDraft().catch(console.error);
   };
 
+  // An existing order is read from the local view store, which POSLayout
+  // rebuilds from IndexedDB on every full page load. Offline, every screen
+  // change IS a full page load, so this screen mounted before the store was
+  // filled, missed the order, fell back to the network, and opened
+  // "Collect payment" on an empty PKR 0 cart. Wait for the store instead.
+  const viewsReady = useViews((s) => s.isReady);
+  const waitForViews =
+    !!searchParams.get('orderId') && !searchParams.get('heldOrderId') &&
+    searchParams.get('isHeld') !== 'true' && !viewsReady;
+
   // Strict Cart Mount Rules
   useEffect(() => {
+    if (waitForViews) {
+      useCartStore.getState().clearCart();
+      return;
+    }
     const existingOrderId = searchParams.get('orderId');
     const heldOrderIdParam = searchParams.get('heldOrderId');
     const isHeld = searchParams.get('isHeld') === 'true' || !!heldOrderIdParam;
@@ -420,7 +434,9 @@ function OrderEntryPageContent() {
       // on an empty "no table selected" screen. Every order Tickets/Home can
       // link to is already in this store (that's what they render from), so
       // this is also just fewer round trips for the common case.
-      const tracked = useViews.getState().orders[idToLoad];
+      // Tickets and Tables link by whichever id they hold; a synced order's
+      // server id maps back to its local key here.
+      const tracked = useViews.getState().orders[resolveLocalOrderId(idToLoad)];
       if (tracked) {
         useCartStore.setState({
           existingOrderData: tracked,
@@ -479,9 +495,14 @@ function OrderEntryPageContent() {
             openCheckout(order.id, order.orderNumber);
           }
         })
-        .catch(() => toast.error('Failed to load order for editing'));
+        .catch(() => toast.error(
+          navigator.onLine === false
+            ? 'This order isn’t on this terminal, and there’s no connection to load it.'
+            : 'Failed to load order for editing',
+        ));
     }
-  }, [searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, waitForViews]);
 
   // Guard against browser refresh/close
   useEffect(() => {
