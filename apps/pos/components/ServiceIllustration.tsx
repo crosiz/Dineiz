@@ -11,7 +11,8 @@ import type { CSSProperties, ReactNode } from 'react';
 
 export type IllustrationKind =
   | 'dine-in' | 'takeaway' | 'tickets'
-  | 'kitchen' | 'stock' | 'floor' | 'order' | 'shift-done';
+  | 'kitchen' | 'stock' | 'floor' | 'order' | 'shift-done'
+  | 'payment' | 'open-shift' | 'break' | 'lost' | 'error';
 
 const ACCENT = 'var(--illustration-accent)';
 
@@ -184,11 +185,127 @@ function ShiftDone() {
   </>;
 }
 
+/** A receipt with notes and coins beside it, ticked. For a payment taken. */
+function Payment() {
+  const ox = 104, oy = 64;
+  const note = (z: number, dx: number, accent = false) => (
+    <g key={z}>
+      <IsoBox ox={ox + dx} oy={oy} x={0} y={0} w={34} d={18} h={1.6} z={z}
+        face={{ top: '#FFF', left: '#E4E9EE', right: '#DDE3E8', stroke: '#C7D1DC' }} />
+      {accent && <>
+        <polyline points={pts(ox + dx, oy, [[4, 9, z + 1.7], [30, 9, z + 1.7]])} stroke={ACCENT} strokeOpacity=".55" strokeWidth="4" />
+        <ellipse cx={isoPoint(ox + dx, oy, 17, 9, z + 1.7)[0]} cy={isoPoint(ox + dx, oy, 17, 9, z + 1.7)[1]} rx="4.5" ry="2.4" fill="#FFF" stroke={ACCENT} strokeOpacity=".6" />
+      </>}
+    </g>
+  );
+  const coin = (cy: number) => (
+    <g key={cy}>
+      <path d={`M129 ${cy}v3c0 2.2 4 4 9 4s9-1.8 9-4v-3`} fill="#E6D7C4" stroke="#D8C9B7" />
+      <ellipse cx="138" cy={cy} rx="9" ry="4" fill="#F2E6D7" stroke="#D8C9B7" />
+    </g>
+  );
+  return <>
+    {shadow(84, 106, 60, 8)}
+    {/* receipt */}
+    <path d="m44 24 40 4-3 66-5-3-5 3-5-3-5 3-5-3-5 3-5-3-5 3 1-67Z" fill="#E9EEF2" stroke="#CBD5DF" />
+    <path d="M40 18h40v70l-5-3-5 3-5-3-5 3-5-3-5 3-5-3-5 3V18Z" fill="#FFF" stroke="#C7D1DC" />
+    <rect x="47" y="28" width="20" height="4.5" rx="2" fill={ACCENT} />
+    <path d="M47 41h26M47 49h18M47 57h22M47 74h10m8 0h8" stroke="#CCD5DE" strokeWidth="3" strokeLinecap="round" />
+    <path d="M47 66h26" stroke="#D9E1E8" strokeDasharray="3 3" />
+    {/* notes and coins */}
+    {note(0, 0)}
+    {note(2.2, 2)}
+    {note(4.4, -1, true)}
+    {coin(96)}
+    {coin(91)}
+    {coin(86)}
+    <Check cx={84} cy={22} />
+  </>;
+}
+
+/** The cash drawer pulled open, notes and coins inside. For opening a shift. */
+function OpenShift() {
+  const ox = 88, oy = 36;
+  const floor = 15.2;
+  return <>
+    {shadow(84, 101, 56, 8)}
+    <IsoBox ox={ox} oy={oy} x={0} y={0} w={60} d={40} h={28} face={COOL} />
+    {/* the drawer, out towards the viewer; its top is the open tray */}
+    <IsoBox ox={ox} oy={oy} x={4} y={40} w={52} d={26} h={12} z={3} face={{ ...COOL, top: '#DDE3E8' }} />
+    {[17, 30, 43].map((x) => (
+      <polyline key={x} points={pts(ox, oy, [[x, 40, floor], [x, 66, floor]])} stroke="#B9C5D1" strokeWidth="1.5" />
+    ))}
+    {/* notes in the first two slots, coins in the last */}
+    <polygon points={pts(ox, oy, [[5.5, 42, floor + 0.3], [15.5, 42, floor + 0.3], [15.5, 64, floor + 0.3], [5.5, 64, floor + 0.3]])} fill="#FFF" stroke="#C7D1DC" />
+    <polygon points={pts(ox, oy, [[18.5, 42, floor + 0.3], [28.5, 42, floor + 0.3], [28.5, 64, floor + 0.3], [18.5, 64, floor + 0.3]])} fill={ACCENT} fillOpacity=".22" stroke={ACCENT} strokeOpacity=".5" />
+    {[[49, 48], [50, 56], [36, 52]].map(([x, y]) => {
+      const [cx, cy] = isoPoint(ox, oy, x, y, floor + 1.5);
+      return <ellipse key={`${x}-${y}`} cx={cx} cy={cy} rx="4.2" ry="2.3" fill="#F2E6D7" stroke="#D8C9B7" />;
+    })}
+    <polyline points={pts(ox, oy, [[22, 66, 9], [38, 66, 9]])} stroke="#9CA8B6" strokeWidth="3" strokeLinecap="round" />
+  </>;
+}
+
+/** Tea on a saucer, steaming. For a terminal on break. */
+function Break() {
+  return <>
+    {shadow(80, 104, 46, 8)}
+    <ellipse cx="80" cy="94" rx="42" ry="12" fill="#DDE3E8" />
+    <ellipse cx="80" cy="91" rx="42" ry="12" fill="#EEF2F5" stroke="#B9C5D1" />
+    <ellipse cx="80" cy="91" rx="27" ry="7" stroke="#DDE3E8" />
+    <path d="M103 62c13-3 16 16 1 18" stroke="#CFD8E1" strokeWidth="5" strokeLinecap="round" />
+    <path d="M56 58v18c0 9 11 14 24 14s24-5 24-14V58" fill="#FFF" stroke="#C7D1DC" />
+    <path d="M56 66v7c0 6 11 10 24 10s24-4 24-10v-7c0 6-11 10-24 10s-24-4-24-10Z" fill={ACCENT} opacity=".85" />
+    <ellipse cx="80" cy="58" rx="24" ry="8" fill="#F8FAFC" stroke="#C7D1DC" />
+    <ellipse cx="80" cy="59" rx="19.5" ry="5.5" fill="#A99680" />
+    <ellipse cx="75" cy="58" rx="7" ry="1.8" fill="#D8C9B7" opacity=".8" />
+    <path d="M70 44c-3-3 3-6 0-10M80 41c-3-3 3-6 0-10M90 44c-3-3 3-6 0-10" stroke="#C7D1DC" strokeWidth="2.5" strokeLinecap="round" />
+  </>;
+}
+
+/** A serving dome lifted off an empty plate. For a page that isn't there. */
+function Lost() {
+  return <>
+    {shadow(80, 106, 54, 8)}
+    <ellipse cx="80" cy="96" rx="46" ry="13" fill="#DDE3E8" />
+    <ellipse cx="80" cy="93" rx="46" ry="13" fill="#EEF2F5" stroke="#B9C5D1" />
+    <ellipse cx="80" cy="93" rx="31" ry="8" fill="#FFF" stroke="#DDE3E8" />
+    <g transform="rotate(-14 80 48)">
+      <ellipse cx="80" cy="62" rx="37" ry="7.5" fill="#E4E9EE" stroke="#C7D1DC" />
+      <path d="M43 62c0-21 16-35 37-35s37 14 37 35c-6 4-20 7.5-37 7.5S49 66 43 62Z" fill="#FFF" stroke="#C7D1DC" />
+      <path d="M57 45c4-6 10-10 17-11" stroke="#E8ECF0" strokeWidth="3" strokeLinecap="round" />
+      <rect x="78" y="22" width="4" height="6" rx="1.5" fill="#9CA8B6" />
+      <ellipse cx="80" cy="21" rx="7" ry="3.2" fill={ACCENT} />
+    </g>
+  </>;
+}
+
+/** A glass knocked over, a small spill. For a screen that failed. */
+function Spill() {
+  return <>
+    {shadow(84, 104, 58, 8)}
+    <path d="M58 94c-12 0-18-5-9-9s25-2 36-6 24 2 32 6-3 11-19 11-29-2-40-2Z" fill={ACCENT} fillOpacity=".16" stroke={ACCENT} strokeOpacity=".35" />
+    <ellipse cx="120" cy="99" rx="3" ry="1.6" fill={ACCENT} opacity=".4" />
+    <ellipse cx="128" cy="96" rx="2" ry="1.2" fill={ACCENT} opacity=".35" />
+    {/* the glass, lying on its side, mouth towards the spill */}
+    <path d="M44 60 98 66V94L44 83Z" fill="#FFF" stroke="#C7D1DC" strokeLinejoin="round" />
+    <ellipse cx="44" cy="71.5" rx="5.5" ry="11.5" fill="#EEF2F5" stroke="#C7D1DC" />
+    <ellipse cx="98" cy="80" rx="7.5" ry="14" fill="#F8FAFC" stroke="#C7D1DC" />
+    <ellipse cx="98" cy="86" rx="5" ry="7" fill={ACCENT} opacity=".3" />
+    <path d="M52 66l38 4" stroke="#E8ECF0" strokeWidth="3" strokeLinecap="round" />
+  </>;
+}
+
 export function ServiceIllustration({ kind, className = '' }: { kind: IllustrationKind; className?: string }) {
   const style = { '--illustration-accent': 'var(--pos-primary)' } as CSSProperties;
   return (
     <svg viewBox="0 0 160 128" fill="none" aria-hidden="true" focusable="false" className={className} style={style}>
       {kind === 'kitchen' ? <Kitchen />
+        : kind === 'payment' ? <Payment />
+        : kind === 'open-shift' ? <OpenShift />
+        : kind === 'break' ? <Break />
+        : kind === 'lost' ? <Lost />
+        : kind === 'error' ? <Spill />
         : kind === 'stock' ? <Stock />
         : kind === 'floor' ? <Floor />
         : kind === 'order' ? <Order />

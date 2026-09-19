@@ -8,6 +8,7 @@ import { DineizLogo } from '@/components/ui/DineizLogo';
 import { endSavedBreak, savedBreaks } from '@/lib/offline-break';
 import { getPosBreak, clearPosBreak, getPosShift, getPosSession, setPosShift } from '@/lib/pos-session';
 import { API_URL } from '@/lib/api';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   canSignInOffline, checkPinOffline, clearServerReauth, queueBreakEnd, queueServerReauth, readRoster, rememberLogin, saveRoster,
   type OfflineUser,
@@ -715,7 +716,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
           {/* ON BREAK Banner */}
           {isBreakMode && (
             <div className="mt-5 flex items-center gap-3 bg-amber-50 border border-amber-300 rounded-2xl px-5 py-3.5 animate-fade-in">
-              <span className="text-2xl">☕</span>
+              <ServiceIllustration kind="break" className="w-14 h-11 shrink-0 -my-1" />
               <div>
                 <p className="text-amber-700 font-black text-[13px] uppercase tracking-widest">Terminal On Break</p>
                 <p className="text-amber-600 text-[12px] font-medium mt-0.5">
@@ -796,7 +797,7 @@ export default function LoginClient({ branchId: defaultBranchId, branchName: def
         </button>
         {isBreakMode && (
           <div className="mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5">
-            <span className="text-lg">☕</span>
+            <ServiceIllustration kind="break" className="w-10 h-8 shrink-0" />
             <div className="min-w-0">
               <p className="text-amber-700 font-black text-[11px] uppercase tracking-widest">Terminal On Break</p>
               <p className="text-amber-600 text-[11px] font-medium truncate">Away for <span className="font-bold">{breakElapsed}</span></p>

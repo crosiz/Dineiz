@@ -10,6 +10,7 @@ import { ArrowRight, ChevronDown, Loader2, ShieldCheck } from 'lucide-react';
 import { API_URL } from '@/lib/api';
 import { pendingShiftCloses } from '@/lib/core/outbox';
 import { newOfflineShiftId, queueShiftOpen } from '@/lib/offline-shift';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 
 // Past this with no answer, the shift opens on this terminal instead.
 const OPEN_TIMEOUT_MS = 8000;
@@ -208,12 +209,17 @@ export default function ShiftOpenGate() {
 
           {/* Float — the only scrolling region */}
           <div className="p-6 overflow-y-auto flex-1 min-h-0">
-            <label htmlFor="floatInput" className="block text-[13px] font-bold text-slate-900">
-              Opening cash float
-            </label>
-            <p className="text-[12px] text-slate-500 mt-0.5">
-              Count what&apos;s physically in the drawer right now.
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="floatInput" className="block text-[13px] font-bold text-slate-900">
+                  Opening cash float
+                </label>
+                <p className="text-[12px] text-slate-500 mt-0.5">
+                  Count what&apos;s physically in the drawer right now.
+                </p>
+              </div>
+              <ServiceIllustration kind="open-shift" className="w-[88px] h-[70px] shrink-0 -my-2" />
+            </div>
 
             <div className="mt-3 h-16 rounded-xl border-2 border-slate-200 bg-white flex items-center gap-3 px-4 transition-colors focus-within:border-brand">
               <span className="text-[15px] font-semibold text-slate-400 shrink-0">PKR</span>

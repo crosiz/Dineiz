@@ -13,6 +13,7 @@ import { formatPKR } from '@/lib/utils';
 import { API_URL } from '@/lib/api';
 import { resolveTaxConfig, isCardMethod, roundMoney } from '@/lib/pricing';
 import { Banknote, Check, CheckCircle2, CreditCard, Delete, Loader2, Lock, MessageSquare, Printer, QrCode, Split, X } from 'lucide-react';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 
 type PaymentMethod = 'CASH' | 'CARD' | 'JAZZCASH' | 'EASYPAISA' | 'SPLIT';
 
@@ -494,9 +495,7 @@ export default function PaymentModal({
   if (showSuccess && receiptSnapshot) {
     return (
       <Modal isOpen label="Payment received" onClose={handleDone} className="max-w-[520px]"><div className="flex flex-col items-center overflow-y-auto py-6 px-4">
-        <span className="w-14 h-14 rounded-full bg-ok/10 text-ok grid place-items-center mb-3 shrink-0">
-          <Check className="w-7 h-7" strokeWidth={2.5} />
-        </span>
+        <ServiceIllustration kind="payment" className="w-36 h-[115px] mb-2 shrink-0" />
         <h2 className="text-[20px] font-semibold text-ink">Payment received</h2>
         <p className={`mt-1 mb-6 text-[15px] ${finalPaymentInfo?.method === 'CASH' && (finalPaymentInfo?.change ?? 0) > 0 ? 'font-semibold text-ink' : 'text-ink-3'}`}>
           {changeText}
