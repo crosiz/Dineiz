@@ -1075,8 +1075,16 @@ export async function refreshOrders(
     // Keep every locally-known order not yet confirmed by the server list
     // (brand new, still in flight) exactly as-is — unless it's a stale
     // server-keyed duplicate of a client-created row we're about to re-add.
+    // Orders this terminal finished (paid, cancelled) stay too, for a day and
+    // a half. The live list never contains them, so they used to be dropped
+    // here as soon as the server had them: Home's "Orders paid / Sales",
+    // which counts this shift's completed orders on this terminal, fell back
+    // every few seconds and waited on the server's figure instead, which is
+    // exactly the delay the local count exists to avoid.
+    const keepFinishedSince = Date.now() - 36 * 60 * 60 * 1000;
     for (const [localId, o] of Object.entries(cur)) {
-      if (o.serverId) continue;
+      const finishedHere = TERMINAL_ORDER_STATUSES.has(o.status) && Date.parse(o.createdAt) >= keepFinishedSince;
+      if (o.serverId && !finishedHere) continue;
       if (o.orderNumber && byNumber.get(o.orderNumber) !== localId) continue;
       merged[localId] = o;
     }

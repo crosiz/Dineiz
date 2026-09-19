@@ -10,6 +10,7 @@ import { useSocket } from '@/contexts/SocketContext';
 import { formatPKR } from '@/lib/utils';
 import { useShiftStats } from '@/hooks/useShiftStats';
 import { useViews } from '@/lib/core/views';
+import { resolveShiftId } from '@/lib/offline-shift';
 import { OrderTypeBadge } from '@/components/OrderStatusBadge';
 import { TicketCard, type TicketLine } from '@/components/orders/TicketCard';
 import { formatElapsed, minutesSince } from '@/lib/time';
@@ -166,7 +167,7 @@ export default function HomeDashboard() {
   const localPerf = useMemo(() => {
     if (!activeShiftId) return { count: 0, value: 0 };
     const done = Object.values(ordersMap).filter(
-      (o) => o.status === 'COMPLETED' && o.shiftId === activeShiftId,
+      (o) => o.status === 'COMPLETED' && resolveShiftId(o.shiftId) === resolveShiftId(activeShiftId),
     );
     const value = done.reduce((sum, o) => sum + Number(o.netAmount ?? o.subtotal ?? 0), 0);
     return { count: done.length, value };

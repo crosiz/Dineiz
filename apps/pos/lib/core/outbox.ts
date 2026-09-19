@@ -1269,24 +1269,29 @@ async function runWatchdog(): Promise<void> {
     kickOutbox('immediate');
   }
 
-  // A payment that's still non-terminal 90s after being collected is worth
-  // flagging even before it's formally POISONED — markFailed's toast only
-  // fires on a hard, permanent rejection, but a payment can just as easily
-  // sit DEGRADED indefinitely (a transient error keeps re-queueing it with
-  // no error ever bad enough to poison outright), and the "PKR 0 at close
-  // shift, hours later" report traces back to exactly this: the cashier's
-  // screen said paid, nothing ever told them the server disagreed.
-  const stuckPayments = nonTerminal.filter(
-    (e) => e.type === 'PAYMENT_COLLECTED' && !stalePaymentWarned.has(e.id)
-      && now - new Date(e.clientTime).getTime() > 90_000,
-  );
-  for (const e of stuckPayments) {
-    stalePaymentWarned.add(e.id);
-    const order = useViews.getState().orders[e.aggregateId];
-    const label = order ? `${order.orderNumber}${order.tableLabel ? ` (Table ${order.tableLabel})` : ''}` : 'an order';
-    toast.warning(`Payment for ${label} is still trying to sync — the server hasn't confirmed it yet.`, {
+  // A payment the server hasn't confirmed long after it was taken. This used
+  // to toast each one after 90 seconds, offline or not: mid-service, over the
+  // screen, telling staff to check "Sync & Data" for something that was
+  // almost always just a slow or missing connection and fixed itself. The
+  // payment is safe on the terminal either way, Close Shift counts it and
+  // says it's still sending, and a payment the server actually REJECTS has
+  // its own error (notifyPaymentPoisoned). What's left worth interrupting
+  // for: the server is reachable, yet a payment has still not gone through
+  // after 10 minutes. One message for all of them, in plain words, once.
+  const STUCK_PAYMENT_MS = 10 * 60 * 1000;
+  const reachable = !circuitOpen && navigator.onLine !== false;
+  const stuckPayments = reachable
+    ? nonTerminal.filter(
+        (e) => e.type === 'PAYMENT_COLLECTED' && !stalePaymentWarned.has(e.id)
+          && now - new Date(e.clientTime).getTime() > STUCK_PAYMENT_MS,
+      )
+    : [];
+  if (stuckPayments.length) {
+    for (const e of stuckPayments) stalePaymentWarned.add(e.id);
+    const n = stuckPayments.length;
+    toast.warning(`${n} payment${n === 1 ? '' : 's'} not sent to the server yet`, {
       duration: 12000,
-      description: 'It will keep retrying automatically. Check Settings → Sync & Data if this order is still open at close-shift.',
+      description: `${n === 1 ? 'It is' : 'They are'} saved on this device. Keep working, and let a manager know if this keeps showing.`,
     });
   }
 }

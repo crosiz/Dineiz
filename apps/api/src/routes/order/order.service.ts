@@ -1,7 +1,7 @@
 import { prisma } from '@dineiz/db';
 import { upstash } from '../../lib/redis';
 import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerator';
-import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled } from '../../lib/socket';
+import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled, getIO } from '../../lib/socket';
 import { recomputeTableStatus, markTableOrderCompleted } from '../../lib/tableStatus';
 import { incrementShiftAggregate, decrementShiftAggregate, getBranchTodayAggregate } from '../../lib/shiftAggregate';
 import { refreezeShiftTotals } from '../../lib/shiftTotals';
@@ -780,6 +780,31 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
     throw err;
   }
 
+  // Money against an order that was cancelled or voided is refused. It was
+  // accepted: the update simply overwrote CANCELLED with COMPLETED, reviving
+  // a void (and its stock, and its shift's totals) without anyone deciding
+  // to. Permanent (409), so the terminal flags that payment for a manager
+  // instead of retrying it.
+  if (payments && payments.length > 0 && ['CANCELLED', 'VOIDED', 'WALKED_OUT'].includes(existingOrder.status)) {
+    const err: any = new Error(`Order #${existingOrder.orderNumber} was cancelled, so this payment was not recorded`);
+    err.statusCode = 409;
+    throw err;
+  }
+
+  // A payment for an order that is already paid is a replay: the terminal
+  // re-sent it because the first answer never reached it. Re-running the
+  // update replaced the recorded payment rows (deleteMany + create) with new
+  // ones, rewriting when the money was taken. Answer with the order as it
+  // stands instead. COMPLETED is terminal, so there is no legitimate second
+  // payment to lose here.
+  if (payments && payments.length > 0 && existingOrder.status === 'COMPLETED') {
+    const current = await prisma.order.findUnique({
+      where: { id, tenantId },
+      include: { items: true, payments: true, orderDeals: true },
+    });
+    return current!;
+  }
+
   if (payments && payments.length > 0) {
     const tenantBranding = await prisma.tenantBranding.findUnique({
       where: { tenantId },
@@ -939,14 +964,33 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
     })
   ]);
 
-  const io = getIO();
-  if (io) {
-    io.to(`branch:${updatedOrder.branchId}`).emit('order:updated', { orderId: id });
-  }
+  // getIO was never imported here, so this line threw a ReferenceError after
+  // the items were already committed. The terminal saw a failed ADD_ITEMS,
+  // retried, and every retry appended the same items again (one test order
+  // collected fourteen copies of a single Seekh Kabab over five hours). A
+  // notification must never fail a write that has already happened.
+  try {
+    getIO()?.to(`branch:${updatedOrder.branchId}`).emit('order:updated', { orderId: id });
+  } catch { /* the live-orders cache bust below still refreshes other screens */ }
 
   invalidateLiveOrdersCache(tenantId, updatedOrder.branchId);
 
   return updatedOrder;
+}
+
+// Work that follows an order change but is not part of it: webhooks, Zapier,
+// ERP, cache busting, the dashboard broadcast, deal counters. It used to be
+// awaited inside the request, and a BullMQ add waits indefinitely for Redis
+// (maxRetriesPerRequest: null), so with Redis down every payment request hung
+// after the payment was already saved: the terminal never got its answer,
+// warned "still trying to sync", retried 20s later, and the Home screen's
+// totals (broadcast further down the same chain) never moved. The request now
+// answers once the money is recorded; this runs after, and a failure here is
+// logged, never surfaced as a failed payment.
+function afterResponse(label: string, work: () => Promise<unknown>): void {
+  setImmediate(() => {
+    work().catch((e: any) => console.warn(`[order side effect] ${label} failed:`, e?.message ?? e));
+  });
 }
 
 export async function enqueueOrderEvents(
@@ -955,22 +999,22 @@ export async function enqueueOrderEvents(
   payments?: any[],
   redeemedPointsAmount?: number
 ) {
-  await enqueueZapierEvent({ tenantId, event: 'order.updated', payload: order }).catch(() => {});
+  afterResponse('zapier order.updated', () => enqueueZapierEvent({ tenantId, event: 'order.updated', payload: order }));
   if (order.status === 'IN_KITCHEN') {
-    await enqueueCustomWebhookEvent({ tenantId, event: 'order.sent_to_kitchen', payload: order }).catch(() => {});
+    afterResponse('webhook sent_to_kitchen', () => enqueueCustomWebhookEvent({ tenantId, event: 'order.sent_to_kitchen', payload: order }));
   }
   if (order.status === 'READY') {
-    await enqueueCustomWebhookEvent({ tenantId, event: 'order.marked_ready', payload: order }).catch(() => {});
+    afterResponse('webhook marked_ready', () => enqueueCustomWebhookEvent({ tenantId, event: 'order.marked_ready', payload: order }));
   }
   if (order.status === 'CANCELLED') {
     recordOrderVoided(order, { amount: Number(order.netAmount ?? 0), wholeOrder: true });
-    await enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
-    await enqueueCustomWebhookEvent({ tenantId, event: 'order.cancelled', payload: order }).catch(() => {});
+    afterResponse('zapier order.cancelled', () => enqueueZapierEvent({ tenantId, event: 'order.cancelled', payload: order }));
+    afterResponse('webhook order.cancelled', () => enqueueCustomWebhookEvent({ tenantId, event: 'order.cancelled', payload: order }));
     // If this order had already completed (a rare reopen-then-void), back it
     // out of the shift's running totals (spec Part 7 / Part 12).
     if (order.sideEffectsAppliedAt) {
       await decrementShiftAggregate(order, order.payments);
-      await broadcastShiftTotals(tenantId, order.branchId);
+      afterResponse('broadcast totals', () => broadcastShiftTotals(tenantId, order.branchId));
       if (order.shiftId) await refreezeShiftTotals(order.shiftId, `order #${order.orderNumber} cancelled after close`).catch(() => {});
     }
   }
@@ -1029,29 +1073,29 @@ export async function enqueueOrderEvents(
           console.error('Failed to record inventory-deduction-failure anomaly:', anomalyErr);
         }
       });
-      await enqueueZapierEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
-      await enqueueCustomWebhookEvent({ tenantId, event: 'order.completed', payload: order }).catch(() => {});
+      // Spec Part 7 — bust the dashboard cache and push the fresh totals so
+      // the number moves within a second, no polling. First, so nothing else
+      // queued here can hold it up.
+      afterResponse('broadcast totals', () => broadcastShiftTotals(tenantId, order.branchId));
+      afterResponse('zapier order.completed', () => enqueueZapierEvent({ tenantId, event: 'order.completed', payload: order }));
+      afterResponse('webhook order.completed', () => enqueueCustomWebhookEvent({ tenantId, event: 'order.completed', payload: order }));
       // This POS's order lifecycle has no separate "payment collected" step distinct from
       // completion — an order is marked COMPLETED exactly when its payment is taken — so
       // payment.collected fires here, with the actual payment rows as its payload.
-      await enqueueCustomWebhookEvent({ tenantId, event: 'payment.collected', payload: { order, payments: payments ?? order.payments } }).catch(() => {});
-      await erpSyncQueue.add('erp.sync', { tenantId }, {
+      afterResponse('webhook payment.collected', () => enqueueCustomWebhookEvent({ tenantId, event: 'payment.collected', payload: { order, payments: payments ?? order.payments } }));
+      afterResponse('erp sync', () => erpSyncQueue.add('erp.sync', { tenantId }, {
         attempts: 5,
         backoff: { type: 'exponential', delay: 2000 },
         removeOnComplete: true,
         removeOnFail: true,
-      }).catch(() => {});
-      // Spec Part 7 — bust the dashboard cache and push the fresh totals so
-      // the number moves within a second, no polling.
-      await broadcastShiftTotals(tenantId, order.branchId);
+      }));
 
       // Update Deal usage counters — one round trip per deal line
       // sequentially used to serialize N DB calls that don't depend on each
       // other; running them concurrently is safe since each is its own
-      // atomic increment (Postgres handles concurrent increments on the
-      // same row correctly, so two lines using the same deal just both add
-      // 1, same net result as before).
-      try {
+      // atomic increment. Runs once per order: it is inside the
+      // sideEffectsAppliedAt claim above.
+      afterResponse('deal usage', async () => {
         const orderDeals = await prisma.orderDeal.findMany({ where: { orderId: order.id } });
         await Promise.all(
           orderDeals
@@ -1063,12 +1107,10 @@ export async function enqueueOrderEvents(
               })
             )
         );
-      } catch (e) {
-        console.error('Failed to update deal usage:', e);
-      }
+      });
     }
   } else if (payments && payments.length > 0) {
-    await broadcastShiftTotals(tenantId, order.branchId);
+    afterResponse('broadcast totals', () => broadcastShiftTotals(tenantId, order.branchId));
   }
 }
 
