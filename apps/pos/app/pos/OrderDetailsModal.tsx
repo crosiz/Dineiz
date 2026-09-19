@@ -65,7 +65,13 @@ function detailFromView(v: any) {
     // otherwise the card shows PKR 893 while this modal hands PaymentModal
     // orderTotal 0, and payment for an unpriced-lines order gets blocked.
     netAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
-    totalAmount: v.netAmount ?? v.totalAmount ?? v.total ?? v.subtotal ?? 0,
+    // `totalAmount` on the server means the pre-tax item subtotal (see
+    // order.service.ts's createOrder: "Subtotal = totalAmount"). This used to
+    // alias it to the same tax-inclusive figure as `netAmount` — harmless
+    // while nothing read it, but it's what this screen's own "Total" line
+    // below now reads, so it has to be the real subtotal (`v.subtotal`, the
+    // OrderView field), not a second copy of the final amount.
+    totalAmount: v.subtotal ?? 0,
     taxAmount: v.taxAmount ?? 0,
     discountAmount: v.discountAmount ?? 0,
     billRequestedAt: v.billRequestedAt ?? null,
@@ -304,6 +310,14 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const busy = order?.__partial || isUpdating;
 
   const netAmount = order ? Number(order.netAmount ?? order.totalAmount ?? 0) : 0;
+  // This screen's own "Total" (below) is the order's cost before tax — tax
+  // depends on how the customer ends up paying (this tenant has separate
+  // cash/card rates), which isn't decided until Collect Payment is open, so
+  // showing a tax-inclusive guess here could quote a number that doesn't
+  // match what PaymentModal actually charges. `netAmount` (tax-inclusive)
+  // is still what's handed to PaymentModal below as its `orderTotal` — that
+  // fallback path genuinely needs the final gross amount, not this one.
+  const displayTotal = order ? Math.max(0, Number(order.totalAmount ?? 0) - Number(order.discountAmount ?? 0)) : 0;
 
   return (
     <>
@@ -396,7 +410,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             {/* Total */}
             <div className="px-5 py-3 border-t border-line flex items-center justify-between shrink-0 bg-canvas">
               <span className="text-[13px] font-bold text-ink-3 uppercase tracking-wide">Total</span>
-              <span className="text-[20px] font-bold text-ink clash-display">{formatPKR(netAmount)}</span>
+              <span className="text-[20px] font-bold text-ink clash-display">{formatPKR(displayTotal)}</span>
             </div>
 
             {/* Actions */}
