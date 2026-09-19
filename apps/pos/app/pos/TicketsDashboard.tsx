@@ -81,6 +81,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   // KDS off.
   // When useKDS is false: PENDING orders get 'Mark Ready' button, not 'Send to Kitchen'
   const useKDS = useBrandingStore(s => !!s.branding.kitchen?.useKDS && s.branding.branchKdsEnabled !== false);
+  // Settings → Point of Sale → "Require marking orders ready before payment".
+  // Off: a pending/in-kitchen ticket goes straight to "Collect payment"
+  // instead of "Send to kitchen"/"Mark ready" — PaymentModal prints the KOT
+  // on success so the kitchen still gets notified.
+  const posMarkReadyEnabled = useBrandingStore(s => s.branding?.pos?.posMarkReadyEnabled ?? true);
 
   useEffect(() => {
     setIsMounted(true);
@@ -536,7 +541,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     const onActionClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (dataMode === 'history') return;
-      if (isPending) {
+      if (!posMarkReadyEnabled && (isPending || isInKitchen)) {
+        // "Require marking ready before payment" is off — same deep link
+        // isReady already uses below, just reached from an earlier status.
+        const typeStr = order.type ? order.type.toLowerCase().replace('_', '-') : 'dine-in';
+        router.push(`/pos/order?orderId=${order.id}&tableId=${order.tableId ?? ''}&tableLabel=${order.tableLabel ?? ''}&type=${typeStr}&checkout=true&totalAmount=${totalAmount}`);
+      } else if (isPending) {
         // If no KDS: go directly to READY (cashier manually marks food ready)
         // If KDS active: go to IN_KITCHEN so KDS screen picks it up
         const nextStatus = 'IN_KITCHEN';
@@ -586,6 +596,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     const primary: TicketAction | null = dataMode !== 'live' ? null
       : order.heldAt ? { label: 'Resume', tone: 'brand', onClick: onActionClick }
       : isPending && isQR ? { label: 'Confirm order', tone: 'brand', onClick: onActionClick, busy: isUpdatingThis }
+      : !posMarkReadyEnabled && (isPending || isInKitchen) ? { label: 'Collect payment', tone: 'brand', onClick: onActionClick }
       : isPending ? { label: 'Send to kitchen', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis }
       : isInKitchen && useKDS ? { label: 'Cooking', tone: 'quiet', onClick: onActionClick, disabled: true }
       : isInKitchen ? { label: 'Mark ready', tone: 'ink', onClick: onActionClick, busy: isUpdatingThis }

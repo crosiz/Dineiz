@@ -5,7 +5,7 @@ import { X, Search, Check, UserX, Loader2 } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL } from '@/lib/api';
-import { cachedRead } from '@/lib/cached-read';
+import { cachedRead, peekCachedRead } from '@/lib/cached-read';
 import { useViews } from '@/lib/core/views';
 import * as commands from '@/lib/core/commands';
 import { Modal } from '@/components/ui/Modal';
@@ -64,34 +64,50 @@ export function AssignWaiterSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, branchId]);
 
-  const fetchWaiters = async () => {
-    setLoading(true);
-    try {
-      const { data: res } = await cachedRead<any>(`/api/pos/waiters?branchId=${branchId}`);
-      const dataArray = Array.isArray(res) ? res : (res.waiters || res.data || []);
-      const floorTables = Object.values(useViews.getState().tables);
-      const tableCountByWaiter = new Map<string, number>();
-      for (const t of floorTables) {
-        if (!t.assignedWaiterId) continue;
-        tableCountByWaiter.set(t.assignedWaiterId, (tableCountByWaiter.get(t.assignedWaiterId) || 0) + 1);
-      }
+  const applyWaiters = (res: any) => {
+    const dataArray = Array.isArray(res) ? res : (res.waiters || res.data || []);
+    const floorTables = Object.values(useViews.getState().tables);
+    const tableCountByWaiter = new Map<string, number>();
+    for (const t of floorTables) {
+      if (!t.assignedWaiterId) continue;
+      tableCountByWaiter.set(t.assignedWaiterId, (tableCountByWaiter.get(t.assignedWaiterId) || 0) + 1);
+    }
 
-      setWaiters(dataArray.map((u: any) => {
-        const name = u.name || 'Unknown';
-        const parts = name.trim().split(' ');
-        return {
-          ...u,
-          avatarInitials: parts.length >= 2
-            ? (parts[0][0] + parts[1][0]).toUpperCase()
-            : name.substring(0, 2).toUpperCase(),
-          isOnShift: u.lastActiveAt
-            ? Date.now() - new Date(u.lastActiveAt).getTime() < 15 * 60 * 1000
-            : false,
-          assignedTablesCount: tableCountByWaiter.get(u.id) || 0,
-        };
-      }));
+    setWaiters(dataArray.map((u: any) => {
+      const name = u.name || 'Unknown';
+      const parts = name.trim().split(' ');
+      return {
+        ...u,
+        avatarInitials: parts.length >= 2
+          ? (parts[0][0] + parts[1][0]).toUpperCase()
+          : name.substring(0, 2).toUpperCase(),
+        isOnShift: u.lastActiveAt
+          ? Date.now() - new Date(u.lastActiveAt).getTime() < 15 * 60 * 1000
+          : false,
+        assignedTablesCount: tableCountByWaiter.get(u.id) || 0,
+      };
+    }));
+  };
+
+  const fetchWaiters = async () => {
+    const path = `/api/pos/waiters?branchId=${branchId}`;
+    // Paint instantly from whatever was last saved for this branch — this
+    // sheet used to block its entire contents behind a live GET on every
+    // open, which is why it felt slower than every other action here (those
+    // all apply optimistically off data already in memory). The background
+    // refresh below still keeps the list current.
+    const cached = await peekCachedRead<any>(path);
+    if (cached) {
+      applyWaiters(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    try {
+      const { data: res } = await cachedRead<any>(path);
+      applyWaiters(res);
     } catch (err) {
-      toast.error("The staff list is not saved on this device yet. Connect once to download it.");
+      if (!cached) toast.error("The staff list is not saved on this device yet. Connect once to download it.");
     } finally {
       setLoading(false);
     }

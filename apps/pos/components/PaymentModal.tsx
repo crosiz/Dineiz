@@ -39,6 +39,14 @@ interface PaymentModalProps {
   tableLabel?: string;
   tableId?: string;
   customerId?: string | null;
+  /** False when this order has never reached the kitchen — no
+   * ORDER_SENT_TO_KITCHEN event has ever fired for it (a brand-new "Charge"
+   * that skips Send to Kitchen, or a still-PENDING order paid directly
+   * because the tenant's "require Mark Ready" setting is off). The moment
+   * payment succeeds, a KOT prints alongside the receipt so the kitchen
+   * still gets a ticket. Defaults to true (assume already sent) so call
+   * sites that don't pass it keep today's behaviour. */
+  sentToKitchen?: boolean;
   onSuccess: (orderId: string, method: string, amountPaid: number, change: number) => void;
 }
 
@@ -53,6 +61,7 @@ export default function PaymentModal({
   tableLabel,
   tableId,
   customerId,
+  sentToKitchen = true,
   onSuccess,
 }: PaymentModalProps) {
   const cart = useCartStore((s) => s.cart);
@@ -332,6 +341,40 @@ export default function PaymentModal({
     }
   };
 
+  // The kitchen has never seen this order (see `sentToKitchen` doc above) —
+  // print a KOT the moment payment succeeds, from the same `receiptItems`
+  // the receipt uses, so it reflects whatever was actually charged. Gated by
+  // the same auto-print-KOT preference `order/page.tsx`'s own printKOT()
+  // honours, so a tenant that's turned kitchen tickets off entirely doesn't
+  // get a surprise one here either.
+  const printKotIfNeeded = async () => {
+    if (sentToKitchen) return;
+    try {
+      let autoPrintKOT = true;
+      try {
+        const settings = JSON.parse(localStorage.getItem('pos_tenant_settings') || '{}');
+        const branchLevel = branding?.branchKotAutoPrint ?? false;
+        if (settings?.pos?.autoPrintKOT === false && !branchLevel) autoPrintKOT = false;
+      } catch {}
+      if (!autoPrintKOT) return;
+      const { printDocument } = await import('@/lib/print.service');
+      await printDocument('KOT', {
+        orderNumber: orderNumber || orderId.slice(-6),
+        tokenNumber: orderNumber || orderId.slice(-4),
+        type: useCartStore.getState().orderType || 'DINE_IN',
+        tableLabel,
+        cashierName: session.cashierName ?? undefined,
+        tenantName: branding.restaurantName || 'Dineiz',
+        branchName: session?.branchName || 'Main Branch',
+        items: receiptItems,
+        createdAt: new Date().toISOString(),
+      } as any);
+    } catch (e) {
+      console.error('KOT print failed', e);
+      toast.error('Payment collected, but the kitchen ticket failed to print — print it manually from the order.');
+    }
+  };
+
   // Captured once, right when payment succeeds and before clearCart() runs
   // — the on-screen receipt (and a reprint from it) reads this snapshot
   // rather than the live cart/discount/etc. state, which is emptied out
@@ -366,6 +409,8 @@ export default function PaymentModal({
     // Snapshot before anything below touches the cart/discount state.
     setReceiptSnapshot(buildReceiptData(methodLabel, tendered, change));
     setFinalPaymentInfo({ method: methodLabel, tendered, change });
+
+    await printKotIfNeeded();
 
     // Settings → Point of Sale → "Auto-print receipt on payment" was never
     // actually consulted here — a receipt printed on every successful
@@ -494,10 +539,10 @@ export default function PaymentModal({
 
   if (showSuccess && receiptSnapshot) {
     return (
-      <Modal isOpen label="Payment received" onClose={handleDone} className="max-w-[520px]"><div className="flex flex-col items-center overflow-y-auto py-6 px-4">
-        <ServiceIllustration kind="payment" className="w-36 h-[115px] mb-2 shrink-0" />
-        <h2 className="text-[20px] font-semibold text-ink">Payment received</h2>
-        <p className={`mt-1 mb-6 text-[15px] ${finalPaymentInfo?.method === 'CASH' && (finalPaymentInfo?.change ?? 0) > 0 ? 'font-semibold text-ink' : 'text-ink-3'}`}>
+      <Modal isOpen label="Payment received" onClose={handleDone} className="max-w-[560px]"><div className="flex flex-col items-center overflow-y-auto py-8 px-4">
+        <ServiceIllustration kind="payment" className="w-44 h-[140px] mb-3 shrink-0" />
+        <h2 className="text-[24px] font-bold text-ink">Payment received</h2>
+        <p className={`mt-1 mb-6 text-[16px] ${finalPaymentInfo?.method === 'CASH' && (finalPaymentInfo?.change ?? 0) > 0 ? 'font-semibold text-ink' : 'text-ink-3'}`}>
           {changeText}
         </p>
 
@@ -508,9 +553,9 @@ export default function PaymentModal({
             <button
               onClick={() => handlePrintReceipt(finalPaymentInfo?.method || receiptSnapshot.paymentMethod, finalPaymentInfo?.tendered || 0, finalPaymentInfo?.change || 0)}
               disabled={isPrinting}
-              className="flex-1 h-12 rounded-xl border border-line-strong bg-surface text-ink text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-sunken disabled:opacity-50"
+              className="flex-1 h-[52px] rounded-xl border border-line-strong bg-surface text-ink text-[15px] font-bold flex items-center justify-center gap-2 hover:bg-sunken disabled:opacity-50"
             >
-              {isPrinting ? <Loader2 className="animate-spin w-4 h-4" /> : <Printer className="w-4 h-4" />}
+              {isPrinting ? <Loader2 className="animate-spin w-5 h-5" /> : <Printer className="w-5 h-5" />}
               {isPrinting ? 'Printing…' : 'Print receipt'}
             </button>
             {customerPhone && (
@@ -518,16 +563,16 @@ export default function PaymentModal({
                 href={`https://wa.me/${customerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(`Thanks for your order! Your receipt total was PKR ${Math.round(receiptSnapshot.total).toLocaleString()}.`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-12 rounded-xl border border-line-strong bg-surface text-ink text-[14px] font-semibold flex items-center justify-center gap-2 hover:bg-sunken"
+                className="flex-1 h-[52px] rounded-xl bg-ok text-white text-[15px] font-bold flex items-center justify-center gap-2 hover:brightness-105"
               >
-                <MessageSquare className="w-4 h-4 text-ok" />
+                <MessageSquare className="w-5 h-5" />
                 Message
               </a>
             )}
           </div>
           <button
             onClick={handleDone}
-            className="w-full h-12 rounded-xl bg-brand text-on-brand text-[15px] font-semibold hover:bg-brand-strong"
+            className="w-full h-[52px] rounded-xl bg-brand text-on-brand text-[16px] font-bold hover:bg-brand-strong active:scale-[0.98] transition-all shadow-md"
           >
             Done
           </button>
@@ -555,328 +600,352 @@ export default function PaymentModal({
           : `Charge ${formatPKR(totalWithTip)} to card`;
 
   const quick = [500, 1000, 2000, 5000];
-  const keyCls = 'h-14 rounded-xl bg-sunken border border-line text-ink text-[20px] font-semibold tabular-nums hover:bg-hover active:scale-[0.97] transition';
+  const keyCls = 'h-16 rounded-2xl bg-surface border border-line-strong text-ink text-[22px] font-bold tabular-nums shadow-xs hover:bg-sunken active:scale-[0.97] transition';
   const segCls = (active: boolean) =>
     `h-11 rounded-lg text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors ${
       active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
     }`;
+  const tileCls = (active: boolean, locked: boolean) =>
+    `relative flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-2xl border transition-all shadow-xs ${
+      active ? 'border-brand bg-brand/10 text-brand' : 'border-line-strong bg-surface hover:border-brand/60 hover:bg-sunken text-ink'
+    } ${locked ? 'opacity-60' : ''}`;
+  const tipCls = (active: boolean) =>
+    `h-12 rounded-xl border text-[14px] font-bold transition-all shadow-xs ${
+      active ? 'border-brand bg-brand/10 text-brand' : 'border-line-strong bg-surface hover:border-brand/60 text-ink'
+    }`;
 
   return (
-    <Modal isOpen onClose={isProcessing ? undefined : onClose} label={`Charge order ${orderLabel}`} sheetOnMobile className="md:max-w-[1000px] h-[95dvh] md:h-[min(780px,calc(100dvh-32px))] md:flex-row">
-        {/* ── The bill ─────────────────────────────────────────────────── */}
-        <aside className="md:w-[360px] shrink-0 flex flex-col bg-canvas border-b md:border-b-0 md:border-r border-line max-h-[42%] md:max-h-none">
-          <header className="px-5 pt-5 pb-3 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-[18px] font-semibold text-ink">Charge</h1>
-              <div className="mt-1 flex items-center gap-2 text-[13px] text-ink-3">
-                <span className="tabular-nums whitespace-nowrap">{orderLabel}</span>
-                <OrderTypeBadge type={tableLabel ? 'DINE_IN' : (useCartStore.getState().orderType || 'TAKEAWAY')} tableLabel={tableLabel} size="sm" />
-              </div>
+    <Modal isOpen onClose={isProcessing ? undefined : onClose} label={`Charge order ${orderLabel}`} sheetOnMobile className="md:max-w-[1040px] h-[95dvh] md:h-[min(820px,calc(100dvh-32px))] md:flex-row">
+        {/* Header + close live outside the scroll region so they stay put,
+            matching the shared Modal idiom (pinned header/footer, one
+            scrolling body). On mobile the bill and payment method both
+            scroll together as ONE region below; only at md+ do they split
+            into two independently-scrolling columns — nesting an
+            always-on scroller inside another was what made this feel
+            cramped and "busy" on a phone. */}
+        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 md:hidden shrink-0">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-bold text-ink leading-tight">Charge</h1>
+            <div className="mt-1 flex items-center gap-2 text-[13px] text-ink-3">
+              <span className="tabular-nums whitespace-nowrap">{orderLabel}</span>
+              <OrderTypeBadge type={tableLabel ? 'DINE_IN' : (useCartStore.getState().orderType || 'TAKEAWAY')} tableLabel={tableLabel} size="sm" />
             </div>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="md:hidden w-11 h-11 grid place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
-            >
-              <X className="w-[18px] h-[18px]" />
-            </button>
-          </header>
-
-          <ul className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 divide-y divide-line">
-            {displayItems.map((c: any, i: number) => {
-              const mods = [
-                c.selectedVariation?.name || c.options?.variation?.name,
-                ...(c.selectedAddOns || c.options?.addOns || []).map((a: any) => `+ ${a.name}`),
-              ].filter(Boolean).join(' · ');
-              return (
-                <li key={i} className="py-2.5 flex gap-3">
-                  <span className="w-6 shrink-0 text-right text-[13.5px] font-semibold text-ink tabular-nums">{c.quantity}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] text-ink truncate">{c.name || c.item?.name || c.itemName || 'Item'}</p>
-                    {mods && <p className="text-[12px] text-ink-3 truncate">{mods}</p>}
-                  </div>
-                  <span className="text-[13.5px] text-ink-2 tabular-nums shrink-0">{formatPKR(c.subtotal || (c.unitPrice * c.quantity) || 0)}</span>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="px-5 pt-3 pb-5 border-t border-line bg-canvas">
-            {loyaltyProfile && loyaltySettings && loyaltySettings.isActive && (
-              <label className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 cursor-pointer">
-                <span className="min-w-0">
-                  <span className="block text-[13.5px] font-semibold text-ink">Use loyalty points</span>
-                  <span className="block text-[12px] text-ink-3 tabular-nums">{loyaltyProfile.loyaltyPoints} available</span>
-                </span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={useLoyaltyPoints}
-                  onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
-                  className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${useLoyaltyPoints ? 'bg-brand' : 'bg-line-strong'}`}
-                >
-                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${useLoyaltyPoints ? 'translate-x-5' : ''}`} />
-                </button>
-              </label>
-            )}
-            <dl className="space-y-1.5 text-[13.5px]">
-              <div className="flex justify-between"><dt className="text-ink-3">Subtotal</dt><dd className="text-ink-2 tabular-nums">{formatPKR(subtotal)}</dd></div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-ok"><dt>Discount</dt><dd className="tabular-nums">− {formatPKR(discountAmount)}</dd></div>
-              )}
-              {loyaltyDiscount > 0 && (
-                <div className="flex justify-between text-ok"><dt>Loyalty ({redeemedPoints} pts)</dt><dd className="tabular-nums">− {formatPKR(loyaltyDiscount)}</dd></div>
-              )}
-              <div className="flex justify-between"><dt className="text-ink-3">{taxLabel}</dt><dd className="text-ink-2 tabular-nums">{formatPKR(taxAmount)}</dd></div>
-              {tipAmount > 0 && (
-                <div className="flex justify-between"><dt className="text-ink-3">Tip</dt><dd className="text-ink-2 tabular-nums">+ {formatPKR(tipAmount)}</dd></div>
-              )}
-              <div className="flex justify-between items-baseline pt-2.5 mt-1 border-t border-line">
-                <dt className="text-[15px] font-semibold text-ink">Total due</dt>
-                <dd className="text-[26px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(totalWithTip)}</dd>
-              </div>
-            </dl>
           </div>
-        </aside>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="w-11 h-11 grid place-items-center rounded-full bg-sunken text-ink-3 hover:bg-hover hover:text-ink shrink-0"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-        {/* ── Taking the money ─────────────────────────────────────────── */}
-        <section className="flex-1 min-w-0 min-h-0 flex flex-col">
-          <div className="px-5 md:px-6 pt-5 flex items-center gap-3">
-            <div className="flex-1 grid grid-cols-3 sm:grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
-              {[
-                { method: 'CASH' as PaymentMethod, Icon: Banknote, label: 'Cash' },
-                { method: 'CARD' as PaymentMethod, Icon: CreditCard, label: 'Card' },
-                { method: 'SPLIT' as PaymentMethod, Icon: Split, label: 'Split' },
-                { method: 'JAZZCASH' as PaymentMethod, Icon: QrCode, label: 'JazzCash' },
-                { method: 'EASYPAISA' as PaymentMethod, Icon: QrCode, label: 'EasyPaisa' },
-              ].map(({ method, Icon, label }) => {
-                const locked = UNCONFIGURED_METHODS.includes(method);
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
+          {/* ── The bill ─────────────────────────────────────────────────── */}
+          <aside className="md:w-[380px] shrink-0 flex flex-col bg-canvas border-b md:border-b-0 md:border-r border-line md:overflow-y-auto">
+            <header className="hidden md:flex px-5 pt-5 pb-3 items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-[22px] font-bold text-ink leading-tight">Charge</h1>
+                <div className="mt-1 flex items-center gap-2 text-[13px] text-ink-3">
+                  <span className="tabular-nums whitespace-nowrap">{orderLabel}</span>
+                  <OrderTypeBadge type={tableLabel ? 'DINE_IN' : (useCartStore.getState().orderType || 'TAKEAWAY')} tableLabel={tableLabel} size="sm" />
+                </div>
+              </div>
+            </header>
+
+            <ul className="px-5 divide-y divide-line">
+              {displayItems.map((c: any, i: number) => {
+                const mods = [
+                  c.selectedVariation?.name || c.options?.variation?.name,
+                  ...(c.selectedAddOns || c.options?.addOns || []).map((a: any) => `+ ${a.name}`),
+                ].filter(Boolean).join(' · ');
                 return (
-                  <button
-                    key={method}
-                    onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
-                    title={locked ? `${label} isn't connected yet` : undefined}
-                    className={`${segCls(activeMethod === method)} ${locked ? 'opacity-55' : ''}`}
-                  >
-                    {locked ? <Lock className="w-3.5 h-3.5" /> : <Icon className="w-4 h-4" />}
-                    <span className="truncate">{label}</span>
-                  </button>
+                  <li key={i} className="py-3 flex gap-3">
+                    <span className="w-6 shrink-0 text-right text-[14px] font-bold text-brand tabular-nums">{c.quantity}×</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-medium text-ink truncate">{c.name || c.item?.name || c.itemName || 'Item'}</p>
+                      {mods && <p className="text-[12px] text-ink-3 italic truncate">{mods}</p>}
+                    </div>
+                    <span className="text-[14px] font-medium text-ink-2 tabular-nums shrink-0">{formatPKR(c.subtotal || (c.unitPrice * c.quantity) || 0)}</span>
+                  </li>
                 );
               })}
-            </div>
-            <button
-              onClick={onClose}
-              aria-label="Close"
-              className="hidden md:grid w-10 h-10 place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+            </ul>
 
-          {/* Tip */}
-          <div className="px-5 md:px-6 pt-3 flex items-center gap-3">
-            <span className="text-[13px] font-medium text-ink-3 w-8 shrink-0">Tip</span>
-            {showCustomTip ? (
-              <div className="flex-1 flex items-center gap-2">
-                <label className="flex-1 h-10 px-3 flex items-center gap-2 rounded-lg border border-line-strong focus-within:border-ink bg-surface">
-                  <span className="text-[12.5px] font-semibold text-ink-3">PKR</span>
-                  <input
-                    type="number"
-                    value={customTip}
-                    onChange={(e) => setCustomTip(e.target.value)}
-                    placeholder="0"
-                    className="w-full bg-transparent outline-none focus:shadow-none text-[15px] font-semibold text-ink tabular-nums"
-                    autoFocus
-                  />
-                </label>
-                <button
-                  onClick={() => { setShowCustomTip(false); setCustomTip(''); setTipPercent(0); }}
-                  className="h-10 px-3 rounded-lg text-[13px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <div className="flex-1 grid grid-cols-5 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
-                {[0, 10, 15, 20].map((pct) => (
-                  <button key={pct} onClick={() => setTipPercent(pct)} className={segCls(tipPercent === pct)}>
-                    {pct === 0 ? 'None' : `${pct}%`}
+            <div className="px-5 pt-2 pb-5">
+              {loyaltyProfile && loyaltySettings && loyaltySettings.isActive && (
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-brand/25 bg-brand/5 px-4 py-3">
+                  <span className="min-w-0">
+                    <span className="block text-[13.5px] font-bold text-brand">Loyalty points</span>
+                    <span className="block text-[12px] text-brand/80 font-medium tabular-nums">{loyaltyProfile.loyaltyPoints} available</span>
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={useLoyaltyPoints}
+                    onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}
+                    className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${useLoyaltyPoints ? 'bg-brand' : 'bg-line-strong'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${useLoyaltyPoints ? 'translate-x-5' : ''}`} />
                   </button>
-                ))}
-                <button onClick={() => { setShowCustomTip(true); setTipPercent(0); }} className={segCls(false)}>
-                  Custom
-                </button>
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+              <dl className="space-y-2 text-[14px]">
+                <div className="flex justify-between"><dt className="text-ink-3">Subtotal</dt><dd className="text-ink-2 font-medium tabular-nums">{formatPKR(subtotal)}</dd></div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-ok font-medium"><dt>Discount</dt><dd className="tabular-nums">− {formatPKR(discountAmount)}</dd></div>
+                )}
+                {loyaltyDiscount > 0 && (
+                  <div className="flex justify-between text-ok font-bold"><dt>Loyalty ({redeemedPoints} pts)</dt><dd className="tabular-nums">− {formatPKR(loyaltyDiscount)}</dd></div>
+                )}
+                <div className="flex justify-between"><dt className="text-ink-3">{taxLabel}</dt><dd className="text-ink-2 font-medium tabular-nums">{formatPKR(taxAmount)}</dd></div>
+                {tipAmount > 0 && (
+                  <div className="flex justify-between text-ok font-medium"><dt className="text-ink-3">Tip</dt><dd className="tabular-nums">+ {formatPKR(tipAmount)}</dd></div>
+                )}
+                <div className="flex justify-between items-end pt-3 mt-1 border-t border-line">
+                  <dt className="text-[16px] font-bold text-ink">Total due</dt>
+                  <dd className="text-[32px] font-bold text-brand tabular-nums tracking-tight leading-none">{formatPKR(totalWithTip)}</dd>
+                </div>
+              </dl>
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 py-5">
-            {activeMethod === 'CASH' && (
-              <div className="flex flex-col lg:flex-row gap-6">
-                <div className="flex-1 min-w-0 flex flex-col gap-4">
-                  {/* Stacked, not side by side: beside the keypad at tablet width
-                      two 28px amounts didn't fit and "Received" truncated. */}
-                  <div className="rounded-xl border border-line divide-y divide-line">
-                    <div className="px-4 py-3 flex items-baseline justify-between gap-3">
-                      <p className="text-[13px] text-ink-3">Received</p>
-                      <p className="text-[26px] font-bold text-ink tabular-nums tracking-tight whitespace-nowrap">
+              {/* Tip */}
+              <div className="mt-6">
+                <p className="text-[11px] font-bold tracking-widest uppercase text-ink-3 mb-2.5">Add tip</p>
+                {showCustomTip ? (
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 h-12 px-3.5 flex items-center gap-2 rounded-xl border border-line-strong focus-within:border-brand bg-surface">
+                      <span className="text-[12.5px] font-bold text-ink-3">PKR</span>
+                      <input
+                        type="number"
+                        value={customTip}
+                        onChange={(e) => setCustomTip(e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-transparent outline-none focus:shadow-none text-[16px] font-bold text-ink tabular-nums"
+                        autoFocus
+                      />
+                    </label>
+                    <button
+                      onClick={() => { setShowCustomTip(false); setCustomTip(''); setTipPercent(0); }}
+                      className="h-12 px-4 rounded-xl border border-line-strong text-[13px] font-bold text-ink-3 hover:bg-sunken hover:text-ink"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {[0, 10, 15, 20].map((pct) => (
+                      <button key={pct} onClick={() => setTipPercent(pct)} className={tipCls(tipPercent === pct && !showCustomTip)}>
+                        {pct === 0 ? 'None' : `${pct}%`}
+                      </button>
+                    ))}
+                    <button onClick={() => { setShowCustomTip(true); setTipPercent(0); }} className={`${tipCls(false)} col-span-4`}>
+                      Custom amount
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* ── Taking the money ─────────────────────────────────────────── */}
+          <section className="flex-1 min-w-0 flex flex-col md:overflow-y-auto">
+            <div className="px-5 md:px-6 pt-5 flex items-center gap-3">
+              <div className="flex-1 grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {[
+                  { method: 'CASH' as PaymentMethod, Icon: Banknote, label: 'Cash' },
+                  { method: 'CARD' as PaymentMethod, Icon: CreditCard, label: 'Card' },
+                  { method: 'SPLIT' as PaymentMethod, Icon: Split, label: 'Split' },
+                  { method: 'JAZZCASH' as PaymentMethod, Icon: QrCode, label: 'JazzCash' },
+                  { method: 'EASYPAISA' as PaymentMethod, Icon: QrCode, label: 'EasyPaisa' },
+                ].map(({ method, Icon, label }) => {
+                  const locked = UNCONFIGURED_METHODS.includes(method);
+                  return (
+                    <button
+                      key={method}
+                      onClick={() => { setActiveMethod(method); setAmountEntered(''); }}
+                      title={locked ? `${label} isn't connected yet` : undefined}
+                      className={tileCls(activeMethod === method, locked)}
+                    >
+                      {locked && <Lock className="absolute top-1.5 right-1.5 w-3 h-3 text-ink-4" />}
+                      {locked ? <Lock className="w-5 h-5" /> : <Icon className="w-6 h-6" />}
+                      <span className="text-[11px] font-bold truncate">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="hidden md:grid w-10 h-10 place-items-center rounded-lg text-ink-3 hover:bg-sunken hover:text-ink shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-5 md:px-6 py-5">
+              {activeMethod === 'CASH' && (
+                <div className="flex flex-col lg:flex-row gap-6">
+                  <div className="flex-1 min-w-0 flex flex-col gap-5">
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold tracking-widest uppercase text-ink-3">Received</p>
+                      <p className="text-[44px] leading-tight font-bold text-ink tabular-nums tracking-tight border-b-2 border-line pb-1">
                         {formatPKR(Number(amountEntered || 0))}
                       </p>
                     </div>
-                    <div className="px-4 py-3 flex items-baseline justify-between gap-3">
-                      <p className="text-[13px] text-ink-3">Change</p>
-                      <p className={`text-[26px] font-bold tabular-nums tracking-tight whitespace-nowrap ${isCashValid ? 'text-ok' : 'text-ink-4'}`}>
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold tracking-widest uppercase text-ink-3">Change</p>
+                      <p className={`text-[38px] leading-tight font-bold tabular-nums tracking-tight ${isCashValid ? 'text-ok' : 'text-ink-4'}`}>
                         {isCashValid ? formatPKR(Math.round(changeDue)) : '—'}
                       </p>
                     </div>
-                  </div>
-                  {!isCashValid && cashNum > 0 && (
-                    <p className="-mt-1.5 text-[13px] text-ink-3">
-                      {formatPKR(Math.ceil(totalWithTip - cashNum))} more to cover the total.
-                    </p>
-                  )}
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())}
-                      className="h-11 rounded-lg border border-ink text-ink text-[13.5px] font-semibold hover:bg-sunken"
-                    >
-                      Exact
-                    </button>
-                    {quick.map((amt) => (
+                    {!isCashValid && cashNum > 0 && (
+                      <p className="-mt-2 text-[13px] text-ink-3">
+                        {formatPKR(Math.ceil(totalWithTip - cashNum))} more to cover the total.
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        key={amt}
-                        onClick={() => setAmountEntered((prev) => (Number(prev || 0) + amt).toString())}
-                        className="h-11 rounded-lg border border-line-strong text-ink-2 text-[13.5px] font-semibold tabular-nums hover:bg-sunken hover:text-ink"
+                        onClick={() => setAmountEntered(Math.ceil(totalWithTip).toString())}
+                        className="h-11 px-4 rounded-full border border-brand text-brand bg-brand/5 text-[13.5px] font-bold hover:bg-brand/10 active:scale-95 transition-all"
                       >
-                        + {amt.toLocaleString('en-US')}
+                        Exact
                       </button>
-                    ))}
-                    <button
-                      onClick={() => setAmountEntered('')}
-                      className="h-11 rounded-lg text-[13.5px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                <div className="lg:w-[300px] shrink-0 grid grid-cols-3 gap-2 content-start">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'backspace'].map((key) =>
-                    key === 'backspace' ? (
-                      <button key={key} onClick={() => handleNumpad('backspace')} className={`${keyCls} grid place-items-center text-ink-2`} aria-label="Delete">
-                        <Delete className="w-5 h-5" />
-                      </button>
-                    ) : key === '00' ? (
-                      <button key={key} onClick={() => setAmountEntered((prev) => (prev ? `${prev}00` : prev))} className={keyCls}>00</button>
-                    ) : (
-                      <button key={key} onClick={() => handleNumpad(key)} className={keyCls}>{key}</button>
-                    ),
-                  )}
-                </div>
-              </div>
-            )}
-
-            {activeMethod === 'CARD' && (
-              <div className="h-full min-h-[260px] flex flex-col items-center justify-center text-center">
-                <span className="w-14 h-14 rounded-2xl bg-sunken text-ink-2 grid place-items-center mb-4">
-                  <CreditCard className="w-7 h-7" />
-                </span>
-                <p className="text-[15px] text-ink-3">Take on the card machine</p>
-                <p className="mt-0.5 text-[28px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(totalWithTip)}</p>
-                <label className="mt-5 w-full max-w-[320px] text-left">
-                  <span className="block text-[13px] font-medium text-ink-2 mb-1.5">Authorization code</span>
-                  <input
-                    type="text"
-                    value={authCode}
-                    onChange={(e) => setAuthCode(e.target.value)}
-                    placeholder="From the card slip"
-                    className="w-full h-12 px-3.5 rounded-xl border border-line-strong focus:border-ink focus:shadow-none bg-surface outline-none text-[15px] font-semibold text-ink placeholder:text-ink-4 placeholder:font-normal tracking-wide"
-                  />
-                </label>
-              </div>
-            )}
-
-            {unconfigured && (
-              <div className="h-full min-h-[260px] flex flex-col items-center justify-center text-center px-6">
-                <span className="w-14 h-14 rounded-2xl bg-sunken text-ink-3 grid place-items-center mb-4">
-                  <Lock className="w-6 h-6" />
-                </span>
-                <p className="text-[16px] font-semibold text-ink">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} isn’t connected yet</p>
-                <p className="mt-1.5 max-w-sm text-[13.5px] text-ink-3 leading-relaxed">
-                  A manager can set it up for this branch. Until then, take this payment as cash or card.
-                </p>
-              </div>
-            )}
-
-            {activeMethod === 'SPLIT' && (
-              <div className="max-w-[520px] flex flex-col gap-3">
-                <p className="text-[13.5px] text-ink-3">Split {formatPKR(totalWithTip)} across two payments.</p>
-                {[
-                  { m: splitMethod1, setM: setSplitMethod1, value: splitAmount1, editable: true },
-                  { m: splitMethod2, setM: setSplitMethod2, value: String(Math.round(splitNum2)), editable: false },
-                ].map((row, i) => (
-                  <div key={i} className="flex flex-col sm:flex-row items-stretch gap-2.5">
-                    <div className="grid grid-cols-2 gap-0.5 p-1 rounded-xl bg-sunken border border-line w-[168px] shrink-0">
-                      {(['CASH', 'CARD'] as const).map((m) => (
-                        <button key={m} onClick={() => row.setM(m)} className={segCls(row.m === m)}>
-                          {m === 'CASH' ? 'Cash' : 'Card'}
+                      {quick.map((amt) => (
+                        <button
+                          key={amt}
+                          onClick={() => setAmountEntered((prev) => (Number(prev || 0) + amt).toString())}
+                          className="h-11 px-4 rounded-full border border-line-strong text-ink-2 text-[13.5px] font-bold tabular-nums hover:bg-sunken hover:text-ink active:scale-95 transition-all"
+                        >
+                          + {amt.toLocaleString('en-US')}
                         </button>
                       ))}
+                      <button
+                        onClick={() => setAmountEntered('')}
+                        className="h-11 px-4 rounded-full border border-line-strong text-danger text-[13.5px] font-bold hover:bg-danger/5 active:scale-95 transition-all"
+                      >
+                        Clear
+                      </button>
                     </div>
-                    <label className={`flex-1 h-12 px-3.5 flex items-center gap-2 rounded-xl border ${row.editable ? 'border-line-strong focus-within:border-ink bg-surface' : 'border-line bg-sunken'}`}>
-                      <span className="text-[12.5px] font-semibold text-ink-3">PKR</span>
-                      {row.editable ? (
-                        <input
-                          type="number"
-                          value={splitAmount1}
-                          onChange={(e) => setSplitAmount1(e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-transparent outline-none focus:shadow-none text-[16px] font-semibold text-ink tabular-nums"
-                        />
-                      ) : (
-                        <span className="text-[16px] font-semibold text-ink-2 tabular-nums">{Number(row.value).toLocaleString('en-US')}</span>
-                      )}
-                    </label>
                   </div>
-                ))}
-                {splitNum1 > 0 && !isSplitValid && (
-                  <p className="text-[13px] font-medium text-danger">The two amounts must add up to {formatPKR(totalWithTip)}.</p>
-                )}
-              </div>
-            )}
-          </div>
 
-          <footer className="px-5 md:px-6 py-4 border-t border-line flex flex-col gap-2.5 shrink-0">
-            {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
-              <p className="text-[12.5px] text-ink-3 text-center">
-                Billing the order’s full total ({formatPKR(Math.round(orderTotal))}); the server confirms the final amount.
-              </p>
-            )}
-            {totalWithTip <= 0 && (
-              <p className="text-[13px] font-medium text-danger text-center">
-                This order’s total couldn’t be read. Reopen it from Tickets or cancel it; payment can’t be taken for PKR 0.
-              </p>
-            )}
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
-                title="Print the bill"
-                aria-label="Print the bill"
-                className="w-12 h-12 grid place-items-center rounded-xl border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink shrink-0"
-              >
-                <Printer className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={confirmDisabled}
-                className="flex-1 h-12 rounded-xl bg-brand text-on-brand text-[15px] font-semibold flex items-center justify-center gap-2 transition-colors enabled:hover:bg-brand-strong disabled:bg-sunken disabled:text-ink-3 disabled:cursor-not-allowed tabular-nums"
-              >
-                {isProcessing && <Loader2 className="animate-spin w-4 h-4" />}
-                {confirmLabel}
-              </button>
+                  <div className="lg:w-[320px] shrink-0 grid grid-cols-3 gap-2.5 content-start p-3 rounded-[28px] bg-canvas border border-line">
+                    {['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0', 'backspace'].map((key) =>
+                      key === 'backspace' ? (
+                        <button key={key} onClick={() => handleNumpad('backspace')} className={`${keyCls} grid place-items-center text-ink-2`} aria-label="Delete">
+                          <Delete className="w-5 h-5" />
+                        </button>
+                      ) : key === '00' ? (
+                        <button key={key} onClick={() => setAmountEntered((prev) => (prev ? `${prev}00` : prev))} className={keyCls}>00</button>
+                      ) : (
+                        <button key={key} onClick={() => handleNumpad(key)} className={keyCls}>{key}</button>
+                      ),
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeMethod === 'CARD' && (
+                <div className="h-full min-h-[280px] flex flex-col items-center justify-center text-center">
+                  <span className="w-28 h-28 rounded-full border-2 border-brand bg-brand/5 grid place-items-center mb-5">
+                    <CreditCard className="w-11 h-11 text-brand" />
+                  </span>
+                  <p className="text-[15px] text-ink-3">Take on the card machine</p>
+                  <p className="mt-1 text-[32px] font-bold text-ink tabular-nums tracking-tight">{formatPKR(totalWithTip)}</p>
+                  <label className="mt-5 w-full max-w-[320px] text-left">
+                    <span className="block text-[13px] font-medium text-ink-2 mb-1.5">Authorization code</span>
+                    <input
+                      type="text"
+                      value={authCode}
+                      onChange={(e) => setAuthCode(e.target.value)}
+                      placeholder="From the card slip"
+                      className="w-full h-12 px-3.5 rounded-xl border border-line-strong focus:border-ink focus:shadow-none bg-surface outline-none text-[15px] font-semibold text-ink placeholder:text-ink-4 placeholder:font-normal tracking-wide"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {unconfigured && (
+                <div className="h-full min-h-[280px] flex flex-col items-center justify-center text-center px-6">
+                  <span className="w-28 h-28 rounded-full border-2 border-line bg-canvas grid place-items-center mb-5">
+                    <Lock className="w-11 h-11 text-ink-4" />
+                  </span>
+                  <p className="text-[17px] font-bold text-ink">{activeMethod === 'JAZZCASH' ? 'JazzCash' : 'EasyPaisa'} isn’t connected yet</p>
+                  <p className="mt-1.5 max-w-sm text-[13.5px] text-ink-3 leading-relaxed">
+                    A manager can set it up for this branch. Until then, take this payment as cash or card.
+                  </p>
+                </div>
+              )}
+
+              {activeMethod === 'SPLIT' && (
+                <div className="max-w-[520px] flex flex-col gap-4">
+                  <p className="text-[14px] font-medium text-ink-3">Split {formatPKR(totalWithTip)} across two payments.</p>
+                  {[
+                    { m: splitMethod1, setM: setSplitMethod1, value: splitAmount1, editable: true },
+                    { m: splitMethod2, setM: setSplitMethod2, value: String(Math.round(splitNum2)), editable: false },
+                  ].map((row, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row items-stretch gap-2.5">
+                      <div className="grid grid-cols-2 gap-0.5 p-1 rounded-xl bg-sunken border border-line w-[168px] shrink-0">
+                        {(['CASH', 'CARD'] as const).map((m) => (
+                          <button key={m} onClick={() => row.setM(m)} className={segCls(row.m === m)}>
+                            {m === 'CASH' ? 'Cash' : 'Card'}
+                          </button>
+                        ))}
+                      </div>
+                      <label className={`flex-1 h-12 px-3.5 flex items-center gap-2 rounded-xl border ${row.editable ? 'border-line-strong focus-within:border-ink bg-surface' : 'border-line bg-sunken'}`}>
+                        <span className="text-[12.5px] font-semibold text-ink-3">PKR</span>
+                        {row.editable ? (
+                          <input
+                            type="number"
+                            value={splitAmount1}
+                            onChange={(e) => setSplitAmount1(e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-transparent outline-none focus:shadow-none text-[16px] font-semibold text-ink tabular-nums"
+                          />
+                        ) : (
+                          <span className="text-[16px] font-semibold text-ink-2 tabular-nums">{Number(row.value).toLocaleString('en-US')}</span>
+                        )}
+                      </label>
+                    </div>
+                  ))}
+                  {splitNum1 > 0 && !isSplitValid && (
+                    <p className="text-[13px] font-medium text-danger">The two amounts must add up to {formatPKR(totalWithTip)}.</p>
+                  )}
+                </div>
+              )}
             </div>
-          </footer>
-        </section>
+          </section>
+        </div>
+
+        <footer className="px-5 md:px-6 py-4 border-t border-line flex flex-col gap-2.5 shrink-0 bg-canvas">
+          {!!orderId && !itemsTrustworthy && orderTotal > 0 && totalWithTip > 0 && (
+            <p className="text-[12.5px] text-ink-3 text-center">
+              Billing the order’s full total ({formatPKR(Math.round(orderTotal))}); the server confirms the final amount.
+            </p>
+          )}
+          {totalWithTip <= 0 && (
+            <p className="text-[13px] font-medium text-danger text-center">
+              This order’s total couldn’t be read. Reopen it from Tickets or cancel it; payment can’t be taken for PKR 0.
+            </p>
+          )}
+          <div className="flex gap-2.5">
+            <button
+              onClick={() => handlePrintReceipt(activeMethod, cashNum || totalWithTip, changeDue)}
+              title="Print the bill"
+              aria-label="Print the bill"
+              className="w-14 h-14 grid place-items-center rounded-2xl border border-line-strong text-ink-2 hover:bg-sunken hover:text-ink shrink-0"
+            >
+              <Printer className="w-6 h-6" />
+            </button>
+            <button
+              onClick={handleConfirm}
+              disabled={confirmDisabled}
+              className="flex-1 h-14 rounded-2xl bg-brand text-on-brand text-[17px] font-bold flex items-center justify-center gap-2.5 transition-all enabled:hover:bg-brand-strong enabled:active:scale-[0.98] disabled:bg-sunken disabled:text-ink-3 disabled:cursor-not-allowed tabular-nums shadow-md"
+            >
+              {isProcessing && <Loader2 className="animate-spin w-5 h-5" />}
+              {confirmLabel}
+            </button>
+          </div>
+        </footer>
     </Modal>
   );
 }

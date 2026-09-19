@@ -347,13 +347,24 @@ export async function bumpOrder(tenantId: string, fullId: string) {
   const allDone = allItems.length > 0 && allItems.every(i => i.kdsStatus === 'DONE');
 
   if (allDone && existing.status !== 'READY' && existing.status !== 'COMPLETED' && existing.status !== 'CANCELLED') {
+    const STATUS_ORDER = ['PENDING', 'IN_KITCHEN', 'READY', 'COMPLETED'];
     const order = await prisma.$transaction(async tx => {
       // Keep every lifecycle step and its audit record, including older pending tickets.
       const steps = existing.status === 'PENDING' ? ['IN_KITCHEN', 'READY'] as const : ['READY'] as const;
       let from = existing.status;
       for (const status of steps) {
         const changed = await tx.order.updateMany({ where: { id: orderId, tenantId, status: from }, data: { status } });
-        if (!changed.count) throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+        if (!changed.count) {
+          // A concurrent bump (a duplicate offline-kitchen replay, or a
+          // near-simultaneous second tap before the button's own busy guard
+          // caught it) may have already carried this order past `from` —
+          // that's not a conflict, it's the same intent having already won.
+          // Only a status that never reaches this step (e.g. CANCELLED) is a
+          // real conflict worth surfacing.
+          const current = await tx.order.findUniqueOrThrow({ where: { id: orderId, tenantId }, select: { status: true } });
+          if (STATUS_ORDER.indexOf(current.status) >= STATUS_ORDER.indexOf(status)) { from = current.status; continue; }
+          throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+        }
         await tx.auditLog.create({ data: { action: 'ORDER_STATUS_CHANGED', targetTenantId: tenantId, before: { orderId, status: from }, after: { orderId, status }, notes: 'Kitchen ready' } });
         from = status;
       }

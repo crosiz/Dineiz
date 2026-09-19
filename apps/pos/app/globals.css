@@ -333,14 +333,20 @@
     .progress-sweep { animation: none; transform: none; width: 100%; opacity: .35; }
   }
 
-  /* components/ui/Dialog.tsx */
+  /* components/ui/Modal.tsx — entrance only. `from`-only (no `to` block) so
+     the settled state is the element's own `transform: none`, not a
+     lingering identity transform that would make the panel a containing
+     block for `position: fixed` descendants and clip nested sheets. */
   @keyframes dialog-in {
     from { opacity: 0; transform: translateY(8px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   @keyframes overlay-in {
     from { opacity: 0; }
-    to { opacity: 1; }
+  }
+  .modal-anim-scrim { animation: overlay-in 140ms ease-out; }
+  .modal-anim-panel { animation: dialog-in 200ms cubic-bezier(0.16, 1, 0.3, 1); }
+  @media (prefers-reduced-motion: reduce) {
+    .modal-anim-scrim, .modal-anim-panel { animation: none; }
   }
 
   @keyframes success-fill {
