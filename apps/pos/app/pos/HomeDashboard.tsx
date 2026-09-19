@@ -472,8 +472,10 @@ export default function HomeDashboard() {
                     {isMounted ? session?.cashierName || 'Operator' : 'Operator'}
                   </h3>
                   {shiftPill && (
-                    <span className={`h-6 px-2 rounded-full inline-flex items-center gap-1.5 text-[12px] font-medium shrink-0 ${shiftPill.tone}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${shiftPill.dot}`} />
+                    // Plain dot and words, the same as the sign-in screen's
+                    // status: no pill.
+                    <span className="inline-flex items-center gap-1.5 text-[12px] text-ink-3 shrink-0">
+                      <span className={`w-2 h-2 rounded-full ${shiftPill.dot}`} />
                       {shiftPill.label}
                     </span>
                   )}
