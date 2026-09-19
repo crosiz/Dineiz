@@ -615,7 +615,7 @@ export default function PaymentModal({
     }`;
 
   return (
-    <Modal isOpen onClose={isProcessing ? undefined : onClose} label={`Charge order ${orderLabel}`} sheetOnMobile className="md:max-w-[1040px] h-[95dvh] md:h-[min(820px,calc(100dvh-32px))] md:flex-row">
+    <Modal isOpen onClose={isProcessing ? undefined : onClose} label={`Charge order ${orderLabel}`} sheetOnMobile className="md:max-w-[1040px] h-[95dvh] md:h-[min(820px,calc(100dvh-32px))]">
         {/* Header + close live outside the scroll region so they stay put,
             matching the shared Modal idiom (pinned header/footer, one
             scrolling body). On mobile the bill and payment method both
