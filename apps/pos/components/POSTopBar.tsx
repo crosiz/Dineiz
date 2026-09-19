@@ -2,7 +2,7 @@
 
 import { Modal } from '@/components/ui/Modal';
 import React, { useContext, useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { TopBarStateContext } from '../contexts/TopBarContext';
 import { useCartStore } from '@/lib/store';
 import { getPosSession, getPosShift, getToken, clearPosSession, setPosBreak, resolveActiveShiftId } from '@/lib/pos-session';
@@ -15,7 +15,7 @@ import { ShiftCloseBlockerModal } from '@/components/ShiftCloseBlockerModal';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { DineizLogo } from './ui/DineizLogo';
-import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag, MoreHorizontal, Check } from 'lucide-react';
 import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
 import { SyncHealthDot } from '@/components/SyncHealthDot';
 import { useShiftActions } from '@/lib/shift-actions';
@@ -49,6 +49,22 @@ export function POSTopBar() {
 
   // Profile Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Phone "…" menu: a page's actions with their names, where the row of
+  // bare icon buttons doesn't fit (and didn't say what each one did).
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isMoreOpen) return;
+    const close = (e: MouseEvent) => { if (moreRef.current && !moreRef.current.contains(e.target as Node)) setIsMoreOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [isMoreOpen]);
+  // The bottom bar's own tabs have nowhere to go "back" to; the bar is the
+  // navigation. Back is for screens reached from somewhere (the order screen
+  // from a table, a report from Admin).
+  const pathname = usePathname();
+  const isRootTab = ['/pos/home', '/pos/tickets', '/pos/tables', '/pos/stock'].includes(pathname ?? '');
+  const showBack = !!(config.showBackButton && config.backPath && !isRootTab);
   const [shiftDuration, setShiftDuration] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -357,7 +373,7 @@ export function POSTopBar() {
           header's own 72px height is left untouched: ClientTableMap.tsx hard-
           codes `calc(100vh - 72px - 64px)` against this exact value. */}
       <div className="shrink-0 sticky top-0 z-[var(--z-nav)] bg-white pt-safe">
-      <header className="flex items-center justify-between whitespace-nowrap border-b border-line bg-white px-3 sm:px-6 py-3 h-[72px] shadow-sm">
+      <header className="flex items-center justify-between gap-2 whitespace-nowrap border-b border-line bg-white px-3 sm:px-6 h-14 lg:h-[72px] lg:shadow-sm">
 
         {/* Left Slot: Logo & Titles. max-w caps this slot's own footprint —
             a page's pageTitle/breadcrumb can be arbitrarily wide (order/
@@ -371,8 +387,8 @@ export function POSTopBar() {
             order-type selector and the avatar cluster. A real max-width is
             what forces the title/breadcrumb block below to actually need
             its own truncate/scroll. */}
-        <div className="flex items-center gap-2 sm:gap-3.5 text-ink min-w-0 shrink-0 max-w-[40%]">
-          {config.showBackButton && config.backPath && (
+        <div className="flex items-center gap-2.5 sm:gap-3.5 text-ink min-w-0 shrink-0 max-w-[64%] lg:max-w-[40%]">
+          {showBack && (
             <button
               onClick={() => {
                 const pathname = window.location.pathname;
@@ -396,12 +412,21 @@ export function POSTopBar() {
             variant="light"
             onClick={() => router.push('/pos/home')}
           /></div>
+          {/* Phones and portrait tablets: the D mark, so the brand is on every
+              screen (the full logo is hidden below lg). */}
+          {!showBack && (
+            <div className="lg:hidden shrink-0">
+              <DineizLogo size="md" variant="light" markOnly onClick={() => router.push('/pos/home')} />
+            </div>
+          )}
 
           {(config.pageTitle || config.breadcrumb) && (
             <div className="flex items-center gap-3 lg:pl-2 lg:border-l border-line min-w-0 shrink">
               <div className="min-w-0 shrink">
-                {config.pageTitle && <h2 className="text-sm sm:text-base font-semibold leading-tight text-ink truncate">{config.pageTitle}</h2>}
-                {config.breadcrumb && <div className="text-[10px] text-ink-3 uppercase tracking-widest leading-none font-semibold overflow-x-auto no-scrollbar whitespace-nowrap">{config.breadcrumb}</div>}
+                {config.pageTitle && <h2 className="text-[16px] font-semibold leading-tight text-ink truncate">{config.pageTitle}</h2>}
+                {/* One plain line: what's useful on this screen right now.
+                    It was 10px bold spaced capitals ("CLIFTON BRANCH"). */}
+                {config.breadcrumb && <div className="mt-0.5 text-[12px] leading-tight text-ink-3 truncate">{config.breadcrumb}</div>}
               </div>
             </div>
           )}
@@ -429,8 +454,37 @@ export function POSTopBar() {
             of being able to push that cluster off-screen. */}
         <div className="flex items-center justify-end gap-2 sm:gap-4 min-w-0 flex-1">
           {config.rightActions && (
-            <div className="flex items-center gap-2 min-w-0 overflow-x-auto no-scrollbar">
+            <div className={`${config.menuActions?.length ? 'hidden sm:flex' : 'flex'} items-center gap-2 min-w-0 overflow-x-auto no-scrollbar`}>
               {config.rightActions}
+            </div>
+          )}
+          {!!config.menuActions?.length && (
+            <div className="relative sm:hidden shrink-0" ref={moreRef}>
+              <button
+                type="button"
+                aria-label="More actions"
+                aria-expanded={isMoreOpen}
+                onClick={() => setIsMoreOpen((o) => !o)}
+                className="w-11 h-11 grid place-items-center rounded-lg text-ink-2 hover:bg-sunken"
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              {isMoreOpen && (
+                <div className="absolute top-12 right-0 w-64 max-w-[calc(100vw-24px)] bg-surface border border-line rounded-xl shadow-xl p-1.5 z-50">
+                  {config.menuActions.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => { setIsMoreOpen(false); a.onClick(); }}
+                      className="w-full h-11 px-3 rounded-lg flex items-center gap-2.5 text-left text-[14px] font-medium text-ink hover:bg-sunken"
+                    >
+                      {a.icon && <a.icon className="w-4 h-4 text-ink-3 shrink-0" />}
+                      <span className="flex-1 truncate">{a.label}</span>
+                      {a.active && <Check className="w-4 h-4 text-brand shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

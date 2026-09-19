@@ -196,25 +196,6 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   
   const queryClient = useQueryClient();
 
-  useTopBar({
-    pageTitle: dataMode === 'live' ? 'Active Orders' : 'Order History',
-    breadcrumb: session?.branchName || getPosSession()?.branchName || 'Branch',
-    showBackButton: true,
-    backPath: '/pos/home',
-    rightActions: (
-      <div className="flex items-center gap-3">
-        <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
-          <ListFilter className="w-[22px] h-[22px] transition-colors" />
-        </button>
-        <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
-          <Clock className="w-[22px] h-[22px] transition-colors" />
-        </button>
-        <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
-          <CircleUser className="w-[22px] h-[22px] transition-colors" />
-        </button>
-      </div>
-    )
-  });
 
   useEffect(() => {
     let openedAtStr: string | null = null;
@@ -313,13 +294,47 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const statusCounts = useMemo(() => {
     const live = (orders ?? []).filter((o: any) => o.status !== 'COMPLETED');
     return {
-      ALL: live.length + heldOrders.length,
+      // What the All list shows: live orders. Held orders have their own
+      // filter; counting them here made "All 2" sit over an empty list.
+      ALL: live.length,
       PENDING: live.filter((o: any) => o.status === 'PENDING').length,
       IN_KITCHEN: live.filter((o: any) => o.status === 'IN_KITCHEN').length,
       READY: live.filter((o: any) => o.status === 'READY').length,
       HELD: heldOrders.length,
     };
   }, [orders, heldOrders]);
+
+  useTopBar({
+    // "Tickets", the tab's own name: the page said "Active Orders" and Home
+    // "Orders in progress" for the same list.
+    pageTitle: dataMode === 'live' ? 'Tickets' : 'Order history',
+    breadcrumb: dataMode === 'live'
+      ? [
+          statusCounts.ALL > 0 ? `${statusCounts.ALL} in progress` : 'Nothing in progress',
+          statusCounts.HELD > 0 ? `${statusCounts.HELD} on hold` : null,
+          myOrdersOnly ? 'mine only' : null,
+        ].filter(Boolean).join(' · ')
+      : 'Past orders',
+    // On phones the three icon buttons don't fit and didn't say what they do.
+    menuActions: [
+      { label: 'Filters and history', icon: ListFilter, onClick: openFilterModal, active: dataMode === 'history' },
+      { label: 'Shift summary', icon: Clock, onClick: () => setShiftSummaryOpen(true) },
+      { label: 'My orders only', icon: CircleUser, onClick: () => setMyOrdersOnly(!myOrdersOnly), active: myOrdersOnly },
+    ],
+    rightActions: (
+      <div className="flex items-center gap-3">
+        <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
+          <ListFilter className="w-[22px] h-[22px] transition-colors" />
+        </button>
+        <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
+          <Clock className="w-[22px] h-[22px] transition-colors" />
+        </button>
+        <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
+          <CircleUser className="w-[22px] h-[22px] transition-colors" />
+        </button>
+      </div>
+    )
+  });
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];

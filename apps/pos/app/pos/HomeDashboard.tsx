@@ -249,7 +249,14 @@ export default function HomeDashboard() {
 
   // The page is named by the bottom bar's highlighted tab and the title; the
   // old small-caps "DASHBOARD" line under it added nothing.
-  useTopBar({ pageTitle: 'Home', showBackButton: false });
+  const firstName = (isMounted ? session?.cashierName : '')?.split(' ')[0] ?? '';
+  useTopBar({
+    pageTitle: 'Home',
+    breadcrumb: !isMounted ? undefined
+      : activeShift ? `${firstName ? `${firstName} · ` : ''}on shift ${shiftElapsed}`
+      : 'No shift open',
+    showBackButton: false,
+  });
 
   // Held orders are local-only drafts (lib/db.ts heldOrders) until resumed.
   const heldOrders = useLiveQuery(
