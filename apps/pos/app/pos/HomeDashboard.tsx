@@ -23,10 +23,11 @@ import { useSyncSummary } from '@/hooks/useSyncSummary';
 import { useShiftActions } from '@/lib/shift-actions';
 import { toast } from 'sonner';
 import { OrderDetailsModal } from './OrderDetailsModal';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import { isViewMode } from '@/lib/view-mode';
 import { API_URL } from '@/lib/api';
 import {
-  AlertCircle, Armchair, ArrowRight, Banknote, BellRing, Clock, Coffee, LogOut, Pause, ShoppingBag, Utensils, Wallet,
+  AlertCircle, Armchair, ArrowRight, Banknote, BellRing, Clock, Coffee, LogOut, Pause, Wallet,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -357,24 +358,31 @@ export default function HomeDashboard() {
       <main className="min-h-full lg:h-full grid grid-cols-1 lg:grid-cols-12">
         {/* ── Left: start, needs you, in progress, on hold ─────────────── */}
         <div className="lg:col-span-7 p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6">
-          {/* The only two ways to start work. */}
+          {/* The only two ways to start work. Codex's drawn scenes (a laid
+              table, a takeaway bag) make the two cards recognisable at a
+              glance, before anyone reads a word. */}
           <section className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Dine-in', sub: 'Pick a table', Icon: Utensils, primary: true, go: () => router.push('/pos/tables') },
-              { label: 'Takeaway', sub: 'At the counter', Icon: ShoppingBag, primary: false, go: () => router.push('/pos/order?type=takeaway') },
-            ].map((a) => (
+            {([
+              { label: 'Dine-in', sub: 'Choose a table', kind: 'dine-in', primary: true, go: () => router.push('/pos/tables') },
+              { label: 'Takeaway', sub: 'At the counter', kind: 'takeaway', primary: false, go: () => router.push('/pos/order?type=takeaway') },
+            ] as const).map((a) => (
               <button
                 key={a.label}
                 type="button"
                 onClick={() => guardOrderEntry(a.go)}
-                className={`h-16 rounded-xl px-4 flex items-center gap-3 text-left transition-colors active:scale-[0.99] ${
-                  a.primary ? 'bg-brand text-on-brand hover:bg-brand-strong' : 'bg-surface border border-line-strong text-ink hover:bg-sunken'
+                className={`relative overflow-hidden min-h-[132px] sm:min-h-[144px] rounded-xl p-4 flex flex-col justify-end text-left transition-colors active:scale-[0.99] ${
+                  a.primary
+                    ? 'bg-brand-soft border border-brand/25 hover:border-brand/50'
+                    : 'bg-surface border border-line hover:border-line-strong'
                 }`}
               >
-                <a.Icon className={`w-6 h-6 shrink-0 ${a.primary ? '' : 'text-ink-2'}`} strokeWidth={2} />
-                <span className="min-w-0">
-                  <span className="block text-[16px] font-semibold leading-tight">{a.label}</span>
-                  <span className={`block text-[12px] mt-0.5 truncate ${a.primary ? 'text-white/85' : 'text-ink-3'}`}>{a.sub}</span>
+                <ServiceIllustration
+                  kind={a.kind}
+                  className="absolute w-[94px] h-[76px] sm:w-[128px] sm:h-[103px] -right-1 -top-1 sm:top-0 opacity-90 pointer-events-none"
+                />
+                <span className="relative z-10 min-w-0">
+                  <span className="block text-[16px] font-semibold leading-tight text-ink">{a.label}</span>
+                  <span className="block text-[12px] mt-0.5 truncate text-ink-3">{a.sub}</span>
                 </span>
               </button>
             ))}
@@ -406,16 +414,16 @@ export default function HomeDashboard() {
               Orders in progress
             </SectionTitle>
             {activeOrders.length === 0 ? (
-              <p className="px-4 py-5 rounded-xl bg-surface border border-line text-[14px] text-ink-3">
-                No orders in progress. Start one with Dine-in or Takeaway above.
-              </p>
+              <div className="px-4 py-5 rounded-xl bg-surface border border-line flex items-center gap-4">
+                <ServiceIllustration kind="tickets" className="w-[72px] h-[58px] shrink-0" />
+                <p className="text-[14px] text-ink-3">No orders in progress. Start one with Dine-in or Takeaway above.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(232px,1fr))] gap-3">
                 {activeOrders.map((order: any) => (
                   <TicketCard
                     key={order.id}
                     compact
-                    fill
                     orderNumber={String(order.tokenNumber || order.orderNumber)}
                     type={order.type}
                     tableLabel={order.tableLabel}
@@ -548,17 +556,24 @@ export default function HomeDashboard() {
                       <div key={floor}>
                         {all.length > 1 && <p className="text-[12px] text-ink-3 mb-2">Floor {floor}</p>}
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(64px,1fr))] gap-2">
-                          {(list as any[]).map((t) => {
+                          {/* Number order (T-1, T-2 … T-11): the store's order is
+                              arbitrary, and staff find a table by its number. */}
+                          {(list as any[]).slice().sort((x, y) => String(x.label).localeCompare(String(y.label), undefined, { numeric: true })).map((t) => {
                             const tone = TABLE_TONE[t.status as keyof typeof TABLE_TONE] ?? TABLE_TONE.FREE;
                             const order = t.activeOrderId ? ordersMap[t.activeOrderId] : null;
                             return (
                               <button
                                 key={t.id}
                                 type="button"
+                                // A busy table opens what's on it; only a free
+                                // one starts a new order (Codex's rule: it
+                                // used to start a second order on a busy table).
                                 onClick={() =>
-                                  guardOrderEntry(() =>
-                                    router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`),
-                                  )
+                                  guardOrderEntry(() => {
+                                    if (order) openOrderDetails(order);
+                                    else if (t.status !== 'FREE') router.push('/pos/tables');
+                                    else router.push(`/pos/order?type=dine-in&tableId=${t.id}&tableLabel=${encodeURIComponent(t.label)}`);
+                                  })
                                 }
                                 className={`h-14 rounded-lg border px-1.5 flex flex-col items-center justify-center transition-colors ${tone.tile}`}
                                 title={`${t.label} · ${tone.label}`}
