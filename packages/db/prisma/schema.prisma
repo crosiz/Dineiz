@@ -65,6 +65,7 @@ enum EmailTemplate {
   MANAGER_INVITE
   PASSWORD_RESET
   BRANCH_CREATED
+  INVOICE
 }
 
 enum EmailStatus {
@@ -2208,14 +2209,34 @@ model PaymentHistory {
   currency    String   @default("PKR")
   method      String   @default("BANK_TRANSFER") // BANK_TRANSFER, CREDIT_CARD, CASH
   reference   String?
-  status      String   @default("PAID") // PAID, FAILED, PENDING
-  description String
-  notes       String?
-  invoiceUrl  String?
-  paidAt      DateTime @default(now())
+  status        String   @default("PAID") // PAID, FAILED, PENDING, DUE (invoice issued, awaiting payment)
+  description   String
+  notes         String?
+  invoiceNumber String?  @unique // e.g. INV-2026-0001, assigned when a PDF invoice is first generated
+  invoiceUrl    String?
+  planAtIssue          String?
+  billingCycleAtIssue  String?
+  paidAt        DateTime @default(now())
   createdAt   DateTime @default(now())
 
   @@index([tenantId])
+}
+
+// Dineiz's own payment-receiving details (bank account, JazzCash, Easypaisa) —
+// shown on unpaid invoices so a tenant knows where to send payment. Singleton:
+// always read/written at id "platform_billing". Not tenant data.
+model PlatformBillingSettings {
+  id                     String    @id @default("platform_billing")
+  bankName               String?
+  bankAccountTitle       String?
+  bankAccountNumber      String?
+  bankIban               String?
+  jazzCashNumber         String?
+  jazzCashAccountTitle   String?
+  easypaisaNumber        String?
+  easypaisaAccountTitle  String?
+  updatedAt              DateTime  @updatedAt
+  updatedBySuperAdminId  String?
 }
 
 model TenantFeatureOverride {

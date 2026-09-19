@@ -508,39 +508,8 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
     },
   });
 
-  // Phantom orders — no items, no value, no payments — can never be "settled"
-  // (there's nothing to charge) and shouldn't trap the cashier at close. They
-  // come from a New Order that was sent with an empty cart, or an ITEM_ADDED
-  // batch that never synced.
-  //
-  // BUT this check runs on every "Close Shift" tap (GET /api/shifts/can-close,
-  // POSTopBar.handleCloseShiftClick), not just on confirm — and a table-tap
-  // creates the order server-side with zero items *before* the cashier adds
-  // anything, by design (it reserves the table/order number immediately). If
-  // the cashier punches items, sends to kitchen, collects payment, and checks
-  // Close Shift within the same window the ADD_ITEMS/COLLECT_PAYMENT ops are
-  // still in flight to the server (normal outbox latency, or a slow Neon
-  // cold-start — both observed live), this used to see the order in its
-  // still-empty server state and permanently cancel it. The cashier's local
-  // view already showed it paid, so nothing looked wrong until close-shift's
-  // drawer total came up short by exactly that order's value. Once cancelled
-  // here, the queued item/payment ops arrive too late — the order is gone.
-  // A minimum age gives any in-flight sync room to land before we treat an
-  // empty order as truly abandoned rather than merely mid-flight.
-  const PHANTOM_MIN_AGE_MS = 3 * 60 * 1000;
-  const phantoms = openOrders.filter(
-    (o) =>
-      o._count.items === 0 && o._count.payments === 0 && (o.totalAmount ?? 0) <= 0 && (o.netAmount ?? 0) <= 0 &&
-      o.createdAt.getTime() < Date.now() - PHANTOM_MIN_AGE_MS,
-  );
-  if (phantoms.length > 0) {
-    await prisma.order.updateMany({
-      where: { id: { in: phantoms.map((o) => o.id) } },
-      data: { status: 'CANCELLED', notes: 'Auto-voided at shift close: empty order (no items, no value).' },
-    });
-  }
-
-  const pendingOrders = openOrders.filter((o) => !phantoms.includes(o));
+  // Reads must never cancel an order: offline item/payment writes can arrive much later.
+  const pendingOrders = openOrders;
 
   if (pendingOrders.length > 0) {
     blockers.push({
@@ -575,8 +544,11 @@ export async function canCloseShift(tenantId: string, branchId: string, shiftId:
       where: {
         branchId, tenantId,
         status: { in: ['PENDING', 'IN_KITCHEN', 'READY'] },
+        // Own-shift orders are already listed above. Historical closed shifts
+        // belong to the orphan-resolution flow, not this cashier's close.
+        shiftId: null,
         createdAt: { gte: from, lte: to },
-        items: { some: {} }, // ignore phantom empty orders (see above)
+        items: { some: {} },
       },
       select: { id: true, orderNumber: true, totalAmount: true, netAmount: true, status: true, table: { select: { label: true } } },
       orderBy: { createdAt: 'asc' },

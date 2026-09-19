@@ -198,10 +198,12 @@ export function PremiumTable({
 
   return (
     <div
+      data-testid="table-node"
       onClick={onClick}
       style={{ width: width + CHAIR_PAD * 2, height: height + CHAIR_PAD * 2, position: 'relative', userSelect: 'none', ...style }}
       className={`group cursor-pointer ${className}`}
       role="button"
+      tabIndex={0}
       aria-label={`${label}, ${norm.replace('_', ' ').toLowerCase()}`}
     >
       {seats.map((s, i) => (

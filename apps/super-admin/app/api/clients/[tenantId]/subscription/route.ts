@@ -9,6 +9,7 @@ import {
   reactivatedEmail,
   suspendedEmail,
 } from '@dineiz/email';
+import { renderAndStoreInvoice, emailInvoice } from '@/lib/invoicing';
 import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
@@ -222,10 +223,53 @@ export async function PATCH(
         template: 'TRIAL_EXTENDED',
         email: trialExtendedEmail({ ownerName, restaurantName, newTrialEndsAt: newTrialEnd.toDateString() }),
       });
-    } else if (action === 'END_TRIAL_EARLY') {
+    } else if (action === 'CANCEL_TRIAL') {
+      const now = new Date();
+      const reason = cancellationReason ? String(cancellationReason).trim() : 'Trial cancelled by super admin';
+
       const updated = await prisma.tenantSubscription.update({
         where: { tenantId },
-        data: { status: 'ACTIVE', trialEndsAt: new Date() },
+        data: {
+          status: 'CANCELLED',
+          trialEndsAt: now,
+          cancelledAt: now,
+          cancellationReason: reason,
+        },
+      });
+
+      await prisma.tenant.update({ where: { id: tenantId }, data: { status: 'CANCELLED' } });
+
+      afterState = updated;
+
+      await logAuditAction({
+        superAdminId: admin.id,
+        action: 'TRIAL_CANCELLED',
+        targetTenantId: tenantId,
+        before: beforeState,
+        after: afterState,
+        ipAddress,
+        notes: `Cancelled trial — ${reason}`,
+      });
+    } else if (action === 'START_SUBSCRIPTION' || action === 'END_TRIAL_EARLY') {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      if (subscription.billingCycle === 'ANNUAL') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+
+      const updated = await prisma.tenantSubscription.update({
+        where: { tenantId },
+        data: {
+          status: 'ACTIVE',
+          trialEndsAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          nextRenewalDate: periodEnd,
+          cancelledAt: null,
+          cancellationReason: null,
+        },
       });
 
       await prisma.tenant.update({ where: { id: tenantId }, data: { status: 'ACTIVE' } });
@@ -239,20 +283,66 @@ export async function PATCH(
         before: beforeState,
         after: afterState,
         ipAddress,
-        notes: `Ended trial early and activated subscription`,
+        notes: `Activated subscription for ${subscription.plan} (${subscription.billingCycle})`,
       });
+
+      let invoiceResult: { invoiceNumber: string; paymentId: string } | null = null;
+      // If the subscription has a billing amount > 0, generate and email the pre-payment (DUE) invoice with PDF
+      if (subscription.amount && subscription.amount > 0 && body.sendInvoice !== false) {
+        try {
+          const duePayment = await prisma.paymentHistory.create({
+            data: {
+              tenantId,
+              amount: subscription.amount,
+              currency: 'PKR',
+              status: 'DUE',
+              description: `${subscription.plan} plan — ${subscription.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'} subscription`,
+              planAtIssue: subscription.plan,
+              billingCycleAtIssue: subscription.billingCycle,
+            },
+          });
+
+          const rendered = await renderAndStoreInvoice(tenantId, duePayment.id);
+          const sendRes = await emailInvoice(rendered);
+          invoiceResult = { invoiceNumber: rendered.invoiceNumber, paymentId: duePayment.id };
+          if (!sendRes.ok) {
+            console.warn('Pre-payment invoice email warning:', sendRes.error);
+          }
+        } catch (invoiceErr) {
+          console.error('Failed to generate/email pre-payment invoice on start subscription:', invoiceErr);
+        }
+      }
+
+      return NextResponse.json({ success: true, subscription: afterState, invoice: invoiceResult });
     } else if (action === 'UPDATE_STATUS') {
       const targetStatus = newStatus || 'ACTIVE';
       const wasInactive = ['SUSPENDED', 'PAST_DUE', 'EXPIRED', 'CANCELLED'].includes(subscription.status);
+      const isActivatingFromTrial = subscription.status === 'TRIALING' && targetStatus === 'ACTIVE';
+
+      const now = new Date();
+      let periodEndUpdate = {};
+      if (isActivatingFromTrial) {
+        const periodEnd = new Date(now);
+        if (subscription.billingCycle === 'ANNUAL') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        else periodEnd.setMonth(periodEnd.getMonth() + 1);
+        periodEndUpdate = {
+          trialEndsAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          nextRenewalDate: periodEnd,
+        };
+      }
 
       const updated = await prisma.tenantSubscription.update({
         where: { tenantId },
         data: {
           status: targetStatus,
-          cancelledAt: targetStatus === 'CANCELLED' ? new Date() : null,
+          cancelledAt: targetStatus === 'CANCELLED' ? now : null,
           cancellationReason: targetStatus === 'CANCELLED' ? (cancellationReason || null) : subscription.cancellationReason,
-          suspendedAt: targetStatus === 'SUSPENDED' ? new Date() : subscription.suspendedAt,
+          suspendedAt: targetStatus === 'SUSPENDED' ? now : subscription.suspendedAt,
           suspensionDeferred: targetStatus === 'SUSPENDED' ? false : subscription.suspensionDeferred,
+          ...(targetStatus === 'CANCELLED' && subscription.status === 'TRIALING' ? { trialEndsAt: now } : {}),
+          ...periodEndUpdate,
         },
       });
 

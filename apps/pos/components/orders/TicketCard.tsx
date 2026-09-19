@@ -79,6 +79,7 @@ export function TicketCard({
 
   return (
     <article
+      data-testid="ticket-card"
       onClick={onOpen}
       className={`group relative flex flex-col bg-surface border border-line rounded-xl overflow-hidden transition-[border-color,box-shadow] ${
         onOpen ? 'cursor-pointer hover:border-line-strong hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]' : ''

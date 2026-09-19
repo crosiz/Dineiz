@@ -6,6 +6,7 @@ import { getToken } from '@/lib/pos-session';
 import { toast } from 'sonner';
 import { API_URL } from '@/lib/api';
 import * as commands from '@/lib/core/commands';
+import { Modal } from '@/components/ui/Modal';
 
 // ── Who's looking after this table ──────────────────────────────────────────
 //
@@ -164,15 +165,17 @@ export function AssignWaiterSheet({
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* 500/501, not 9998/9999 — matches CustomerPickerSheet; see the comment
-          there. Both had independently landed on the same "high enough" values,
-          which also tied with ConfirmModal's real z-index. */}
-      <div className="fixed inset-0 bg-black/40 z-[500]" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 sm:inset-0 sm:m-auto sm:h-fit sm:max-w-[440px] bg-surface rounded-t-2xl sm:rounded-2xl z-[501] flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.12)] max-h-[85dvh]">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      labelledBy="assign-waiter-title"
+      sheetOnMobile
+      zIndex={500}
+      className="sm:max-w-[440px] max-h-[85dvh] flex flex-col"
+    >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-line shrink-0">
           <div className="min-w-0">
-            <h2 className="text-[17px] font-semibold text-ink truncate">Who's serving this order?</h2>
+            <h2 id="assign-waiter-title" className="text-[17px] font-semibold text-ink truncate">Who's serving this order?</h2>
             {tableLabel && <p className="text-[12px] text-ink-3 mt-0.5">Table {tableLabel}</p>}
           </div>
           <button
@@ -270,7 +273,6 @@ export function AssignWaiterSheet({
             </button>
           </div>
         )}
-      </div>
-    </>
+    </Modal>
   );
 }

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@dineiz/db';
 import { getCurrentSuperAdmin } from '@/lib/auth';
 import { logAuditAction } from '@/lib/audit';
-import { paymentReceivedEmail, reactivatedEmail } from '@dineiz/email';
+import { reactivatedEmail } from '@dineiz/email';
+import { renderAndStoreInvoice, emailInvoice } from '@/lib/invoicing';
 import { Resend } from 'resend';
 
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,10 @@ export async function POST(
 
     const paymentDate = paidAt ? new Date(paidAt) : new Date();
 
+    // Fetched before creating the row so the payment snapshots exactly
+    // what plan/cycle was in effect at this moment
+    const subscription = await prisma.tenantSubscription.findUnique({ where: { tenantId } });
+
     const payment = await prisma.paymentHistory.create({
       data: {
         tenantId,
@@ -66,11 +71,12 @@ export async function POST(
         description: `Manual Payment (${method}) - Ref: ${reference || 'N/A'}`,
         notes: notes || null,
         paidAt: paymentDate,
+        planAtIssue: subscription?.plan,
+        billingCycleAtIssue: subscription?.billingCycle,
       },
     });
 
     // Extend subscription renewal date by 1 month/year based on cycle, or an explicit period end
-    const subscription = await prisma.tenantSubscription.findUnique({ where: { tenantId } });
     const wasInactive = subscription ? ['SUSPENDED', 'PAST_DUE', 'EXPIRED', 'CANCELLED'].includes(subscription.status) : false;
     let nextRenewal: Date | null = null;
 
@@ -117,55 +123,45 @@ export async function POST(
       notes: `Recorded manual payment of PKR ${amount} via ${method} (Ref: ${reference || 'N/A'})`,
     });
 
-    // Notify the tenant — best-effort, never blocks the payment record itself
+    // Generate the PDF receipt invoice and email it to the tenant owner
+    let invoiceNumber: string | undefined;
     try {
-      const tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        include: { users: { where: { role: 'TENANT_ADMIN' }, select: { email: true, name: true } } },
-      });
-      const ownerEmail = tenant?.users?.[0]?.email;
-      if (ownerEmail && subscription) {
-        const emailParams = { ownerName: tenant?.users?.[0]?.name || 'there', restaurantName: tenant?.name || 'your restaurant' };
-        const email = wasInactive
-          ? reactivatedEmail(emailParams)
-          : paymentReceivedEmail({
-              ...emailParams,
-              amount: `PKR ${Number(amount).toLocaleString()}`,
-              method,
-              periodStart: paymentDate.toDateString(),
-              periodEnd: (nextRenewal || paymentDate).toDateString(),
-              billingUrl: 'https://console.dineiz.com/settings/billing',
-            });
-
-        let status: 'SENT' | 'FAILED' = 'SENT';
-        let providerMessageId: string | undefined;
-        let errorMessage: string | undefined;
-        if (process.env.RESEND_API_KEY) {
-          const result = await resend.emails.send({
-            from: 'Dineiz Billing <billing@dineiz.com>',
-            to: ownerEmail,
-            subject: email.subject,
-            html: email.html,
-            text: email.text,
-          });
-          providerMessageId = result.data?.id;
-        } else {
-          status = 'FAILED';
-          errorMessage = 'RESEND_API_KEY not configured';
-        }
-        await prisma.emailLog.create({
-          data: {
-            tenantId, recipientEmail: ownerEmail, template: wasInactive ? 'REACTIVATED' : 'PAYMENT_RECEIVED',
-            subject: email.subject, status, providerMessageId, errorMessage, attempts: 1,
-            sentAt: status === 'SENT' ? new Date() : null,
-          },
-        });
-      }
-    } catch (emailErr) {
-      console.warn('Payment confirmation email failed:', emailErr);
+      const rendered = await renderAndStoreInvoice(tenantId, payment.id);
+      invoiceNumber = rendered.invoiceNumber;
+      await emailInvoice(rendered);
+    } catch (invoiceErr) {
+      console.error('Invoice receipt generation/email error:', invoiceErr);
     }
 
-    return NextResponse.json({ success: true, payment });
+    // If tenant was previously inactive, also send reactivation email
+    if (wasInactive) {
+      try {
+        const tenant = await prisma.tenant.findUnique({
+          where: { id: tenantId },
+          include: { users: { where: { role: 'TENANT_ADMIN' }, select: { email: true, name: true } } },
+        });
+        const ownerEmail = tenant?.users?.[0]?.email;
+        if (ownerEmail) {
+          const email = reactivatedEmail({
+            ownerName: tenant?.users?.[0]?.name || 'there',
+            restaurantName: tenant?.name || 'your restaurant',
+          });
+          if (process.env.RESEND_API_KEY) {
+            await resend.emails.send({
+              from: 'Dineiz Billing <billing@dineiz.com>',
+              to: ownerEmail,
+              subject: email.subject,
+              html: email.html,
+              text: email.text,
+            });
+          }
+        }
+      } catch (reactivateErr) {
+        console.warn('Reactivation notification error:', reactivateErr);
+      }
+    }
+
+    return NextResponse.json({ success: true, payment, invoiceNumber });
   } catch (error: any) {
     console.error('Manual payment error:', error);
     return NextResponse.json({ error: 'Failed to record manual payment' }, { status: 500 });

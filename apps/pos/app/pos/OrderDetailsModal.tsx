@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getToken } from '@/lib/pos-session';
@@ -302,10 +303,8 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   const netAmount = order ? Number(order.netAmount ?? order.totalAmount ?? 0) : 0;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-
-      <div className="relative w-full sm:max-w-[560px] bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:zoom-in-95 duration-300 max-h-[92dvh] flex flex-col">
+    <>
+      <Modal isOpen onClose={onClose} label="Order details" sheetOnMobile className="max-w-[560px]">
         {!order ? (
           <div className="flex items-center justify-center h-64">
             <Loader2 className="animate-spin text-ink-4 w-[30px] h-[30px]" />
@@ -315,7 +314,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             {/* Header */}
             <div className="p-5 border-b border-line flex items-start justify-between shrink-0">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h2 className="text-[20px] font-bold text-ink clash-display">#{order.tokenNumber || order.orderNumber}</h2>
                   <StatusBadge status={order.status} />
                   {order.createdAt && !isFinal && <TicketTimer createdAt={order.createdAt} />}
@@ -354,7 +353,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             )}
 
             {/* Items */}
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+            <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
               {order.__partial ? (
                 <div className="space-y-3 animate-pulse">
                   {[1, 2, 3].map(i => (
@@ -380,7 +379,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                     {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
-                        className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
+                        className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
                         title="Remove item"
                       >
                         <Trash2 className="w-[18px] h-[18px]" />
@@ -477,7 +476,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
             </div>
           </>
         )}
-      </div>
+      </Modal>
 
       {/* Assign waiter sheet */}
       {assignOpen && (
@@ -542,6 +541,6 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
           onSuccess={() => { setCancelPinOpen(false); updateStatus('CANCELLED'); }}
         />
       )}
-    </div>
+    </>
   );
 }
