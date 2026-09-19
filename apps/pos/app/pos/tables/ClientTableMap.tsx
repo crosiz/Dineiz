@@ -17,6 +17,7 @@ import { useViews, seedTablesFromServer, type TableView } from '@/lib/core/views
 import { setTableStatus, markTableCleaned } from '@/lib/core/commands';
 import { isViewMode } from '@/lib/view-mode';
 import { formatPKR } from '@/lib/utils';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   ZoomIn,
   ZoomOut,
@@ -1040,7 +1041,12 @@ export default function ClientTableMap() {
         className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
         <div className="absolute top-3 left-4 z-20 pointer-events-none text-xs text-ink-3">{visibleTables.length} tables · Tap a table to open it</div>
-        {visibleTables.length === 0 && <div className="absolute inset-0 grid place-items-center text-sm text-ink-3 pointer-events-none">No tables match. Try another filter.</div>}
+        {visibleTables.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+            <ServiceIllustration kind="floor" className="w-36 h-28 mb-2" />
+            <p className="text-[14px] text-ink-3">No tables match. Try another filter.</p>
+          </div>
+        )}
         {/* Transform wrapper. `translate() scale()`, in that order — see the
             `view` comment at the top of this component for why the order is
             load-bearing. `inset: 0` rather than a hardcoded 1200×700 design

@@ -9,6 +9,7 @@ import { useSocket } from '@/contexts/SocketContext';
 import { getPosSession, clearPosSession, getToken } from '@/lib/pos-session';
 import { useTerminalSettings } from '@/lib/terminal-settings';
 import { toast } from 'sonner';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   Check,
   CheckCircle2,
@@ -304,7 +305,11 @@ export default function KDSPage() {
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-ink-3">Loading...</div>
         ) : orders.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-ink-3">No active orders</div>
+          <div className="h-full flex flex-col items-center justify-center text-center">
+            <ServiceIllustration kind="kitchen" className="w-40 h-32 mb-3" />
+            <p className="text-[16px] font-semibold text-ink">Kitchen is clear</p>
+            <p className="text-[14px] text-ink-3 mt-1">New orders appear here the moment they're sent.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 auto-rows-max">
             {orders.map(order => (

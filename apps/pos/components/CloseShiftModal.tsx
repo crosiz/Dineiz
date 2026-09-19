@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox, flushOutbox, isSettledLocally,
   type SyncCategoryProgress, getShiftSyncStatus,
@@ -666,9 +667,7 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
           // ── Closed ────────────────────────────────────────────────────────
           <>
             <div className="px-6 pt-7 pb-2 flex flex-col items-center text-center">
-              <span className="w-14 h-14 rounded-full bg-ok/10 text-ok grid place-items-center mb-3">
-                <CheckCircle2 className="w-7 h-7" strokeWidth={2.25} />
-              </span>
+              <ServiceIllustration kind="shift-done" className="w-32 h-[102px] mb-2" />
               <h2 className="text-[18px] font-semibold text-ink">Shift closed</h2>
               <p className="mt-1 text-[13.5px] text-ink-3">Thanks — you’re all done for this shift.</p>
             </div>

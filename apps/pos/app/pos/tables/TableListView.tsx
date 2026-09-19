@@ -4,6 +4,7 @@ import { TABLE_TONE } from '@/lib/table-tone';
 import { useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { formatPKR } from '@/lib/utils';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 
 // ── The phone view of the floor ─────────────────────────────────────────────
 //
@@ -74,7 +75,10 @@ export function TableListView({
   if (ordered.length === 0) {
     return (
       <div className="flex-1 grid place-items-center p-8 text-center">
-        <p className="text-[14px] text-ink-3">No tables to show. Choose another floor or filter.</p>
+        <div className="flex flex-col items-center">
+          <ServiceIllustration kind="floor" className="w-36 h-28 mb-2" />
+          <p className="text-[14px] text-ink-3">No tables to show. Choose another floor or filter.</p>
+        </div>
       </div>
     );
   }

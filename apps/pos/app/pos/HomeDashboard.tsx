@@ -525,9 +525,9 @@ export default function HomeDashboard() {
               <LinkButton onClick={() => router.push('/pos/tables')}>Floor plan</LinkButton>
             </div>
             {tables.length === 0 ? (
-              <div className="px-4 py-10 flex flex-col items-center text-ink-3 gap-2">
-                <Armchair className="w-6 h-6" />
-                <span className="text-[14px]">No floor plan loaded</span>
+              <div className="px-4 pb-6 pt-2 flex flex-col items-center text-center">
+                <ServiceIllustration kind="floor" className="w-32 h-[102px] mb-2" />
+                <span className="text-[14px] text-ink-3">No floor plan loaded</span>
               </div>
             ) : (
               <>

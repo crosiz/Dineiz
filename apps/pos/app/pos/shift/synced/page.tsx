@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { RefreshCw, CheckCircle2, CloudOff, LogOut } from 'lucide-react';
 import { getToken } from '@/lib/pos-session';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   getUnsyncedSummary, getSyncCategoryProgress, kickOutbox, forceSyncNow, getShiftSyncStatus,
   type UnsyncedSummary, type SyncCategoryProgress,
@@ -113,9 +114,7 @@ export default function ShiftSyncedPage() {
       <div className="w-full max-w-[420px] max-h-[calc(100dvh-32px)] overflow-y-auto bg-white rounded-2xl shadow-[0_30px_80px_rgba(15,23,42,0.2)] border border-slate-200 p-7">
         {done ? (
           <>
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mb-4">
-              <CheckCircle2 size={22} />
-            </div>
+            <ServiceIllustration kind="shift-done" className="w-28 h-[90px] -ml-2 mb-3" />
             <h1 className="text-lg font-bold text-slate-900 mb-1">Shift fully synced</h1>
             <p className="text-xs text-slate-500 leading-relaxed mb-6">
               Every order and payment from your shift has reached the server. This shift is now finalised.

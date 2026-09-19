@@ -24,6 +24,7 @@ import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts'
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
 import { ScrollRail } from '@/components/ScrollRail';
 import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 
 // One line of the order being punched: name and modifiers, a stepper, the line
 // total — in one row. It was two rows per line (name + price, then add-on caps
@@ -1486,7 +1487,7 @@ function OrderEntryPageContent() {
 
             {cart.length === 0 && existingItems.length === 0 ? (
               <div className="h-full min-h-[180px] flex flex-col items-center justify-center text-center px-6">
-                <ShoppingCart className="mb-3 text-ink-4 w-8 h-8" strokeWidth={1.75} />
+                <ServiceIllustration kind="order" className="w-32 h-[102px] mb-2" />
                 <p className="text-[14px] font-semibold text-ink">Nothing on this order yet</p>
                 <p className="text-[13px] mt-1 max-w-[240px] text-ink-3">
                   {selectedTableLabel ? `Tap items on the menu to start ${selectedTableLabel}'s order.` : 'Tap items on the menu to add them.'}

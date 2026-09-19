@@ -7,6 +7,7 @@ import { getToken } from '@/lib/pos-session';
 import { useSocket } from '@/contexts/SocketContext';
 import { useTopBar } from '@/hooks/useTopBar';
 import { toast } from 'sonner';
+import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
   AlertTriangle,
   AlertCircle,
@@ -363,9 +364,13 @@ export default function StockPage() {
         {/* Items */}
         {filteredItems.length === 0 ? (
           <div className="bg-white rounded-2xl border border-line shadow-sm p-10 flex flex-col items-center text-center">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
-              <PackageCheck size={26} className="text-emerald-600" />
-            </div>
+            {noProblems && (filter === 'PROBLEMS' || filter === 'OUT' || filter === 'LOW') ? (
+              <ServiceIllustration kind="stock" className="w-36 h-28 mb-3" />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+                <PackageCheck size={26} className="text-emerald-600" />
+              </div>
+            )}
             <h3 className="text-[16px] font-bold text-ink">
               {noProblems && (filter === 'PROBLEMS' || filter === 'OUT' || filter === 'LOW') ? 'All stocked up' : 'No items in this view'}
             </h3>
