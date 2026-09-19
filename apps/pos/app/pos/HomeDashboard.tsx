@@ -249,7 +249,14 @@ export default function HomeDashboard() {
 
   // The page is named by the bottom bar's highlighted tab and the title; the
   // old small-caps "DASHBOARD" line under it added nothing.
-  useTopBar({ pageTitle: 'Home', showBackButton: false });
+  const firstName = (isMounted ? session?.cashierName : '')?.split(' ')[0] ?? '';
+  useTopBar({
+    pageTitle: 'Home',
+    breadcrumb: !isMounted ? undefined
+      : activeShift ? `${firstName ? `${firstName} · ` : ''}on shift ${shiftElapsed}`
+      : 'No shift open',
+    showBackButton: false,
+  });
 
   // Held orders are local-only drafts (lib/db.ts heldOrders) until resumed.
   const heldOrders = useLiveQuery(
@@ -358,19 +365,29 @@ export default function HomeDashboard() {
       <main className="min-h-full lg:h-full grid grid-cols-1 lg:grid-cols-12">
         {/* ── Left: start, needs you, in progress, on hold ─────────────── */}
         <div className="lg:col-span-7 p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6">
-          {/* The only two ways to start work. Codex's drawn scenes (a laid
-              table, a takeaway bag) make the two cards recognisable at a
-              glance, before anyone reads a word. */}
+          {/* Four starting points, each drawn as what it is: a laid table, a
+              takeaway bag (Codex's scenes), a ticket, a slip waiting on the
+              kitchen rail. Recognisable before anyone reads a word. */}
           <section className="grid grid-cols-2 gap-3">
             {([
-              { label: 'Dine-in', sub: 'Choose a table', kind: 'dine-in', primary: true, go: () => router.push('/pos/tables') },
-              { label: 'Takeaway', sub: 'At the counter', kind: 'takeaway', primary: false, go: () => router.push('/pos/order?type=takeaway') },
+              { label: 'Dine-in', sub: 'Choose a table', kind: 'dine-in', primary: true, guard: true, go: () => router.push('/pos/tables') },
+              { label: 'Takeaway', sub: 'At the counter', kind: 'takeaway', primary: false, guard: true, go: () => router.push('/pos/order?type=takeaway') },
+              {
+                label: 'Tickets',
+                sub: activeOrders.length > 0 ? `${activeOrders.length} in progress` : 'Nothing in progress',
+                kind: 'tickets', primary: false, guard: false, go: () => router.push('/pos/tickets'),
+              },
+              {
+                label: 'On hold',
+                sub: heldOrders.length > 0 ? `${heldOrders.length} waiting` : 'None waiting',
+                kind: 'on-hold', primary: false, guard: false, go: () => router.push('/pos/tickets?filter=held'),
+              },
             ] as const).map((a) => (
               <button
                 key={a.label}
                 type="button"
-                onClick={() => guardOrderEntry(a.go)}
-                className={`relative overflow-hidden min-h-[132px] sm:min-h-[144px] rounded-xl p-4 flex flex-col justify-end text-left transition-colors active:scale-[0.99] ${
+                onClick={() => (a.guard ? guardOrderEntry(a.go) : a.go())}
+                className={`relative overflow-hidden min-h-[120px] sm:min-h-[128px] rounded-xl p-4 flex flex-col justify-end text-left transition-colors active:scale-[0.99] ${
                   a.primary
                     ? 'bg-brand-soft border border-brand/25 hover:border-brand/50'
                     : 'bg-surface border border-line hover:border-line-strong'
@@ -378,7 +395,7 @@ export default function HomeDashboard() {
               >
                 <ServiceIllustration
                   kind={a.kind}
-                  className="absolute w-[94px] h-[76px] sm:w-[128px] sm:h-[103px] -right-1 -top-1 sm:top-0 opacity-90 pointer-events-none"
+                  className="absolute w-[88px] h-[70px] sm:w-[112px] sm:h-[90px] -right-1 -top-1 sm:top-0 opacity-90 pointer-events-none"
                 />
                 <span className="relative z-10 min-w-0">
                   <span className="block text-[16px] font-semibold leading-tight text-ink">{a.label}</span>

@@ -210,7 +210,13 @@ export default function ClientTableMap() {
   const [isAssignWaiterOpen, setIsAssignWaiterOpen] = useState<boolean>(false);
 
 
-  useTopBar({ pageTitle: 'Tables', showBackButton: false });
+  const tableList = Object.values(viewTables ?? {}) as any[];
+  const busyTables = tableList.filter((t) => t.status === 'OCCUPIED' || t.status === 'BILL_REQUESTED').length;
+  useTopBar({
+    pageTitle: 'Tables',
+    breadcrumb: tableList.length ? `${busyTables} of ${tableList.length} busy` : undefined,
+    showBackButton: false,
+  });
 
   // Refresh table reference data from the server into the shared store —
   // same function POSLayout.tsx calls at bootstrap and on table:status_changed;

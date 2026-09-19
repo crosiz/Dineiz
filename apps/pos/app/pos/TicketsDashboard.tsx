@@ -146,6 +146,12 @@ export default function TicketsDashboard({ onViewChange }: Props) {
     }
   }, []);
   const [filter, setFilter] = useState<string>('ALL');
+  // Home's On hold card links here with ?filter=held; open on that filter
+  // rather than All. Read from the URL directly, like the history-mode
+  // signal above, so this screen needs no Suspense boundary.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('filter') === 'held') setFilter('ON_HOLD');
+  }, []);
   const [sourceFilter, setSourceFilter] = useState<'ALL' | 'WHATSAPP'>('ALL');
   const [sortOrder, setSortOrder] = useState<'oldest' | 'newest' | 'table'>('oldest');
   const [historySearch, setHistorySearch] = useState('');
@@ -189,26 +195,6 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const [shiftElapsed, setShiftElapsed] = useState('Active');
   
   const queryClient = useQueryClient();
-
-  useTopBar({
-    pageTitle: dataMode === 'live' ? 'Tickets' : 'Order History',
-    breadcrumb: session?.branchName || getPosSession()?.branchName || 'Branch',
-    showBackButton: false,
-    backPath: '/pos/home',
-    rightActions: (
-      <div className="flex items-center gap-3">
-        <button aria-label="Filters and history" onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
-          <ListFilter className="w-[22px] h-[22px] transition-colors" />
-        </button>
-        <button aria-label="Shift summary" onClick={() => setShiftSummaryOpen(true)} className="hidden sm:flex items-center justify-center rounded-xl h-11 w-11 bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
-          <Clock className="w-[22px] h-[22px] transition-colors" />
-        </button>
-        <button aria-label="My orders only" aria-pressed={myOrdersOnly} onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`hidden sm:flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
-          <CircleUser className="w-[22px] h-[22px] transition-colors" />
-        </button>
-      </div>
-    )
-  });
 
   useEffect(() => {
     let openedAtStr: string | null = null;
@@ -307,13 +293,47 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const statusCounts = useMemo(() => {
     const live = (orders ?? []).filter((o: any) => o.status !== 'COMPLETED');
     return {
-      ALL: live.length + heldOrders.length,
+      // What the All list shows: live orders. Held orders have their own
+      // filter; counting them here made "All 2" sit over an empty list.
+      ALL: live.length,
       PENDING: live.filter((o: any) => o.status === 'PENDING').length,
       IN_KITCHEN: live.filter((o: any) => o.status === 'IN_KITCHEN').length,
       READY: live.filter((o: any) => o.status === 'READY').length,
       HELD: heldOrders.length,
     };
   }, [orders, heldOrders]);
+
+  useTopBar({
+    // "Tickets", the tab's own name: the page said "Active Orders" and Home
+    // "Orders in progress" for the same list.
+    pageTitle: dataMode === 'live' ? 'Tickets' : 'Order history',
+    breadcrumb: dataMode === 'live'
+      ? [
+          statusCounts.ALL > 0 ? `${statusCounts.ALL} in progress` : 'Nothing in progress',
+          statusCounts.HELD > 0 ? `${statusCounts.HELD} on hold` : null,
+          myOrdersOnly ? 'mine only' : null,
+        ].filter(Boolean).join(' · ')
+      : 'Past orders',
+    // On phones the three icon buttons don't fit and didn't say what they do.
+    menuActions: [
+      { label: 'Filters and history', icon: ListFilter, onClick: openFilterModal, active: dataMode === 'history' },
+      { label: 'Shift summary', icon: Clock, onClick: () => setShiftSummaryOpen(true) },
+      { label: 'My orders only', icon: CircleUser, onClick: () => setMyOrdersOnly(!myOrdersOnly), active: myOrdersOnly },
+    ],
+    rightActions: (
+      <div className="flex items-center gap-3">
+        <button aria-label="Filters and history" onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
+          <ListFilter className="w-[22px] h-[22px] transition-colors" />
+        </button>
+        <button aria-label="Shift summary" onClick={() => setShiftSummaryOpen(true)} className="hidden sm:flex items-center justify-center rounded-xl h-11 w-11 bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
+          <Clock className="w-[22px] h-[22px] transition-colors" />
+        </button>
+        <button aria-label="My orders only" aria-pressed={myOrdersOnly} onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`hidden sm:flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
+          <CircleUser className="w-[22px] h-[22px] transition-colors" />
+        </button>
+      </div>
+    ),
+  });
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];

@@ -77,7 +77,8 @@ function timeAgo(date: Date | null, nowMs: number): string {
   const hrs = Math.floor(mins / 60);
   if (hrs === 1) return '1 hr ago';
   if (hrs < 24) return `${hrs} hrs ago`;
-  return date.toLocaleDateString();
+  // "18 Sep", not the US-style 9/18/2026 the browser default gave.
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
 export default function StockPage() {
@@ -150,15 +151,16 @@ export default function StockPage() {
   }, [data, lastFetchedAt]);
 
   useTopBar({
-    pageTitle: 'Stock Status',
-    breadcrumb: `${session?.branchName ? `${session.branchName} • ` : ''}Updated ${timeAgo(mostRecentUpdate, now)}`,
+    pageTitle: 'Stock',
+    breadcrumb: `Updated ${timeAgo(mostRecentUpdate, now)}`,
     rightActions: (
       <button
         onClick={() => refetchStock()}
-        className={`p-1.5 rounded-full text-ink-3 hover:bg-hover transition-colors ${refreshing ? 'animate-spin text-brand' : ''}`}
+        className="w-11 h-11 grid place-items-center rounded-lg text-ink-2 hover:bg-sunken transition-colors"
         title="Refresh"
+        aria-label="Refresh stock"
       >
-        <RefreshCw size={18} />
+        <RefreshCw size={18} className={refreshing ? 'animate-spin text-brand' : ''} />
       </button>
     ),
   });

@@ -9,6 +9,8 @@ export interface DineizLogoProps {
   badgeText?: string;
   className?: string;
   onClick?: () => void;
+  /** Just the D mark, cropped from the full logo: for narrow top bars. */
+  markOnly?: boolean;
 }
 
 const SIZES = {
@@ -26,8 +28,32 @@ export function DineizLogo({
   badgeText = 'POS',
   className = '',
   onClick,
+  markOnly = false,
 }: DineizLogoProps) {
   const { height, canvasMultiplier, badgeText: badgeFontSize } = SIZES[size];
+
+  // The D on its own: the brand's symbol file, cropped to the mark. The mark
+  // fills x 24-79% and y 21.5-77% of that canvas (measured from its pixels),
+  // so the image is scaled up and shifted to show exactly that square.
+  if (markOnly) {
+    const img = height / 0.555;
+    return (
+      <div
+        onClick={onClick}
+        className={`relative overflow-hidden shrink-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+        style={{ width: height, height }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/transparent/symbols/dineiz-symbol-light-bg.svg"
+          alt="Dineiz"
+          draggable={false}
+          className="pointer-events-none select-none absolute"
+          style={{ width: img, height: img, left: -img * 0.24, top: -img * 0.215, maxWidth: 'none' }}
+        />
+      </div>
+    );
+  }
 
   // Exact vertical and horizontal cropping math for the 768x768 SVG canvas
   const canvasHeight = height * canvasMultiplier;

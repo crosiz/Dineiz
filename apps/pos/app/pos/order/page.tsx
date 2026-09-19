@@ -1054,24 +1054,18 @@ function OrderEntryPageContent() {
     // type in its own control, the table as a pill (only when it's a dine-in
     // concern), the party size only when it isn't the default of one.
     pageTitle: paymentOrderId ? 'Edit Order' : 'New Order',
+    // One plain line, not a row of capital-letter pills: "Table T-4 ·
+    // 2 guests", "Takeaway", or a warning in words when dine-in has no table.
     breadcrumb: (
-      <div className="flex items-center gap-1.5">
-        {paymentOrderId && (
-          <span className="px-2 py-0.5 rounded-md bg-sunken border border-line text-[10px] font-bold text-ink-2 uppercase tracking-wider tabular-nums">
-            {orderIdDisplay}
-          </span>
-        )}
-        {orderType === 'DINE_IN' && (
-          <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${selectedTableLabel ? 'bg-sunken border-line text-ink-2' : 'bg-warn/10 border-warn/30 text-warn'}`}>
-            {tableDisplay}
-          </span>
-        )}
-        {orderType === 'DINE_IN' && parseInt(guestCount) > 1 && (
-          <span className="px-2 py-0.5 rounded-md bg-sunken border border-line text-[10px] font-bold text-ink-2 uppercase tracking-wider">
-            {guestCount} guests
-          </span>
-        )}
-      </div>
+      <span>
+        {[
+          paymentOrderId ? orderIdDisplay : null,
+          orderType === 'DINE_IN' ? null : orderType === 'TAKEAWAY' ? 'Takeaway' : orderType === 'DELIVERY' ? 'Delivery' : null,
+          orderType === 'DINE_IN' && selectedTableLabel ? tableDisplay : null,
+          orderType === 'DINE_IN' && selectedTableLabel && parseInt(guestCount) > 1 ? `${guestCount} guests` : null,
+        ].filter(Boolean).join(' · ')}
+        {orderType === 'DINE_IN' && !selectedTableLabel && <span className="text-warn font-medium">No table chosen</span>}
+      </span>
     ),
     showBackButton: true,
     backPath: '/pos/tables',

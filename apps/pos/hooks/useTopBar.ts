@@ -15,6 +15,7 @@ export function useTopBar(config: TopBarConfig) {
         breadcrumb: undefined,
         centerSlot: null,
         rightActions: null,
+        menuActions: undefined,
         showBackButton: false,
         backPath: undefined,
       });
@@ -24,6 +25,7 @@ export function useTopBar(config: TopBarConfig) {
     config.breadcrumb,
     config.centerSlot,
     config.rightActions,
+    config.menuActions,
     config.showBackButton,
     config.backPath,
     setConfig,
