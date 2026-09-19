@@ -1001,7 +1001,21 @@ async function doSeedTablesFromServer(branchId: string): Promise<void> {
 // this conversion).
 function mapServerOrderToView(o: any): OrderView {
   const rawItems = Array.isArray(o.items) ? o.items : [];
+  // `total` is this endpoint's only order-level amount field, and it's
+  // tax-inclusive (order.service.ts's mapOrder sends `total: o.netAmount`) —
+  // there is no separate pre-tax subtotal in this response shape. Using it
+  // for BOTH `subtotal` and `netAmount` below used to make this order's
+  // pre-tax total (OrderDetailsModal's own "Total" line) come out equal to
+  // its final tax-inclusive amount for any order rebuilt from a live-orders
+  // pull (every page reload/reconnect/socket refresh, not just a one-off).
+  // Each line item's own `subtotal` IS present on this response, though
+  // (mapOrder: `subtotal: it.subtotal ?? unitPrice*quantity`) — summing
+  // those gives the real pre-tax figure without needing a server change.
   const total = Number(o.total ?? o.netAmount ?? o.totalAmount ?? o.subtotal ?? 0);
+  const computedSubtotal = rawItems.reduce(
+    (sum: number, it: any) => sum + (Number(it.subtotal) || (Number(it.unitPrice) || 0) * (Number(it.qty ?? it.quantity) || 1)),
+    0,
+  );
   return {
     id: o.id,
     serverId: o.id,
@@ -1025,7 +1039,7 @@ function mapServerOrderToView(o: any): OrderView {
       voided: it.status === 'VOIDED',
       addOns: it.options?.addOns ?? [],
     })),
-    subtotal: total,
+    subtotal: computedSubtotal,
     taxAmount: Number(o.taxAmount ?? 0),
     discountAmount: Number(o.discountAmount ?? 0),
     discountReason: null,
