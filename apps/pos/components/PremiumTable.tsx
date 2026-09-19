@@ -49,14 +49,14 @@ const STATUS: Record<string, { surface: string; label: string; sub: string; seat
     caption: (_m, cap) => `${cap} seats`,
   },
   OCCUPIED: {
-    surface: 'bg-info/10 border-info/60',
-    label: 'text-info',
-    sub: 'text-info/80',
-    seat: 'bg-info/40',
-    caption: (m, cap) => m || `${cap} seats`,
+    surface: 'bg-surface border-info/60',
+    label: 'text-ink',
+    sub: 'text-ink-3',
+    seat: 'bg-info/20',
+    caption: (m) => m ? `Occupied · ${m}` : 'Occupied',
   },
   BILL_REQUESTED: {
-    surface: 'bg-brand/10 border-brand/70',
+    surface: 'bg-surface border-brand/70',
     label: 'text-brand-strong',
     sub: 'text-brand-strong/80',
     seat: 'bg-brand/40',
@@ -128,7 +128,7 @@ const SEAT_GAP = 4;
 
 function calculateSeats(capacity: number, shape: string, w: number, h: number): Seat[] {
   const seats: Seat[] = [];
-  const cap = Math.max(1, Math.min(20, capacity));
+  const cap = Math.max(0, Math.min(20, Math.floor(capacity || 0)));
   const isRound = shape.toLowerCase() === 'round' || shape.toLowerCase() === 'table_round';
   const P = CHAIR_PAD;
 
@@ -218,9 +218,9 @@ export function PremiumTable({
           isSelected ? 'ring-2 ring-ink ring-offset-2 ring-offset-canvas' : ''
         }`}
       >
-        <span aria-hidden className="absolute inset-[3px] border border-white/70 pointer-events-none" style={{ borderRadius }} />
-        <span className={`text-[17px] font-semibold leading-none tracking-tight ${tone.label}`}>{label}</span>
-        <span className={`mt-1.5 text-[11px] font-medium leading-none tabular-nums ${tone.sub}`}>
+        {timed && <span aria-hidden className={`absolute top-3 h-1 w-5 rounded-full ${norm === 'BILL_REQUESTED' ? 'bg-brand' : 'bg-info'}`} />}
+        <span className={`text-[21px] font-semibold leading-none tracking-tight ${tone.label}`}>{label}</span>
+        <span className={`mt-1.5 text-[10px] font-medium leading-none tabular-nums ${tone.sub}`}>
           {tone.caption(elapsed, capacity)}
         </span>
       </div>

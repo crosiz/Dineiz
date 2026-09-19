@@ -150,10 +150,8 @@ export default function ClientTableMap() {
 
   const { isMobile: isNarrow } = useScreenSize();
 
-  // Plan is the default everywhere, phones included. The list is the escape
-  // hatch for a floor the plan genuinely can't serve at phone width — a long
-  // narrow room, or more tables than fit legibly at any zoom. Remembered per
-  // terminal so a waiter who prefers one isn't re-choosing every shift.
+  // Cards default on phones; the spatial plan defaults on wider terminals.
+  // Remember the phone preference without shrinking table labels to fit.
   const [narrowView, setNarrowView] = useState<'plan' | 'list'>('list');
   const [wideView, setWideView] = useState<'plan' | 'list'>('plan');
   const [tableSearch, setTableSearch] = useState('');
@@ -879,7 +877,7 @@ export default function ClientTableMap() {
 
         <button
           onClick={() => setShowOverrideModal(true)}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
+          className="w-full flex items-center justify-center gap-2 min-h-11 py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all"
         >
           <ShieldAlert className="w-3.5 h-3.5" />
           <span>Override (Manager PIN)</span>
@@ -967,7 +965,7 @@ export default function ClientTableMap() {
     (statusFilter === 'ALL' || t.status?.toUpperCase() === statusFilter);
   const visibleTables = floorTables.filter(matchesTable);
   const tableToolbar = (
-    <div className="shrink-0 bg-surface border-b border-line px-4 sm:px-6 py-3 space-y-3">
+    <div className="shrink-0 bg-surface border-b border-line px-3 sm:px-6 py-3 space-y-3">
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative w-full sm:w-72 sm:shrink-0">
           <Search size={17} className="absolute left-3 top-3.5 text-ink-3" />
@@ -977,8 +975,8 @@ export default function ClientTableMap() {
           {floors.map(f => <option key={f} value={f}>Floor {f}</option>)}
         </select>
         <div className="inline-flex ml-auto rounded-lg border border-line bg-canvas p-1">
-          {(['list', 'plan'] as const).map(mode => <button key={mode} aria-pressed={showList === (mode === 'list')} aria-label={mode === 'list' ? 'Show table cards' : 'Show floor plan'} onClick={() => { if (isNarrow) { setNarrowView(mode); localStorage.setItem('pos_tables_view', mode); } else setWideView(mode); }} className={`h-11 px-3 rounded-md inline-flex items-center gap-2 text-sm font-medium ${showList === (mode === 'list') ? 'bg-surface text-ink shadow-sm' : 'text-ink-3'}`}>
-            {mode === 'list' ? <Rows3 size={17} /> : <MapIcon size={17} />}<span className="hidden sm:inline">{mode === 'list' ? 'Cards' : 'Floor plan'}</span>
+          {(['list', 'plan'] as const).map(mode => <button key={mode} aria-pressed={showList === (mode === 'list')} aria-label={mode === 'list' ? 'Show table cards' : 'Show floor plan'} onClick={() => { if (isNarrow) { setNarrowView(mode); localStorage.setItem('pos_tables_view', mode); } else setWideView(mode); }} className={`h-11 px-2 sm:px-3 rounded-md inline-flex items-center gap-1 sm:gap-2 text-sm font-medium ${showList === (mode === 'list') ? 'bg-surface text-ink shadow-sm' : 'text-ink-3'}`}>
+            {mode === 'list' ? <Rows3 size={17} /> : <MapIcon size={17} />}<span className="inline">{mode === 'list' ? 'Cards' : 'Floor plan'}</span>
           </button>)}
         </div>
       </div>
@@ -1010,6 +1008,7 @@ export default function ClientTableMap() {
   return (
     <div className="w-full h-full flex flex-col bg-canvas text-ink select-none overflow-hidden relative">
       {tableToolbar}
+      <div className="shrink-0 px-4 sm:px-6 pt-4 pb-2"><p className="text-sm font-semibold text-ink">Floor {activeFloor}</p><p className="mt-1 text-xs text-ink-3">{visibleTables.length} tables · Select a table to start or view an order</p></div>
       {/* Main Floor Canvas Container. height:100% (not the old hardcoded
           calc(100vh - 72px - 64px)) — this root now fills POSLayout's
           already-correctly-sized flex-1 content slot via h-full above, so
@@ -1030,7 +1029,7 @@ export default function ClientTableMap() {
           position: 'relative',
           overflow: 'hidden',
           backgroundColor: 'var(--pos-bg-base)',
-          backgroundImage: 'radial-gradient(var(--pos-border) 1px, transparent 1px)',
+          backgroundImage: 'none',
           backgroundSize: `${24 * view.zoom}px ${24 * view.zoom}px`,
           backgroundPosition: `${view.x}px ${view.y}px`,
           // Without this the browser's own pan/zoom fights every gesture the
@@ -1040,7 +1039,6 @@ export default function ClientTableMap() {
         }}
         className={isPanning ? 'cursor-grabbing' : 'cursor-grab'}
       >
-        <div className="absolute top-3 left-4 z-20 pointer-events-none text-xs text-ink-3">{visibleTables.length} tables · Tap a table to open it</div>
         {visibleTables.length === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
             <ServiceIllustration kind="floor" className="w-36 h-28 mb-2" />

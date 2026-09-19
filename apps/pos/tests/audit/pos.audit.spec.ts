@@ -67,6 +67,11 @@ for (const width of [320, 360, 768, 1280]) {
         await expect(page.getByTestId('ticket-card').first()).toContainText('50 items');
         await expect(page.getByTestId('ticket-card').filter({ hasText: 'Takeaway' }).first()).toBeVisible();
       }
+      if (screen === 'tables' && width === 320) {
+        const floor = await page.getByRole('combobox', { name: 'Choose floor' }).boundingBox();
+        const view = await page.getByRole('button', { name: 'Show table cards', exact: true }).boundingBox();
+        expect(Math.abs(floor!.y - view!.y)).toBeLessThanOrEqual(6);
+      }
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.screenshot({ path: testInfo.outputPath(screen.split('?')[0] + '.png'), fullPage: true });
     }
@@ -270,4 +275,94 @@ test('legacy saved payment recovers its missing order and survives another offli
   await page.reload();
   await expect(page.getByTestId('ticket-card')).toHaveCount(7);
   await expect(page.getByTestId('ticket-card').filter({ hasText: '#A-1809-001' })).toHaveCount(0);
+  const state = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve, reject) => { const r = indexedDB.open('DineizPOS_EventStore_v1'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+    return await new Promise<string>((resolve, reject) => { const r = db.transaction('events').objectStore('events').get('legacy-paid-fixture'); r.onsuccess = () => { db.close(); resolve(r.result?.syncState); }; r.onerror = () => reject(r.error); });
+  });
+  expect(['QUEUED', 'BLOCKED', 'INFLIGHT', 'DEGRADED']).toContain(state);
+
+});
+
+
+test('menu categories, add-on-only items and long names stay usable at 320px', async ({ page, context }, info) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await prepare(page);
+  const menu = categories.map(category => ({ ...category, items: category.items.map(item => item.id === 'item-0'
+    ? { ...item, name: 'Chicken Biryani family platter with extra-long menu description', addOns: [{ id: 'extra-raita', name: 'Extra raita', price: 75 }] }
+    : item.id === 'item-4' ? { ...item, isAvailable: false } : item) }));
+  await page.route(/\/api\/menu(?:\?|$)/, route => route.fulfill({ json: menu }));
+  await page.goto('/pos/order?type=takeaway');
+  await expect(page.getByTestId('menu-item').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /View order/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /^Chicken Biryani 4, PKR/ })).toBeDisabled();
+  await context.setOffline(true);
+  await page.getByTestId('menu-item').first().click();
+  const options = page.getByRole('dialog', { name: /Options for Chicken Biryani/ });
+  await expect(options).toBeVisible();
+  await options.getByText('Extra raita', { exact: true }).click();
+  await expect(options.getByRole('checkbox', { name: /Extra raita/ })).toBeChecked();
+  await expect(options.getByRole('button', { name: /Add to order/i })).toContainText('PKR 575');
+  expect(await options.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath('menu-options-phone.png') });
+  await options.getByRole('button', { name: /Add to order/i }).click();
+  await expect(page.getByRole('button', { name: /View order/i })).toContainText('1');
+  // Same dish without extras must remain a separate price/configuration.
+  await page.getByTestId('menu-item').first().click();
+  await options.getByRole('button', { name: /Add to order/i }).click();
+  await expect(page.getByRole('button', { name: /View order/i })).toContainText('2');
+  await page.getByRole('textbox', { name: 'Search menu', exact: true }).fill('Fresh Lime');
+  await expect(page.getByTestId('menu-item')).toHaveCount(12);
+  await page.getByTestId('menu-item').last().scrollIntoViewIfNeeded();
+  const last = await page.getByTestId('menu-item').last().boundingBox();
+  const footer = await page.getByRole('button', { name: /View order/i }).boundingBox();
+  expect(last!.y + last!.height).toBeLessThanOrEqual(footer!.y);
+  await page.getByRole('textbox', { name: 'Search menu', exact: true }).fill('nothing matches');
+  await expect(page.getByRole('heading', { name: 'No items found' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show all items', exact: true }).click();
+  await expect(page.getByTestId('menu-item')).toHaveCount(50);
+  await page.getByRole('button', { name: /View order/i }).click();
+  await expect(page.getByText('Extra raita', { exact: false }).first()).toBeVisible();
+  const cart = page.getByRole('dialog', { name: 'Current order', exact: true });
+  expect(await cart.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(280);
+  expect(await cart.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await expect(cart.getByRole('button', { name: /^One more/ })).toHaveCount(2);
+  await cart.getByRole('button', { name: /^One more.*Extra raita/ }).click();
+  await expect(cart.getByText('PKR 1,150', { exact: true })).toBeVisible();
+  await expect(cart.getByText('PKR 500', { exact: true })).toBeVisible();
+  await page.screenshot({ path: info.outputPath('menu-cart-phone.png') });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Current order', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /View order/i })).toBeFocused();
+});
+
+test('ticket list and table cards retain readable structure on desktop', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1280, height: 850 });
+  await prepare(page);
+  await page.goto('/pos/tables');
+  await page.getByRole('button', { name: 'Show table cards', exact: true }).click();
+  await expect(page.getByTestId('table-row')).toHaveCount(12);
+  await expect(page.getByTestId('table-row').first()).toHaveAttribute('aria-label', /^Table 1,/);
+  await page.screenshot({ path: info.outputPath('tables-cards-desktop.png') });
+  await page.goto('/pos/tickets');
+  await page.getByRole('button', { name: 'List View', exact: true }).click();
+  await expect(page.getByTestId('ticket-card')).toHaveCount(8);
+  await expect(page.getByTestId('ticket-card').first()).toContainText('50 items');
+  await page.screenshot({ path: info.outputPath('tickets-list-desktop.png') });
+});
+
+
+test('standard-width dialogs do not inherit spacing-token widths', async ({ page }, info) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await prepare(page);
+  await page.goto('/pos/tickets');
+  await page.getByRole('button', { name: 'Filters and history', exact: true }).click();
+  const filters = page.getByRole('dialog', { name: 'Ticket filters', exact: true });
+  await expect(filters).toBeVisible();
+  expect(await filters.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(280);
+  await filters.getByRole('button', { name: 'View shift summary', exact: true }).click();
+  const summary = page.getByRole('dialog', { name: 'Shift summary', exact: true });
+  await expect(summary).toBeVisible();
+  expect(await summary.evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(280);
+  expect(await summary.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath('shift-summary-phone.png') });
 });

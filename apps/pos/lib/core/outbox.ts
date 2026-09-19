@@ -341,6 +341,10 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
     } else {
       // ORDER
       const order = orders[aggregateId];
+      // A missing projection is not a server acknowledgement. It may still be
+      // rebuilding or waiting for the cached/server order to be imported.
+      // Keep the original event retryable, especially collected payments.
+      if (!order) continue;
       const hasServerId = !!order?.serverId;
 
       if (!hasServerId) {
@@ -404,7 +408,8 @@ async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
             // exist. The server never needs to hear about an order that never
             // held anything, so those events end here.
             const newest = Math.max(...events.map((e) => Date.parse(e.clientTime) || 0));
-            if (ORDER_TERMINAL_STATUSES.has(order.status) || now - newest > EMPTY_ORDER_GRACE_MS) {
+            const hasPayment = events.some(e => e.type === 'PAYMENT_COLLECTED');
+            if (!hasPayment && (ORDER_TERMINAL_STATUSES.has(order.status) || now - newest > EMPTY_ORDER_GRACE_MS)) {
               toConfirm.push(...events.map((e) => e.id));
             }
             continue;
@@ -660,9 +665,8 @@ interface BatchOp {
 // state where a line item genuinely no longer matters to anyone.
 const ORDER_TERMINAL_STATUSES = new Set(['COMPLETED', 'CANCELLED', 'VOIDED', 'WALKED_OUT']);
 
-// null = confirm task.eventIds as local-only, nothing to ship (safe: either
-// the aggregate is gone entirely, or the order has reached a terminal state
-// so a stale item genuinely doesn't matter any more).
+// null = no item remains to ship on a terminal order. A missing aggregate
+// returns undefined, never null: losing a projection is not an acknowledgement.
 // undefined = do NOT touch task.eventIds — leave them exactly as they are so
 // the next cycle tries again. Used when addItemsBody comes back empty for a
 // still-open order: that's either a legitimate remove/void racing this
@@ -679,11 +683,11 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
 
   switch (task.kind) {
     case 'CREATE_ORDER':
-      if (!order) return null;
+      if (!order) return undefined;
       task.bodyLineIds = linesOf(order);
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: task.aggregateId, idempotencyKey: task.aggregateId, body: createOrderBody(order) };
     case 'ADD_ITEMS': {
-      if (!order) return null;
+      if (!order) return undefined;
       const body = await addItemsBody(task, order);
       if (!body.items.length) {
         if (ORDER_TERMINAL_STATUSES.has(order.status)) return null;
@@ -693,19 +697,19 @@ async function buildOp(task: OutboxTask): Promise<BatchOp | null | undefined> {
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `additems:${opId}`, body };
     }
     case 'UPDATE_STATUS':
-      if (!order) return null;
+      if (!order) return undefined;
       // Keyed like the others: a status change runs applyOrderStatusSideEffects
       // server-side (stock deduction on IN_KITCHEN, among others), so a re-sent
       // op is not harmlessly repeatable.
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `status:${opId}`, body: { status: task.status } };
     case 'COLLECT_PAYMENT':
-      if (!order) return null;
+      if (!order) return undefined;
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `pay:${opId}`, body: collectPaymentBody(order) };
     case 'REQUEST_BILL':
-      if (!order) return null;
+      if (!order) return undefined;
       return { opId, kind: task.kind, aggregateId: task.aggregateId, targetId: order.serverId ?? null, idempotencyKey: `bill:${opId}`, body: { billRequestedAt: task.billRequestedAt ?? null } };
     case 'ASSIGN_WAITER':
-      if (!order) return null;
+      if (!order) return undefined;
       // No idempotency key: assignOrder just sets three columns, so replaying it
       // lands on the same state. A key would only pin the FIRST assignment's
       // response, which is wrong for a field a manager can legitimately change.
@@ -728,7 +732,7 @@ async function runTaskViaRest(task: OutboxTask): Promise<boolean> {
   const order = orders[task.aggregateId];
 
   if (task.kind === 'CREATE_ORDER') {
-    if (!order) return true;
+    if (!order) return false;
     const body = JSON.stringify(createOrderBody(order));
     task.bodyLineIds = linesOf(order);
     await beginCreateAttempt(task);
@@ -1129,7 +1133,7 @@ async function shipOps(ops: BatchOp[], tasks: OutboxTask[]): Promise<void> {
 // ─── Drain ───────────────────────────────────────────────────────────────
 
 async function drain(): Promise<void> {
-  if (draining || circuitOpen) return;
+  if (draining || circuitOpen || !useViews.getState().isReady) return;
   // No API address configured: there is nowhere correct to send these. Leaving
   // them QUEUED (and letting the sync indicator show "stuck") is the only safe
   // behaviour — shipping at a guessed address is what poisoned real orders.

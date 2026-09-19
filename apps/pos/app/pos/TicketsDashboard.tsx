@@ -191,19 +191,19 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   const queryClient = useQueryClient();
 
   useTopBar({
-    pageTitle: dataMode === 'live' ? 'Active Orders' : 'Order History',
+    pageTitle: dataMode === 'live' ? 'Tickets' : 'Order History',
     breadcrumb: session?.branchName || getPosSession()?.branchName || 'Branch',
-    showBackButton: true,
+    showBackButton: false,
     backPath: '/pos/home',
     rightActions: (
       <div className="flex items-center gap-3">
-        <button onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
+        <button aria-label="Filters and history" onClick={openFilterModal} className={`flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${dataMode === 'history' ? 'bg-brand border-brand text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="Advanced Filter & History">
           <ListFilter className="w-[22px] h-[22px] transition-colors" />
         </button>
-        <button onClick={() => setShiftSummaryOpen(true)} className="flex items-center justify-center rounded-xl h-[42px] w-[42px] bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
+        <button aria-label="Shift summary" onClick={() => setShiftSummaryOpen(true)} className="hidden sm:flex items-center justify-center rounded-xl h-11 w-11 bg-white hover:bg-canvas transition-all border border-line-strong text-ink-2 hover:text-ink shadow-sm" title="Shift Summary">
           <Clock className="w-[22px] h-[22px] transition-colors" />
         </button>
-        <button onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`flex items-center justify-center rounded-xl h-[42px] w-[42px] transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
+        <button aria-label="My orders only" aria-pressed={myOrdersOnly} onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`hidden sm:flex items-center justify-center rounded-xl h-11 w-11 transition-all border shadow-sm ${myOrdersOnly ? 'bg-ink border-ink text-white' : 'bg-white border-line-strong text-ink-2 hover:bg-canvas hover:text-ink'}`} title="My Orders">
           <CircleUser className="w-[22px] h-[22px] transition-colors" />
         </button>
       </div>
@@ -633,15 +633,15 @@ export default function TicketsDashboard({ onViewChange }: Props) {
   };
 
   return (
-    <main className="flex-1 bg-canvas overflow-y-auto no-scrollbar font-body-md pb-24 text-ink">
+    <main className="flex-1 bg-canvas overflow-y-auto no-scrollbar font-body-md pb-6 text-ink">
       {/* Toolbar */}
       <div className="px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface">
-        {dataMode === 'live' && <button onClick={() => router.push('/pos/tables')} className="h-11 inline-flex items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white"><Plus size={18} />New order</button>}
+        {dataMode === 'live' && <button onClick={() => router.push('/pos/tables')} className="order-2 self-start h-11 inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white"><Plus size={18} />New order</button>}
 
         {/* Status filter: one segmented control, each tab with its count, so
             "how many are ready?" is answered without tapping anything. */}
-        <div className="flex min-w-0 max-w-full items-center gap-2 overflow-x-auto no-scrollbar">
-          <div className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-sunken border border-line">
+        <div className="order-3 flex w-full min-w-0 items-center gap-2 overflow-x-auto no-scrollbar">
+          <div className="inline-flex items-center gap-1">
             {(dataMode === 'live'
               ? ([
                   ['ALL', 'All', statusCounts.ALL],
@@ -660,14 +660,15 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               return (
                 <button
                   key={tab}
+                  aria-pressed={active}
                   onClick={() => setFilter(tab as any)}
                   className={`h-11 px-3 rounded-lg flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3 hover:text-ink'
+                    active ? 'bg-ink text-white' : 'text-ink-3 hover:text-ink hover:bg-canvas'
                   }`}
                 >
                   {label}
                   {n !== null && n > 0 && (
-                    <span className={`min-w-5 h-5 px-1.5 rounded-full grid place-items-center text-[11px] tabular-nums ${active ? 'bg-ink text-white' : 'bg-line text-ink-2'}`}>
+                    <span className={`min-w-5 h-5 px-1.5 rounded-full grid place-items-center text-[11px] tabular-nums ${active ? 'bg-white/15 text-white' : 'bg-sunken text-ink-2'}`}>
                       {n}
                     </span>
                   )}
@@ -692,7 +693,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         </div>
 
         {/* Right: Search + Sort + View Mode */}
-        <div className="flex flex-wrap w-full xl:w-auto min-w-0 items-center gap-2 sm:ml-auto">
+        <div className="order-1 flex flex-wrap min-w-0 flex-1 items-center gap-2">
           {/* Refreshing over cached data. Inline, not a fixed pill: the pill sat
               at top-right and covered the header clock and avatar. */}
           {isStale && (
@@ -702,13 +703,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             </span>
           )}
           {(
-            <div className="relative flex-1 min-w-0">
+            <div className="relative w-full sm:w-auto sm:flex-1 min-w-[140px] sm:max-w-[360px]">
               <input
                 type="text"
-                aria-label="Search tickets" placeholder="Find order, table or customer"
+                aria-label="Search tickets" placeholder="Search tickets"
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
-                className="h-11 w-full sm:w-64 bg-surface border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[16px] font-medium text-ink placeholder:text-ink-4 outline-none"
+                className="h-11 w-full bg-canvas border border-line hover:border-line-strong focus:border-brand rounded-xl pl-9 pr-3 text-[16px] font-medium text-ink placeholder:text-ink-3 outline-none"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 w-4 h-4" />
             </div>
@@ -717,6 +718,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           {/* Sort Dropdown */}
           <div className="relative">
             <select
+              aria-label="Sort tickets"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value as any)}
               className="h-11 bg-surface border border-line rounded-xl pl-3 pr-8 text-[13px] font-semibold text-ink outline-none appearance-none cursor-pointer hover:border-line-strong"
@@ -951,6 +953,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   </div>
                 </div>
               )}
+
+              <button type="button" aria-pressed={myOrdersOnly} onClick={() => setMyOrdersOnly(!myOrdersOnly)} className={`sm:hidden flex min-h-11 w-full items-center justify-between rounded-lg border px-3 text-sm ${myOrdersOnly ? 'border-ink bg-ink text-white' : 'border-line text-ink'}`}>My orders only <span>{myOrdersOnly ? 'On' : 'Off'}</span></button>
+              <button type="button" onClick={() => { setFilterModalOpen(false); setShiftSummaryOpen(true); }} className="sm:hidden min-h-11 w-full rounded-lg border border-line px-3 text-left text-sm text-ink">View shift summary</button>
 
               {/* History Search (History Only) */}
               {tempDataMode === 'history' && (

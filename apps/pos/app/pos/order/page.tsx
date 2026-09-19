@@ -2,12 +2,14 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCartStore } from '@/lib/store';
+import { cartItemKey, useCartStore } from '@/lib/store';
 import { useMenu, groupByCategory } from '@/hooks/useMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { VariationPicker, DiscountModal } from './components';
 import type { CachedMenuItem } from '@/lib/db';
-import { MenuItemCard, type ViewMode } from '@/components/MenuItemCard';
+import type { ViewMode } from '@/components/MenuItemCard';
+import { OrderPanel } from '@/components/OrderPanel';
+import { MenuBrowser } from '@/components/MenuBrowser';
 import { toast } from 'sonner';
 import { getDB } from '@/lib/db';
 import { v4 as uuid } from 'uuid';
@@ -22,46 +24,44 @@ import { useBrandingStore } from '@/lib/branding-store';
 import { formatPKR } from '@/lib/utils';
 import { saveCartDraft, loadCartDraft, clearCartDraft } from '@/lib/core/drafts';
 import { CustomerPickerSheet, type PickedCustomer } from '@/components/CustomerPickerSheet';
-import { ScrollRail } from '@/components/ScrollRail';
 import { AssignWaiterSheet } from '@/app/pos/tables/AssignWaiterSheet';
 import { ServiceIllustration } from '@/components/ServiceIllustration';
 
-// One line of the order being punched: name and modifiers, a stepper, the line
-// total — in one row. It was two rows per line (name + price, then add-on caps
-// chips + a 44px pill stepper + a separate trash button), which left room for
-// about two lines between the panel's header and footer. At quantity 1 the
-// minus becomes a remove (decrementItem drops a line at 0), so there's no
-// separate delete control to aim for, and no swipe gesture to discover.
+// Give the name its own row so long dishes remain readable in a narrow
+// order panel. Quantity and price share the second row; at one portion the
+// minus becomes remove. The configuration key targets only this exact set
+// of extras, not every portion of the same dish.
 function SwipeableCartItem({ cartItem, incrementItem, decrementItem }: any) {
   const addOns: string[] = (cartItem.selectedAddOns ?? []).map((a: any) => a.name);
   const detail = [cartItem.selectedVariation?.name, ...addOns.map((n) => `+ ${n}`)].filter(Boolean).join(' · ');
   const lastOne = cartItem.quantity <= 1;
-  const stepBtn = 'w-10 h-10 grid place-items-center text-ink-2 hover:bg-sunken hover:text-ink transition-colors';
+  const accessibleName = [cartItem.name, detail].filter(Boolean).join(', ');
+  const stepBtn = 'w-11 h-11 grid place-items-center text-ink-2 hover:bg-sunken hover:text-ink transition-colors';
 
   return (
-    <div className="px-4 py-2.5 flex items-center gap-3 border-b border-line last:border-b-0">
-      <div className="min-w-0 flex-1">
-        <p className="text-[14px] font-semibold text-ink leading-snug truncate">{cartItem.name}</p>
+    <div className="px-4 py-3 grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 border-b border-line last:border-b-0">
+      <div className="min-w-0 col-span-2">
+        <p className="text-[14px] font-semibold text-ink leading-snug line-clamp-2">{cartItem.name}</p>
         {detail && <p className="text-[12px] text-ink-3 leading-snug truncate">{detail}</p>}
       </div>
-      <div className="flex items-center h-10 rounded-lg border border-line-strong overflow-hidden shrink-0">
+      <div className="flex w-fit items-center h-11 rounded-lg border border-line overflow-hidden shrink-0">
         <button
-          onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id)}
+          onClick={() => decrementItem(cartItem.itemId, cartItem.selectedVariation?.id, cartItemKey(cartItem))}
           className={`${stepBtn} ${lastOne ? 'text-danger hover:text-danger hover:bg-danger/10' : ''}`}
-          aria-label={lastOne ? `Remove ${cartItem.name}` : `One less ${cartItem.name}`}
+          aria-label={lastOne ? `Remove ${accessibleName}` : `One less ${accessibleName}`}
         >
           {lastOne ? <Trash2 className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
         </button>
         <span className="w-7 text-center text-[14px] font-semibold text-ink tabular-nums">{cartItem.quantity}</span>
         <button
-          onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id)}
+          onClick={() => incrementItem(cartItem.itemId, cartItem.selectedVariation?.id, cartItemKey(cartItem))}
           className={stepBtn}
-          aria-label={`One more ${cartItem.name}`}
+          aria-label={`One more ${accessibleName}`}
         >
           <Plus className="w-4 h-4" />
         </button>
       </div>
-      <span className="w-[84px] text-right text-[14px] font-semibold text-ink tabular-nums shrink-0">
+      <span className="text-right text-[14px] font-semibold text-ink tabular-nums shrink-0">
         {formatPKR(cartItem.subtotal)}
       </span>
     </div>
@@ -214,26 +214,27 @@ function OrderEntryPageContent() {
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  const [cartWidthPercent, setCartWidthPercent] = useState(42);
+  const [cartWidthPercent, setCartWidthPercent] = useState(32);
   const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     const savedWidth = localStorage.getItem('pos_cart_width_percent');
-    if (savedWidth) setCartWidthPercent(parseFloat(savedWidth));
+    const width = Number(savedWidth);
+    if (savedWidth && Number.isFinite(width)) setCartWidthPercent(Math.max(28, Math.min(48, width)));
   }, []);
 
   useEffect(() => {
     if (!isResizing) return;
     const handlePointerMove = (e: PointerEvent) => {
       const newPercent = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
-      if (newPercent > 25 && newPercent < 60) {
+      if (newPercent >= 28 && newPercent <= 48) {
         setCartWidthPercent(newPercent);
       }
     };
     const handlePointerUp = (e: PointerEvent) => {
       setIsResizing(false);
       const newPercent = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
-      if (newPercent > 25 && newPercent < 60) {
+      if (newPercent >= 28 && newPercent <= 48) {
         localStorage.setItem('pos_cart_width_percent', newPercent.toString());
       } else {
         localStorage.setItem('pos_cart_width_percent', cartWidthPercent.toString());
@@ -531,23 +532,16 @@ function OrderEntryPageContent() {
     return items;
   }, [menuItems, activeCategoryId, debouncedSearch]);
 
-  // Two layouts. There were five, three of them reachable from a toggle above
-  // the grid — a decision a cashier has to make mid-service that changes nothing
-  // about the job. Grid for browsing by sight, list for a long menu you know by
-  // name.
-  // Both layouts are dense now that the card is text-first (see MenuItemCard's
-  // header — 1 of 36 items in the seeded tenant has a photo, so an image-shaped
-  // card meant two items visible on a phone out of thirty-six). Grid is the
-  // fat-finger tablet layout; list packs more in and aligns the price column.
-  const gridColsClass = viewMode === 'list'
-    ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-1.5'
-    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-2';
+  const cartQuantities = useMemo(() => cart.reduce<Record<string, number>>((quantities, item) => {
+    quantities[item.itemId] = (quantities[item.itemId] ?? 0) + item.quantity;
+    return quantities;
+  }, {}), [cart]);
 
   const [selectedItem, setSelectedItem] = useState<CachedMenuItem | null>(null);
 
   const handleItemTap = (item: CachedMenuItem) => {
-    if (!item.isAvailable) return;
-    if (item.variations && item.variations.length > 0) {
+    if (item.isAvailable === false) return;
+    if (item.variations?.length || item.addOns?.length) {
       setSelectedItem(item);
     } else {
       addItem({
@@ -1044,10 +1038,10 @@ function OrderEntryPageContent() {
             router.push('/pos/tables');
           }
         }}
-        className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}
+        className={`flex-1 lg:flex-none min-h-11 px-3 sm:px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${orderType === 'DINE_IN' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}
       >Dine-in</button>
-      <button onClick={() => setOrderType('TAKEAWAY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Takeaway</button>
-      <button onClick={() => setOrderType('DELIVERY')} className={`flex-1 sm:flex-none px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Delivery</button>
+      <button onClick={() => setOrderType('TAKEAWAY')} className={`flex-1 lg:flex-none min-h-11 px-3 sm:px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${orderType === 'TAKEAWAY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Takeaway</button>
+      <button onClick={() => setOrderType('DELIVERY')} className={`flex-1 lg:flex-none min-h-11 px-3 sm:px-4 py-1.5 text-sm font-semibold rounded-lg transition-colors ${orderType === 'DELIVERY' ? 'bg-white text-ink shadow-sm' : 'text-ink-3 hover:text-ink'}`}>Delivery</button>
     </>
   );
 
@@ -1137,179 +1131,26 @@ function OrderEntryPageContent() {
         className="flex flex-col lg:flex-row flex-1 overflow-hidden"
         style={{ '--cart-width': `${cartWidthPercent}%` } as React.CSSProperties}
       >
-        {/* LEFT - MENU BROWSER */}
-        <section className="w-full lg:flex-1 flex flex-col bg-canvas relative overflow-hidden">
-          {/* Order type — the lg:hidden counterpart of centerSlot above,
-              here instead of squeezed into the shared header (see
-              orderTypeButtons' own comment for why). */}
-          <div className="lg:hidden shrink-0 px-3 pt-3">
-            <div className="flex bg-sunken border border-line-strong p-1 rounded-xl">
-              {orderTypeButtons}
-            </div>
-          </div>
-          {/* Category bar. ScrollRail, not a bare overflow-x div: with eleven
-              categories on a 1280px screen, 568px of this strip — everything
-              from Pizza onward — had no way to be reached with a mouse. */}
-          <ScrollRail
-            aria-label="Menu categories"
-            className="shrink-0 h-[52px] bg-surface border-b border-line px-3"
-          >
-            {/* min-w so a two-letter label still reads as a pill rather than
-                rendering as a circle next to its wider neighbours. */}
-            <button
-              onClick={() => setActiveCategoryId(null)}
-              className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${!activeCategoryId ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
-            >
-              All
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryId(cat.id)}
-                className={`shrink-0 min-w-[64px] px-4 h-11 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors ${activeCategoryId === cat.id ? 'bg-brand text-white shadow-sm' : 'border border-line-strong bg-canvas text-ink-3 hover:bg-sunken hover:text-ink'}`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </ScrollRail>
+        <MenuBrowser
+          categories={categories} items={filteredItems} loading={menuLoading}
+          search={searchQuery} onSearch={setSearchQuery}
+          category={activeCategoryId} onCategory={setActiveCategoryId}
+          view={viewMode} onView={handleViewChange}
+          quantities={cartQuantities} onTap={handleItemTap}
+          onAvailability={canToggleAvailability ? handleToggleAvailability : undefined}
+          togglingId={togglingItemId} orderTypeControl={orderTypeButtons}
+        />
 
-          {/* Search Bar & View Toggle */}
-          <div className="p-3 border-b border-line bg-canvas flex gap-2 items-center">
-            {/* min-w-0 on both this wrapper and the <input> — flex items
-                default to min-width:auto (their content's natural size, and
-                a bare <input> has its own non-trivial intrinsic minimum),
-                which silently overrode flex-1's ability to shrink and pushed
-                this row ~80px past a 360px viewport, clipped by the section's
-                overflow-hidden with no visible sign anything was cut off. */}
-            <div className="flex-1 min-w-0 flex items-center gap-2 bg-white border border-line-strong rounded-xl px-4 h-11 transition-colors focus-within:border-brand shadow-sm">
-              <Search className="text-ink-4 shrink-0 w-[18px] h-[18px]" />
-              <input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search menu items..."
-                className="bg-transparent border-none outline-none text-[16px] text-ink flex-1 min-w-0 placeholder:text-ink-4"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="w-8 h-8 -mr-1 flex items-center justify-center text-ink-3 hover:text-ink transition-colors shrink-0">
-                  <X className="w-[18px] h-[18px]" />
-                </button>
-              )}
-            </div>
-
-            {/* One toggle, two states — not a three-way segmented control for
-                five layouts that all showed the same four facts. */}
-            <button
-              onClick={() => handleViewChange(viewMode === 'grid' ? 'list' : 'grid')}
-              title={viewMode === 'grid' ? 'Switch to list' : 'Switch to grid'}
-              aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-              className="shrink-0 grid place-items-center w-11 h-11 rounded-xl border border-line-strong bg-surface text-ink-2 hover:bg-sunken hover:text-ink transition-colors"
-            >
-              {viewMode === 'grid' ? <Rows3 className="w-[18px] h-[18px]" /> : <LayoutGrid className="w-[18px] h-[18px]" />}
-            </button>
-          </div>
-
-          {/* Menu Grid — "All" groups items under a category divider per
-              section (a flat, undifferentiated grid of the whole menu was
-              genuinely hard to scan mid-service); picking one category
-              already narrows the grid to just that category, so a divider
-              there would just repeat the category chip above it. */}
-          <div className="flex-1 overflow-y-auto no-scrollbar p-3 pb-24 lg:pb-3">
-            {menuLoading ? (
-              // Mirrors the real tile, at the real height — a skeleton that
-              // predicts a different shape than what arrives is just filler.
-              <div className={`grid content-start ${gridColsClass}`}>
-                {Array.from({ length: 18 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-line bg-surface min-h-[76px] p-2.5 flex flex-col justify-between animate-pulse">
-                    <div className="h-3.5 bg-sunken rounded w-4/5" />
-                    <div className="h-3 bg-sunken rounded w-1/3" />
-                  </div>
-                ))}
-              </div>
-            ) : !activeCategoryId ? (
-              <div className="flex flex-col gap-7">
-                {categories.map(cat => {
-                  const catItems = filteredItems.filter(i => i.categoryId === cat.id);
-                  if (catItems.length === 0) return null;
-                  return (
-                    <section key={cat.id}>
-                      <div className="flex items-center gap-2.5 mb-3">
-                        <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">{cat.name}</h3>
-                        <span className="text-[12px] font-bold text-ink-4">{catItems.length}</span>
-                        <div className="h-px flex-1 bg-hover" />
-                      </div>
-                      <div className={`grid content-start ${gridColsClass}`}>
-                        {catItems.map(item => (
-                          <MenuItemCard
-                            key={item.id}
-                            item={item}
-                            cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
-                            onTap={handleItemTap}
-                            viewMode={viewMode}
-                            onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
-                            isTogglingAvailable={togglingItemId === item.id}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  );
-                })}
-                {filteredItems.length === 0 && (
-                  <div className="text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
-                )}
-              </div>
-            ) : (
-              <div className={`grid content-start ${gridColsClass}`}>
-                {filteredItems.map(item => (
-                  <MenuItemCard
-                    key={item.id}
-                    item={item}
-                    cartQty={cart.filter(c => c.itemId === item.id).reduce((s, c) => s + c.quantity, 0)}
-                    onTap={handleItemTap}
-                    viewMode={viewMode}
-                    onToggleAvailable={canToggleAvailability ? handleToggleAvailability : undefined}
-                    isTogglingAvailable={togglingItemId === item.id}
-                  />
-                ))}
-                {filteredItems.length === 0 && (
-                  <div className="col-span-full text-center text-ink-4 py-10 font-medium">No menu items match your search.</div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Floating Mobile Cart Button */}
-        <div className="lg:hidden absolute bottom-4 left-4 right-4 z-40">
-          <button
-            onClick={() => setIsCartDrawerOpen(true)}
-            className="w-full bg-brand text-white h-14 rounded-2xl font-bold flex items-center justify-between px-6 shadow-lg active:scale-[0.98] transition-transform"
-          >
-            <div className="flex items-center gap-3">
-              <div className="bg-black/20 px-2.5 py-1 rounded-md text-sm shadow-inner flex items-center gap-1">
-                {existingItems.length > 0 ? (
-                  <>
-                    {existingItems.reduce((acc, c) => acc + c.quantity, 0)}
-                    {cart.length > 0 && (
-                      <span className="text-green-300 font-black">+{cart.reduce((acc, c) => acc + c.quantity, 0)}</span>
-                    )}
-                  </>
-                ) : (
-                  cart.reduce((acc, c) => acc + c.quantity, 0)
-                )}
-              </div>
-              <span className="tracking-wide">View order</span>
-            </div>
-            <span className="text-lg tracking-tight">{formatPKR(combinedTotal)}</span>
+        {/* A reserved footer, never a floating control covering the last item. */}
+        {!orderEmpty && <div className="lg:hidden shrink-0 border-t border-line bg-surface p-3">
+          <button onClick={() => setIsCartDrawerOpen(true)} className="flex h-13 w-full items-center justify-between gap-3 rounded-lg bg-ink px-4 text-white">
+            <span className="flex items-center gap-3 text-sm font-semibold">
+              <span className="grid min-w-7 h-7 place-items-center rounded-md bg-white/15 px-1.5 tabular-nums">{cart.reduce((sum, item) => sum + item.quantity, 0) + existingItems.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0)}</span>
+              View order
+            </span>
+            <span className="text-base font-semibold tabular-nums">{formatPKR(combinedTotal)}</span>
           </button>
-        </div>
-
-        {/* Drawer overlay for mobile */}
-        {isCartDrawerOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
-            onClick={() => setIsCartDrawerOpen(false)}
-          />
-        )}
+        </div>}
 
         {/* RESIZER HANDLE */}
         <div
@@ -1320,29 +1161,8 @@ function OrderEntryPageContent() {
           <div className="absolute inset-y-0 -left-2 -right-2 z-10 cursor-col-resize" />
         </div>
 
-        {/* RIGHT - ORDER CART. overflow-hidden is load-bearing on mobile: this
-            is `fixed`, so it escapes POSLayout's own overflow-hidden ancestor
-            entirely (fixed positioning clips only to the viewport) — without
-            its own overflow-hidden, a cart with enough items (or a keyboard-
-            shortened viewport) could push the shrink-0 footer's KITCHEN/
-            CHARGE buttons below the box's bottom edge and off the bottom of
-            the screen with no way to scroll to them, since flex-shrink:0
-            siblings don't yield space to the flex-1 item and nothing bounded
-            the total. The flex-1 item below also needs min-h-0 for the same
-            reason (see its comment). */}
-        <section className={`
-          fixed lg:relative inset-x-0 bottom-0 lg:inset-auto z-[110] lg:z-auto
-          w-full lg:w-[var(--cart-width)] h-[85dvh] lg:h-auto shrink-0 flex flex-col bg-white overflow-hidden
-          border-t lg:border-t-0 border-line
-          transition-transform duration-300 ease-in-out
-          ${isCartDrawerOpen ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}
-          rounded-t-3xl lg:rounded-none shadow-2xl lg:shadow-none
-        `}>
-          {/* Mobile Drawer Handle */}
-          <div className="w-full h-10 flex items-center justify-center lg:hidden cursor-pointer shrink-0 border-b border-line bg-canvas rounded-t-3xl" onClick={() => setIsCartDrawerOpen(false)}>
-            <div className="w-12 h-1.5 bg-hover rounded-full" />
-          </div>
-
+        <OrderPanel open={isCartDrawerOpen} onClose={() => setIsCartDrawerOpen(false)}>
+          <button type="button" onClick={() => setIsCartDrawerOpen(false)} className="flex h-11 shrink-0 items-center justify-center gap-2 border-b border-line text-sm font-medium text-ink-2 lg:hidden"><X size={16} />Back to menu</button>
           {/* Header: what this order is, and who it's for / who serves it. */}
           <div className="px-4 pt-3.5 pb-3 border-b border-line shrink-0">
             <div className="flex items-center justify-between gap-3">
@@ -1365,7 +1185,7 @@ function OrderEntryPageContent() {
               </div>
               <button
                 onClick={startNewOrder}
-                className="h-8 px-2.5 rounded-lg text-[12.5px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink flex items-center gap-1.5 shrink-0"
+                className="h-11 px-2.5 rounded-lg text-[12.5px] font-semibold text-ink-3 hover:bg-sunken hover:text-ink flex items-center gap-1.5 shrink-0"
                 title="Start a fresh order"
               >
                 <Plus className="w-3.5 h-3.5" /> New
@@ -1378,21 +1198,21 @@ function OrderEntryPageContent() {
                 not only from the floor plan once an order exists. */}
             <div className="mt-2.5 flex gap-2">
               {customerId ? (
-                <div className="flex-1 min-w-0 h-9 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
+                <div className="flex-1 min-w-0 h-11 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
                   <button onClick={() => setCustomerPickerOpen(true)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
                     <span className="w-5 h-5 rounded-full bg-brand/15 text-brand grid place-items-center text-[10px] font-bold shrink-0">
                       {(customerName || 'C').charAt(0).toUpperCase()}
                     </span>
                     <span className="text-[13px] font-semibold text-ink truncate">{customerName || 'Customer'}</span>
                   </button>
-                  <button onClick={() => setCustomer(null)} className="w-7 h-7 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove customer">
+                  <button onClick={() => setCustomer(null)} className="w-11 h-11 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove customer">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => setCustomerPickerOpen(true)}
-                  className="flex-1 min-w-0 h-9 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
+                  className="flex-1 min-w-0 h-11 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
                 >
                   <UserPlus className="w-4 h-4 shrink-0" /> <span className="truncate">Customer</span>
                 </button>
@@ -1400,7 +1220,7 @@ function OrderEntryPageContent() {
 
               {orderType === 'DINE_IN' && (
                 waiterId ? (
-                  <div className="flex-1 min-w-0 h-9 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
+                  <div className="flex-1 min-w-0 h-11 pl-2 pr-1 flex items-center gap-2 rounded-lg bg-sunken border border-line">
                     <button onClick={() => setWaiterPickerOpen(true)} className="flex items-center gap-2 min-w-0 flex-1 text-left">
                       <span
                         className="w-5 h-5 rounded-full grid place-items-center text-white text-[10px] font-bold shrink-0"
@@ -1410,14 +1230,14 @@ function OrderEntryPageContent() {
                       </span>
                       <span className="text-[13px] font-semibold text-ink truncate">{waiterName}</span>
                     </button>
-                    <button onClick={() => setWaiter(null)} className="w-7 h-7 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove waiter">
+                    <button onClick={() => setWaiter(null)} className="w-11 h-11 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-surface shrink-0" aria-label="Remove waiter">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setWaiterPickerOpen(true)}
-                    className="flex-1 min-w-0 h-9 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
+                    className="flex-1 min-w-0 h-11 px-2.5 flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-line-strong text-[13px] font-medium text-ink-3 hover:text-ink hover:border-ink-4 hover:bg-sunken"
                   >
                     <ConciergeBell className="w-4 h-4 shrink-0" /> <span className="truncate">Waiter</span>
                   </button>
@@ -1441,7 +1261,7 @@ function OrderEntryPageContent() {
               </div>
               <button
                 onClick={() => router.push('/pos/tables')}
-                className="h-8 px-3 rounded-md bg-ink text-white text-[12.5px] font-semibold shrink-0 hover:bg-ink-2"
+                className="h-11 px-3 rounded-md bg-ink text-white text-[12.5px] font-semibold shrink-0 hover:bg-ink-2"
               >
                 Pick table
               </button>
@@ -1469,7 +1289,7 @@ function OrderEntryPageContent() {
                     <span className="text-[13.5px] text-ink-3 tabular-nums shrink-0">{formatPKR(i.subtotal || (i.quantity * i.unitPrice))}</span>
                     <button
                       onClick={() => setVoidSheetState({ isOpen: true, item: i })}
-                      className="w-8 h-8 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-danger/10 shrink-0"
+                      className="w-11 h-11 grid place-items-center rounded-md text-ink-4 hover:text-danger hover:bg-danger/10 shrink-0"
                       aria-label={`Void ${i.itemName || 'item'}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1513,7 +1333,7 @@ function OrderEntryPageContent() {
                 <span className="text-[12.5px] font-semibold text-ink-2">Kitchen note</span>
                 <button
                   onClick={() => { setShowKitchenNote(false); setOrderNote(''); }}
-                  className="w-7 h-7 grid place-items-center rounded-md text-ink-3 hover:bg-sunken hover:text-ink"
+                  className="w-11 h-11 grid place-items-center rounded-md text-ink-3 hover:bg-sunken hover:text-ink"
                   aria-label="Remove note"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1567,7 +1387,7 @@ function OrderEntryPageContent() {
                   key={label}
                   onClick={onClick}
                   disabled={disabled}
-                  className={`h-10 rounded-lg border text-[12.5px] font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`h-11 rounded-lg border text-[12.5px] font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                     active ? 'border-brand/40 bg-brand/10 text-brand-strong' : 'border-line text-ink-2 enabled:hover:bg-sunken enabled:hover:text-ink'
                   }`}
                 >
@@ -1608,7 +1428,7 @@ function OrderEntryPageContent() {
               })()}
             </div>
           </div>
-        </section>
+        </OrderPanel>
       </main>
 
       {/* Modals */}

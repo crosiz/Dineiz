@@ -62,11 +62,10 @@
   --spacing-gutter: 16px;
   --spacing-base: 8px;
   --spacing-touch-min: 48px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  /* Do not name spacing tokens xs/sm/md/lg/xl: Tailwind resolves max-w-*
+     through spacing first, so --spacing-xl:32px collapses an entire modal
+     to 32px. Use the numeric 4px scale for spacing and container widths for
+     max-w-sm/md/lg/xl. */
   --spacing-margin-edge: 24px;
 
   /* One typeface (see app/layout.tsx). These names are kept because ~45 call

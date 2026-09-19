@@ -110,11 +110,11 @@ interface CartStore {
   setExistingItems: (items: any[]) => void;
 
   addItem: (item: Omit<CartItem, 'quantity' | 'subtotal'>) => void;
-  removeItem: (itemId: string, variationId?: string) => void;
-  incrementItem: (itemId: string, variationId?: string) => void;
-  decrementItem: (itemId: string, variationId?: string) => void;
-  setQuantity: (itemId: string, quantity: number, variationId?: string) => void;
-  updateItemNotes: (itemId: string, notes: string, variationId?: string) => void;
+  removeItem: (itemId: string, variationId?: string, lineKey?: string) => void;
+  incrementItem: (itemId: string, variationId?: string, lineKey?: string) => void;
+  decrementItem: (itemId: string, variationId?: string, lineKey?: string) => void;
+  setQuantity: (itemId: string, quantity: number, variationId?: string, lineKey?: string) => void;
+  updateItemNotes: (itemId: string, notes: string, variationId?: string, lineKey?: string) => void;
   clearCart: () => void;
   setOrderType: (type: CartStore['orderType']) => void;
   setOrderContext: (context: { tableId?: string | null, tableLabel?: string | null, orderId?: string | null, isEditing?: boolean }) => void;
@@ -158,9 +158,16 @@ interface CartStore {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 
-/** Generates a unique cart key per item+variation combo */
-const cartKey = (itemId: string, variationId?: string) =>
-  `${itemId}-${variationId ?? 'base'}`;
+/** Configuration identity, independent of quantity and modifier-selection order.
+ * Keep plain and extra-topped portions separate, including their prices.
+ * Derived keys also work for older held/draft carts without migrating storage.
+ */
+export const cartItemKey = (item: Pick<CartItem, 'itemId' | 'selectedVariation' | 'selectedAddOns' | 'unitPrice'>) =>
+  JSON.stringify([item.itemId, item.selectedVariation?.id ?? null, item.unitPrice,
+    (item.selectedAddOns ?? []).map(addOn => [addOn.id, addOn.price]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))]);
+
+const matchesCartItem = (item: CartItem, itemId: string, variationId?: string, lineKey?: string) =>
+  lineKey ? cartItemKey(item) === lineKey : item.itemId === itemId && item.selectedVariation?.id === variationId;
 
 // ─── Zustand Store ────────────────────────────────────────────────────────────
 
@@ -264,16 +271,16 @@ export const useCartStore = create<CartStore>()(
         addItem: (incoming) =>
           set(
             (s) => {
-              const key = cartKey(incoming.itemId, incoming.selectedVariation?.id);
+              const key = cartItemKey(incoming);
               const exists = s.cart.find(
-                (c) => cartKey(c.itemId, c.selectedVariation?.id) === key
+                (c) => cartItemKey(c) === key
               );
 
               if (exists) {
                 // Increment existing line
                 return {
                   cart: s.cart.map((c) =>
-                    cartKey(c.itemId, c.selectedVariation?.id) === key
+                    cartItemKey(c) === key
                       ? {
                         ...c,
                         quantity: c.quantity + 1,
@@ -296,22 +303,22 @@ export const useCartStore = create<CartStore>()(
             'addItem'
           ),
 
-        removeItem: (itemId, variationId) =>
+        removeItem: (itemId, variationId, lineKey) =>
           set(
             (s) => ({
               cart: s.cart.filter(
-                (c) => cartKey(c.itemId, c.selectedVariation?.id) !== cartKey(itemId, variationId)
+                (c) => !matchesCartItem(c, itemId, variationId, lineKey)
               ),
             }),
             false,
             'removeItem'
           ),
 
-        incrementItem: (itemId, variationId) =>
+        incrementItem: (itemId, variationId, lineKey) =>
           set(
             (s) => ({
               cart: s.cart.map((c) =>
-                cartKey(c.itemId, c.selectedVariation?.id) === cartKey(itemId, variationId)
+                matchesCartItem(c, itemId, variationId, lineKey)
                   ? {
                     ...c,
                     quantity: c.quantity + 1,
@@ -324,12 +331,12 @@ export const useCartStore = create<CartStore>()(
             'incrementItem'
           ),
 
-        decrementItem: (itemId, variationId) =>
+        decrementItem: (itemId, variationId, lineKey) =>
           set(
             (s) => ({
               cart: s.cart
                 .map((c) =>
-                  cartKey(c.itemId, c.selectedVariation?.id) === cartKey(itemId, variationId)
+                  matchesCartItem(c, itemId, variationId, lineKey)
                     ? {
                       ...c,
                       quantity: c.quantity - 1,
@@ -343,19 +350,19 @@ export const useCartStore = create<CartStore>()(
             'decrementItem'
           ),
 
-        setQuantity: (itemId, quantity, variationId) =>
+        setQuantity: (itemId, quantity, variationId, lineKey) =>
           set(
             (s) => {
               if (quantity <= 0) {
                 return {
                   cart: s.cart.filter(
-                    (c) => cartKey(c.itemId, c.selectedVariation?.id) !== cartKey(itemId, variationId)
+                    (c) => !matchesCartItem(c, itemId, variationId, lineKey)
                   ),
                 };
               }
               return {
                 cart: s.cart.map((c) =>
-                  cartKey(c.itemId, c.selectedVariation?.id) === cartKey(itemId, variationId)
+                  matchesCartItem(c, itemId, variationId, lineKey)
                     ? { ...c, quantity, subtotal: quantity * c.unitPrice }
                     : c
                 ),
@@ -365,11 +372,11 @@ export const useCartStore = create<CartStore>()(
             'setQuantity'
           ),
 
-        updateItemNotes: (itemId, notes, variationId) =>
+        updateItemNotes: (itemId, notes, variationId, lineKey) =>
           set(
             (s) => ({
               cart: s.cart.map((c) =>
-                cartKey(c.itemId, c.selectedVariation?.id) === cartKey(itemId, variationId)
+                matchesCartItem(c, itemId, variationId, lineKey)
                   ? { ...c, notes }
                   : c
               ),

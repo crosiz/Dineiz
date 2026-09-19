@@ -2,7 +2,7 @@
 
 import { TABLE_TONE } from '@/lib/table-tone';
 import { useMemo } from 'react';
-import { Users } from 'lucide-react';
+import { ArrowUpRight, Clock, Users } from 'lucide-react';
 import { formatPKR } from '@/lib/utils';
 import { ServiceIllustration } from '@/components/ServiceIllustration';
 
@@ -60,17 +60,11 @@ export function TableListView({
   tables: TableListRow[];
   onTap: (table: TableListRow) => void;
 }) {
-  // Free tables first — the one a waiter is usually looking for — then the
-  // rest grouped by state, and by label within each group so the order on
-  // screen is stable between renders.
-  const ordered = useMemo(() => {
-    const rank: Record<string, number> = { FREE: 0, DIRTY: 1, RESERVED: 2, OCCUPIED: 3, BILL_REQUESTED: 4 };
-    return [...tables].sort((a, b) => {
-      const r = rank[normalise(a.status)] - rank[normalise(b.status)];
-      if (r !== 0) return r;
-      return a.label.localeCompare(b.label, undefined, { numeric: true });
-    });
-  }, [tables]);
+  // Keep each number in a predictable position when another table changes
+  // status. Staff can use the status filters when looking for a free table.
+  const ordered = useMemo(() => [...tables].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { numeric: true })
+  ), [tables]);
 
   if (ordered.length === 0) {
     return (
@@ -84,8 +78,8 @@ export function TableListView({
   }
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pb-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+    <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 pb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
         {ordered.map((t) => {
           const key = normalise(t.status);
           const s = TABLE_TONE[key];
@@ -97,34 +91,29 @@ export function TableListView({
               key={t.id}
               data-testid="table-row"
               data-table-status={key.toLowerCase()}
+              aria-label={`${/^table\b/i.test(t.label) ? t.label : 'Table ' + t.label}, ${t.capacity} seats, ${key === 'FREE' ? 'available' : s.label}`}
               onClick={() => onTap(t)}
-              className={`text-left rounded-xl border ${s.tile} p-4 min-h-[132px] flex flex-col justify-between transition-colors active:scale-[0.99]`}
+              className="group flex min-h-[164px] min-w-0 flex-col rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-[22px] font-semibold text-ink leading-none">{t.label}</span>
-                <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${s.dot}`} aria-hidden />
-              </div>
-
-              <div className="space-y-0.5">
-                <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-ink-3">
-                  <Users className="w-3.5 h-3.5" aria-hidden />
-                  <span>{t.capacity} seats</span>
-                  <span className="text-ink-4">·</span>
-                  <span className="font-medium text-ink-2">{s.label === 'bill' ? 'Bill requested' : s.label === 'to clean' ? 'Cleaning' : s.label.charAt(0).toUpperCase() + s.label.slice(1)}</span>
+              <div className="flex w-full items-start justify-between gap-2 p-3 sm:p-3.5">
+                <div className="min-w-0">
+                  <span className="block text-[12px] font-medium text-ink-3">{/^table\b/i.test(t.label) ? 'Dine-in' : 'Table'}</span>
+                  <span className="mt-1 block break-words text-[24px] font-semibold leading-tight tracking-tight text-ink">{t.label}</span>
                 </div>
-
-                {busy && (
-                  <div className="flex items-center justify-between gap-2 text-[12px]">
-                    {time && <span className="text-ink-3 tabular-nums">{time}</span>}
-                    {typeof t.amount === 'number' && t.amount > 0 && (
-                      <span className="font-semibold text-ink tabular-nums">{formatPKR(t.amount)}</span>
-                    )}
-                  </div>
-                )}
-
-                {t.assignedWaiterName && (
-                  <div className="text-[11px] text-ink-4 truncate">{t.assignedWaiterName}</div>
-                )}
+                <span className="mt-1 flex items-center gap-1 text-xs text-ink-3"><Users size={14} aria-hidden />{t.capacity}</span>
+              </div>
+              <div className="flex flex-1 items-end justify-between gap-2 px-3 sm:px-3.5 pb-3.5">
+                <span className="min-w-0">
+                  {busy && typeof t.amount === 'number' && t.amount > 0
+                    ? <span className="block text-[13px] font-semibold text-ink tabular-nums">{formatPKR(t.amount)}</span>
+                    : <span className="block text-xs text-ink-3">{key === 'FREE' ? 'Start an order' : key === 'DIRTY' ? 'Prepare for guests' : key === 'RESERVED' ? 'Reserved for guests' : 'Order in progress'}</span>}
+                  {t.assignedWaiterName && <span className="mt-1 block truncate text-xs text-ink-3">{t.assignedWaiterName}</span>}
+                </span>
+                {key === 'FREE' && <ArrowUpRight size={16} className="shrink-0 text-ink-4 group-hover:text-ink" aria-hidden />}
+              </div>
+              <div className="flex w-full flex-wrap items-center justify-between gap-1 border-t border-line bg-canvas/50 px-3 sm:px-3.5 py-2.5">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-2"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${s.dot}`} aria-hidden />{key === 'FREE' ? 'Available' : key === 'BILL_REQUESTED' ? 'Bill requested' : key === 'DIRTY' ? 'To clean' : key === 'RESERVED' ? 'Reserved' : 'Occupied'}</span>
+                {time && <span className="inline-flex items-center gap-1 text-[11px] text-ink-3 tabular-nums"><Clock size={12} />{time}</span>}
               </div>
             </button>
           );

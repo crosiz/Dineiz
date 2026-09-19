@@ -39,41 +39,28 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
 
   return (
     <Modal isOpen onClose={onClose} label={`Options for ${item.name}`} sheetOnMobile className="max-w-[600px]">
-          {/* Header */}
-          <header className="px-4 sm:px-6 pb-6 flex items-center justify-between border-b border-line shrink-0">
-            <div className="flex items-center gap-4">
-              <div className="w-[56px] h-[56px] rounded-xl overflow-hidden border border-line bg-canvas shrink-0">
-                <img className="w-full h-full object-cover" src={item.image || "https://placehold.co/400x300/F1F5F9/64748B?text=No+Image"} alt={item.name} />
-              </div>
-              <div>
-                <h1 className="text-[22px] font-bold leading-tight text-ink">{item.name}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[11px] font-bold text-ink-3 uppercase tracking-wider">{item.categoryName || 'Mains'}</span>
-                  <span className="w-1 h-1 bg-hover rounded-full"></span>
-                  <span className="text-[12px] font-bold text-brand">{formatPKR(item.basePrice)}</span>
-                </div>
-              </div>
+          <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line p-4 sm:p-5">
+            <div className="min-w-0">
+              <p className="mb-1 text-xs font-medium text-ink-3">{item.categoryName || 'Menu item'}</p>
+              <h2 className="text-lg font-semibold leading-6 tracking-tight text-ink">{item.name}</h2>
+              <p className="mt-2 text-sm text-ink-2 tabular-nums">From {formatPKR(item.basePrice)}</p>
             </div>
-
-            <div className="bg-brand-soft px-4 py-2 rounded-xl border border-brand/30 flex items-center gap-3 shrink-0">
-              <span className="text-[11px] font-bold text-brand-strong uppercase tracking-wider">Total</span>
-              <span className="text-[20px] font-black text-brand-strong tabular-nums">{formatPKR(currentTotal)}</span>
-            </div>
+            <button type="button" aria-label="Close item options" onClick={onClose} className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-ink-3 hover:bg-canvas"><X size={20} /></button>
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto no-scrollbar px-4 sm:px-6 py-6 space-y-7">
+          <main className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-5 py-5 space-y-6">
             {/* 1. Choose Size (Single Select) */}
             {!!item.variations?.length && <section>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Choose Size</h3>
+                <h3 className="text-sm font-semibold text-ink">Choose Size</h3>
                 <span className="bg-brand/10 text-brand text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Required</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {item.variations?.map((v) => (
                   <label
                     key={v.id}
-                    className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedVarId === v.id ? 'border-2 border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
+                    className={`relative flex items-center justify-between min-h-[68px] gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 ${selectedVarId === v.id ? 'border border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
                   >
                     <input
                       type="radio"
@@ -83,7 +70,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                       className="sr-only"
                     />
                     <div className="flex flex-col">
-                      <span className="text-[16px] font-semibold text-ink">{v.name}</span>
+                      <span className="text-[15px] font-medium text-ink">{v.name}</span>
                       {v.price > 0 && <span className="text-[12px] font-bold text-brand">+ {formatPKR(v.price)}</span>}
                     </div>
                     {selectedVarId === v.id
@@ -98,14 +85,14 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
             {item.addOns && item.addOns.length > 0 && (
               <section>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[13px] font-bold text-ink uppercase tracking-widest">Add Extras</h3>
+                  <h3 className="text-sm font-semibold text-ink">Add Extras</h3>
                   <span className="bg-sunken text-ink-3 text-[11px] font-bold px-2 py-1 rounded uppercase tracking-wide">Optional</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {item.addOns.map((a) => (
                     <label
                       key={a.id}
-                      className={`relative flex items-center justify-between h-[68px] px-5 rounded-xl cursor-pointer transition-colors ${selectedAddOnIds.has(a.id) ? 'border-2 border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
+                      className={`relative flex items-center justify-between min-h-[68px] gap-3 px-4 py-3 rounded-lg cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 ${selectedAddOnIds.has(a.id) ? 'border border-brand bg-brand-soft' : 'border border-line bg-white hover:bg-canvas'}`}
                     >
                       <input
                         type="checkbox"
@@ -119,7 +106,7 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
                         className="sr-only"
                       />
                       <div className="flex flex-col">
-                        <span className="text-[16px] font-semibold text-ink">{a.name}</span>
+                        <span className="text-[15px] font-medium text-ink">{a.name}</span>
                         {a.price > 0 && <span className="text-[12px] font-bold text-brand">+ {formatPKR(a.price)}</span>}
                       </div>
                       {selectedAddOnIds.has(a.id)
@@ -132,16 +119,9 @@ export function VariationPicker({ item, onClose }: { item: CachedMenuItem; onClo
             )}
           </main>
 
-          {/* Bottom Action Bar */}
-          <footer className="border-t border-line bg-white px-4 sm:px-6 py-4 flex items-center justify-between shrink-0 gap-4">
-            <button className="px-6 py-4 rounded-xl border border-line text-ink-2 font-bold text-[15px] hover:bg-sunken transition-colors" onClick={onClose}>
-              Cancel
-            </button>
-            <button
-              className="flex-1 px-4 sm:px-6 py-4 bg-brand text-white rounded-xl font-bold text-[17px] hover:brightness-105 active:scale-[0.99] transition-all shadow-lg shadow-brand/25"
-              onClick={handleAdd}
-            >
-              Add to Order &middot; {formatPKR(currentTotal)}
+          <footer className="shrink-0 border-t border-line bg-surface p-4 sm:p-5">
+            <button type="button" onClick={handleAdd} className="flex min-h-12 w-full items-center justify-between gap-3 rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-on-brand hover:bg-brand-strong">
+              <span>Add to order</span><span className="tabular-nums">{formatPKR(currentTotal)}</span>
             </button>
           </footer>
     </Modal>
