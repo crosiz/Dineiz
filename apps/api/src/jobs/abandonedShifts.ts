@@ -1,6 +1,6 @@
 import { prisma } from '@dineiz/db';
 import { sendWhatsAppMessage } from '../lib/whatsapp';
-import { computeShiftTotals } from '../routes/shift/shift.service';
+import { computeShiftTotals, refreezeShiftTotals } from '../lib/shiftTotals';
 import { recomputeShiftAggregate } from '../lib/shiftAggregate';
 
 export async function processAbandonedShifts() {
@@ -17,12 +17,12 @@ export async function processAbandonedShifts() {
     select: { id: true },
   });
   for (const s of stalePendingSync) {
-    const totals = await computeShiftTotals(s.id);
     await recomputeShiftAggregate(s.id).catch(() => {});
     await prisma.shift.update({
       where: { id: s.id },
-      data: { status: 'CLOSED', pendingSyncAt: null, pendingSyncCount: null, ...totals },
+      data: { status: 'CLOSED', pendingSyncAt: null, pendingSyncCount: null },
     });
+    await refreezeShiftTotals(s.id, 'auto-finalised after 6h pending sync');
     await prisma.shiftActivity.create({
       data: { shiftId: s.id, activityType: 'CLOSED', notes: 'Auto-finalised after 6h pending sync — flag for review' },
     }).catch(() => {});

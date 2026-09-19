@@ -117,6 +117,8 @@ async function build() {
       return cb(new Error(`CORS blocked for origin: ${origin}`), false);
     },
     credentials: true,
+    // The POS reads its sliding sign-in expiry from this (middleware/auth.ts).
+    exposedHeaders: ['X-Session-Expires-At'],
   });
 
   // Compress JSON responses (dashboard list/analytics payloads are the big

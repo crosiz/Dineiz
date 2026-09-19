@@ -44,6 +44,18 @@ if (typeof window !== 'undefined') {
   };
 
   const watch = async (res: Response): Promise<Response> => {
+    // The server slides a PIN session forward while it's in use and says
+    // until when; keep the local copy in step so POSLayout's expiry check
+    // doesn't ask for a PIN the server would still accept.
+    const slid = res.headers.get('X-Session-Expires-At');
+    if (slid) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('pos_session') ?? 'null');
+        if (stored && stored.expiresAt !== slid && Date.parse(slid) > Date.parse(stored.expiresAt ?? '') ) {
+          localStorage.setItem('pos_session', JSON.stringify({ ...stored, expiresAt: slid }));
+        }
+      } catch { /* keep the old expiry; worst case is one early PIN prompt */ }
+    }
     if (res.status !== 401) return res;
     try {
       const body = await res.clone().json();

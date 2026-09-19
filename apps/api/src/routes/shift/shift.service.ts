@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { fromZonedTime } from 'date-fns-tz';
 import { emitShiftEvent, emitBreakEvent, emitDashboardStatsUpdated } from '../../lib/socket';
 import { recomputeShiftAggregate } from '../../lib/shiftAggregate';
+import { computeShiftTotals, refreezeShiftTotals } from '../../lib/shiftTotals';
 import { getBusinessDayRange } from '../../lib/date-utils';
 import { applyOrderStatusSideEffects } from '../order/order.service';
 import { enqueueCustomWebhookEvent } from '../../lib/webhooks';
@@ -249,22 +250,9 @@ export async function openShift(
  * abandoned shift reads as PKR 0 in Shift Management no matter how much it
  * actually took.
  */
-export async function computeShiftTotals(shiftId: string) {
-  const [orderAgg, cashAgg, cardAgg] = await Promise.all([
-    prisma.order.aggregate({ where: { shiftId, status: { notIn: ['CANCELLED'] } }, _sum: { netAmount: true, discountAmount: true, taxAmount: true }, _count: { id: true } }),
-    prisma.payment.aggregate({ where: { order: { shiftId }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
-    prisma.payment.aggregate({ where: { order: { shiftId }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
-  ]);
-
-  return {
-    totalSales: orderAgg._sum.netAmount ?? 0,
-    totalDiscount: orderAgg._sum.discountAmount ?? 0,
-    totalTax: orderAgg._sum.taxAmount ?? 0,
-    totalOrders: orderAgg._count.id,
-    totalCash: cashAgg._sum.amount ?? 0,
-    totalCard: cardAgg._sum.amount ?? 0,
-  };
-}
+// Moved to lib/shiftTotals.ts so the order service can refreeze a closed
+// shift without importing this module. Re-exported for existing callers.
+export { computeShiftTotals };
 
 export interface CloseShiftInput {
   /** Cash the cashier physically counted. `null` = never counted (force close). */
@@ -475,18 +463,15 @@ export async function completeShiftSync(tenantId: string, id: string) {
   if (shift.status === 'CLOSED') return { ok: true, alreadyClosed: true };
   if (shift.status !== 'PENDING_SYNC') return { error: `Shift is ${shift.status}, not PENDING_SYNC` };
 
-  const { totalSales, totalDiscount, totalTax, totalOrders, totalCash, totalCard } = await computeShiftTotals(id);
   await recomputeShiftAggregate(id).catch(() => {});
 
   await prisma.shift.update({
     where: { id },
-    data: {
-      status: 'CLOSED',
-      pendingSyncAt: null,
-      pendingSyncCount: null,
-      totalSales, totalCash, totalCard, totalDiscount, totalTax, totalOrders,
-    },
+    data: { status: 'CLOSED', pendingSyncAt: null, pendingSyncCount: null },
   });
+  // Totals AND the cash variance: the drawer was counted against an expected
+  // figure that didn't yet include the payments that have just landed.
+  await refreezeShiftTotals(id, 'queued payments finished syncing');
   await prisma.shiftActivity.create({
     data: { shiftId: id, activityType: 'CLOSED', notes: 'Background sync completed — shift finalised' },
   }).catch(() => {});
@@ -630,7 +615,7 @@ export async function getShiftSummary(tenantId: string, id: string) {
   // less expected in the drawer and looked broken. This also makes the figure
   // agree with ShiftAggregate (lib/shiftAggregate.ts), which has always
   // counted COMPLETED only. Unpaid work is reported separately below.
-  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidOrdersList, cashEntryAgg, breaks] = await Promise.all([
+  const [orderAgg, cashAgg, cardAgg, digitalAgg, totalOrders, unpaidOrdersList, cashEntryAgg, breaks, paidOrders] = await Promise.all([
     prisma.order.aggregate({ where: { shiftId: id, status: 'COMPLETED' }, _sum: { netAmount: true, discountAmount: true, taxAmount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CASH', status: 'COMPLETED' }, _sum: { amount: true } }),
     prisma.payment.aggregate({ where: { order: { shiftId: id }, method: 'CARD', status: 'COMPLETED' }, _sum: { amount: true } }),
@@ -650,6 +635,11 @@ export async function getShiftSummary(tenantId: string, id: string) {
     }),
     prisma.shiftCashEntry.groupBy({ by: ['type'], where: { shiftId: id }, _sum: { amount: true } }),
     prisma.shiftBreak.findMany({ where: { shiftId: id }, select: { startedAt: true, endedAt: true, durationMinutes: true } }),
+    // Which orders the totals above include. A terminal that has taken a
+    // payment still on its way here adds exactly the orders missing from this
+    // list, so its close screen never shows less cash than the drawer holds,
+    // and never counts one twice (the payment may already have landed).
+    prisma.order.findMany({ where: { shiftId: id, status: 'COMPLETED' }, select: { id: true, orderNumber: true } }),
   ]);
 
   const totalCash = cashAgg._sum.amount ?? 0;
@@ -686,6 +676,7 @@ export async function getShiftSummary(tenantId: string, id: string) {
     breakCount: breaks.filter((b) => b.endedAt !== null).length,
     totalBreakMinutes: breaks.reduce((s, b) => s + (b.durationMinutes ?? 0), 0),
     onBreak: breaks.some((b) => b.endedAt === null),
+    paidOrders,
   };
 }
 

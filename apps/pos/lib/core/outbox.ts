@@ -261,11 +261,21 @@ function delayForAttempts(attempts: number): number {
   return BACKOFF_MS[attempts - 1];
 }
 
+// Set by forceSyncNow. Anything that last failed before this moment is due
+// again right away, whatever its backoff says. Without it, a payment that had
+// been refused for hours (an expired sign-in, a long outage) sat on the
+// 60-second retry step after the cause was fixed, and the close-shift screen,
+// which flushes the queue before asking the server for totals, read them
+// before that payment had been sent.
+let forcedDueAt = 0;
+
 function isDue(e: PosEvent, now: number): boolean {
   if (e.syncState === 'QUEUED' || e.syncState === 'BLOCKED') return true;
   if (e.syncState !== 'DEGRADED') return false;
   if (!e.lastAttemptAt) return true;
-  return now - new Date(e.lastAttemptAt).getTime() >= delayForAttempts(e.attempts);
+  const last = new Date(e.lastAttemptAt).getTime();
+  if (last < forcedDueAt) return true;
+  return now - last >= delayForAttempts(e.attempts);
 }
 
 async function deriveTaskChains(): Promise<Map<string, OutboxTask[]>> {
@@ -1522,6 +1532,7 @@ export async function retryStuckEvent(eventId: string): Promise<void> {
 
 /** Manual "Force Sync Now" from the Sync Status panel. */
 export function forceSyncNow(): void {
+  forcedDueAt = Date.now();
   consecutiveFailures = 0;
   circuitOpen = false;
   kickOutbox('immediate');

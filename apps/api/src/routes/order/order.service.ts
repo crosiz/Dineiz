@@ -4,6 +4,7 @@ import { generateOrderNumber, generateTokenNumber } from '../../lib/tokenGenerat
 import { emitDashboardStatsUpdated, emitOrderUpdated, emitOrderCancelled } from '../../lib/socket';
 import { recomputeTableStatus, markTableOrderCompleted } from '../../lib/tableStatus';
 import { incrementShiftAggregate, decrementShiftAggregate, getBranchTodayAggregate } from '../../lib/shiftAggregate';
+import { refreezeShiftTotals } from '../../lib/shiftTotals';
 import { invalidatePattern } from '../../lib/cache';
 import { sendLowStockIfNeeded } from '../../lib/lowStock';
 import { enqueueZapierEvent, enqueueCustomWebhookEvent } from '../../lib/webhooks';
@@ -970,6 +971,7 @@ export async function enqueueOrderEvents(
     if (order.sideEffectsAppliedAt) {
       await decrementShiftAggregate(order, order.payments);
       await broadcastShiftTotals(tenantId, order.branchId);
+      if (order.shiftId) await refreezeShiftTotals(order.shiftId, `order #${order.orderNumber} cancelled after close`).catch(() => {});
     }
   }
   if (order.status === 'COMPLETED') {
@@ -994,6 +996,9 @@ export async function enqueueOrderEvents(
       // as a single row. Awaited (not fire-and-forget) so the broadcast
       // below carries the fresh number.
       await incrementShiftAggregate({ ...order, payments: payments ?? order.payments }, payments ?? order.payments);
+      // Paid after its shift was closed (the terminal was still sending it):
+      // the closed shift's totals and variance must include it.
+      if (order.shiftId) await refreezeShiftTotals(order.shiftId, `order #${order.orderNumber} paid after close`).catch(() => {});
 
       // Writes the ORDER_COMPLETED (and DISCOUNT_APPLIED) lines the Shift
       // Management timeline and the shift PDF are built from. Fire-and-forget

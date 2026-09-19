@@ -12,6 +12,31 @@ declare module 'fastify' {
   }
 }
 
+// PIN sessions (pin-login) last 12 hours from the PIN. A POS terminal is used
+// all day and left on overnight, so its session used to lapse mid-shift: every
+// sync attempt from then on was refused and the terminal's payments sat in its
+// queue, unseen by the server and the dashboard, until someone happened to
+// enter a PIN again. A session in use now slides: once it has under 6 hours
+// left, each request moves its expiry to 12 hours from now, up to 7 days after
+// the PIN was entered (the same window lib/offline-auth.ts allows offline).
+// One write per session every ~6 hours at most. An idle terminal still expires.
+const SLIDE_WHEN_LEFT_MS = 6 * 60 * 60 * 1000;
+const PIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const PIN_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+async function slidePinSession(s: { id: string; createdAt: Date; expiresAt: Date }): Promise<Date> {
+  const now = Date.now();
+  if (s.expiresAt.getTime() - now > SLIDE_WHEN_LEFT_MS) return s.expiresAt;
+  const next = new Date(Math.min(now + PIN_SESSION_TTL_MS, s.createdAt.getTime() + PIN_SESSION_MAX_AGE_MS));
+  if (next <= s.expiresAt) return s.expiresAt;
+  try {
+    await prisma.session.update({ where: { id: s.id }, data: { expiresAt: next } });
+    return next;
+  } catch {
+    return s.expiresAt;
+  }
+}
+
 /**
  * Resolves the authenticated user for a request.
  *
@@ -52,6 +77,7 @@ export const requireAuth = async (request: FastifyRequest, reply: FastifyReply) 
           session: dbSession as any,
           user: dbSession.user as any
         };
+        reply.header('X-Session-Expires-At', (await slidePinSession(dbSession)).toISOString());
       }
     }
   }

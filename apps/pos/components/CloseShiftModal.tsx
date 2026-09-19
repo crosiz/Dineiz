@@ -12,6 +12,7 @@ import {
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
 import { isShiftPendingOpen, resolveShiftId } from '@/lib/offline-shift';
 import { localShiftSummary } from '@/lib/local-shift-summary';
+import { useViews } from '@/lib/core/views';
 import { OrderTypeBadge } from '@/components/OrderStatusBadge';
 import { AdminPinModal } from '@/components/AdminPinModal';
 import { useBrandingStore } from '@/lib/branding-store';
@@ -53,6 +54,48 @@ function dropLocallySettled(summary: any) {
     unpaidOrdersList: list,
     unpaidOrders: list.length,
     unpaidValue: list.reduce((sum: number, o: any) => sum + (Number(o.netAmount) || 0), 0),
+  };
+}
+
+// The server's summary counts only what has reached it. A payment taken on
+// this terminal can still be on its way (offline, or a slow sync), and the
+// close screen used to show the server's figures regardless: an order paid
+// seconds earlier was missing from sales and from the expected cash, so the
+// drawer looked like it should hold that much less. This adds every order
+// this terminal has settled that the server's `paidOrders` doesn't include.
+// Matched by id and order number, so a payment that did land (even if its
+// confirmation never came back) is never counted twice.
+function withTerminalPayments(summary: any, shiftId: string) {
+  const base = dropLocallySettled(summary);
+  if (!Array.isArray(summary?.paidOrders)) return base;
+  const counted = new Set<string>();
+  for (const p of summary.paidOrders as { id: string; orderNumber?: string }[]) {
+    counted.add(p.id);
+    if (p.orderNumber) counted.add(`#${p.orderNumber}`);
+  }
+  const target = resolveShiftId(shiftId);
+  const missing = Object.values(useViews.getState().orders).filter((o) =>
+    o.status === 'COMPLETED' && resolveShiftId(o.shiftId) === target &&
+    !counted.has(o.id) && !(o.serverId && counted.has(o.serverId)) && !counted.has(`#${o.orderNumber}`),
+  );
+  if (missing.length === 0) return base;
+
+  const paidBy = (o: (typeof missing)[number], cash: boolean) =>
+    o.payments?.length
+      ? o.payments.filter((p) => (p.method === 'CASH') === cash).reduce((sum, p) => sum + (Number(p.amount) || 0), 0)
+      : ((o.paymentMethod ?? 'CASH') === 'CASH') === cash ? o.netAmount : 0;
+  const sales = missing.reduce((sum, o) => sum + o.netAmount, 0);
+  const cash = missing.reduce((sum, o) => sum + paidBy(o, true), 0);
+  const other = missing.reduce((sum, o) => sum + paidBy(o, false), 0);
+  return {
+    ...base,
+    totalOrders: Number(base.totalOrders ?? 0) + missing.length,
+    totalSales: Number(base.totalSales ?? 0) + sales,
+    totalCash: Number(base.totalCash ?? 0) + cash,
+    totalDigital: Number(base.totalDigital ?? 0) + other,
+    expectedCash: Number(base.expectedCash ?? 0) + cash,
+    sendingOrders: missing.length,
+    sendingValue: sales,
   };
 }
 
@@ -189,7 +232,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         setSummary(await localShiftSummary(resolvedId));
         return;
       }
-      setSummary(dropLocallySettled(await res.json()));
+      const serverSummary = await res.json();
+      // The local orders must be loaded before they can be compared.
+      for (let i = 0; i < 25 && !useViews.getState().isReady; i++) await new Promise((r) => setTimeout(r, 200));
+      setSummary(withTerminalPayments(serverSummary, resolvedId));
     } catch (err: any) {
       toast.error(err.message || 'Error fetching shift summary');
     } finally {
@@ -202,6 +248,21 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     fetchSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, token]);
+
+  // While this shift still has changes on their way, watch the queue and
+  // reload the server's figures the moment it's empty, so what's on screen
+  // becomes the server's own count without anyone pressing anything.
+  useEffect(() => {
+    if (!isOpen || !shiftId || shiftPending === 0 || isSubmitting) return;
+    const id = setInterval(async () => {
+      const sync = await getShiftSyncStatus(shiftId).catch(() => null);
+      if (!sync) return;
+      setSyncProblems(sync.rejected);
+      if (sync.pending === 0) { setShiftPending(0); fetchSummary(false); }
+    }, 2500);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, shiftId, shiftPending, isSubmitting]);
 
   useEffect(() => {
     if (isOpen && awaitingSignIn && renewedAt) fetchSummary();
@@ -686,7 +747,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                 <div className="flex flex-col gap-4">
                   {(syncProblems > 0 || shiftPending > 0) && <div role="status" className="rounded-xl border border-warn/30 bg-warn/10 p-4 text-sm">
                     <p className="font-semibold">{syncProblems ? 'Saved changes need review' : 'Payments and orders are waiting to sync'}</p>
-                    <p className="mt-1 text-ink-2">Do not collect a payment or record a cash movement twice. Your local records have been kept.</p>
+                    <p className="mt-1 text-ink-2">
+                      {summary.sendingOrders > 0 && <>The totals below include {summary.sendingOrders} payment{summary.sendingOrders === 1 ? '' : 's'} ({formatPKR(summary.sendingValue)}) taken here that {summary.sendingOrders === 1 ? 'is' : 'are'} still being sent. </>}
+                      Do not collect a payment or record a cash movement twice. Your local records have been kept.
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <button className="min-h-11 px-3 rounded-lg border border-line bg-surface font-semibold" onClick={() => fetchSummary()}>Sync & recheck</button>
                       {syncProblems > 0 && <button className="min-h-11 px-3 font-semibold text-brand" onClick={() => { onClose(); router.push('/pos/settings?section=sync'); }}>Review saved changes</button>}
