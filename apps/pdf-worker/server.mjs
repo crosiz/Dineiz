@@ -77,7 +77,15 @@ app.post("/render-invoice", async (req, res) => {
 });
 
 const port = process.env.PORT || 8091;
-app.listen(port, "0.0.0.0", () => console.log(`[pdf-worker] listening on ${port}`));
+const server = app.listen(port, "0.0.0.0", () => console.log(`[pdf-worker] listening on ${port}`));
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.warn(`[pdf-worker] Port ${port} is already in use. Existing service will be reused.`);
+  } else {
+    console.error("[pdf-worker] Server error:", err);
+    process.exit(1);
+  }
+});
 
 // Warm the browser at boot so the first PDF of the day isn't the slow one.
 getBrowser().catch((e) => console.error("[pdf-worker] browser warmup failed:", e?.message ?? e));
