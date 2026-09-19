@@ -558,13 +558,21 @@ async function settleCreateAttempt(task: OutboxTask, err: unknown): Promise<void
   if (!(err instanceof TaskError && err.timedOut)) await abandonCreateAttempt(task);
 }
 
+// The server's order statuses are PENDING, IN_KITCHEN, READY, COMPLETED and
+// CANCELLED. SERVED, VOIDED and WALKED_OUT are this terminal's own finer
+// states; sent verbatim they were rejected by the database, reported as a
+// server error, and retried forever, so "Served", whole-order voids and
+// walk-outs never reached the server and the stuck change blocked closing
+// the shift. Served food is still READY until paid; a void or a walk-out is
+// a cancellation. (The server translates these too, for terminals that
+// already have the old values queued.)
 function statusForEvent(e: PosEvent): string {
   switch (e.type) {
     case 'ORDER_MARKED_READY': return 'READY';
-    case 'ORDER_SERVED': return 'SERVED';
+    case 'ORDER_SERVED': return 'READY';
     case 'ORDER_CANCELLED': return 'CANCELLED';
-    case 'ORDER_VOIDED': return 'VOIDED';
-    case 'ORDER_WALKED_OUT': return 'WALKED_OUT';
+    case 'ORDER_VOIDED': return 'CANCELLED';
+    case 'ORDER_WALKED_OUT': return 'CANCELLED';
     default: return 'PENDING';
   }
 }

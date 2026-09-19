@@ -7,7 +7,7 @@ import { getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { downloadShiftReport, printShiftReport } from '@/lib/shift-report';
 import { ServiceIllustration } from '@/components/ServiceIllustration';
 import {
-  getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox, flushOutbox, isSettledLocally,
+  getUnsyncedSummary, getSyncCategoryProgress, markShiftPendingSync, kickOutbox, forceSyncNow, flushOutbox, isSettledLocally,
   type SyncCategoryProgress, getShiftSyncStatus,
 } from '@/lib/core/outbox';
 import { closeShift as emitShiftClosed, cancelOrder } from '@/lib/core/commands';
@@ -457,7 +457,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     syncStartRef.current = Date.now();
     setSyncElapsed(0);
     setSyncPhase('syncing');
-    kickOutbox('immediate');
+    // Everything now, including changes waiting out a retry delay: a kick
+    // alone left a change that had failed earlier on its 60-second step, so
+    // nothing moved for the whole wait.
+    forceSyncNow();
 
     syncPollRef.current = setInterval(async () => {
       const elapsed = Math.round((Date.now() - syncStartRef.current) / 1000);
@@ -472,11 +475,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
         void doClose(false);
         return;
       }
-      // Server is unreachable (circuit breaker open) and no progress has been
-      // made — don't make the cashier watch a 45s bar tick against a dead
-      // connection. Bail to the "incomplete" step early with the right copy.
-      if ((summary.circuitOpen || summary.stalled) && elapsed >= 6) {
+      // Genuinely unreachable (circuit open, or the device is offline): no
+      // point watching the bar tick, go to the close-anyway step with the
+      // right words. A queue that is only stuck is NOT that: the server is
+      // there and something isn't being accepted. It used to be reported as
+      // "Can't reach the server" too, which sent people looking at the wifi.
+      const unreachable = summary.circuitOpen || navigator.onLine === false;
+      if (unreachable && elapsed >= 6) {
         setServerUnreachable(true);
+        stopSyncTimers();
+        setSyncPhase('incomplete');
+      } else if (summary.stalled && elapsed >= 20) {
+        setServerUnreachable(false);
         stopSyncTimers();
         setSyncPhase('incomplete');
       }
@@ -503,9 +513,10 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
     const summary = await getUnsyncedSummary();
     if (shiftStatus.total === 0) {
       void doClose(false);
-    } else if (summary.circuitOpen || summary.stalled) {
+    } else if (summary.circuitOpen || navigator.onLine === false) {
       // Server already known-unreachable — go straight to the close-anyway
-      // step, no countdown.
+      // step, no countdown. (Merely stalled goes through the sync step, which
+      // forces a retry first.)
       setServerUnreachable(true);
       const c = await getSyncCategoryProgress();
       syncBaseRef.current = c;
@@ -593,10 +604,16 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
                   {frameHeader(RefreshCw, 'bg-info/10 text-info', 'Sending your shift to the server', 'Every order and payment goes through before the shift closes.')}
                   <div className="px-6 pb-5">
                     <div className="w-full h-2 rounded-full bg-sunken overflow-hidden">
-                      <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
+                      {done === 0 && syncNow.total > 0
+                        // Nothing finished yet: with one change to send the
+                        // bar sat at 0% until the very end and looked stuck.
+                        ? <div className="h-full w-1/3 rounded-full bg-brand progress-sweep" />
+                        : <div className="h-full bg-brand transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />}
                     </div>
                     <p className="mt-2 text-[12.5px] text-ink-3 tabular-nums">
-                      {done} of {base.total} sent · {syncElapsed}s{etaSec !== null && syncNow.total > 0 ? ` · about ${etaSec}s left` : ''}
+                      {done === 0 && syncNow.total > 0
+                        ? `Sending ${syncNow.total} change${syncNow.total === 1 ? '' : 's'} · ${syncElapsed}s`
+                        : `${done} of ${base.total} sent · ${syncElapsed}s${etaSec !== null && syncNow.total > 0 ? ` · about ${etaSec}s left` : ''}`}
                     </p>
                     <div className="mt-4 px-4 rounded-xl border border-line divide-y divide-line">
                       {row('Payments', base.payments, syncNow.payments)}

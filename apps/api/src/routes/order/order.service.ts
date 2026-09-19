@@ -780,6 +780,36 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
     throw err;
   }
 
+  // Status. The POS has states the database doesn't: SERVED means "on the
+  // table, not paid", which is still READY here; a void or a walk-out is a
+  // cancellation. They used to arrive verbatim, Prisma rejected them, the
+  // batch reported a 500 and the terminal retried forever: "Served", whole-
+  // order voids and walk-outs never reached the server, and the one stuck
+  // change then kept the shift from closing ("Can't reach the server").
+  if (typeof orderData.status === 'string') {
+    const TRANSLATE: Record<string, string> = { SERVED: 'READY', VOIDED: 'CANCELLED', WALKED_OUT: 'CANCELLED' };
+    orderData.status = TRANSLATE[orderData.status] ?? orderData.status;
+    if (!['PENDING', 'IN_KITCHEN', 'READY', 'COMPLETED', 'CANCELLED'].includes(orderData.status)) {
+      const err: any = new Error(`Unknown order status "${orderData.status}"`);
+      err.statusCode = 422;
+      throw err;
+    }
+    // A finished order never moves backwards. A status change queued before
+    // the payment can arrive after it (the terminal marked it served, then
+    // took the money); applying it reopened a paid order. A cancelled order
+    // stays cancelled; a completed one can only still be cancelled (void
+    // after payment). Anything else is answered with the order as it is.
+    const settled = existingOrder.status === 'CANCELLED'
+      || (existingOrder.status === 'COMPLETED' && orderData.status !== 'CANCELLED');
+    if (settled && !(payments && payments.length > 0) && orderData.status !== existingOrder.status) {
+      const current = await prisma.order.findUnique({
+        where: { id, tenantId },
+        include: { items: true, payments: true, orderDeals: true },
+      });
+      return current!;
+    }
+  }
+
   // Money against an order that was cancelled or voided is refused. It was
   // accepted: the update simply overwrote CANCELLED with COMPLETED, reviving
   // a void (and its stock, and its shift's totals) without anyone deciding

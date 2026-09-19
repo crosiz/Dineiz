@@ -437,6 +437,10 @@ export const posRoutes: FastifyPluginAsyncZod = async (fastify) => {
       const status = typeof e?.statusCode === 'number' ? e.statusCode
         : e?.code === 'P2002' ? 409
         : e?.code === 'P2025' ? 404
+        // Data Prisma can't store (an unknown enum value, a wrong type) is
+        // the same on every retry: permanent, so the terminal flags it for a
+        // manager instead of retrying it forever.
+        : e?.name === 'PrismaClientValidationError' ? 400
         : 500;
       const permanent = status >= 400 && status < 500 && status !== 408 && status !== 429;
       return { status, permanent };

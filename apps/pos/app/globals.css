@@ -321,6 +321,19 @@
     animation: shake 0.2s ease-in-out 0s 2;
   }
 
+  /* A progress bar with work in flight but nothing finished yet: a band that
+     sweeps across, so it never sits still at 0% looking stuck. */
+  @keyframes progress-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(300%); }
+  }
+  .progress-sweep {
+    animation: progress-sweep 1.3s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .progress-sweep { animation: none; transform: none; width: 100%; opacity: .35; }
+  }
+
   /* components/ui/Dialog.tsx */
   @keyframes dialog-in {
     from { opacity: 0; transform: translateY(8px) scale(0.98); }
