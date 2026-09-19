@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { TopBarProvider } from '@/contexts/TopBarContext';
 import { SocketProvider, useSocket } from '@/contexts/SocketContext';
 import { POSTopBar } from '@/components/POSTopBar';
-import { getPosSession, getPosShift, getToken } from '@/lib/pos-session';
+import { getPosSession, getPosShift, getToken, resolveActiveShiftId } from '@/lib/pos-session';
 import { useBrandingStore } from '@/lib/branding-store';
 import { resolveTaxConfig } from '@/lib/pricing';
 import { QuickStockAlertModal, StockAlertPayload } from '@/components/QuickStockAlertModal';
@@ -28,6 +28,7 @@ import { API_URL } from '@/lib/api';
 import { resumeOfflineFollowUps } from '@/lib/offline-auth';
 import { markSessionExpired, sessionLooksExpired } from '@/lib/session-guard';
 import { SessionExpiredDialog } from '@/components/SessionExpiredDialog';
+import { ConnectionBanner } from '@/components/ConnectionBanner';
 
 // Spec Part 2 — a cashier's / waiter's live board is scoped to their own
 // open shift; a branch manager / admin sees the whole branch. The server
@@ -181,6 +182,50 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
   // token, and report a break that ended offline. Offline, every screen change
   // is a full page load, so this picks the work back up on each one.
   useEffect(() => { resumeOfflineFollowUps(); }, []);
+
+  // A shift can end without this terminal doing anything: a manager force-
+  // closes it from the dashboard, or the inactivity sweep marks it abandoned.
+  // The terminal never heard, and kept showing "on shift 23h" and taking
+  // orders against a shift the server had closed. resolveActiveShiftId asks
+  // the server and clears the local shift when nothing is open (it leaves a
+  // shift opened offline alone); when that happens, say so and go to the
+  // open-shift screen.
+  useEffect(() => {
+    let busy = false;
+    const check = async () => {
+      const shift = getPosShift();
+      const me = getPosSession();
+      if (busy || navigator.onLine === false || !shift || !me) return;
+      // Only the signed-in person's own shift: /current answers for them, so
+      // a manager signing in here must not clear the cashier's shift.
+      if (shift.userId && shift.userId !== me.userId) return;
+      busy = true;
+      try {
+        const before = getPosShift()?.shiftId;
+        const now = await resolveActiveShiftId(API_URL);
+        if (before && !now) {
+          const cur = useCartStore.getState().session;
+          useCartStore.setState({ session: { ...cur, shiftId: null } });
+          toast.message('Your shift was closed from the dashboard', {
+            description: 'Open a new shift to keep taking orders.',
+            duration: 10000,
+          });
+          router.replace('/pos/shift/open');
+        }
+      } finally {
+        busy = false;
+      }
+    };
+    check();
+    const id = setInterval(check, 5 * 60_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Ask for the PIN when the 12-hour server session runs out, rather than
   // waiting for the first request to fail (lib/session-guard.ts). Checked on
@@ -613,6 +658,7 @@ function POSLayoutInner({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col h-dvh select-none bg-[var(--pos-bg-base)] text-ink overflow-hidden font-body-md">
       <NavigationProgress />
       {!hideTopBar && <POSTopBar />}
+      {!hideTopBar && <ConnectionBanner />}
       <ManagerOverlayBar />
       {!hideTopBar && <ViewModeBanner />}
       {/* Dynamic Content Area. Held behind `isMounted` for the first paint:

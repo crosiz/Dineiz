@@ -7,12 +7,12 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal'
 import { navProgress } from '@/lib/nav-progress-store'
 
 const NAV_ITEMS = [
-  { id: 'home',    label: 'HOME',    icon: Home,            path: '/pos/home' },
-  { id: 'menu',    label: 'MENU',    icon: UtensilsCrossed, path: '/pos/order' },
-  { id: 'tickets', label: 'TICKETS', icon: ClipboardList,   path: '/pos/tickets' },
-  { id: 'stock',   label: 'STOCK',   icon: Package,         path: '/pos/stock' },
-  { id: 'tables',  label: 'TABLES',  icon: LayoutGrid,      path: '/pos/tables' },
-  { id: 'admin',   label: 'ADMIN',   icon: ShieldCheck,     path: '/pos/admin' },
+  { id: 'home',    label: 'Home',    icon: Home,            path: '/pos/home' },
+  { id: 'menu',    label: 'Menu',    icon: UtensilsCrossed, path: '/pos/order' },
+  { id: 'tickets', label: 'Tickets', icon: ClipboardList,   path: '/pos/tickets' },
+  { id: 'stock',   label: 'Stock',   icon: Package,         path: '/pos/stock' },
+  { id: 'tables',  label: 'Tables',  icon: LayoutGrid,      path: '/pos/tables' },
+  { id: 'admin',   label: 'Admin',   icon: ShieldCheck,     path: '/pos/admin' },
 ]
 
 export function BottomNav() {
@@ -87,7 +87,10 @@ export function BottomNav() {
               className="flex flex-col items-center justify-center gap-1 min-w-[48px] sm:min-w-[60px] flex-1 sm:flex-none max-w-[84px] h-full transition-colors duration-150 cursor-pointer"
             >
               <Icon size={22} style={{ color }} />
-              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider" style={{ color }}>
+              {/* 12px, normal case: the old 9-10px bold capitals were the
+                  hardest text on the screen to read, on the buttons pressed
+                  most. */}
+              <span className={`text-[12px] leading-none ${isActive ? 'font-semibold' : 'font-medium'}`} style={{ color }}>
                 {item.label}
               </span>
             </a>

@@ -44,6 +44,7 @@ export function TicketCard({
   secondary,
   onOpen,
   compact = false,
+  fill = false,
   dimmed = false,
   layout = 'grid',
 }: {
@@ -66,6 +67,8 @@ export function TicketCard({
   onOpen?: () => void;
   /** Home's row: fewer lines, no action bar. */
   compact?: boolean;
+  /** Compact, but as wide as its grid cell instead of a fixed 248px. */
+  fill?: boolean;
   dimmed?: boolean;
   layout?: 'grid' | 'list';
 }) {
@@ -88,7 +91,7 @@ export function TicketCard({
       onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen?.(); } }}
       className={`group relative flex flex-col bg-surface border border-line rounded-xl overflow-hidden transition-[border-color,box-shadow] ${
         onOpen ? 'cursor-pointer hover:border-line-strong hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]' : ''
-      } ${dimmed ? 'opacity-70' : ''} ${compact ? 'w-[248px] shrink-0' : layout === 'list' ? 'sm:grid sm:grid-cols-[minmax(180px,1fr)_minmax(200px,2fr)]' : 'h-full'}`}
+      } ${dimmed ? 'opacity-70' : ''} ${compact ? (fill ? 'w-full' : 'w-[248px] shrink-0') : layout === 'list' ? 'sm:grid sm:grid-cols-[minmax(180px,1fr)_minmax(200px,2fr)]' : 'h-full'}`}
     >
       {/* Type accent: the one piece of colour that says what kind of order
           this is from across the room. */}
@@ -100,7 +103,7 @@ export function TicketCard({
           <StatusBadge status={status} />
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-3">
-          <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[15px]' : 'text-[17px]'}`}>
+          <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[16px]' : 'text-[17px]'}`}>
             #{orderNumber}
           </h3>
           {createdAt && <TicketTimer createdAt={createdAt} />}

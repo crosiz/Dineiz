@@ -25,3 +25,10 @@ export function minutesSince(fromIso: string | number | Date | null | undefined,
   const from = fromIso instanceof Date ? fromIso.getTime() : new Date(fromIso).getTime();
   return Number.isFinite(from) ? Math.max(0, Math.floor((now - from) / 60_000)) : 0;
 }
+
+/** "just now" / "12m ago", for a sentence ("ready 12m ago", "held just now"). */
+export function formatAgo(fromIso: string | number | Date | null | undefined, now = Date.now()): string {
+  const e = formatElapsed(fromIso, now);
+  if (!e) return '';
+  return e === 'Just now' ? 'just now' : `${e} ago`;
+}

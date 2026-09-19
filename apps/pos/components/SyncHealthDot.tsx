@@ -30,7 +30,7 @@ function classify(s: UnsyncedSummary | null): { health: Health; label: string; d
     return { health: 'stuck', label: 'Sync stuck', detail: s.circuitOpen ? 'Can’t reach the server — retrying' : `${s.count} change${s.count === 1 ? '' : 's'} not moving` };
   }
   if (s.count > 0) {
-    return { health: 'syncing', label: `${s.count}`, detail: `${s.count} change${s.count === 1 ? '' : 's'} syncing` };
+    return { health: 'syncing', label: `Sending ${s.count}`, detail: `${s.count} change${s.count === 1 ? '' : 's'} on the way to the server` };
   }
   return { health: 'ok', label: 'Synced', detail: `All ${s.confirmedToday} change${s.confirmedToday === 1 ? '' : 's'} today are saved` };
 }

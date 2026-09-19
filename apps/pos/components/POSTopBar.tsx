@@ -18,6 +18,7 @@ import { DineizLogo } from './ui/DineizLogo';
 import { Maximize2, Minimize2, Clock, Coffee, LogOut, ArrowLeft, Wallet, RefreshCw, ShieldAlert, Settings, Unlock, ShoppingBag } from 'lucide-react';
 import { StartManagerOverrideModal } from '@/components/StartManagerOverrideModal';
 import { SyncHealthDot } from '@/components/SyncHealthDot';
+import { useShiftActions } from '@/lib/shift-actions';
 import { useManagerOverlay } from '@/lib/manager-overlay';
 import { hasUnsyncedEvents, getUnsyncedSummary, kickOutbox, flushOutbox, isSettledLocally, type UnsyncedSummary } from '@/lib/core/outbox';
 import { startSavedBreak } from '@/lib/offline-break';
@@ -41,7 +42,7 @@ export function POSTopBar() {
   const config = useContext(TopBarStateContext);
   const router = useRouter();
   const session = useCartStore((s) => s.session);
-  const [clockStr, setClockStr] = useState('00:00:00');
+  const [clockStr, setClockStr] = useState('00:00');
   const [isOnline, setIsOnline] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -92,6 +93,18 @@ export function POSTopBar() {
   // order from inside the blocker list. Clears the blocker modal and drops
   // them into the close flow the moment nothing is blocking any more, so they
   // never have to re-open the menu and start over.
+  // Home's shift buttons ask for these through lib/shift-actions.ts so the
+  // same dialogs and checks run whichever button was pressed.
+  const shiftRequest = useShiftActions((s) => s.request);
+  useEffect(() => {
+    if (!shiftRequest) return;
+    useShiftActions.getState().clear();
+    if (shiftRequest === 'close') void handleCloseShiftClick();
+    else if (shiftRequest === 'cash') setIsCashDrawerOpen(true);
+    else if (shiftRequest === 'break') setShowTakeBreakConfirm(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shiftRequest]);
+
   const recheckCanClose = async () => {
     if (!session.branchId || !session.shiftId) return;
     try {
@@ -149,11 +162,12 @@ export function POSTopBar() {
     }
   };
 
-  // Live clock
+  // Live clock. Hours and minutes: a seconds digit ticking in the corner
+  // pulls the eye every second and tells nobody anything.
   useEffect(() => {
-    const updateTime = () => setClockStr(new Date().toTimeString().split(' ')[0]);
+    const updateTime = () => setClockStr(new Date().toTimeString().slice(0, 5));
     updateTime();
-    const interval = setInterval(updateTime, 1000);
+    const interval = setInterval(updateTime, 15_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -428,16 +442,7 @@ export function POSTopBar() {
               details live one tap away in the avatar menu instead of
               sitting in the bar permanently. */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            {!isOnline && (
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 border border-rose-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 pulse-red"></span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Offline</span>
-              </div>
-            )}
-            {!isOnline && (
-              <span className="sm:hidden w-2 h-2 rounded-full bg-rose-500 pulse-red shrink-0" title="Offline" />
-            )}
-
+            {/* Offline is said in words by ConnectionBanner, under this bar. */}
             {isMounted && <SyncHealthDot />}
 
             <span className="hidden md:inline font-mono text-[13px] font-semibold text-ink-3 tabular-nums">{clockStr}</span>
