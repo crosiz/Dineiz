@@ -955,6 +955,7 @@ export default function ClientTableMap() {
         tableLabel={selectedTable?.label}
         tableId={selectedTable.id}
         customerId={popupOrder.customerId || undefined}
+        sentToKitchen={popupOrder.status !== 'PENDING'}
         onClose={() => setIsPaymentOpen(false)}
         onSuccess={async () => {
           setIsPaymentOpen(false);

@@ -467,6 +467,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   const [toggledItems, setToggledItems] = useState<Record<string, boolean>>({});
   const [elapsedSecs, setElapsedSecs] = useState(0);
   const [isReprinting, setIsReprinting] = useState(false);
+  const [isMarkingReady, setIsMarkingReady] = useState(false);
 
   const handleReprintKOT = async () => {
     setIsReprinting(true);
@@ -518,12 +519,16 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
   }
 
   const handleMarkReady = async () => {
+    if (isMarkingReady) return;
+    setIsMarkingReady(true);
     try {
       await recordKitchenReady(order.id);
       toast.success(`Order #${order.orderNumber} marked ready on this device`);
       onReady(order.id);
     } catch {
       toast.error('Could not save this change. The order has been kept on screen.');
+    } finally {
+      setIsMarkingReady(false);
     }
   };
 
@@ -611,9 +616,10 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
         </button>
         <button
           onClick={handleMarkReady}
-          className="flex-[1.2] h-11 rounded-md bg-ok hover:bg-ok text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors"
+          disabled={isMarkingReady}
+          className="flex-[1.2] h-11 rounded-md bg-ok hover:bg-ok text-white text-[13px] font-bold flex justify-center items-center gap-1.5 shadow-sm transition-colors disabled:opacity-60"
         >
-          <CheckCircle2 className="w-[16px] h-[16px]" />
+          {isMarkingReady ? <Loader2 className="w-[16px] h-[16px] animate-spin" /> : <CheckCircle2 className="w-[16px] h-[16px]" />}
           Mark ready
         </button>
       </div>

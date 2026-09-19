@@ -71,9 +71,9 @@ export function Modal({ isOpen, onClose, children, className = '', labelledBy, l
   if (!isOpen || !mounted) return null;
   return createPortal(
     <div className={`fixed inset-0 flex justify-center ${sheetOnMobile ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-3 sm:p-4'}`} style={{ zIndex }}>
-      <div aria-hidden="true" className="absolute inset-0 bg-slate-950/45" onClick={() => { if (openDialogs[openDialogs.length - 1] === dialogRef.current) onClose?.(); }} />
+      <div aria-hidden="true" className="absolute inset-0 bg-slate-950/45 modal-anim-scrim" onClick={() => { if (openDialogs[openDialogs.length - 1] === dialogRef.current) onClose?.(); }} />
       <section ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={labelledBy} aria-label={labelledBy ? undefined : label}
-        className={`pos-dialog relative flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden border border-line bg-surface shadow-xl outline-none ${sheetOnMobile ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl'} ${className}`}>
+        className={`pos-dialog modal-anim-panel relative flex w-full max-h-[calc(100dvh-2rem)] flex-col overflow-hidden border border-line bg-surface shadow-xl outline-none ${sheetOnMobile ? 'rounded-t-2xl sm:rounded-2xl' : 'rounded-2xl'} ${className}`}>
         {children}
       </section>
     </div>, document.body,

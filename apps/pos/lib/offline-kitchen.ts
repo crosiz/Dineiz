@@ -29,9 +29,16 @@ export async function replayKitchenReady() {
       await api.patch(`/api/kds/orders/${encodeURIComponent(op.orderId)}/bump`, {}, { headers: { Authorization: `Bearer ${token}` } });
       await edb.meta.put({ key: PREFIX + op.id, value: { ...op, state: 'confirmed' } });
     } catch (error) {
-      const rejected = error instanceof ApiError && [400, 403, 404, 409, 422].includes(error.status);
+      // 409 means another attempt (a duplicate replay, or a near-simultaneous
+      // second tap) raced this exact bump — bumpOrder is idempotent now, so a
+      // follow-up retry resolves cleanly once that status is visible. Treat
+      // it as transient rather than a dead end that silently hid the card
+      // and then brought it back with no explanation.
+      const rejected = error instanceof ApiError && [400, 403, 404, 422].includes(error.status);
       await edb.meta.put({ key: PREFIX + op.id, value: { ...op, state: rejected ? 'rejected' : 'pending', error: error instanceof Error ? error.message : 'Waiting for connection' } });
       if (!rejected) return;
+      const { toast } = await import('sonner');
+      toast.error("An order's kitchen-ready update couldn't be saved — open it from Tickets and try again.");
     }
   }
 }

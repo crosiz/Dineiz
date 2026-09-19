@@ -275,6 +275,12 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
   // Point of Sale toggle.
   const voidRequiresManagerApproval = branding?.pos?.voidRequiresManagerApproval ?? true;
   const isManager = session?.role === 'BRANCH_MANAGER' || session?.role === 'TENANT_ADMIN';
+  // Settings → Point of Sale → "Require marking orders ready before payment".
+  // Off lets a cashier collect payment the moment an order exists, without a
+  // separate Mark Ready/Send to Kitchen tap in between — PaymentModal still
+  // prints a KOT on success (see `sentToKitchen` below) so the kitchen isn't
+  // left out just because that step was skipped.
+  const posMarkReadyEnabled = branding?.pos?.posMarkReadyEnabled ?? true;
 
   const requestCancel = () => setCancelConfirmOpen(true);
   const confirmCancel = () => {
@@ -434,7 +440,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                       Open a shift to take payment
                       <span className="text-[10px] font-medium text-sky-500">You’re in view-only mode</span>
                     </button>
-                  ) : isReady ? (
+                  ) : isReady || (!posMarkReadyEnabled && (isPending || isInKitchen)) ? (
                     <button
                       onClick={() => setIsPaymentOpen(true)}
                       disabled={busy}
@@ -513,6 +519,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
           tableLabel={order.table?.label}
           tableId={order.tableId ?? undefined}
           customerId={order.customerId ?? null}
+          sentToKitchen={order.status !== 'PENDING'}
           onClose={() => setIsPaymentOpen(false)}
           onSuccess={() => { setIsPaymentOpen(false); refreshAfterChange(); onClose(); }}
         />

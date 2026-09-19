@@ -447,6 +447,7 @@ export default function SettingsPage() {
   const [posOps, setPosOps] = useState<Record<string, any>>({
     orderNumberFormat: "STANDARD", tableCleaningMinutes: 5,
     allowLoginWithoutShift: false, allowOrderReopen: false, orderReopenWindowMinutes: 30,
+    posMarkReadyEnabled: true,
     cashCountRequired: true, varianceAlertThreshold: 500,
     staleShiftWarnHours: 16, autoCloseAbandonedHours: 24,
     managerOverlayEnabled: true, managerOverlayIdleMinutes: 5, managerOverlayRequireReason: true,
@@ -840,6 +841,7 @@ export default function SettingsPage() {
                 </SettingRow>
                 <SettingRow label="Allow login without shift" hint="Cashiers can sign in to view orders and print without opening a shift." checked={posOps.allowLoginWithoutShift} onChange={v => saveOps({ allowLoginWithoutShift: v })} />
                 <SettingRow label="Allow order reopen" hint="A completed order can be reopened to add items, within the window below." checked={posOps.allowOrderReopen} onChange={v => saveOps({ allowOrderReopen: v })} />
+                <SettingRow label="Require marking orders ready before payment" hint="Off lets cashiers jump straight from placing an order to Collect Payment — no separate Send to Kitchen/Mark Ready tap. The kitchen still gets a ticket automatically." checked={posOps.posMarkReadyEnabled} onChange={v => saveOps({ posMarkReadyEnabled: v })} />
                 {posOps.allowOrderReopen && (
                   <SettingRow label="Reopen window" hint="Minutes after completion an order can still be reopened.">
                     <NumberInput value={posOps.orderReopenWindowMinutes} onChange={v => saveOps({ orderReopenWindowMinutes: v })} min={1} max={240} suffix="min" />

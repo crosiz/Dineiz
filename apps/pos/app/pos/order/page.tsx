@@ -940,6 +940,11 @@ function OrderEntryPageContent() {
 
         setPaymentOrderId(localId);
         setPaymentOrderNumber(orderNumber);
+        // Charging directly skips Send to Kitchen by design, but the kitchen
+        // still needs to know what to cook — PaymentModal prints a KOT the
+        // moment payment succeeds (see its `sentToKitchen` prop below), keyed
+        // off this order genuinely being PENDING right now.
+        setOrderStatus('PENDING');
         openCheckout(localId, orderNumber);
 
         const isHeld = searchParams.get('isHeld') === 'true';
@@ -974,6 +979,23 @@ function OrderEntryPageContent() {
           let targetId = paymentOrderId!;
           if (!useViews.getState().orders[targetId]) {
             targetId = seedServerOrder(existingOrderData) || targetId;
+          }
+          // These new lines need their own ticket only if the order already
+          // went to the kitchen once (mirrors sendToKitchen's own append
+          // branch above). If it never did — still PENDING — nothing has
+          // been printed for it yet at all, so let PaymentModal's
+          // `sentToKitchen` print one ticket for the whole merged order the
+          // moment payment succeeds, instead of double-ticketing here.
+          if (orderStatus !== 'PENDING') {
+            const sessionObj = JSON.parse(localStorage.getItem('pos_session') ?? '{}');
+            printKOT(
+              {
+                orderNumber: existingOrderData?.orderNumber || paymentOrderNumber || `#${paymentOrderId?.slice(-6)}`,
+                tokenNumber: existingOrderData?.tokenNumber,
+                createdAt: new Date().toISOString(),
+              },
+              orderType || 'DINE_IN', sessionObj, cart, orderNote,
+            );
           }
           await commands.appendItems(targetId, cart.map(item => ({
             itemId: item.itemId,
@@ -1445,6 +1467,7 @@ function OrderEntryPageContent() {
           tableLabel={searchParams.get('tableLabel') ?? undefined}
           tableId={searchParams.get('tableId') ?? undefined}
           customerId={existingOrderData?.customerId || useCartStore.getState().customerId || undefined}
+          sentToKitchen={orderStatus !== 'PENDING'}
           isOpen={isPaymentOpen}
           onClose={() => setIsPaymentOpen(false)}
           onSuccess={() => {

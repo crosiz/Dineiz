@@ -973,22 +973,62 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
     throw err;
   }
 
-  // Simple recalculation as requested by the user
+  // Recompute tax fresh on the whole new subtotal. This used to reuse
+  // `existingOrder.taxAmount` completely unchanged — a field only ever set
+  // once, at creation — so an order first punched with one item and topped
+  // up later kept billing tax on just that first item forever (a 3-item
+  // order — one item at creation, two appended after — showed "Total
+  // PKR 2,643" here: 2,600 subtotal + the frozen PKR 43 tax from the
+  // original single-item order, while PaymentModal, which always prices off
+  // the live item list, correctly showed "Total due PKR 2,730" — 2,600 +
+  // 5% = 130). `updateOrder`'s payment-time recalculation already ignores
+  // this stale field and prices off `totalAmount` fresh, so no order was
+  // ever actually mischarged — but every pre-payment display (tickets,
+  // order details, a printed pre-payment bill) quoted the wrong total.
   const newItemsTotal = newItems.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
   const newSubtotal = Number(existingOrder.totalAmount) + newItemsTotal;
   const taxableSubtotal = newSubtotal - Number(existingOrder.discountAmount);
-  // Using simple rounding for the total netAmount
-  const netAmount = taxableSubtotal + Number(existingOrder.taxAmount); // Assume tax recalculation later or simple sum
+
+  const tenantBranding = await prisma.tenantBranding.findUnique({
+    where: { tenantId },
+    select: {
+      cashTaxEnabled: true, cashTaxRate: true, cashTaxLabel: true,
+      cardTaxEnabled: true, cardTaxRate: true, cardTaxLabel: true,
+      taxRoundingMethod: true,
+    },
+  });
+  const cashTaxEnabled = tenantBranding?.cashTaxEnabled ?? true;
+  const cashTaxRate = tenantBranding?.cashTaxRate ?? 5;
+  const cardTaxEnabled = tenantBranding?.cardTaxEnabled ?? true;
+  const cardTaxRate = tenantBranding?.cardTaxRate ?? 17;
+  const cashTaxLabel = tenantBranding?.cashTaxLabel ?? 'GST (Cash)';
+  const cardTaxLabel = tenantBranding?.cardTaxLabel ?? 'GST (Card/Digital)';
+  const roundingMethod = tenantBranding?.taxRoundingMethod ?? 'ROUND';
+
+  // No payment method is known yet at append time (same as at creation) —
+  // resolveAppliedTax defaults to the cash rate here, matching what
+  // PaymentModal shows pre-payment and what createOrder itself assumes.
+  const { taxAmount, appliedTaxRate, appliedTaxLabel } = resolveAppliedTax(
+    [],
+    cashTaxEnabled, cardTaxEnabled, cashTaxRate, cardTaxRate, cashTaxLabel, cardTaxLabel,
+    taxableSubtotal, roundingMethod,
+  );
+  const netAmount = taxableSubtotal + taxAmount;
 
   const [_, updatedOrder] = await prisma.$transaction([
-    prisma.orderItem.createMany({ 
-      data: newItems.map((i: any) => ({ ...i, orderId: id })) 
+    prisma.orderItem.createMany({
+      data: newItems.map((i: any) => ({ ...i, orderId: id }))
     }),
-    prisma.order.update({ 
-      where: { id }, 
+    prisma.order.update({
+      where: { id },
       data: {
         totalAmount: newSubtotal,
-        netAmount: netAmount,
+        taxAmount,
+        netAmount,
+        appliedTaxRate,
+        appliedTaxLabel,
+        cashTaxRate: cashTaxRate / 100,
+        cardTaxRate: cardTaxRate / 100,
         status: ['DELIVERED', 'READY', 'BILL_REQUESTED'].includes(existingOrder.status) ? 'IN_KITCHEN' : undefined,
       }
     })
