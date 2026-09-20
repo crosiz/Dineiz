@@ -151,15 +151,22 @@ export default function ClientTableMap() {
   const { isMobile: isNarrow } = useScreenSize();
 
   // Cards default on phones; the spatial plan defaults on wider terminals.
-  // Remember the phone preference without shrinking table labels to fit.
+  // Remember each terminal class's own preference — a phone tucked in an
+  // apron and a tablet mounted at a host stand aren't the same device — so
+  // separate keys, not one, but BOTH need one: only the phone key used to be
+  // read/written here, so picking Cards on a tablet or desktop never
+  // survived a screen change, since wideView re-inits to its hardcoded
+  // default on every mount with nothing to restore it from.
   const [narrowView, setNarrowView] = useState<'plan' | 'list'>('list');
   const [wideView, setWideView] = useState<'plan' | 'list'>('plan');
   const [tableSearch, setTableSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const showList = isNarrow ? narrowView === 'list' : wideView === 'list';
   useEffect(() => {
-    const saved = localStorage.getItem('pos_tables_view');
-    if (saved === 'list' || saved === 'plan') setNarrowView(saved);
+    const savedNarrow = localStorage.getItem('pos_tables_view');
+    if (savedNarrow === 'list' || savedNarrow === 'plan') setNarrowView(savedNarrow);
+    const savedWide = localStorage.getItem('pos_tables_view_wide');
+    if (savedWide === 'list' || savedWide === 'plan') setWideView(savedWide);
   }, []);
 
   // ── Canvas zoom & pan ───────────────────────────────────────────────────
@@ -982,7 +989,10 @@ export default function ClientTableMap() {
           {floors.map(f => <option key={f} value={f}>Floor {f}</option>)}
         </select>
         <div className="inline-flex ml-auto rounded-lg border border-line bg-canvas p-1">
-          {(['list', 'plan'] as const).map(mode => <button key={mode} aria-pressed={showList === (mode === 'list')} aria-label={mode === 'list' ? 'Show table cards' : 'Show floor plan'} onClick={() => { if (isNarrow) { setNarrowView(mode); localStorage.setItem('pos_tables_view', mode); } else setWideView(mode); }} className={`h-11 px-2 sm:px-3 rounded-md inline-flex items-center gap-1 sm:gap-2 text-sm font-medium ${showList === (mode === 'list') ? 'bg-surface text-ink shadow-sm' : 'text-ink-3'}`}>
+          {(['list', 'plan'] as const).map(mode => <button key={mode} aria-pressed={showList === (mode === 'list')} aria-label={mode === 'list' ? 'Show table cards' : 'Show floor plan'} onClick={() => {
+              if (isNarrow) { setNarrowView(mode); localStorage.setItem('pos_tables_view', mode); }
+              else { setWideView(mode); localStorage.setItem('pos_tables_view_wide', mode); }
+            }} className={`h-11 px-2 sm:px-3 rounded-md inline-flex items-center gap-1 sm:gap-2 text-sm font-medium ${showList === (mode === 'list') ? 'bg-surface text-ink shadow-sm' : 'text-ink-3'}`}>
             {mode === 'list' ? <Rows3 size={17} /> : <MapIcon size={17} />}<span className="inline">{mode === 'list' ? 'Cards' : 'Floor plan'}</span>
           </button>)}
         </div>
