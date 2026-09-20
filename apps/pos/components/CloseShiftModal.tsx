@@ -441,10 +441,18 @@ export function CloseShiftModal({ isOpen, onClose }: CloseShiftModalProps) {
       toast.success('Shift closed');
       setIsSuccess(true);
     } catch (err: any) {
-      toast.error(err.message || 'An error occurred closing the shift');
+      // The server's own "a shift can always be closed" exception: an order
+      // still PENDING/IN_KITCHEN/READY on this shift. That's a real, correct
+      // refusal, not a sync problem — the generic message here used to leave
+      // the cashier on this same screen with no indication that the "N
+      // orders still open" section below (already built, already listing
+      // exactly this order with a Review button) is where to go next.
+      const pendingOrders = err.message === 'Shift cannot be closed due to pending orders';
+      toast.error(pendingOrders ? 'An order is still open — settle or cancel it below, then close.' : (err.message || 'An error occurred closing the shift'));
       closeInFlight.current = false;
       setIsSubmitting(false);
       setSyncPhase('none');
+      if (pendingOrders) fetchSummary(false);
     }
   };
 
