@@ -772,7 +772,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
         {/* Order Cards Area */}
         <div className="px-4 sm:px-6 pt-5">
           {isLoading && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" aria-busy="true">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4" aria-busy="true">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="h-[196px] rounded-xl border border-line bg-surface animate-pulse" />
               ))}
@@ -796,7 +796,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 {filteredOrders.map((order: any) => renderCard(order, 'list'))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
                 {filteredOrders.map((order: any) => renderCard(order, 'grid'))}
               </div>
             )
@@ -816,7 +816,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                       {dineInOrders.map((order: any) => renderCard(order, 'list'))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
                       {dineInOrders.map((order: any) => renderCard(order, 'grid'))}
                     </div>
                   )}
@@ -835,7 +835,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                       {otherOrders.map((order: any) => renderCard(order, 'list'))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
                       {otherOrders.map((order: any) => renderCard(order, 'grid'))}
                     </div>
                   )}
