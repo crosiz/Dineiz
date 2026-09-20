@@ -1515,6 +1515,15 @@ export async function getSyncDiagnostics() {
   const attention = all
     .filter((e) => e.syncState === 'POISONED' || e.syncState === 'ABANDONED')
     .map((e) => ({ id: e.id, type: e.type, aggregateId: e.aggregateId, state: e.syncState, attempts: e.attempts, lastError: e.lastError, at: e.lastAttemptAt }));
+  // `attention` above only ever covers POISONED/ABANDONED — a report of "1
+  // item permanently stuck, never rejected, never in the needs-attention
+  // list" had nothing to actually look at in an exported diagnostics file:
+  // an event that keeps failing but never escalates past QUEUED/DEGRADED is
+  // invisible here too, for the exact same reason it's invisible on screen.
+  // Every non-confirmed event, regardless of state, so that case is visible.
+  const unconfirmed = all
+    .filter((e) => e.syncState !== 'CONFIRMED')
+    .map((e) => ({ id: e.id, type: e.type, aggregateId: e.aggregateId, state: e.syncState, attempts: e.attempts, lastError: e.lastError, clientTime: e.clientTime, lastAttemptAt: e.lastAttemptAt }));
   return {
     byState,
     circuitOpen,
@@ -1522,6 +1531,7 @@ export async function getSyncDiagnostics() {
     avgRttMs: rttSamples.length ? Math.round(rttSamples.reduce((s, n) => s + n, 0) / rttSamples.length) : null,
     lastProgressAt: new Date(lastProgressAt).toISOString(),
     attention,
+    unconfirmed,
     cash: (await cashMovements()).filter(e => e.state !== 'confirmed'),
     kitchen: (await kitchenReadyOperations()).filter(e => e.state !== 'confirmed'),
     breaks: (await savedBreaks()).filter(e => e.state !== 'confirmed'),
