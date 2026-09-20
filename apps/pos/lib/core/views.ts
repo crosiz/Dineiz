@@ -943,6 +943,18 @@ async function doSeedTablesFromServer(branchId: string): Promise<void> {
       // server's for a table this terminal has never seen — otherwise a table
       // held OCCUPIED by a locally-punched order that hasn't synced yet would
       // get wiped to FREE the next time the floor plan is fetched.
+      //
+      // statusOverride is the one exception: it's a manager decision
+      // (RESERVED/INACTIVE/MERGED), never order-derived, so there is no local
+      // reducer that could ever set it for a change made on ANOTHER terminal
+      // (or the dashboard) — only this fetch can. Keeping it out of this
+      // branch meant a reservation set after a terminal had already loaded a
+      // table was invisible on that terminal forever, no matter how many
+      // times it reconnected or refetched: reconcileTables() below re-derives
+      // `status` from this same field, so the stale override silently won
+      // every time. Always take the server's; reconcileTables() then
+      // re-derives `status` from it plus this terminal's own local orders, so
+      // an order genuinely in flight locally still outranks a stale override.
       map[t.id] = local
         ? {
             ...local,
@@ -958,6 +970,7 @@ async function doSeedTablesFromServer(branchId: string): Promise<void> {
             assignedWaiterId: t.assignedWaiterId ?? local.assignedWaiterId ?? null,
             assignedWaiterName: t.assignedWaiterName ?? local.assignedWaiterName ?? null,
             assignedWaiterColor: t.assignedWaiterColor ?? local.assignedWaiterColor ?? null,
+            statusOverride: (t.statusOverride as TableStatusOverride) ?? null,
           }
         : {
             id: t.id,
