@@ -363,7 +363,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
               </div>
             ) : (
               <div className="px-5 pt-4 shrink-0">
-                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[13px] font-bold flex items-center gap-2">
+                <div className="p-2.5 bg-danger/10 border border-danger/25 rounded-lg text-danger text-[13px] font-bold flex items-center gap-2">
                   <XCircle className="w-[16px] h-[16px]" /> Order Cancelled
                 </div>
               </div>
@@ -396,7 +396,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                     {canAct && !viewMode && (
                       <button
                         onClick={() => setVoidState({ isOpen: true, item: { ...item, orderId: order.id, itemName: item.item?.name } })}
-                        className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-rose-50 text-rose-500"
+                        className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-danger/10 text-danger"
                         title="Remove item"
                       >
                         <Trash2 className="w-[18px] h-[18px]" />
@@ -440,7 +440,7 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                     <button
                       onClick={requestCancel}
                       disabled={busy}
-                      className="h-12 px-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold text-[13px] hover:bg-rose-100 transition-colors disabled:opacity-50"
+                      className="h-12 px-4 rounded-xl border border-danger/25 bg-danger/10 text-danger font-bold text-[13px] hover:bg-danger/15 transition-colors disabled:opacity-50"
                     >
                       Cancel Order
                     </button>
@@ -449,10 +449,10 @@ export function OrderDetailsModal({ orderId, onClose, useKDS, readOnly, onChange
                   {isReady && viewMode ? (
                     <button
                       onClick={() => { router.push('/pos/shift/open'); }}
-                      className="flex-1 h-12 rounded-xl font-bold text-[13px] border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors flex flex-col items-center justify-center leading-tight"
+                      className="flex-1 h-12 rounded-xl font-bold text-[13px] border border-info/25 bg-info/10 text-info hover:bg-info/15 transition-colors flex flex-col items-center justify-center leading-tight"
                     >
                       Open a shift to take payment
-                      <span className="text-[10px] font-medium text-sky-500">You’re in view-only mode</span>
+                      <span className="text-[10px] font-medium text-info/70">You’re in view-only mode</span>
                     </button>
                   ) : isReady || (!posMarkReadyEnabled && (isPending || isInKitchen)) ? (
                     <button

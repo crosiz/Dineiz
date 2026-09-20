@@ -249,9 +249,9 @@ export default function KDSPage() {
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-4 min-w-0 shrink-0">
-          <div className="hidden md:flex items-center gap-2 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shrink-0">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full pulse-green"></span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Live</span>
+          <div className="hidden md:flex items-center gap-2 bg-ok/10 px-2.5 py-1 rounded-full border border-ok/25 shrink-0">
+            <span className="w-2 h-2 bg-ok rounded-full pulse-green"></span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ok">Live</span>
           </div>
 
           <div className="w-[1px] h-6 bg-hover mx-1 sm:mx-2 shrink-0 hidden sm:block"></div>
@@ -262,7 +262,7 @@ export default function KDSPage() {
           <button aria-label="Kitchen settings" onClick={() => setShowSettings(true)} className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-sunken transition-colors border border-transparent hover:border-line-strong shrink-0">
             <Settings size={20} className="text-ink-2" />
           </button>
-          <button aria-label="Log out" onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-red-50 text-red-600 transition-colors border border-transparent hover:border-red-200 shrink-0">
+          <button aria-label="Log out" onClick={handleLogout} className="flex items-center gap-2 px-2.5 sm:px-3 h-11 rounded-lg hover:bg-danger/10 text-danger transition-colors border border-transparent hover:border-danger/25 shrink-0">
             <LogOut size={16} />
             <span className="hidden md:inline text-[14px] font-medium">Log Out</span>
           </button>
@@ -340,13 +340,13 @@ export default function KDSPage() {
         <div className="flex items-center gap-1.5">
           {isConnected ? (
             <>
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span className="text-green-500">Online</span>
+              <span className="w-2 h-2 rounded-full bg-ok"></span>
+              <span className="text-ok">Online</span>
             </>
           ) : (
             <>
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              <span className="text-red-500">Offline</span>
+              <span className="w-2 h-2 rounded-full bg-danger"></span>
+              <span className="text-danger">Offline</span>
             </>
           )}
         </div>
@@ -367,7 +367,7 @@ export default function KDSPage() {
                 <span className="text-ink-2 font-medium">Sound Alerts</span>
                 <button 
                   onClick={() => saveSettings({...settings, soundAlerts: !settings.soundAlerts})}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundAlerts ? 'bg-green-500' : 'bg-hover'}`}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.soundAlerts ? 'bg-ok' : 'bg-hover'}`}
                 >
                   <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.soundAlerts ? 'translate-x-6' : ''}`} />
                 </button>
@@ -377,7 +377,7 @@ export default function KDSPage() {
                 <span className="text-ink-2 font-medium">Auto-Scroll to New</span>
                 <button 
                   onClick={() => saveSettings({...settings, autoScroll: !settings.autoScroll})}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoScroll ? 'bg-green-500' : 'bg-hover'}`}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${settings.autoScroll ? 'bg-ok' : 'bg-hover'}`}
                 >
                   <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${settings.autoScroll ? 'translate-x-6' : ''}`} />
                 </button>
@@ -532,12 +532,12 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
     }
   };
 
-  let typeBadgeColor = 'border-blue-500 text-blue-400 bg-blue-500/10';
-  if (order.type === 'TAKEAWAY') typeBadgeColor = 'border-purple-500 text-purple-400 bg-purple-500/10';
-  if (order.type === 'DELIVERY') typeBadgeColor = 'border-orange-500 text-orange-400 bg-orange-500/10';
+  let typeBadgeColor = 'border-info text-info bg-info/10';
+  if (order.type === 'TAKEAWAY') typeBadgeColor = 'border-brand text-brand-strong bg-brand/10';
+  if (order.type === 'DELIVERY') typeBadgeColor = 'border-special text-special bg-special/10';
 
   let headerBg = 'bg-surface';
-  let headerText = 'text-black';
+  let headerText = 'text-ink';
   if (elapsedMin >= rushThreshold) {
     headerBg = 'bg-danger/10';
     headerText = 'text-danger';
@@ -592,7 +592,7 @@ function OrderCard({ order, rushThreshold, onReady, onReadyFailed }: { order: Kd
                     </p>
                   )}
                 </div>
-                <div className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors ${checked ? 'border-green-500 bg-green-500 text-white' : 'border-line-strong bg-white'}`}>
+                <div className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-5 h-5 rounded-full border-2 transition-colors ${checked ? 'border-ok bg-ok text-white' : 'border-line-strong bg-white'}`}>
                   {checked && <Check size={12} strokeWidth={3} />}
                 </div>
               </div>
