@@ -32,6 +32,23 @@ export interface TableListRow {
   amount?: number | null;
 }
 
+/**
+ * How much a card leans on colour, on top of the shared dot+caption. A dot
+ * alone reads fine one table at a time but disappears when scanning a full
+ * floor of them — the two states worth spotting from across the room (bill
+ * waiting, reserved) get a tinted card and a coloured number; the rest stay
+ * closer to neutral so those two still stand out. Same restraint as the
+ * floor-plan canvas (PremiumTable), just applied to a list row instead of a
+ * spatial tile.
+ */
+const CARD_TONE: Record<keyof typeof TABLE_TONE, { border: string; wash: string; label: string }> = {
+  FREE: { border: 'border-line hover:border-line-strong', wash: '', label: 'text-ink' },
+  OCCUPIED: { border: 'border-info/40 hover:border-info/60', wash: 'bg-info/[0.04]', label: 'text-ink' },
+  BILL_REQUESTED: { border: 'border-brand/50 hover:border-brand/70', wash: 'bg-brand/[0.06]', label: 'text-brand-strong' },
+  RESERVED: { border: 'border-special/40 hover:border-special/60', wash: 'bg-special/[0.05]', label: 'text-special' },
+  DIRTY: { border: 'border-line border-dashed hover:border-line-strong', wash: 'bg-sunken', label: 'text-ink-3' },
+};
+
 /** One vocabulary for a table's state, shared by the label and the colour. */
 
 function normalise(status?: string): keyof typeof TABLE_TONE {
@@ -83,6 +100,7 @@ export function TableListView({
         {ordered.map((t) => {
           const key = normalise(t.status);
           const s = TABLE_TONE[key];
+          const tone = CARD_TONE[key];
           const busy = key === 'OCCUPIED' || key === 'BILL_REQUESTED';
           const time = busy ? elapsed(t.occupiedSince) : null;
 
@@ -93,12 +111,12 @@ export function TableListView({
               data-table-status={key.toLowerCase()}
               aria-label={`${/^table\b/i.test(t.label) ? t.label : 'Table ' + t.label}, ${t.capacity} seats, ${key === 'FREE' ? 'available' : s.label}`}
               onClick={() => onTap(t)}
-              className="group flex min-h-[164px] min-w-0 flex-col rounded-lg border border-line bg-surface text-left transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              className={`group flex min-h-[164px] min-w-0 flex-col rounded-lg border text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${tone.border} ${tone.wash || 'bg-surface'}`}
             >
               <div className="flex w-full items-start justify-between gap-2 p-3 sm:p-3.5">
                 <div className="min-w-0">
                   <span className="block text-[12px] font-medium text-ink-3">{/^table\b/i.test(t.label) ? 'Dine-in' : 'Table'}</span>
-                  <span className="mt-1 block break-words text-[24px] font-semibold leading-tight tracking-tight text-ink">{t.label}</span>
+                  <span className={`mt-1 block break-words text-[24px] font-semibold leading-tight tracking-tight ${tone.label}`}>{t.label}</span>
                 </div>
                 <span className="mt-1 flex items-center gap-1 text-xs text-ink-3"><Users size={14} aria-hidden />{t.capacity}</span>
               </div>
