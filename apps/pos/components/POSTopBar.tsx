@@ -358,9 +358,9 @@ export function POSTopBar() {
   const cashierRole = posSession?.role?.replace(/_/g, ' ') || 'CASHIER';
 
   let roleBadgeStyle = 'bg-hover text-ink-2'; // default gray for Cashier
-  if (posSession?.role === 'WAITER') roleBadgeStyle = 'bg-blue-100 text-blue-700';
+  if (posSession?.role === 'WAITER') roleBadgeStyle = 'bg-info/10 text-info';
   else if (posSession?.role === 'BRANCH_MANAGER' || posSession?.role === 'TENANT_ADMIN') {
-    roleBadgeStyle = 'bg-brand text-white';
+    roleBadgeStyle = 'bg-brand text-on-brand';
   }
 
   return (
@@ -515,20 +515,20 @@ export function POSTopBar() {
 
               {/* Profile Dropdown Popover */}
               {isDropdownOpen && (
-                <div className="absolute top-11 right-0 w-64 max-w-[calc(100vw-24px)] bg-white border border-slate-200/90 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
+                <div className="absolute top-11 right-0 w-64 max-w-[calc(100vw-24px)] bg-surface border border-line rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 z-50">
                   {/* User Info Header */}
-                  <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200/80">
+                  <div className="px-4 py-3 bg-sunken border-b border-line">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-bold text-slate-900 text-sm truncate">{avatarTitle}</p>
-                      <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-700 shrink-0">
+                      <p className="font-bold text-ink text-sm truncate">{avatarTitle}</p>
+                      <span className="text-[10px] font-mono font-semibold uppercase px-1.5 py-0.5 rounded bg-hover text-ink-2 shrink-0">
                         {cashierRole}
                       </span>
                     </div>
-                    
+
                     {/* Active Shift Row */}
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200/60 text-xs">
-                      <span className="text-slate-500 font-medium">Shift Duration</span>
-                      <span className="font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded text-[11px] tabular-nums">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-line text-xs">
+                      <span className="text-ink-3 font-medium">Shift Duration</span>
+                      <span className="font-mono font-semibold text-ok bg-ok/10 border border-ok/25 px-2 py-0.5 rounded text-[11px] tabular-nums">
                         {shiftDuration || 'Active'}
                       </span>
                     </div>
@@ -543,74 +543,74 @@ export function POSTopBar() {
                   <div className="p-1.5 flex flex-col gap-0.5">
                     {/* — Your shift — */}
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover transition-colors text-xs font-semibold"
                       onClick={() => {
                         setIsDropdownOpen(false);
                         setShowTakeBreakConfirm(true);
                       }}
                     >
-                      <Coffee size={15} className="text-slate-500" />
+                      <Coffee size={15} className="text-ink-3" />
                       <span>Take a Break</span>
                     </button>
 
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover transition-colors text-xs font-semibold"
                       onClick={handleCloseShiftClick}
                     >
-                      <Clock size={15} className="text-slate-500" />
+                      <Clock size={15} className="text-ink-3" />
                       <span>Close Shift</span>
                     </button>
 
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover transition-colors text-xs font-semibold"
                       onClick={() => { setIsDropdownOpen(false); setIsCashDrawerOpen(true); }}
                     >
-                      <Wallet size={15} className="text-slate-500" />
+                      <Wallet size={15} className="text-ink-3" />
                       <span>Cash Drawer</span>
                     </button>
 
-                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+                    <div className="h-[1px] bg-line my-1 mx-1.5" />
 
                     {/* — Elevated access — */}
                     <button
-                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-amber-700 hover:bg-amber-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70'}`}
+                      className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left transition-colors text-xs font-semibold ${overlayActive ? 'text-warn hover:bg-warn/10' : 'text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover'}`}
                       onClick={() => {
                         setIsDropdownOpen(false);
                         if (overlayActive) exitOverlay('MANUAL');
                         else setShowManagerOverride(true);
                       }}
                     >
-                      <Unlock size={15} className={overlayActive ? 'text-amber-600' : 'text-slate-500'} />
+                      <Unlock size={15} className={overlayActive ? 'text-warn' : 'text-ink-3'} />
                       <span>{overlayActive ? 'Exit Manager Mode' : 'Manager Override'}</span>
                     </button>
 
                     {/* — This terminal — */}
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover transition-colors text-xs font-semibold"
                       onClick={() => { setIsDropdownOpen(false); router.push('/pos/settings'); }}
                     >
-                      <Settings size={15} className="text-slate-500" />
+                      <Settings size={15} className="text-ink-3" />
                       <span>Settings</span>
                     </button>
 
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-slate-700 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200/70 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-ink-2 hover:text-ink hover:bg-sunken active:bg-hover transition-colors text-xs font-semibold"
                       onClick={() => { setIsDropdownOpen(false); toggleFullscreen(); }}
                     >
-                      {isFullscreen ? <Minimize2 size={15} className="text-slate-500" /> : <Maximize2 size={15} className="text-slate-500" />}
+                      {isFullscreen ? <Minimize2 size={15} className="text-ink-3" /> : <Maximize2 size={15} className="text-ink-3" />}
                       <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span>
                     </button>
 
-                    <div className="h-[1px] bg-slate-200/80 my-1 mx-1.5" />
+                    <div className="h-[1px] bg-line my-1 mx-1.5" />
 
                     <button
-                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-rose-600 hover:text-rose-700 hover:bg-rose-50 active:bg-rose-100/80 transition-colors text-xs font-semibold"
+                      className="w-full px-3 py-2 rounded-lg flex items-center gap-2.5 text-left text-danger hover:bg-danger/10 active:bg-danger/15 transition-colors text-xs font-semibold"
                       onClick={() => {
                         setIsDropdownOpen(false);
                         setShowSignOutConfirm(true);
                       }}
                     >
-                      <LogOut size={15} className="text-rose-500" />
+                      <LogOut size={15} className="text-danger" />
                       <span>Sign Out</span>
                     </button>
                   </div>
@@ -625,25 +625,25 @@ export function POSTopBar() {
       {/* Sign out confirm modal */}
       {showSignOutConfirm && (
 <Modal isOpen label="Terminal action" className="max-w-[360px] p-5 overflow-y-auto">
-            <div className="w-10 h-11 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mb-4">
+            <div className="w-10 h-11 rounded-xl bg-danger/10 border border-danger/25 text-danger flex items-center justify-center mb-4">
               <LogOut size={20} />
             </div>
             
-            <h3 className="font-bold text-slate-900 text-base mb-1">Sign Out of POS?</h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            <h3 className="font-bold text-ink text-base mb-1">Sign Out of POS?</h3>
+            <p className="text-ink-3 text-xs leading-relaxed mb-6">
               Your session will be closed, but your <strong className="text-brand">shift will remain active</strong> for when you return.
             </p>
 
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={() => setShowSignOutConfirm(false)}
-                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-line bg-sunken hover:bg-hover text-ink-2 text-xs font-semibold transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSignOut}
-                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-danger hover:brightness-90 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Sign Out
               </button>
@@ -654,14 +654,14 @@ export function POSTopBar() {
       {/* Spec Part 11 — unfinished cart on sign-out. Hold It / Discard / Cancel. */}
       {showCartWarning && (
 <Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
-            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+            <div className="w-10 h-11 rounded-xl bg-warn/10 border border-warn/25 text-warn flex items-center justify-center mb-4">
               <ShoppingBag size={20} />
             </div>
 
-            <h3 className="font-bold text-slate-900 text-base mb-1">You have an unfinished order</h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            <h3 className="font-bold text-ink text-base mb-1">You have an unfinished order</h3>
+            <p className="text-ink-3 text-xs leading-relaxed mb-6">
               There {useCartStore.getState().cart.length === 1 ? 'is' : 'are'}{' '}
-              <strong className="text-slate-700">
+              <strong className="text-ink-2">
                 {useCartStore.getState().cart.length} item{useCartStore.getState().cart.length === 1 ? '' : 's'}
               </strong>{' '}
               in the cart that {useCartStore.getState().cart.length === 1 ? 'hasn’t' : 'haven’t'} been sent to the
@@ -680,13 +680,13 @@ export function POSTopBar() {
               <div className="flex gap-2.5 w-full">
                 <button
                   onClick={() => setShowCartWarning(false)}
-                  className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                  className="flex-1 h-11 rounded-xl border border-line bg-sunken hover:bg-hover text-ink-2 text-xs font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={discardCartThenSignOut}
-                  className="flex-1 h-11 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold transition-colors"
+                  className="flex-1 h-11 rounded-xl border border-danger/25 bg-surface hover:bg-danger/10 text-danger text-xs font-semibold transition-colors"
                 >
                   Discard &amp; Sign Out
                 </button>
@@ -703,13 +703,13 @@ export function POSTopBar() {
           manager PIN for something that isn't actually an override. */}
       {signOutSyncing && unsyncedInfo?.blockedOnAuthOnly && (
 <Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
-            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+            <div className="w-10 h-11 rounded-xl bg-warn/10 border border-warn/25 text-warn flex items-center justify-center mb-4">
               <Clock size={20} />
             </div>
 
-            <h3 className="font-bold text-slate-900 text-base mb-1">Session Expired</h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
-              This terminal has <strong className="text-slate-700">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> saved
+            <h3 className="font-bold text-ink text-base mb-1">Session Expired</h3>
+            <p className="text-ink-3 text-xs leading-relaxed mb-6">
+              This terminal has <strong className="text-ink-2">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> saved
               locally that couldn't reach the server because this session timed out. They're safe and will sync
               automatically the next time anyone signs in here — go ahead and sign out.
             </p>
@@ -717,13 +717,13 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={cancelSignOutWait}
-                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-line bg-sunken hover:bg-hover text-ink-2 text-xs font-semibold transition-colors"
               >
                 Stay Signed In
               </button>
               <button
                 onClick={() => { setSignOutSyncing(false); finishSignOut(); }}
-                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-danger hover:brightness-90 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Sign Out
               </button>
@@ -733,22 +733,22 @@ export function POSTopBar() {
 
       {signOutSyncing && unsyncedInfo && !unsyncedInfo.blockedOnAuthOnly && (
 <Modal isOpen label="Terminal action" className="max-w-[380px] p-5 overflow-y-auto">
-            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+            <div className="w-10 h-11 rounded-xl bg-warn/10 border border-warn/25 text-warn flex items-center justify-center mb-4">
               <RefreshCw size={20} className="animate-spin" style={{ animationDuration: '1.5s' }} />
             </div>
 
-            <h3 className="font-bold text-slate-900 text-base mb-1">Finishing Sync…</h3>
-            <p className="text-slate-500 text-xs leading-relaxed mb-3">
-              This terminal has <strong className="text-slate-700">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> still
+            <h3 className="font-bold text-ink text-base mb-1">Finishing Sync…</h3>
+            <p className="text-ink-3 text-xs leading-relaxed mb-3">
+              This terminal has <strong className="text-ink-2">{unsyncedInfo.count} change{unsyncedInfo.count === 1 ? '' : 's'}</strong> still
               being sent to the server. Signing out now would leave them queued until someone logs back in here.
               {unsyncedInfo.poisoned > 0 && (
-                <span className="block mt-2 text-rose-600 font-semibold">
+                <span className="block mt-2 text-danger font-semibold">
                   {unsyncedInfo.poisoned} of these were rejected by the server and need a manager to review them.
                 </span>
               )}
             </p>
 
-            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mb-4">
+            <div className="w-full h-1.5 rounded-full bg-sunken overflow-hidden mb-4">
               <div
                 className="h-full bg-brand transition-all duration-500 ease-out"
                 style={{
@@ -760,13 +760,13 @@ export function POSTopBar() {
             <div className="flex gap-2.5 w-full mb-2">
               <button
                 onClick={cancelSignOutWait}
-                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-line bg-sunken hover:bg-hover text-ink-2 text-xs font-semibold transition-colors"
               >
                 Keep Working
               </button>
               <button
                 onClick={() => kickOutbox()}
-                className="flex-1 h-11 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                className="flex-1 h-11 rounded-xl border border-line bg-surface hover:bg-sunken text-ink-2 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
               >
                 <RefreshCw size={13} /> Retry Now
               </button>
@@ -774,7 +774,7 @@ export function POSTopBar() {
 
             <button
               onClick={() => setShowForcePin(true)}
-              className="w-full h-11 rounded-xl bg-transparent text-rose-600 hover:bg-rose-50 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
+              className="w-full h-11 rounded-xl bg-transparent text-danger hover:bg-danger/10 text-[11px] font-semibold transition-colors flex items-center justify-center gap-1.5"
             >
               <ShieldAlert size={13} /> Force Sign Out (Manager PIN)
             </button>
@@ -799,19 +799,19 @@ export function POSTopBar() {
       {/* Take Break confirm modal */}
       {showTakeBreakConfirm && (
 <Modal isOpen label="Terminal action" className="max-w-[360px] p-5 overflow-y-auto">
-            <div className="w-10 h-11 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center mb-4">
+            <div className="w-10 h-11 rounded-xl bg-warn/10 border border-warn/25 text-warn flex items-center justify-center mb-4">
               <Coffee size={20} />
             </div>
             
-            <h2 className="font-bold text-slate-900 text-base mb-1">Take a Break?</h2>
-            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            <h2 className="font-bold text-ink text-base mb-1">Take a Break?</h2>
+            <p className="text-ink-3 text-xs leading-relaxed mb-6">
               You'll be locked out temporarily. Your shift stays active and all orders continue.
             </p>
 
             <div className="flex gap-2.5 w-full">
               <button
                 onClick={() => setShowTakeBreakConfirm(false)}
-                className="flex-1 h-11 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
+                className="flex-1 h-11 rounded-xl border border-line bg-sunken hover:bg-hover text-ink-2 text-xs font-semibold transition-colors"
               >
                 Cancel
               </button>
@@ -863,7 +863,7 @@ export function POSTopBar() {
                     toast.error(error instanceof Error ? error.message : 'Could not save your break. Try again.');
                   }
                 }}
-                className="flex-1 h-11 rounded-xl bg-brand hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-colors"
+                className="flex-1 h-11 rounded-xl bg-brand hover:bg-brand-strong text-on-brand text-xs font-semibold shadow-xs transition-colors"
               >
                 Lock Screen
               </button>

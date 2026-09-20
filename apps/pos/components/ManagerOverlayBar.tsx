@@ -26,11 +26,11 @@ export function ManagerOverlayBar() {
   const ss = String(left % 60).padStart(2, '0');
 
   return (
-    <div className="shrink-0 h-10 bg-amber-500 text-white flex items-center justify-between px-4 gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.15)] z-[300]">
+    <div className="shrink-0 h-10 bg-warn text-white flex items-center justify-between px-4 gap-3 shadow-[0_2px_10px_rgba(0,0,0,0.15)] z-[300]">
       <div className="flex items-center gap-2 min-w-0">
         <Unlock size={15} className="shrink-0" />
         <span className="text-[12px] font-bold truncate">MANAGER MODE — {overlay.managerName}</span>
-        <span className="text-[11px] font-medium text-amber-50/90 truncate hidden sm:inline">
+        <span className="text-[11px] font-medium text-white/70 truncate hidden sm:inline">
           · Working on {overlay.cashierName}'s terminal
         </span>
         {overlay.oneShot && (
