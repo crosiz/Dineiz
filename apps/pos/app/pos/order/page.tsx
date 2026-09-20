@@ -1170,7 +1170,7 @@ function OrderEntryPageContent() {
 
         {/* RESIZER HANDLE */}
         <div
-          className="hidden lg:flex w-2 cursor-col-resize hover:bg-amber-100 active:bg-amber-200 items-center justify-center border-l border-r border-line z-50 shrink-0 relative transition-colors group"
+          className="hidden lg:flex w-2 cursor-col-resize hover:bg-brand/10 active:bg-brand/15 items-center justify-center border-l border-r border-line z-50 shrink-0 relative transition-colors group"
           onPointerDown={(e) => { e.preventDefault(); setIsResizing(true); }}
         >
           <div className="w-0.5 h-10 bg-hover group-hover:bg-brand rounded-full transition-colors" />
@@ -1427,7 +1427,7 @@ function OrderEntryPageContent() {
                     >
                       {kitchenLoading
                         ? <><Loader2 className="animate-spin w-4 h-4" /> Sending…</>
-                        : <><ChefHat className="w-[18px] h-[18px]" /> {paymentOrderId ? 'Send again' : 'Send to kitchen'}</>}
+                        : <><UtensilsCrossed className="w-[18px] h-[18px]" /> {paymentOrderId ? 'Send again' : 'Send to kitchen'}</>}
                     </button>
                     <button
                       onClick={handleCharge}
@@ -1521,7 +1521,7 @@ function OrderEntryPageContent() {
 
 import { Suspense } from 'react';
 import { API_URL } from '@/lib/api';
-import { Armchair, Banknote, ChefHat, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, X, ConciergeBell } from 'lucide-react';
+import { Armchair, Banknote, GalleryVerticalEnd, Info, LayoutGrid, Loader2, Minus, NotebookPen, Pause, PauseCircle, Percent, Plus, Printer, Rows3, Search, ShoppingCart, Trash2, UserPlus, UtensilsCrossed, X, ConciergeBell } from 'lucide-react';
 
 export default function OrderEntryPage() {
   const [isMounted, setIsMounted] = useState(false);
