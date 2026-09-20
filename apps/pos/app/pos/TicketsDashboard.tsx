@@ -849,9 +849,9 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {dataMode === 'history' ? (
                 // Single Column for History in Kanban mode
                 <div className="flex flex-col min-w-[320px] max-w-[400px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                  <div className="flex items-center justify-between pb-2 border-b-2 border-slate-200 shrink-0">
-                    <h3 className="font-bold text-slate-500 text-xs uppercase tracking-widest">Order History</h3>
-                    <span className="text-slate-500 text-xs font-bold">{filteredOrders.length}</span>
+                  <div className="flex items-center justify-between pb-2 border-b-2 border-line shrink-0">
+                    <h3 className="font-bold text-ink-3 text-xs uppercase tracking-widest">Order History</h3>
+                    <span className="text-ink-3 text-xs font-bold">{filteredOrders.length}</span>
                   </div>
                   <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
                     {filteredOrders.map((order: any) => renderCard(order, 'kanban'))}
@@ -861,11 +861,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                 <>
                   {/* Pending Column */}
                   <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-yellow-500/20 shrink-0">
-                      <h3 className="font-bold text-yellow-500 text-xs uppercase tracking-widest flex items-center gap-2">
+                    <div className="flex items-center justify-between pb-2 border-b-2 border-warn/20 shrink-0">
+                      <h3 className="font-bold text-warn text-xs uppercase tracking-widest flex items-center gap-2">
                         Pending
                       </h3>
-                      <span className="text-yellow-500 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'PENDING').length}</span>
+                      <span className="text-warn text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'PENDING').length}</span>
                     </div>
                     <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
                       {filteredOrders.filter((o: any) => o.status === 'PENDING').map((order: any) => renderCard(order, 'kanban'))}
@@ -874,11 +874,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                   
                   {/* In Kitchen Column */}
                   <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-blue-500/20 shrink-0">
-                      <h3 className="font-bold text-blue-400 text-xs uppercase tracking-widest flex items-center gap-2">
+                    <div className="flex items-center justify-between pb-2 border-b-2 border-info/20 shrink-0">
+                      <h3 className="font-bold text-info text-xs uppercase tracking-widest flex items-center gap-2">
                         In Kitchen
                       </h3>
-                      <span className="text-blue-400 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'IN_KITCHEN').length}</span>
+                      <span className="text-info text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'IN_KITCHEN').length}</span>
                     </div>
                     <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
                       {filteredOrders.filter((o: any) => o.status === 'IN_KITCHEN').map((order: any) => renderCard(order, 'kanban'))}
@@ -887,11 +887,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
 
                   {/* Ready Column */}
                   <div className="flex flex-col min-w-[320px] max-w-[350px] flex-1 max-h-[calc(100vh-280px)] overflow-hidden">
-                    <div className="flex items-center justify-between pb-2 border-b-2 border-green-500/20 shrink-0">
-                      <h3 className="font-bold text-green-500 text-xs uppercase tracking-widest flex items-center gap-2">
+                    <div className="flex items-center justify-between pb-2 border-b-2 border-ok/20 shrink-0">
+                      <h3 className="font-bold text-ok text-xs uppercase tracking-widest flex items-center gap-2">
                         Ready
                       </h3>
-                      <span className="text-green-500 text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'READY').length}</span>
+                      <span className="text-ok text-xs font-bold">{filteredOrders.filter((o: any) => o.status === 'READY').length}</span>
                     </div>
                     <div className="flex flex-col overflow-y-auto hide-scrollbar flex-1 pb-10 mt-2">
                       {filteredOrders.filter((o: any) => o.status === 'READY').map((order: any) => renderCard(order, 'kanban'))}
@@ -910,10 +910,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Filters</h2>
+                <h2 className="text-2xl font-semibold text-ink tracking-tight">Filters</h2>
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={resetFilters} className="text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-wider">
+                <button onClick={resetFilters} className="text-xs font-bold text-ink-3 hover:text-ink transition-colors uppercase tracking-wider">
                   Reset
                 </button>
                 <button onClick={() => setFilterModalOpen(false)} aria-label="Close filters" className="w-11 h-11 grid place-items-center text-ink-3 rounded-lg hover:bg-sunken">
@@ -925,17 +925,17 @@ export default function TicketsDashboard({ onViewChange }: Props) {
             <div className="space-y-6">
               {/* Dashboard Mode */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">View Mode</h3>
-                <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-xl">
-                  <button 
+                <h3 className="text-xs font-bold text-ink-3 uppercase tracking-widest">View Mode</h3>
+                <div className="flex bg-sunken border border-line p-1 rounded-xl">
+                  <button
                     onClick={() => { setTempDataMode('live'); setTempSearch(''); }}
-                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all shadow-sm ${tempDataMode === 'live' ? 'bg-white text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-900 border border-transparent'}`}
+                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all shadow-sm ${tempDataMode === 'live' ? 'bg-surface text-ink border border-line' : 'text-ink-3 hover:text-ink border border-transparent'}`}
                   >
                     Live Tickets
                   </button>
-                  <button 
+                  <button
                     onClick={() => setTempDataMode('history')}
-                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all shadow-sm ${tempDataMode === 'history' ? 'bg-white text-slate-900 border border-slate-200' : 'text-slate-500 hover:text-slate-900 border border-transparent'}`}
+                    className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all shadow-sm ${tempDataMode === 'history' ? 'bg-surface text-ink border border-line' : 'text-ink-3 hover:text-ink border border-transparent'}`}
                   >
                     Order History
                   </button>
@@ -945,13 +945,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {/* Order Type Filter (Live Only) */}
               {tempDataMode === 'live' && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Order Type</h3>
+                  <h3 className="text-xs font-bold text-ink-3 uppercase tracking-widest">Order Type</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {(['ALL', 'DINE_IN', 'TAKEAWAY', 'DELIVERY', 'ON_HOLD'] as const).map(option => (
                       <button 
                         key={option}
                         onClick={() => setTempFilter(option)}
-                        className={`py-3 px-2 rounded-xl border flex items-center justify-center transition-all ${tempFilter === option ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        className={`py-3 px-2 rounded-xl border flex items-center justify-center transition-all ${tempFilter === option ? 'bg-brand/10 border-brand text-brand-strong shadow-sm' : 'bg-surface border-line text-ink-2 hover:bg-sunken'}`}
                       >
                         <span className="text-sm font-bold capitalize">{option.replace('_', ' ').toLowerCase()}</span>
                       </button>
@@ -963,11 +963,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {/* Waiter Filter */}
               {waiters.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Waiter</h3>
+                  <h3 className="text-xs font-bold text-ink-3 uppercase tracking-widest">Waiter</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     <button 
                       onClick={() => setTempWaiterFilter('ALL')}
-                      className={`py-2 px-2 rounded-xl border flex items-center justify-center transition-all ${tempWaiterFilter === 'ALL' ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      className={`py-2 px-2 rounded-xl border flex items-center justify-center transition-all ${tempWaiterFilter === 'ALL' ? 'bg-brand/10 border-brand text-brand-strong shadow-sm' : 'bg-surface border-line text-ink-2 hover:bg-sunken'}`}
                     >
                       <span className="text-sm font-bold capitalize">All Waiters</span>
                     </button>
@@ -975,7 +975,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                       <button 
                         key={waiter.id}
                         onClick={() => setTempWaiterFilter(waiter.id)}
-                        className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center transition-all ${tempWaiterFilter === waiter.id ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        className={`py-2 px-2 rounded-xl border flex flex-col items-center justify-center transition-all ${tempWaiterFilter === waiter.id ? 'bg-brand/10 border-brand text-brand-strong shadow-sm' : 'bg-surface border-line text-ink-2 hover:bg-sunken'}`}
                       >
                         <span className="text-sm font-bold truncate max-w-full px-1">{waiter.name}</span>
                         {waiter.waiterNumber && <span className="text-[10px] opacity-70">W-{waiter.waiterNumber}</span>}
@@ -991,11 +991,11 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {/* History Search (History Only) */}
               {tempDataMode === 'history' && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Search History</h3>
+                  <h3 className="text-xs font-bold text-ink-3 uppercase tracking-widest">Search History</h3>
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-[20px] h-[20px]" />
-                    <input 
-                      type="text" 
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-3 w-[20px] h-[20px]" />
+                    <input
+                      type="text"
                       placeholder="e.g. Table T-5 or #1024"
                       value={tempSearch}
                       onChange={e => setTempSearch(e.target.value)}
@@ -1004,7 +1004,7 @@ export default function TicketsDashboard({ onViewChange }: Props) {
                           applyFilters();
                         }
                       }}
-                      className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-12 pr-4 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-sm"
+                      className="w-full bg-surface border border-line rounded-xl py-3 pl-12 pr-4 text-ink placeholder-ink-3 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/30 transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -1013,13 +1013,13 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               {/* Sorting (Live Only) */}
               {tempDataMode === 'live' && (
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sort By</h3>
+                  <h3 className="text-xs font-bold text-ink-3 uppercase tracking-widest">Sort By</h3>
                   <div className="grid grid-cols-3 gap-2">
                     {(['oldest', 'newest', 'table'] as const).map(option => (
                       <button 
                         key={option}
                         onClick={() => setTempSortOrder(option)}
-                        className={`py-3 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${tempSortOrder === option ? 'bg-amber-50 border-amber-500 text-amber-700 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        className={`py-3 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all ${tempSortOrder === option ? 'bg-brand/10 border-brand text-brand-strong shadow-sm' : 'bg-surface border-line text-ink-2 hover:bg-sunken'}`}
                       >
                         {option === 'oldest' ? <Clock className="w-[18px] h-[18px]" /> : option === 'newest' ? <Zap className="w-[18px] h-[18px]" /> : <Armchair className="w-[18px] h-[18px]" />}
                         <span className="text-xs font-bold capitalize">{option === 'table' ? 'By Table' : option}</span>
@@ -1030,10 +1030,10 @@ export default function TicketsDashboard({ onViewChange }: Props) {
               )}
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-100">
-              <button 
+            <div className="mt-8 pt-6 border-t border-line">
+              <button
                 onClick={applyFilters}
-                className="w-full py-4 bg-brand text-white text-sm font-bold rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all shadow-sm"
+                className="w-full py-4 bg-brand text-on-brand text-sm font-bold rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all shadow-sm"
               >
                 Apply Changes
               </button>
@@ -1049,14 +1049,14 @@ export default function TicketsDashboard({ onViewChange }: Props) {
           to out-rank everything, including this. */}
       {shiftSummaryOpen && (
         <Modal isOpen label="Shift summary" onClose={() => setShiftSummaryOpen(false)} className="max-w-sm p-5 overflow-y-auto">
-            <h2 className="text-xl font-semibold text-slate-900 mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
-            <div className="text-slate-600 space-y-3 my-6 text-sm font-medium">
-              <p className="flex justify-between"><span>Duration</span> <span className="text-slate-900 font-bold">{shiftElapsed}</span></p>
-              <p className="flex justify-between"><span>Orders today</span> <span className="text-slate-900 font-bold">{orders.length}</span></p>
+            <h2 className="text-xl font-semibold text-ink mb-2 tracking-tight">Your Shift: {isMounted ? (session.cashierName || 'Cashier') : 'Cashier'}</h2>
+            <div className="text-ink-2 space-y-3 my-6 text-sm font-medium">
+              <p className="flex justify-between"><span>Duration</span> <span className="text-ink font-bold">{shiftElapsed}</span></p>
+              <p className="flex justify-between"><span>Orders today</span> <span className="text-ink font-bold">{orders.length}</span></p>
             </div>
-            <button 
+            <button
               onClick={() => { setShiftSummaryOpen(false); router.push('/pos/shift/close'); }}
-              className="mt-2 w-full font-bold py-3.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors shadow-sm"
+              className="mt-2 w-full font-bold py-3.5 rounded-xl bg-danger/10 text-danger hover:bg-danger/15 transition-colors shadow-sm"
             >
               Close Shift
             </button>
