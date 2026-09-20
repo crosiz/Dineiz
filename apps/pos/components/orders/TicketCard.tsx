@@ -93,14 +93,14 @@ export function TicketCard({
       {/* Dine-in/takeaway/delivery, read off the edge before anyone reads the
           badge — same colour as OrderTypeBadge, just ambient. */}
       <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-[3px] ${orderTypeBar(type)}`} />
-      <header className={compact ? 'px-3.5 pt-3.5' : 'border-b border-line bg-canvas/50 px-4 py-3.5'}>
+      <header className={compact ? 'px-3.5 pt-3.5' : 'border-b border-line bg-canvas/50 px-3.5 py-2.5 lg:px-4 lg:py-3.5'}>
         <div className="flex items-baseline justify-between gap-3">
           <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[16px]' : 'text-[18px]'}`}>
             #{orderNumber}
           </h3>
           {createdAt && <TicketTimer createdAt={createdAt} urgent={status === 'PENDING' || status === 'IN_KITCHEN'} />}
         </div>
-        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+        <div className="mt-2 lg:mt-2.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
           <OrderTypeBadge type={type} tableLabel={tableLabel} size={compact ? 'sm' : 'md'} />
           <StatusBadge status={status} />
         </div>
@@ -112,7 +112,12 @@ export function TicketCard({
         )}
       </header>
 
-      <ul className={`flex-1 ${compact ? 'px-3.5 pt-2.5 pb-3 space-y-1' : 'px-4 py-3.5 space-y-1.5 min-h-[110px]'}`}>
+      {/* min-h keeps every card in a multi-column desktop row the same
+          height; below lg there's only one card per row (nothing to align
+          with), so a short order doesn't need to hold the same floor —
+          that gap was exactly what made a 1-item ticket look mostly empty
+          on a phone or tablet. */}
+      <ul className={`flex-1 ${compact ? 'px-3.5 pt-2.5 pb-3 space-y-1' : 'px-3.5 py-2.5 lg:px-4 lg:py-3.5 space-y-1 lg:space-y-1.5 min-h-[56px] lg:min-h-[110px]'}`}>
         {shown.map((l, i) => (
           <li key={i} className="flex gap-2.5 min-w-0">
             <span className={`shrink-0 text-right font-semibold tabular-nums text-ink ${compact ? 'w-4 text-[12px]' : 'w-5 text-[13px]'}`}>
@@ -139,13 +144,13 @@ export function TicketCard({
         {lines.length === 0 && <li className="text-[13px] text-ink-3">No items yet</li>}
       </ul>
 
-      <footer className={`mt-auto border-t border-line bg-surface ${layout === 'list' ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:flex lg:flex-col lg:justify-center' : ''} ${compact ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
+      <footer className={`mt-auto border-t border-line bg-surface ${layout === 'list' ? 'lg:mt-0 lg:border-t-0 lg:border-l lg:flex lg:flex-col lg:justify-center' : ''} ${compact ? 'px-3.5 py-2.5' : 'px-3.5 py-2.5 lg:px-4 lg:py-3'}`}
         onClick={e => { if (primary || secondary) e.stopPropagation(); }}>
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-xs text-ink-3 tabular-nums">{units} {units === 1 ? 'item' : 'items'}</span>
           <span className={`font-semibold text-ink tabular-nums ${compact ? 'text-[14px]' : 'text-[16px]'}`}>{formatPKR(total)}</span>
         </div>
-        {!compact && (primary || secondary) && <div className="mt-3 flex items-center gap-2">
+        {!compact && (primary || secondary) && <div className="mt-2.5 lg:mt-3 flex items-center gap-2">
           {primary && <button type="button" onClick={primary.onClick} disabled={primary.disabled || primary.busy}
             className={`min-w-0 flex-1 min-h-11 px-3 rounded-lg text-[13px] font-semibold transition-colors disabled:cursor-not-allowed ${primary.tone === 'brand'
               ? 'bg-brand text-on-brand hover:bg-brand-strong disabled:opacity-60'

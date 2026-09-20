@@ -1035,8 +1035,16 @@ export default function ClientTableMap() {
           minHeight: 0,
           position: 'relative',
           overflow: 'hidden',
+          // A flat colour read as an empty, unfinished page rather than a
+          // floor you can pan and zoom — the size/position math below was
+          // already computed for a panning dot grid, but the image itself
+          // was switched off, leaving a blank canvas with dead math behind
+          // it. Restored: the same quiet dot-grid language design/floor
+          // tools use for "this is a draggable surface," at the app's own
+          // border colour so it stays in the background, not textured
+          // wallpaper.
           backgroundColor: 'var(--pos-bg-base)',
-          backgroundImage: 'none',
+          backgroundImage: 'radial-gradient(circle, var(--pos-border) 1px, transparent 1px)',
           backgroundSize: `${24 * view.zoom}px ${24 * view.zoom}px`,
           backgroundPosition: `${view.x}px ${view.y}px`,
           // Without this the browser's own pan/zoom fights every gesture the
