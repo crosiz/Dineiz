@@ -141,6 +141,14 @@ export default function HomeDashboard() {
   const { posSocket } = useSocket();
   const askShift = useShiftActions((s) => s.ask);
 
+  // Phones stack both columns in one long scroll — fine with a handful of
+  // orders, but punching several in a row pushes the shift card and the
+  // whole table grid a full screen-height down, every time. Desktop has the
+  // room for both side by side (unchanged below); a phone gets a segmented
+  // switch instead so "how's my shift / which tables are free" is always one
+  // tap away, not a scroll away. Always defaults back to Orders — that's the
+  // screen open for most of a shift.
+  const [mobileTab, setMobileTab] = useState<'orders' | 'shift'>('orders');
   const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
   // The full order object from the list already on screen — passed to
   // OrderDetailsModal as initialOrder so it paints instantly instead of
@@ -405,8 +413,33 @@ export default function HomeDashboard() {
             ))}
           </section>
 
+          {/* Phone only: everything below splits by tab so a long "in
+              progress" list can never bury the shift card and tables a
+              screen-height down. Desktop keeps both columns side by side and
+              never looks at this state. */}
+          <div className="lg:hidden grid grid-cols-2 gap-0.5 p-1 rounded-xl bg-sunken border border-line">
+            <button
+              type="button"
+              onClick={() => setMobileTab('orders')}
+              className={`h-11 rounded-lg text-[14px] font-semibold transition-colors ${
+                mobileTab === 'orders' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3'
+              }`}
+            >
+              Orders{taskCount > 0 ? ` · ${taskCount}` : ''}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('shift')}
+              className={`h-11 rounded-lg text-[14px] font-semibold transition-colors ${
+                mobileTab === 'shift' ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(15,23,42,0.08)]' : 'text-ink-3'
+              }`}
+            >
+              Shift &amp; tables
+            </button>
+          </div>
+
           {taskCount > 0 && (
-            <section>
+            <section className={mobileTab === 'orders' ? '' : 'hidden lg:block'}>
               <SectionTitle count={taskCount}>Needs you</SectionTitle>
               <div className="bg-surface border border-line rounded-xl divide-y divide-line overflow-hidden">
                 {tasks}
@@ -423,7 +456,7 @@ export default function HomeDashboard() {
             </section>
           )}
 
-          <section>
+          <section className={mobileTab === 'orders' ? '' : 'hidden lg:block'}>
             <SectionTitle
               count={activeOrders.length}
               action={activeOrders.length > 0 ? <LinkButton onClick={() => router.push('/pos/tickets')}>All tickets</LinkButton> : undefined}
@@ -456,7 +489,7 @@ export default function HomeDashboard() {
           </section>
 
           {heldOrders.length > 0 && (
-            <section>
+            <section className={mobileTab === 'orders' ? '' : 'hidden lg:block'}>
               <SectionTitle count={heldOrders.length}>On hold</SectionTitle>
               <div className="bg-surface border border-line rounded-xl divide-y divide-line overflow-hidden">
                 {heldOrders.map((h: any) => {
@@ -479,7 +512,11 @@ export default function HomeDashboard() {
         </div>
 
         {/* ── Right: my shift, then the floor ─────────────────────────── */}
-        <div className="lg:col-span-5 border-t lg:border-t-0 lg:border-l border-line p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex flex-col gap-6">
+        <div
+          className={`lg:col-span-5 border-t lg:border-t-0 lg:border-l border-line p-4 sm:p-6 lg:overflow-y-auto no-scrollbar flex-col gap-6 ${
+            mobileTab === 'shift' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
           <section className="bg-surface border border-line rounded-xl">
             <div className="p-4 flex items-start justify-between gap-4">
               <div className="min-w-0">

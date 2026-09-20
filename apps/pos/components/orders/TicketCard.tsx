@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { OrderTypeBadge, StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
+import { orderTypeBar, OrderTypeBadge, StatusBadge, TicketTimer } from '@/components/OrderStatusBadge';
 import { formatPKR } from '@/lib/utils';
 
 // One order, as a ticket. Used by the Tickets board and Home's active-orders
@@ -90,6 +90,9 @@ export function TicketCard({
         onOpen ? 'cursor-pointer hover:border-line-strong hover:shadow-[0_2px_10px_rgba(15,23,42,0.06)]' : ''
       } ${dimmed ? 'opacity-70' : ''} ${compact ? 'min-w-0 w-full' : layout === 'list' ? 'lg:grid lg:grid-cols-[minmax(180px,1fr)_minmax(180px,1.5fr)_240px]' : 'h-full'}`}
     >
+      {/* Dine-in/takeaway/delivery, read off the edge before anyone reads the
+          badge — same colour as OrderTypeBadge, just ambient. */}
+      <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-[3px] ${orderTypeBar(type)}`} />
       <header className={compact ? 'px-3.5 pt-3.5' : 'border-b border-line bg-canvas/50 px-4 py-3.5'}>
         <div className="flex items-baseline justify-between gap-3">
           <h3 className={`font-semibold text-ink tabular-nums break-all tracking-tight ${compact ? 'text-[16px]' : 'text-[18px]'}`}>
