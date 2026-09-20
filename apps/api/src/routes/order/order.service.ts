@@ -959,9 +959,28 @@ export async function updateOrder(tenantId: string, id: string, data: any) {
 }
 
 export async function appendOrderItems(tenantId: string, id: string, newItems: any[]) {
-  const existingOrder = await prisma.order.findUnique({
-    where: { id, tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } }
-  });
+  // Run independently of each other — createOrder already does the same for
+  // its own lookups. This used to be two sequential round trips (the order,
+  // then branding), which on a slow/cold Neon connection could push an
+  // otherwise-fine request past the client's per-request sync timeout: the
+  // terminal would see that as a failure and retry, even though the write
+  // itself was never the problem. ADD_ITEMS is on the hot path every time a
+  // cashier adds to an already-open order, so the extra latency here was not
+  // free — confirmed live: a close-shift sync-wait stuck on "0 of 1 order
+  // sending" traced back to this exact function.
+  const [existingOrder, tenantBranding] = await Promise.all([
+    prisma.order.findUnique({
+      where: { id, tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    }),
+    prisma.tenantBranding.findUnique({
+      where: { tenantId },
+      select: {
+        cashTaxEnabled: true, cashTaxRate: true, cashTaxLabel: true,
+        cardTaxEnabled: true, cardTaxRate: true, cardTaxLabel: true,
+        taxRoundingMethod: true,
+      },
+    }),
+  ]);
 
   if (!existingOrder) {
     // Order is gone, or already COMPLETED/CANCELLED — an ADD_ITEMS retry can
@@ -989,14 +1008,6 @@ export async function appendOrderItems(tenantId: string, id: string, newItems: a
   const newSubtotal = Number(existingOrder.totalAmount) + newItemsTotal;
   const taxableSubtotal = newSubtotal - Number(existingOrder.discountAmount);
 
-  const tenantBranding = await prisma.tenantBranding.findUnique({
-    where: { tenantId },
-    select: {
-      cashTaxEnabled: true, cashTaxRate: true, cashTaxLabel: true,
-      cardTaxEnabled: true, cardTaxRate: true, cardTaxLabel: true,
-      taxRoundingMethod: true,
-    },
-  });
   const cashTaxEnabled = tenantBranding?.cashTaxEnabled ?? true;
   const cashTaxRate = tenantBranding?.cashTaxRate ?? 5;
   const cardTaxEnabled = tenantBranding?.cardTaxEnabled ?? true;
