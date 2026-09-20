@@ -284,7 +284,17 @@ async function transitionOrder(tenantId: string, id: string, fromStatus: string 
       }
     }
     const changed = await tx.order.updateMany({ where: { id, tenantId, status: existing.status }, data: { status: toStatus as any } });
-    if (!changed.count) throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+    if (!changed.count) {
+      // Same race as bumpOrder below: a duplicate concurrent call (a
+      // double-tap before the button's own busy guard caught it) can win
+      // this exact transition a moment before we did. If the order is
+      // already sitting at the status we were asked to reach, that's the
+      // same intent having already succeeded, not a conflict — only a
+      // status that isn't our target is a real one worth surfacing.
+      const current = await tx.order.findUniqueOrThrow({ where: { id, tenantId }, select: { status: true } });
+      if (current.status === toStatus) return tx.order.findUniqueOrThrow({ where: { id, tenantId }, include: ORDER_INCLUDE });
+      throw Object.assign(new Error('Order changed. Refresh the kitchen ticket.'), { statusCode: 409 });
+    }
     await tx.auditLog.create({ data: { action: 'ORDER_STATUS_CHANGED', targetTenantId: tenantId, before: { orderId: id, status: existing.status }, after: { orderId: id, status: toStatus }, notes: 'Kitchen transition' } });
     return tx.order.findUniqueOrThrow({ where: { id, tenantId }, include: ORDER_INCLUDE });
   });
