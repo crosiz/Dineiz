@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShoppingBag, Truck, Utensils, X } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 import { cn } from "@/lib/utils";
 import { useLiveOrders, useUpdateOrderStatus, type ApiOrder } from "@/lib/queries";
 
@@ -33,7 +33,7 @@ export default function KitchenDisplayPage() {
     <div className="flex h-screen flex-col bg-panel">
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-bg px-5">
         <div className="flex items-center gap-2.5">
-          <Logo size={24} />
+          <DineizLogo size="sm" markOnly />
           <span className="text-sm font-bold text-text-1">Kitchen Display</span>
           <span className="tabular text-xs text-text-3">Kababjees · Clifton</span>
         </div>

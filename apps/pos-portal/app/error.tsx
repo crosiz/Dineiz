@@ -1,12 +1,12 @@
 "use client";
 
 import { ServerCrash } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-bg px-6 text-center">
-      <Logo size={32} />
+      <DineizLogo size="md" />
       <div className="flex flex-col items-center gap-3">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-danger-tint">
           <ServerCrash className="h-6 w-6 text-danger" strokeWidth={1.5} />

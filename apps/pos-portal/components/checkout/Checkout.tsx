@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Banknote, CreditCard, Download, Mail, MessageCircle, Smartphone } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Logo } from "@/components/layout/Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 import { cn, formatPKR } from "@/lib/utils";
 import { useCheckoutOrder } from "@/lib/queries";
 import { ApiError } from "@/lib/api-client";
@@ -220,7 +220,7 @@ function ReceiptView({
   return (
     <div className="flex flex-col items-center gap-4 p-10">
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success-tint">
-        <Logo size={22} />
+        <DineizLogo size="sm" markOnly />
       </span>
       <div className="text-center">
         <div className="text-base font-bold text-text-1">Payment Collected</div>
