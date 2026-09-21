@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
@@ -94,11 +93,9 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <Link href="/onboarding" className="text-center text-xs font-semibold text-primary">
-          First time here? Set up your branch
-        </Link>
-
-        <p className="text-center text-[11px] text-text-3">Dineiz POS Portal — design preview build</p>
+        <p className="text-center text-[11px] text-text-3">
+          Restaurant accounts are set up by Dineiz — contact your account manager to get started.
+        </p>
       </div>
     </div>
   );
