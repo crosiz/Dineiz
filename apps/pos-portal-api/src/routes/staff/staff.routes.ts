@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import { requireAuth, resolveBranchId } from '../../middleware/auth';
+import { requireAuth, requireRole, resolveBranchId } from '../../middleware/auth';
 import * as staffService from './staff.service';
 
 const CreateStaffSchema = z.object({
@@ -10,13 +10,13 @@ const CreateStaffSchema = z.object({
 
 export const staffRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/staff', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return staffService.listStaff(branchId);
   });
 
-  fastify.post('/api/staff', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+  fastify.post('/api/staff', { preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER']) }, async (request, reply) => {
+    const branchId = await resolveBranchId(request);
     if (!branchId || !request.user?.tenantId) return reply.status(400).send({ error: 'No branch in scope' });
     const parsed = CreateStaffSchema.safeParse(request.body);
     if (!parsed.success) return reply.status(400).send({ error: 'Invalid request', issues: parsed.error.issues });
@@ -24,8 +24,12 @@ export const staffRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(staff);
   });
 
-  fastify.delete('/api/staff/:id', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+  // Scoped to the same roles as create: this endpoint's only real caller is
+  // Onboarding's "undo a staff member I just added by mistake" button, not a
+  // general staff-management delete (Staff Management has no delete UI) —
+  // whoever can create here should be able to correct their own mistake.
+  fastify.delete('/api/staff/:id', { preHandler: requireRole(['TENANT_ADMIN', 'BRANCH_MANAGER']) }, async (request, reply) => {
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     const deleted = await staffService.deleteStaffMember(branchId, id);
@@ -40,13 +44,13 @@ export const staffRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/api/staff/attendance', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return staffService.listAttendance(branchId);
   });
 
   fastify.get('/api/staff/payroll', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return staffService.listPayroll(branchId);
   });

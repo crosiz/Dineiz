@@ -22,25 +22,25 @@ const CheckoutSchema = z.object({
 
 export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/orders/live', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return ordersService.listLive(branchId);
   });
 
   fastify.get('/api/orders/history', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return ordersService.listHistory(branchId);
   });
 
   fastify.get('/api/orders/held', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return ordersService.listHeld(branchId);
   });
 
   fastify.post('/api/orders', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const parsed = CreateOrderSchema.safeParse(request.body);
     if (!parsed.success) return reply.status(400).send({ error: 'Invalid request', issues: parsed.error.issues });
@@ -53,7 +53,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/orders/:id/hold', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     try {
@@ -64,7 +64,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/orders/:id/resume', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     try {
@@ -75,7 +75,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.patch('/api/orders/:id/status', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     const parsed = StatusSchema.safeParse(request.body);
@@ -88,7 +88,7 @@ export const orderRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/api/orders/:id/checkout', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     const parsed = CheckoutSchema.safeParse(request.body);

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { prisma } from '@dineiz/pos-portal-db';
+import { env } from '../../env';
 
 const PIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // a shift length
 const MAX_ATTEMPTS = 5;
@@ -57,9 +58,14 @@ export const pinRoutes: FastifyPluginAsync = async (fastify) => {
     const expiresAt = new Date(Date.now() + PIN_SESSION_TTL_MS);
     await prisma.session.create({ data: { userId: user.id, token, expiresAt } });
 
+    // Secure is conditional on production, not hardcoded: browsers silently
+    // refuse to set a Secure cookie over plain HTTP, which is exactly how
+    // this runs in local dev (http://localhost) — hardcoding it would break
+    // PIN login on every dev machine while looking correct in prod.
+    const secure = env.NODE_ENV === 'production' ? '; Secure' : '';
     reply.header(
       'set-cookie',
-      `better-auth.session_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${PIN_SESSION_TTL_MS / 1000}`
+      `better-auth.session_token=${token}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${PIN_SESSION_TTL_MS / 1000}`
     );
     return reply.send({ user: { id: user.id, name: user.name, role: user.role, branchId: user.branchId } });
   });

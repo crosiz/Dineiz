@@ -60,7 +60,9 @@ export async function getSettings(branchId: string): Promise<BranchSettingsBlob>
   };
 }
 
-export async function updateSettings(branchId: string, patch: Partial<BranchSettingsBlob>): Promise<BranchSettingsBlob> {
+type DeepPartial<T> = { [K in keyof T]?: Partial<T[K]> };
+
+export async function updateSettings(branchId: string, patch: DeepPartial<BranchSettingsBlob>): Promise<BranchSettingsBlob> {
   const current = await getSettings(branchId);
   const merged: BranchSettingsBlob = {
     receipt: { ...current.receipt, ...patch.receipt },

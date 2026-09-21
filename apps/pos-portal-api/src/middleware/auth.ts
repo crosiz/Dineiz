@@ -94,10 +94,22 @@ export const requireTenant = async (request: FastifyRequest, reply: FastifyReply
 };
 
 /** Resolves the branch a request should be scoped to: pinned for Branch
- * Managers, otherwise from a `?branchId=` query param (Tenant Admin can see
- * any branch). Never trusts a branchId from the request body. */
-export function resolveBranchId(request: FastifyRequest): string | null {
+ * Managers (query param ignored). A Tenant Admin may pass `?branchId=` to
+ * view a specific branch, but only one that actually belongs to their own
+ * tenant — checked here, not assumed. Every other role is always locked to
+ * their own assigned branch; the query param is never even read for them.
+ * Never trusts a branchId from the request body. */
+export async function resolveBranchId(request: FastifyRequest): Promise<string | null> {
   if (request.scopedBranchId) return request.scopedBranchId;
-  const query = request.query as { branchId?: string };
-  return query?.branchId ?? request.user?.branchId ?? null;
+  if (!request.user) return null;
+
+  if (request.user.role === 'TENANT_ADMIN') {
+    const query = request.query as { branchId?: string };
+    if (query?.branchId) {
+      const branch = await prisma.branch.findUnique({ where: { id: query.branchId }, select: { tenantId: true } });
+      return branch && branch.tenantId === request.user.tenantId ? query.branchId : null;
+    }
+  }
+
+  return request.user.branchId ?? null;
 }

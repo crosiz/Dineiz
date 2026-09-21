@@ -5,7 +5,7 @@ import * as inventoryService from './inventory.service';
 export const inventoryRoutes: FastifyPluginAsync = async (fastify) => {
   const branchScoped = (fn: (branchId: string) => Promise<unknown>) =>
     async (request: any, reply: any) => {
-      const branchId = resolveBranchId(request);
+      const branchId = await resolveBranchId(request);
       if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
       return fn(branchId);
     };

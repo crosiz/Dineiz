@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TabbedPage } from "@/components/ui/TabbedPage";
 import { Card } from "@/components/ui/Card";
@@ -66,6 +67,10 @@ function FieldPanel({ title, children }: { title: string; children: React.ReactN
   );
 }
 
+function SettingsError({ message }: { message: string }) {
+  return <div className="mt-3 rounded-md border border-danger-border bg-danger-tint px-3 py-2 text-[13px] text-danger">{message}</div>;
+}
+
 function BranchView() {
   const { data: branch, isLoading } = useCurrentBranch();
 
@@ -95,16 +100,21 @@ function BranchView() {
 function useSettingsToggle() {
   const { data: settings } = useSettings();
   const update = useUpdateSettings();
+  const [error, setError] = useState<string | null>(null);
   function toggle<S extends keyof ApiBranchSettings>(section: S, field: keyof ApiBranchSettings[S]) {
     if (!settings) return;
+    setError(null);
     const current = settings[section] as Record<string, unknown>;
-    update.mutate({ [section]: { ...current, [field]: !current[field as string] } } as Partial<ApiBranchSettings>);
+    update.mutate(
+      { [section]: { ...current, [field]: !current[field as string] } } as Partial<ApiBranchSettings>,
+      { onError: (err) => setError(err instanceof Error ? err.message : "Couldn't save that change") }
+    );
   }
-  return { settings, toggle, isPending: update.isPending };
+  return { settings, toggle, isPending: update.isPending, error };
 }
 
 function ReceiptView() {
-  const { settings, toggle, isPending } = useSettingsToggle();
+  const { settings, toggle, isPending, error } = useSettingsToggle();
 
   if (!settings) return <div className="p-6 text-sm text-text-2">Loading receipt settings…</div>;
 
@@ -133,6 +143,7 @@ function ReceiptView() {
           </button>
         </SettingsRow>
       </div>
+      {error && <SettingsError message={error} />}
     </FieldPanel>
   );
 }
@@ -162,7 +173,7 @@ function TaxView() {
 }
 
 function PaymentsView() {
-  const { settings, toggle, isPending } = useSettingsToggle();
+  const { settings, toggle, isPending, error } = useSettingsToggle();
 
   if (!settings) return <div className="p-6 text-sm text-text-2">Loading payment settings…</div>;
 
@@ -184,12 +195,13 @@ function PaymentsView() {
           </SettingsRow>
         ))}
       </div>
+      {error && <SettingsError message={error} />}
     </FieldPanel>
   );
 }
 
 function WorkflowView() {
-  const { settings, toggle, isPending } = useSettingsToggle();
+  const { settings, toggle, isPending, error } = useSettingsToggle();
 
   if (!settings) return <div className="p-6 text-sm text-text-2">Loading workflow settings…</div>;
 
@@ -210,12 +222,13 @@ function WorkflowView() {
           </SettingsRow>
         ))}
       </div>
+      {error && <SettingsError message={error} />}
     </FieldPanel>
   );
 }
 
 function NotificationsView() {
-  const { settings, toggle, isPending } = useSettingsToggle();
+  const { settings, toggle, isPending, error } = useSettingsToggle();
 
   if (!settings) return <div className="p-6 text-sm text-text-2">Loading notification settings…</div>;
 
@@ -237,6 +250,7 @@ function NotificationsView() {
           </SettingsRow>
         ))}
       </div>
+      {error && <SettingsError message={error} />}
     </FieldPanel>
   );
 }

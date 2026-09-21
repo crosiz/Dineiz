@@ -10,13 +10,13 @@ const LogEntrySchema = z.object({
 
 export const syncQueueRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/sync-queue', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return syncQueueService.listRecent(branchId);
   });
 
   fastify.post('/api/sync-queue', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const parsed = LogEntrySchema.safeParse(request.body);
     if (!parsed.success) return reply.status(400).send({ error: 'Invalid request', issues: parsed.error.issues });

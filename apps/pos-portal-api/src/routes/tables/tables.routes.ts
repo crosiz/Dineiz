@@ -4,13 +4,13 @@ import * as tablesService from './tables.service';
 
 export const tableRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/tables/sections', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return tablesService.listSections(branchId);
   });
 
   fastify.get('/api/tables/:id', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     const { id } = request.params as { id: string };
     const result = await tablesService.getTable(branchId, id);
@@ -19,7 +19,7 @@ export const tableRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/api/reservations', { preHandler: requireAuth }, async (request, reply) => {
-    const branchId = resolveBranchId(request);
+    const branchId = await resolveBranchId(request);
     if (!branchId) return reply.status(400).send({ error: 'No branch in scope' });
     return tablesService.listReservations(branchId);
   });
