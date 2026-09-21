@@ -8,10 +8,15 @@ import { Card, SectionTitle } from "@/components/ui/Card";
 import { Badge, Dot } from "@/components/ui/Badge";
 import { formatPKR } from "@/lib/utils";
 import { STATUS_TONE, STATUS_LABEL } from "@/lib/order-status";
-import { useCurrentShift, useLiveOrders, useOrderHistory, useTableSections, useCurrentBranch, type ApiOrder } from "@/lib/queries";
-import { LOW_STOCK } from "@/mocks/dashboard";
+import { useCurrentShift, useLiveOrders, useOrderHistory, useTableSections, useCurrentBranch, useStockItems, type ApiOrder, type ApiStockItem } from "@/lib/queries";
 
 const TYPE_LABEL: Record<ApiOrder["type"], string> = { DINE_IN: "Dine-In", TAKEAWAY: "Takeaway", DELIVERY: "Delivery" };
+
+// Same OK/LOW/OUT boundary as the Inventory page's stockStatus() — anything
+// under threshold (including at/below zero) counts as an alert here.
+function isLowStock(item: ApiStockItem) {
+  return item.onHand < item.threshold;
+}
 
 export default function DashboardPage() {
   const { data: branch } = useCurrentBranch();
@@ -19,6 +24,8 @@ export default function DashboardPage() {
   const { data: liveOrders } = useLiveOrders();
   const { data: history } = useOrderHistory();
   const { data: sections } = useTableSections();
+  const { data: stockItems } = useStockItems();
+  const lowStock = (stockItems ?? []).filter(isLowStock).slice(0, 5);
 
   const recentOrders = [...(liveOrders ?? []), ...(history ?? [])]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -137,12 +144,15 @@ export default function DashboardPage() {
           <Card className="p-4">
             <SectionTitle>Low Stock Alerts</SectionTitle>
             <div className="flex flex-col gap-3">
-              {LOW_STOCK.map((item) => (
-                <div key={item.name} className="flex items-center justify-between">
+              {lowStock.map((item) => (
+                <div key={item.id} className="flex items-center justify-between">
                   <span className="text-[13px] text-text-2">{item.name}</span>
-                  <span className="tabular text-xs font-semibold text-warning">{item.remaining}</span>
+                  <span className="tabular text-xs font-semibold text-warning">
+                    {item.onHand} {item.unit}
+                  </span>
                 </div>
               ))}
+              {lowStock.length === 0 && <div className="py-2 text-center text-xs text-text-3">Nothing low right now</div>}
             </div>
             <Link href="/inventory" className="mt-3 block text-center text-xs font-semibold text-primary">
               View Inventory
