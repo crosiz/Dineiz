@@ -13,7 +13,7 @@ import {
   Upload,
   UserPlus,
 } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { useCurrentBranch, useUpdateBranch, useMenuCategories, useMenuItems, useCreateStaff, useDeleteStaff } from "@/lib/queries";
@@ -114,7 +114,7 @@ export default function OnboardingPage() {
     <div className="flex min-h-screen items-center justify-center bg-panel px-6 py-10">
       <div className="flex w-[560px] flex-col gap-6">
         <div className="flex flex-col items-center gap-2 text-center">
-          <Logo size={30} />
+          <DineizLogo size="md" />
           <h1 className="text-lg font-bold text-text-1">Set up {branchName || "your branch"} on Dineiz</h1>
         </div>
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { Logo } from "@/components/layout/Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 import { Button } from "@/components/ui/Button";
 import { api, ApiError } from "@/lib/api-client";
 
@@ -34,7 +34,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-panel px-6">
       <div className="flex w-full max-w-[380px] flex-col gap-6 rounded-lg border border-border bg-bg p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
         <div className="flex flex-col items-center gap-3 text-center">
-          <Logo size={36} />
+          <DineizLogo size="lg" />
           <div>
             <h1 className="text-lg font-bold text-text-1">Dineiz Portal</h1>
             <p className="text-[13px] text-text-2">Sign in to manage your restaurant</p>

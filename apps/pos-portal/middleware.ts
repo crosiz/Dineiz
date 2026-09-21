@@ -38,5 +38,10 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Excludes Next.js internals and anything that looks like a static file
+  // (has a dot in its last path segment) - favicon.svg, /icon.svg, and
+  // everything under /brand/ all need this, not just the one favicon.ico
+  // the previous matcher named explicitly. A real page route never has a
+  // literal dot in its path here, so this is safe.
+  matcher: ["/((?!api|_next/static|_next/image|.*\\..*).*)"],
 };

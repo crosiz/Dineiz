@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronDown, CircleHelp, LogOut } from "lucide-react";
-import { Logo } from "./Logo";
+import { DineizLogo } from "@/components/ui/DineizLogo";
 import { NAV_ITEMS, splitHref } from "@/lib/nav-config";
 import { CURRENT_BRANCH, TENANT_NAME } from "@/mocks/session";
 import { cn } from "@/lib/utils";
@@ -39,9 +39,8 @@ export function Sidebar() {
       className="flex h-screen w-[260px] shrink-0 flex-col border-r border-border bg-panel px-3 py-4"
       aria-label="Primary navigation"
     >
-      <div className="mb-4 flex items-center gap-2.5 px-2">
-        <Logo size={28} />
-        <span className="text-[15px] font-bold text-text-1">Dineiz</span>
+      <div className="mb-4 px-2">
+        <DineizLogo size="md" />
       </div>
 
       <button
